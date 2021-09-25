@@ -3,6 +3,17 @@ spring:
     url: jdbc:postgresql://localhost:6432/capital
     username: postgres
     password: local
+tranwall:
+  encryption:
+    key:
+      aes:
+        current: C42719606E3416E460781F39B298EA63:BE52F8AE9649C1B37B57CB22B84EACCF
+        0: C42719606E3416E460781F39B298EA63:BE52F8AE9649C1B37B57CB22B84EACCF
+        next: BE52F8AE9649C1B37B57CB22B84EACCF:BE52F8AE9649C1B37B57CB22B84EACCF
+    fpe:
+      pan:
+        key: 148F8C2650959006B52D67A1E927A4D83DF6C967B8D4BA30C457EAF492F7C825
+        tweak: 9F1E1761
 
 feign:
   url:

@@ -54,6 +54,39 @@ create schema public;
 -- Use cases:
 -- * Onboard business: need to OTP business owner email (creates 1 business and 1 business owner)
 
+create table if not exists key
+(
+    id       uuid                        not null primary key,
+    created  timestamp without time zone not null,
+    key_ref  bigint                      not null,
+    key_hash bytea                       not null,
+    unique (key_ref)
+);
+
+-- sequence for generating card numbers (when we get that far)
+create sequence if not exists pan_seq;
+
+create table if not exists bin
+(
+    id      uuid                        not null primary key,
+    created timestamp without time zone not null,
+    updated timestamp without time zone not null,
+    version bigint                      not null,
+    bin     varchar(6)                  not null,
+    unique (bin)
+);
+
+create table if not exists program
+(
+    id      uuid                        not null primary key,
+    created timestamp without time zone not null,
+    updated timestamp without time zone not null,
+    version bigint                      not null,
+    name    varchar(200)                not null,
+    bin     varchar(6)                  not null,
+    constraint fk_bin foreign key (bin) references bin (bin)
+);
+
 -- top level entity for a given business. Container for employees and stakeholders
 create table if not exists business
 (
@@ -120,6 +153,8 @@ create table if not exists employee
     updated                        timestamp without time zone not null,
     version                        bigint                      not null,
     business_id                    uuid                        not null,
+    first_name_encrypted           varchar(100)                not null,
+    last_name_encrypted            varchar(100)                not null,
     -- we may not need the addresses of the employee
     address_street_line1_encrypted bytea                       null,
     address_street_line2_encrypted bytea                       null,
@@ -133,37 +168,17 @@ create table if not exists employee
     constraint fk_business foreign key (business_id) references business (id)
 );
 
-create table if not exists bin
-(
-    id      uuid                        not null primary key,
-    created timestamp without time zone not null,
-    updated timestamp without time zone not null,
-    version bigint                      not null,
-    bin     varchar(6)                  not null,
-    unique (bin)
-);
-
-create table if not exists program
-(
-    id      uuid                        not null primary key,
-    created timestamp without time zone not null,
-    updated timestamp without time zone not null,
-    version bigint                      not null,
-    bin     varchar(6)                  not null,
-    constraint fk_bin foreign key (bin) references bin (bin)
-);
-
 create table if not exists allocation
 (
-    id                     uuid                        not null primary key,
-    created                timestamp without time zone not null,
-    updated                timestamp without time zone not null,
-    version                bigint                      not null,
-    program_id             uuid                        not null,
-    business_id            uuid                        not null,
-    parent_allocation_id   uuid,
-    ancestor_allocation_id uuid[],
-    name                   varchar(200)                not null,
+    id                      uuid                        not null primary key,
+    created                 timestamp without time zone not null,
+    updated                 timestamp without time zone not null,
+    version                 bigint                      not null,
+    program_id              uuid                        not null,
+    business_id             uuid                        not null,
+    parent_allocation_id    uuid,
+    ancestor_allocation_ids uuid[],
+    name                    varchar(200)                not null,
     constraint fk_program foreign key (program_id) references program (id),
     constraint fk_business foreign key (business_id) references business (id),
     constraint fk_allocation foreign key (parent_allocation_id) references allocation (id)
@@ -171,12 +186,12 @@ create table if not exists allocation
 
 create table if not exists ledger_account
 (
-    id                  uuid                        not null primary key,
-    created             timestamp without time zone not null,
-    updated             timestamp without time zone not null,
-    version             bigint                      not null,
-    ledger_account_type varchar(50)                 not null,
-    currency            varchar(10)                 not null
+    id       uuid                        not null primary key,
+    created  timestamp without time zone not null,
+    updated  timestamp without time zone not null,
+    version  bigint                      not null,
+    type     varchar(50)                 not null,
+    currency varchar(10)                 not null
 );
 
 create table if not exists journal_entry
@@ -199,28 +214,29 @@ create table if not exists posting
     version           bigint                      not null,
     ledger_account_id uuid                        not null,
     journal_entry_id  uuid                        not null,
-    currency          varchar(10)                 not null,
-    amount            numeric                     not null,
+    amount_currency   varchar(10)                 not null,
+    amount_amount     numeric                     not null,
     effective_date    timestamp without time zone null
 );
 
 create table if not exists account -- could be balance
 (
-    id                uuid                        not null primary key,
-    created           timestamp without time zone not null,
-    updated           timestamp without time zone not null,
-    version           bigint                      not null,
-    program_id        uuid                        not null,
-    business_id       uuid                        not null,
-    type              varchar(20)                 not null, -- business, allocation, card
-    owner_id          uuid                        not null,
-    currency          varchar(10)                 not null,
-    ledger_balance    numeric                     not null,
-    ledger_account_id uuid                        not null,
+    id                      uuid                        not null primary key,
+    created                 timestamp without time zone not null,
+    updated                 timestamp without time zone not null,
+    version                 bigint                      not null,
+    program_id              uuid                        not null,
+    business_id             uuid                        not null,
+    ledger_account_id       uuid                        not null,
+    type                    varchar(20)                 not null, -- business, allocation, card
+    owner_id                uuid                        not null,
+    ledger_balance_currency varchar(10)                 not null,
+    ledger_balance_amount   numeric                     not null,
     constraint fk_program foreign key (program_id) references program (id),
     constraint fk_business foreign key (business_id) references business (id),
     constraint fk_ledger_account foreign key (ledger_account_id) references ledger_account (id)
 );
+
 
 create table if not exists adjustment
 (
@@ -229,15 +245,23 @@ create table if not exists adjustment
     created           timestamp without time zone not null,
     updated           timestamp without time zone not null,
     version           bigint                      not null,
+    business_id       uuid                        not null,
+    allocation_id     uuid                        not null,
     account_id        uuid                        not null,
-    -- deposit, withdraw, reallocation, card,
-    adjustment_type   varchar(50)                 not null,
-    effective_date    timestamp without time zone null,
-    currency          varchar(10)                 not null,
-    amount            numeric                     not null,
-    journal_entry_id  uuid                        not null,
     ledger_account_id uuid                        not null,
-    posting_id        uuid                        not null
+    journal_entry_id  uuid                        not null,
+    posting_id        uuid                        not null,
+    -- deposit, withdraw, reallocation, card,
+    type              varchar(50)                 not null,
+    effective_date    timestamp without time zone null,
+    amount_currency   varchar(10)                 not null,
+    amount_amount     numeric                     not null,
+    constraint fk_business foreign key (business_id) references business (id),
+    constraint fk_allocation foreign key (allocation_id) references allocation (id),
+    constraint fk_account foreign key (account_id) references account (id),
+    constraint fk_journal_entry foreign key (journal_entry_id) references journal_entry (id),
+    constraint fk_ledger_account foreign key (ledger_account_id) references ledger_account (id),
+    constraint fk_posting foreign key (posting_id) references posting (id)
 );
 
 -- holds data associated with a given network message from the network (e.g. Visa) via i2c
@@ -248,16 +272,18 @@ create table if not exists network_message
     created                  timestamp without time zone not null,
     updated                  timestamp without time zone not null,
     version                  bigint                      not null,
-    -- this needs to be nullable in the case that the card hasn't yet been issued
+    -- these needs to be nullable in the case that the card hasn't yet been issued
+    business_id              uuid,
+    allocation_id            uuid,
     card_id                  uuid,
-    -- for (fraudulent) cases where we receive messages for cards that have not yet been issued
-    card_number_encrypted    bytea,
     hold_id                  uuid,
     adjustment_id            uuid,
+    -- for (fraudulent) cases where we receive messages for cards that have not yet been issued
+    card_number_encrypted    bytea,
     -- used to group multiple messages into a logical group (e.g. auth + completion)
     network_message_group_id uuid                        not null,
-    currency                 varchar(10)                 not null,
-    amount                   numeric                     not null
+    amount_currency          varchar(10)                 not null,
+    amount_amount            numeric                     not null
     -- mcc
     -- location
     -- mid
@@ -268,16 +294,16 @@ create table if not exists network_message
 
 create table hold
 (
-    id         uuid                        not null
+    id              uuid                        not null
         primary key,
-    created    timestamp without time zone not null,
-    updated    timestamp without time zone not null,
-    version    bigint                      not null,
-    account_id uuid                        not null,
-    currency   varchar(10)                 not null,
-    amount     numeric                     not null,
-    expiry     timestamp without time zone not null,
-    status     varchar(20)                 not null
+    created         timestamp without time zone not null,
+    updated         timestamp without time zone not null,
+    version         bigint                      not null,
+    account_id      uuid                        not null,
+    status          varchar(20)                 not null,
+    amount_currency varchar(10)                 not null,
+    amount_amount   numeric                     not null,
+    expiry          timestamp without time zone not null
 );
 
 create table if not exists card
@@ -299,3 +325,37 @@ create table if not exists card
     constraint fk_allocation foreign key (allocation_id) references allocation (id),
     constraint fk_employee foreign key (employee_id) references employee (id)
 );
+
+insert into bin (id, created, updated, version, bin)
+values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288');
+
+insert into program (id, created, updated, version, name, bin)
+values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program', '401288');
+
+insert into business (id, created, updated, version, legal_name, address_street_line1,
+                      address_street_line2, address_locality, address_region, address_postal_code,
+                      address_country, employer_identification_number, business_email_encrypted,
+                      business_phone_encrypted, formation_date, onboarding_step, kyb_status, status)
+values ('82a79d15-9e47-421b-ab8f-78532f4f8bc7', now(), now(), 1, 'Tranwall', '', '', '', '', '',
+        'USA', '123654789', '', '', '2021-01-01', 'COMPLETE', 'PASS', 'ACTIVE');
+insert into ledger_account (id, created, updated, version, type, currency)
+values ('b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1', now(), now(), 1, 'BUSINESS', 'USD');
+insert into account (id, created, updated, version, program_id, business_id, type, owner_id,
+                     currency, ledger_balance, ledger_account_id)
+values ('334b6925-7621-4e72-99ec-f3877587437d', now(), now(), 1,
+        '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'BUSINESS',
+        '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'USD', 100, 'b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1');
+
+insert into allocation (id, created, updated, version, program_id, business_id,
+                        parent_allocation_id, ancestor_allocation_id, name)
+values ('9f3356de-6e2f-4221-af39-cf7063645b92', now(), now(), 1,
+        '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', null, null,
+        'Tranwall Test Allocation');
+insert into ledger_account (id, created, updated, version, type, currency)
+values ('29a443b9-fb41-4d80-b2ea-7a9dd87be061', now(), now(), 1, 'BUSINESS', 'USD');
+insert into account (id, created, updated, version, program_id, business_id, type, owner_id,
+                     currency, ledger_balance, ledger_account_id)
+values ('bb4652e8-064e-4818-aca3-6d871e749980', now(), now(), 1,
+        '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7',
+        'ALLOCATION', '9f3356de-6e2f-4221-af39-cf7063645b92', 'USD', 100,
+        '29a443b9-fb41-4d80-b2ea-7a9dd87be061');

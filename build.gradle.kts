@@ -37,6 +37,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("com.idealista:format-preserving-encryption:1.0.0")
+    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("org.apache.commons:commons-lang3:3.0")
+    implementation("commons-codec:commons-codec:1.9")
+    implementation("com.google.code.gson:gson:2.8.8")
 
     implementation("org.flywaydb:flyway-core")
     //to be used by feign as a http client
