@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__({@Autowired, @Lazy}))
-//@Converter
+@Converter
 public class EncryptionConverter implements AttributeConverter<String, byte[]> {
   private final Crypto crypto;
 

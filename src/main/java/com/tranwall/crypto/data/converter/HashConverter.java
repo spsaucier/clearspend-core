@@ -1,6 +1,7 @@
 package com.tranwall.crypto.data.converter;
 
 import com.tranwall.crypto.Crypto;
+import com.tranwall.crypto.HashUtil;
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
 import lombok.NonNull;
@@ -14,11 +15,9 @@ import org.springframework.context.annotation.Lazy;
 @Converter
 public class HashConverter implements AttributeConverter<byte[], byte[]> {
 
-  @NonNull @Lazy private final Crypto crypto;
-
   @Override
   public byte[] convertToDatabaseColumn(byte[] attribute) {
-    return crypto.calculateHash(attribute);
+    return HashUtil.calculateHash(attribute);
   }
 
   @Override

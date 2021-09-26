@@ -49,9 +49,8 @@ public class HashUtil {
   }
 
   public byte[] calculateHash256(byte[] clearText, int hashPrefixLength, int hashLength) {
+    // a null or empty input results in a null output
     if (clearText == null || clearText.length == 0) {
-      // a null input results in a null output
-
       return null;
     }
 
