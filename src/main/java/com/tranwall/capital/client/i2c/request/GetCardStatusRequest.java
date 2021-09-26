@@ -1,8 +1,8 @@
-package com.tranwall.capital.clients.i2c.request;
+package com.tranwall.capital.client.i2c.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.tranwall.capital.clients.i2c.Acquirer;
-import com.tranwall.capital.clients.i2c.Card;
+import com.tranwall.capital.client.i2c.Acquirer;
+import com.tranwall.capital.client.i2c.Card;
 import lombok.Builder;
 import lombok.Value;
 

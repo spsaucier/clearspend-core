@@ -33,7 +33,9 @@ dependencies {
     implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
 
     annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
+    implementation("com.plaid:plaid-java:9.0.0")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")

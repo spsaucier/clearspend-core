@@ -1,5 +1,5 @@
-drop schema public cascade;
-create schema public;
+-- drop schema public cascade;
+-- create schema public;
 
 -- Program: Credit
 -- Program: Debit Virtual [pooled funds]

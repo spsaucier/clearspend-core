@@ -1,4 +1,4 @@
-package com.tranwall.capital.clients.i2c.util;
+package com.tranwall.capital.client.i2c.util;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
