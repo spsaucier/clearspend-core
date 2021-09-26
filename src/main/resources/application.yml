@@ -1,9 +1,14 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
+    url: jdbc:postgresql://localhost:6432/capital
     username: postgres
     password: local
 
+feign:
+  url:
+    i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
+  okhttp:
+    enabled: true
 ---
 
 #Docker profile

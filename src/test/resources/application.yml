@@ -2,3 +2,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+feign:
+  url:
+    i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
+  okhttp:
+    enabled: true
