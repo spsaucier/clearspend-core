@@ -3,6 +3,7 @@ package com.tranwall.crypto.data.model.embedded;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.tranwall.crypto.HashUtil;
 import com.tranwall.crypto.data.converter.EncryptionConverter;
+import com.tranwall.crypto.data.converter.HashConverter;
 import java.util.Locale;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -24,8 +25,7 @@ public class EncryptedStringWithHash implements WithEncryptedString {
   @Convert(converter = EncryptionConverter.class)
   private String encrypted;
 
-  @Convert(converter = HashCommitter.class)
-  @Column(columnDefinition = "binary(34)")
+  @Convert(converter = HashConverter.class)
   private byte[] hash;
 
   public EncryptedStringWithHash(String string) {

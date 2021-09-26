@@ -20,7 +20,7 @@ public class RequiredEncryptedStringWithHash implements WithEncryptedString {
   @Convert(converter = EncryptionConverter.class)
   private String encrypted;
 
-  @Column(columnDefinition = "binary(34)", nullable = false)
+  @Column(nullable = false)
   @Convert(converter = HashConverter.class)
   private byte[] hash;
 

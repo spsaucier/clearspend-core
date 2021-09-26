@@ -29,5 +29,5 @@ public class Key extends Immutable {
   @Column(length = 50)
   // the hash of the key (the actual key is not stored in the database aside from the DEK (data
   // encryption key) which is first encrypted with the KEK (key encryption key))
-  private String keyHash;
+  private byte[] keyHash;
 }

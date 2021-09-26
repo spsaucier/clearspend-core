@@ -28,7 +28,6 @@ public class NullableEncryptedStringWithHash implements WithEncryptedString {
   private String encrypted;
 
   @Convert(converter = HashConverter.class)
-  @Column(columnDefinition = "binary(34)")
   private byte[] hash;
 
   public NullableEncryptedStringWithHash(String string) {
