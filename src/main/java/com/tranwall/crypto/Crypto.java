@@ -25,20 +25,17 @@ import org.apache.logging.log4j.util.Strings;
 import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-// @Component
+@Component
 @Slf4j
 public class Crypto {
   static String envPrefix = "tranwall.encryption.key.aes.";
-  private static String keyVersion = "0";
-  private static int maxKeys = 1000;
-  private static String keyDelimiter = "\\|";
-  private HashMap<String, String> replacementKeys = new HashMap<>();
-  // variables used to load the keys
-  private HashMap<byte[], Integer> existingKeys = new HashMap<>();
-  private HashMap<Integer, byte[]> keyMap = new HashMap<>();
-  private Integer nextKeyRef = 0;
+  private static final int maxKeys = 1000;
+  private static final String keyDelimiter = "\\|";
+  private final HashMap<String, String> replacementKeys = new HashMap<>();
+  private final HashMap<Integer, byte[]> keyMap = new HashMap<>();
 
   byte[] currentKey;
   int currentKeyRef;
@@ -62,6 +59,9 @@ public class Crypto {
     }
 
     // load existing keys
+    // variables used to load the keys
+    int nextKeyRef = 0;
+    HashMap<byte[], Integer> existingKeys = new HashMap<>();
     for (Key key : keyRepository.findAll()) {
       existingKeys.put(key.getKeyHash(), key.getKeyRef());
       if (nextKeyRef < key.getKeyRef()) {

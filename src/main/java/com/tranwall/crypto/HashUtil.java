@@ -118,11 +118,11 @@ public class HashUtil {
   }
 
   public String generateKeyString() {
-    return BaseEncoding.base16().encode(generateKey());
+    return BaseEncoding.base64().encode(generateKey());
   }
 
   public String generateKeyString(int size) {
-    return BaseEncoding.base16().encode(generateKey(size));
+    return BaseEncoding.base64().encode(generateKey(size));
   }
 
   public byte[] generateKey() {

@@ -48,6 +48,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp")
 
     compileOnly("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
 
     runtimeOnly("org.postgresql:postgresql")
 
