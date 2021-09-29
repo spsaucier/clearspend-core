@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class BankLinkService {
 	@NonNull private PlaidClient plaidClient;
 
-	public void getLinkToken() throws IOException {
-		plaidClient.createLinkToken();
+	public String getLinkToken() throws IOException {
+		return plaidClient.createLinkToken();
 	}
 }

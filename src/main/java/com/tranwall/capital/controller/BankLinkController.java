@@ -14,7 +14,6 @@ public class BankLinkController {
 
   @GetMapping("/bank-link")
   private String linkBank() throws IOException {
-    bankLinkService.getLinkToken();
-    return "done";
+    return bankLinkService.getLinkToken();
   }
 }

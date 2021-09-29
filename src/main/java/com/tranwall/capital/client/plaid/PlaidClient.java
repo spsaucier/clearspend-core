@@ -22,6 +22,8 @@ import retrofit2.Response;
 @Data
 @Slf4j
 public class PlaidClient {
+  public static final String PLAID_CLIENT_NAME = "Tranwall";
+  public static final String LANGUAGE = "en";
   private PlaidApi plaidClient;
   @NonNull private PlaidProperties plaidProperties;
 
@@ -49,17 +51,24 @@ public class PlaidClient {
     plaidClient = apiClient.createService(PlaidApi.class);
   }
 
-  public void createLinkToken() throws IOException {
+  public String createLinkToken() throws IOException {
+    // TODO: User ID instead of random UUID
     LinkTokenCreateRequest request =
         new LinkTokenCreateRequest()
-            .clientName("Tranwall")
-            .language("en")
+            .clientName(PLAID_CLIENT_NAME)
+            .language(LANGUAGE)
             .countryCodes(Collections.singletonList(CountryCode.US))
             .products(Collections.singletonList(Products.TRANSACTIONS))
             .user(new LinkTokenCreateRequestUser().clientUserId(UUID.randomUUID().toString()));
     Response<LinkTokenCreateResponse> response = plaidClient.linkTokenCreate(request).execute();
-    log.info("{}", response.code());
-    log.info("{}", response.body());
-    log.info("{}", response.errorBody() != null ? response.errorBody().string() : "");
+    log.debug("{}", response.code());
+    log.debug("{}", response.body());
+    log.debug("{}", response.errorBody() != null ? response.errorBody().string() : "");
+
+    if (response.body() == null) {
+      throw new RuntimeException("No response body from Plaid");
+    }
+
+    return response.body().getLinkToken();
   }
 }
