@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BankLinkController {
   @NonNull private BankLinkService bankLinkService;
 
-  @GetMapping("/bankLink")
+  @GetMapping("/bank-link")
   private String linkBank() throws IOException {
     bankLinkService.getLinkToken();
     return "done";
