@@ -5,18 +5,10 @@ import com.tranwall.common.data.model.Mutable;
 import com.tranwall.common.masking.annotation.Sensitive;
 import com.tranwall.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.crypto.data.model.embedded.RequiredEncryptedString;
-import com.tranwall.data.model.enums.BusinessOwnerStatus;
-import com.tranwall.data.model.enums.BusinessOwnerType;
-import com.tranwall.data.model.enums.Country;
-import com.tranwall.data.model.enums.KnowYourCustomerStatus;
-import com.tranwall.data.model.enums.RelationshipToBusiness;
-import java.time.LocalDate;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,24 +32,15 @@ public class Employee extends Mutable {
   @Column(updatable = false)
   private UUID businessId;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString firstName;
+  @Sensitive @Embedded private NullableEncryptedString firstName;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString lastName;
+  @Sensitive @Embedded private NullableEncryptedString lastName;
 
-  @Embedded
-  private Address address;
+  @Embedded private Address address;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString email;
+  @Sensitive @Embedded private RequiredEncryptedString email;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString phone;
+  @Sensitive @Embedded private RequiredEncryptedString phone;
 
   // link to FusionAuth
   private String subjectRef;

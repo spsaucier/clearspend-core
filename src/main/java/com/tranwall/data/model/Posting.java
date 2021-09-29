@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sun.istack.NotNull;
 import com.tranwall.common.data.model.Amount;
 import com.tranwall.common.data.model.Mutable;
-import com.tranwall.data.model.enums.Currency;
-import com.tranwall.data.model.enums.LedgerAccountType;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import javax.persistence.CascadeType;
@@ -41,9 +39,7 @@ public class Posting extends Mutable {
   @NotNull
   private JournalEntry journalEntry;
 
-  @NonNull
-  @Embedded
-  private Amount amount;
+  @NonNull @Embedded private Amount amount;
 
   private OffsetDateTime effectiveDate;
 }

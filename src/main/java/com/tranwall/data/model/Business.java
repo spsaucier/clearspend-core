@@ -8,7 +8,6 @@ import com.tranwall.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.data.model.enums.BusinessStatus;
 import com.tranwall.data.model.enums.KnowYourBusinessStatus;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -29,24 +28,15 @@ import org.hibernate.annotations.DynamicUpdate;
 @DynamicUpdate
 @Slf4j
 public class Business extends Mutable {
-  @NonNull
-  private String legalName;
+  @NonNull private String legalName;
 
-  @Embedded
-  @NonNull
-  private Address address;
+  @Embedded @NonNull private Address address;
 
-  @Sensitive
-  @NonNull
-  private String employerIdentificationNumber;
+  @Sensitive @NonNull private String employerIdentificationNumber;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString email;
+  @Sensitive @Embedded private NullableEncryptedString email;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString phone;
+  @Sensitive @Embedded private NullableEncryptedString phone;
 
   private LocalDate formationDate;
 

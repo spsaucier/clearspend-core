@@ -1,15 +1,12 @@
 package com.tranwall.data.model;
 
-import com.tranwall.common.data.model.Amount;
 import com.tranwall.common.data.model.Mutable;
-import com.tranwall.data.model.enums.HoldStatus;
-import java.time.OffsetDateTime;
+import com.tranwall.common.masking.annotation.Sensitive;
+import com.tranwall.crypto.data.model.embedded.NullableEncryptedString;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,18 +23,14 @@ import org.hibernate.annotations.DynamicUpdate;
 @AllArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Hold extends Mutable {
+public class BusinessBankAccount extends Mutable {
 
   @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "account")
+  @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
-  private UUID accountId;
+  private UUID businessId;
 
-  @NonNull
-  @Enumerated(EnumType.STRING)
-  private HoldStatus status;
+  @Sensitive @Embedded private NullableEncryptedString routingNumber;
 
-  @NonNull @Embedded private Amount amount;
-
-  private OffsetDateTime expirationDate;
+  @Sensitive @Embedded private NullableEncryptedString accountNumber;
 }

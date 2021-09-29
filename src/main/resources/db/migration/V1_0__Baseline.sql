@@ -146,6 +146,18 @@ create table if not exists business_owner
     constraint fk_business foreign key (business_id) references business (id)
 );
 
+create table if not exists business_bank_account
+(
+    id                       uuid                        not null primary key,
+    created                  timestamp without time zone not null,
+    updated                  timestamp without time zone not null,
+    version                  bigint                      not null,
+    business_id              uuid                        not null,
+    routing_number_encrypted varchar(100)                not null,
+    account_number_encrypted varchar(100)                not null,
+    constraint fk_business foreign key (business_id) references business (id)
+);
+
 create table if not exists employee
 (
     id                             uuid                        not null primary key,
@@ -341,20 +353,20 @@ values ('82a79d15-9e47-421b-ab8f-78532f4f8bc7', now(), now(), 1, 'Tranwall', '',
 insert into ledger_account (id, created, updated, version, type, currency)
 values ('b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1', now(), now(), 1, 'BUSINESS', 'USD');
 insert into account (id, created, updated, version, program_id, business_id, type, owner_id,
-                     currency, ledger_balance, ledger_account_id)
+                     ledger_balance_currency, ledger_balance_amount, ledger_account_id)
 values ('334b6925-7621-4e72-99ec-f3877587437d', now(), now(), 1,
         '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'BUSINESS',
         '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'USD', 100, 'b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1');
 
 insert into allocation (id, created, updated, version, program_id, business_id,
-                        parent_allocation_id, ancestor_allocation_id, name)
+                        parent_allocation_id, ancestor_allocation_ids, name)
 values ('9f3356de-6e2f-4221-af39-cf7063645b92', now(), now(), 1,
         '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', null, null,
         'Tranwall Test Allocation');
 insert into ledger_account (id, created, updated, version, type, currency)
 values ('29a443b9-fb41-4d80-b2ea-7a9dd87be061', now(), now(), 1, 'BUSINESS', 'USD');
 insert into account (id, created, updated, version, program_id, business_id, type, owner_id,
-                     currency, ledger_balance, ledger_account_id)
+                     ledger_balance_currency, ledger_balance_amount, ledger_account_id)
 values ('bb4652e8-064e-4818-aca3-6d871e749980', now(), now(), 1,
         '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7',
         'ALLOCATION', '9f3356de-6e2f-4221-af39-cf7063645b92', 'USD', 100,

@@ -21,9 +21,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @Slf4j
 public class LedgerAccount extends Mutable {
 
-  @NonNull
-  private LedgerAccountType type;
+  @NonNull private LedgerAccountType type;
 
-  @NonNull
-  private Currency currency;
+  @NonNull private Currency currency;
 }

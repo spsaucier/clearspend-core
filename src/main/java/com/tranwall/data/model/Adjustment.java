@@ -2,7 +2,6 @@ package com.tranwall.data.model;
 
 import com.tranwall.common.data.model.Amount;
 import com.tranwall.common.data.model.Mutable;
-import com.tranwall.data.model.enums.AccountType;
 import com.tranwall.data.model.enums.AdjustmentType;
 import java.time.OffsetDateTime;
 import java.util.UUID;

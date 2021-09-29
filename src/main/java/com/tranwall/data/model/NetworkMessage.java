@@ -47,14 +47,11 @@ public class NetworkMessage extends Mutable {
   @Column(updatable = false)
   private UUID adjustmentId;
 
-  @Embedded
-  private NullableEncryptedString cardNumber;
+  @Embedded private NullableEncryptedString cardNumber;
 
   @NonNull
   @Column(updatable = false)
   private UUID networkMessageGroupId;
 
-  @Embedded
-  @NonNull
-  private Amount amount;
+  @Embedded @NonNull private Amount amount;
 }

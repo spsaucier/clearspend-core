@@ -19,6 +19,5 @@ import org.hibernate.annotations.DynamicUpdate;
 @Slf4j
 public class Bin extends Mutable {
 
-  @NonNull
-  private String bin;
+  @NonNull private String bin;
 }

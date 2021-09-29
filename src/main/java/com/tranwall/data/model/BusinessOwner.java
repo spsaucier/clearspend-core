@@ -1,17 +1,13 @@
 package com.tranwall.data.model;
 
-import com.sun.istack.NotNull;
 import com.tranwall.common.data.model.Address;
 import com.tranwall.common.data.model.Mutable;
 import com.tranwall.common.masking.annotation.Sensitive;
 import com.tranwall.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.crypto.data.model.embedded.RequiredEncryptedString;
-import com.tranwall.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.data.model.enums.BusinessOwnerStatus;
 import com.tranwall.data.model.enums.BusinessOwnerType;
-import com.tranwall.data.model.enums.BusinessStatus;
 import com.tranwall.data.model.enums.Country;
-import com.tranwall.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.data.model.enums.KnowYourCustomerStatus;
 import com.tranwall.data.model.enums.RelationshipToBusiness;
 import java.time.LocalDate;
@@ -48,36 +44,23 @@ public class BusinessOwner extends Mutable {
   @Enumerated(EnumType.STRING)
   private BusinessOwnerType type;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString firstName;
+  @Sensitive @Embedded private NullableEncryptedString firstName;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString lastName;
+  @Sensitive @Embedded private NullableEncryptedString lastName;
 
   @NonNull
   @Enumerated(EnumType.STRING)
   private RelationshipToBusiness relationshipToBusiness;
 
-  @Embedded
-  private Address address;
+  @Embedded private Address address;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString taxIdentificationNumber;
+  @Sensitive @Embedded private RequiredEncryptedString taxIdentificationNumber;
 
-  @Sensitive
-  @NonNull
-  private String employerIdentificationNumber;
+  @Sensitive @NonNull private String employerIdentificationNumber;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString email;
+  @Sensitive @Embedded private RequiredEncryptedString email;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString phone;
+  @Sensitive @Embedded private RequiredEncryptedString phone;
 
   private LocalDate dateOfBirth;
 

@@ -1,15 +1,9 @@
 package com.tranwall.data.model;
 
-import com.tranwall.common.data.model.Amount;
 import com.tranwall.common.data.model.Mutable;
-import com.tranwall.data.model.enums.AdjustmentType;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.AllArgsConstructor;
 import lombok.Data;

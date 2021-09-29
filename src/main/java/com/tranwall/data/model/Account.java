@@ -3,7 +3,6 @@ package com.tranwall.data.model;
 import com.tranwall.common.data.model.Amount;
 import com.tranwall.common.data.model.Mutable;
 import com.tranwall.data.model.enums.AccountType;
-import com.tranwall.data.model.enums.KnowYourCustomerStatus;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
