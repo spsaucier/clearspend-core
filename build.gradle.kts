@@ -3,6 +3,7 @@ plugins {
     id("org.springframework.boot") version "2.5.4"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("org.flywaydb.flyway") version "8.0.0-beta1"
+    id("com.google.cloud.tools.jib") version "3.1.4"
 }
 
 group = "com.example"
@@ -15,6 +16,11 @@ repositories {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+jib {
+    from.image = "openjdk:17-jdk-alpine3.13"
+    to.image = "capital/core"
 }
 
 tasks {

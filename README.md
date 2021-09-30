@@ -1,4 +1,4 @@
 #To get started
 `./gradlew build`
 
-`docker compose up --build`
+`docker compose --profile full up`

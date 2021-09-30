@@ -4,9 +4,10 @@ plaid:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:6432/capital
+    url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
-    password: local
+    password: docker
+
 tranwall:
   encryption:
     key:
