@@ -1,6 +1,6 @@
-package com.tranwall.capital.clients.i2c.util;
+package com.tranwall.capital.client.i2c.util;
 
-import com.tranwall.capital.clients.i2c.CardStatusCode;
+import com.tranwall.capital.client.i2c.CardStatusCode;
 
 import java.util.function.Function;
 

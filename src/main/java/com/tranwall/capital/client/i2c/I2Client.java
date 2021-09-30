@@ -1,7 +1,7 @@
-package com.tranwall.capital.clients.i2c;
+package com.tranwall.capital.client.i2c;
 
-import com.tranwall.capital.clients.i2c.request.GetCardStatusRequestRoot;
-import com.tranwall.capital.clients.i2c.response.GetCardStatusResponseRoot;
+import com.tranwall.capital.client.i2c.request.GetCardStatusRequestRoot;
+import com.tranwall.capital.client.i2c.response.GetCardStatusResponseRoot;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,5 +12,5 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public interface I2Client {
 
     @RequestMapping(method = RequestMethod.POST, value = "getCardStatus", produces = MediaType.APPLICATION_JSON_VALUE)
-    GetCardStatusResponseRoot getCardStatusResponse(@RequestBody GetCardStatusRequestRoot request);
+	GetCardStatusResponseRoot getCardStatusResponse(@RequestBody GetCardStatusRequestRoot request);
 }

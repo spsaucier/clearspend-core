@@ -1,4 +1,4 @@
-package com.tranwall.capital.clients.i2c.request;
+package com.tranwall.capital.client.i2c.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
