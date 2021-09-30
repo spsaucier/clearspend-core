@@ -1,6 +1,6 @@
-package com.tranwall.capital.clients.i2c;
+package com.tranwall.capital.client.i2c;
 
-import com.tranwall.capital.clients.i2c.util.I2CEnumSerializable;
+import com.tranwall.capital.client.i2c.util.I2CEnumSerializable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
