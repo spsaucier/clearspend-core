@@ -1,11 +1,10 @@
-version: '2'
+version: '3.9'
 
 services:
   app:
-    image: 'capital:latest'
-    build:
-      context: .
+    image: 'capital/core:latest'
     container_name: app
+    profiles: ["full"]
     depends_on:
       - db
     environment:
