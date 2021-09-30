@@ -1,0 +1,254 @@
+package com.tranwall.capital.crypto;
+
+import static java.lang.Byte.parseByte;
+
+import com.tranwall.capital.crypto.data.model.Key;
+import com.tranwall.capital.crypto.data.repository.KeyRepository;
+import com.tranwall.capital.crypto.utils.VarInt;
+import java.nio.ByteBuffer;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.util.Strings;
+import org.bouncycastle.util.encoders.Base64;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
+
+@Component
+@Slf4j
+public class Crypto {
+  static String envPrefix = "tranwall.encryption.key.aes.";
+  private static final int maxKeys = 1000;
+  private static final String keyDelimiter = "\\|";
+  private final HashMap<String, String> replacementKeys = new HashMap<>();
+  private final HashMap<Integer, byte[]> keyMap = new HashMap<>();
+
+  byte[] currentKey;
+  int currentKeyRef;
+  private final byte aesFormatVersion = parseByte("0");
+  public static final String AES_CFB_NO_PADDING = "AES/CFB/NoPadding";
+  public static final String SHA_1_PRNG = "SHA1PRNG";
+  public static final String HMAC_SHA_512 = "HmacSHA512";
+  public static final String AES = "AES";
+  private SecureRandom random;
+  private int ivLength = 0;
+
+  @Autowired
+  public Crypto(Environment env, KeyRepository keyRepository) {
+    try {
+      Cipher cipher = Cipher.getInstance(AES_CFB_NO_PADDING);
+      ivLength = cipher.getBlockSize();
+      random = SecureRandom.getInstance(SHA_1_PRNG);
+    } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
+      log.error("Weak security. Bailing because SHA-256 is not available");
+      System.exit(-1);
+    }
+
+    // load existing keys
+    // variables used to load the keys
+    int nextKeyRef = 0;
+    HashMap<byte[], Integer> existingKeys = new HashMap<>();
+    for (Key key : keyRepository.findAll()) {
+      existingKeys.put(key.getKeyHash(), key.getKeyRef());
+      if (nextKeyRef < key.getKeyRef()) {
+        nextKeyRef = key.getKeyRef() + 1;
+      }
+    }
+
+    // read all the environment
+    // first the "current" key
+    String currentKeyString = env.getProperty(envPrefix + "current");
+    Assert.isTrue(Strings.isNotBlank(currentKeyString), "current aes key is null or empty");
+    currentKey = Base64.decode(currentKeyString);
+
+    // then numbered keys
+    record EnvironmentKey (byte[] key, String name) {}
+    ArrayList<EnvironmentKey> environmentKeys = new ArrayList<>();
+    Loop:
+    for (int i = 0; i < maxKeys; i++) {
+      String envString = env.getProperty(envPrefix + i);
+      Assert.isTrue(StringUtils.isNotBlank(envString), "invalid key: " + i);
+
+      String[] envParts = envString.split(keyDelimiter);
+      switch (envParts.length) {
+        case 2:
+          // if we have 2 keys add to the list of replacement keys, they fall through to the single
+          // key case
+          replacementKeys.put(envParts[0], envParts[1]);
+        case 1:
+          // add either one or two keys
+          for (String keyString : envParts) {
+            byte[] key = Base64.decode(keyString);
+            EnvironmentKey environmentKey = new EnvironmentKey(key, String.valueOf(i));
+
+            if (environmentKeys.contains(environmentKey)) {
+              throw new RuntimeException("Duplicate key " + i);
+            }
+            environmentKeys.add(environmentKey);
+
+            if (Arrays.equals(currentKey, key)) {
+              // the current index key matches the current key
+              break Loop;
+            }
+          }
+          break;
+        default:
+          // we have an invalid number of keys for this envrionment variable
+          throw new RuntimeException("Invalid key found for " + i);
+      }
+    }
+    // finally "next" key
+    String nextKeyString = env.getProperty(envPrefix + "next");
+    org.springframework.util.Assert.isTrue(
+        Strings.isNotBlank(nextKeyString), "next aes key is null or empty");
+    byte[] nextKey = Base64.decode(nextKeyString);
+    environmentKeys.add(new EnvironmentKey(nextKey, "next"));
+
+    // at a minimum we should have 2 keys, the "current" and  the "next" keys
+    org.springframework.util.Assert.isTrue(
+        environmentKeys.size() >= 2, "invalid environment size: " + environmentKeys.size());
+
+    // and create any missing key records as needed
+    for (EnvironmentKey entry : environmentKeys) {
+      byte[] keyHash = HashUtil.calculateHash(entry.key);
+      Integer keyRef = existingKeys.get(keyHash);
+      if (keyRef == null) {
+        Key key = new Key(nextKeyRef++, keyHash);
+        keyRepository.save(key);
+        existingKeys.put(key.getKeyHash(), key.getKeyRef());
+      }
+      keyMap.put(keyRef, entry.key);
+    }
+  }
+
+  public byte[] encrypt(String clearText) {
+    if (clearText == null || clearText.length() == 0) {
+      return null;
+    }
+
+    return encrypt(clearText.getBytes());
+  }
+
+  public byte[] encrypt(byte[] clearText) {
+    if (clearText == null || clearText.length == 0) {
+      return null;
+    }
+
+    // create IV
+    byte[] iv = new byte[ivLength];
+    random.nextBytes(iv);
+
+    // create key spec
+    IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+    SecretKeySpec secretKeySpec = new SecretKeySpec(currentKey, AES);
+
+    // create cipher for encryption
+    Cipher cipher;
+    try {
+      cipher = Cipher.getInstance(AES_CFB_NO_PADDING);
+      cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
+    } catch (InvalidAlgorithmParameterException
+        | NoSuchPaddingException
+        | NoSuchAlgorithmException
+        | InvalidKeyException e) {
+      log.error("failed to encrypt bytes: {}", Arrays.toString(clearText));
+      throw new RuntimeException(e);
+    }
+
+    // determine result size
+    int outputSize = cipher.getOutputSize(clearText.length);
+
+    int keyRefSize = VarInt.varIntSize(currentKeyRef);
+    // create byte[] to hold the format (1 byte), the IV (16 bytes) and the encrypted bytes
+    ByteBuffer buffer = ByteBuffer.allocate(1 + keyRefSize + iv.length + outputSize);
+
+    // the format being used
+    buffer.put(aesFormatVersion);
+
+    // write the keyRef
+    VarInt.putVarInt(currentKeyRef, buffer);
+
+    // the IV
+    buffer.put(iv);
+
+    // finally, the encrypted bytes
+    try {
+      buffer.put(cipher.doFinal(clearText));
+    } catch (IllegalBlockSizeException | BadPaddingException e) {
+      log.error("failed to encrypt bytes: {}", Arrays.toString(clearText));
+      throw new RuntimeException(e);
+    }
+
+    return buffer.array();
+  }
+
+  public byte[] decrypt(byte[] cipherText) {
+    if (cipherText == null) {
+      return null;
+    }
+
+    if (cipherText.length == 0) {
+      String message =
+          String.format(
+              "invalid cipherText length, expected at least %d bytes got 0", 1 + ivLength + 1);
+      log.error(message);
+      throw new RuntimeException(message);
+    }
+
+    // wrap cipherText so we can read parts of it
+    ByteBuffer buffer = ByteBuffer.wrap(cipherText);
+
+    if (buffer.get() != aesFormatVersion) {
+      String message =
+          String.format(
+              "invalid cipherText format, expected %02X got %02X", aesFormatVersion, cipherText[0]);
+      log.error(message);
+      throw new RuntimeException(message);
+    }
+
+    // look up the key that was used to encrypt this data
+    int encKeyRef = VarInt.getVarInt(buffer);
+
+    Assert.isTrue(
+        keyMap.containsKey(encKeyRef),
+        String.format("key not found for keyRef %d", encKeyRef));
+
+    byte[] key = keyMap.get(encKeyRef);
+
+    byte[] iv = new byte[ivLength];
+    buffer.get(iv);
+
+    // create key spec
+    IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+    SecretKeySpec secretKeySpec = new SecretKeySpec(key, AES);
+
+    try {
+      // create cipher for decryption
+      Cipher cipher = Cipher.getInstance(AES_CFB_NO_PADDING);
+      cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+
+      ByteBuffer slice = buffer.slice();
+      byte[] encryptedBytes = new byte[slice.capacity()];
+      slice.get(encryptedBytes);
+
+      return cipher.doFinal(encryptedBytes);
+    } catch (Exception e) {
+      log.error("failed to decrypt bytes: {}", Arrays.toString(cipherText));
+      throw new RuntimeException(e);
+    }
+  }
+}

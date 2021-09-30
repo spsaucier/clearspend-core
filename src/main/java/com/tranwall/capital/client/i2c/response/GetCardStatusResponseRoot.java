@@ -8,6 +8,6 @@ import lombok.Value;
 @Builder
 public class GetCardStatusResponseRoot {
 
-    @JsonProperty("getCardStatusResponse")
-    private final GetCardStatusResponse response;
+  @JsonProperty("getCardStatusResponse")
+  private final GetCardStatusResponse response;
 }
