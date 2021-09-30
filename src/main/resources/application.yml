@@ -1,5 +1,6 @@
 plaid:
   clientId: 6148efa64491e20011af5b75
+  secret:
   environment: SANDBOX
 
 spring:
@@ -7,6 +8,18 @@ spring:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: docker
+  jpa:
+    open-in-view: false
+    hibernate:
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
+    properties:
+      hibernate:
+        show_sql: false
+        use_sql_comments: false
+        format_sql: true
+  flyway:
+    clean-on-validation-error: true
 
 tranwall:
   encryption:

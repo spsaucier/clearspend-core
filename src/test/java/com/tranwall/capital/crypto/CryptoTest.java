@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.io.BaseEncoding;
+import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.crypto.data.model.Key;
 import com.tranwall.capital.crypto.data.repository.KeyRepository;
 import java.util.Collections;
@@ -17,11 +18,10 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@SpringBootTest
+@CapitalTest
 @Slf4j
 public class CryptoTest {
   @Mock KeyRepository keyRepository;
@@ -233,6 +233,7 @@ public class CryptoTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testCrypto_previousData() {
     byte[] key = HashUtil.generateKey();
 

@@ -12,20 +12,18 @@ import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.CardRepository;
 import java.util.UUID;
 import javax.transaction.Transactional;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor(onConstructor = @__({@Autowired}))
+@RequiredArgsConstructor
 @Slf4j
 public class CardService {
 
-  @NonNull private final CardRepository cardRepository;
+  private final CardRepository cardRepository;
 
-  private AccountService accountService;
+  private final AccountService accountService;
 
   private I2Client i2Client;
 
@@ -42,15 +40,14 @@ public class CardService {
     AddCardResponseRoot response =
         i2Client.addCard(new AddCardRequestRoot(AddCardRequest.builder().build()));
 
-    Card card =
-        new Card(
-            businessId,
-            allocationId,
-            userId,
-            bin,
-            programId,
-            null,
-            response.getResponse().getReferenceId());
+    Card card = Card.builder()
+        .businessId(businessId)
+        .allocationId(allocationId)
+        .userId(userId)
+        .bin(bin)
+        .accountId(null)
+        .i2cCardRef(response.getResponse().getReferenceId())
+        .build();
 
     if (fundingType == FundingType.INDIVIDUAL) {
       Account account =

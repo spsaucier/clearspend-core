@@ -4,14 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.Version;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.ReadOnlyProperty;
+import org.hibernate.annotations.GenericGenerator;
 
 @Getter
 @Setter
@@ -19,17 +20,26 @@ import org.springframework.data.annotation.ReadOnlyProperty;
 @NoArgsConstructor
 public class Immutable {
 
-  @Id private UUID id = UUID.randomUUID();
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @GenericGenerator(
+      name = "UUID",
+      strategy = "org.hibernate.id.UUIDGenerator"
+  )
+  private UUID id;
 
-  // Null when new so that SimpleJpaRepository::save does an insert (EntityManager::persist) without
-  // a select statement (EntityManager::merge) when saving new entities
   @Column(nullable = false, updatable = false)
-  @Version
-  @ReadOnlyProperty
-  private Long version;
-
-  @Column(nullable = false, updatable = false)
-  @CreatedDate
   @JsonIgnore
-  private OffsetDateTime created = OffsetDateTime.now();
+  private OffsetDateTime created;
+
+  @PrePersist
+  private void prePersist() {
+    setCreated(OffsetDateTime.now());
+  }
+
+  @PreUpdate
+  private void preUpdate() {
+    throw new UnsupportedOperationException(
+        String.format("Immutable object %s cannot be updated in db", this.getClass().getName()));
+  }
 }

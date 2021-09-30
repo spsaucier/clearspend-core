@@ -16,7 +16,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,11 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessService {
 
-  @NonNull private final BusinessRepository businessRepository;
-  @NonNull private final ProgramRepository programRepository;
+  private final BusinessRepository businessRepository;
+  private final ProgramRepository programRepository;
 
-  @NonNull private final AllocationService allocationService;
-  @NonNull private final AccountService accountService;
+  private final AllocationService allocationService;
+  private final AccountService accountService;
 
   @Transactional
   Business createBusiness(
@@ -44,16 +43,17 @@ public class BusinessService {
       List<UUID> programIds) {
     Business business =
         businessRepository.save(
-            new Business(
-                legalName,
-                address,
-                employerIdentificationNumber,
-                new NullableEncryptedString(email),
-                new NullableEncryptedString(phone),
-                formationDate,
-                BusinessOnboardingStep.COMPLETE,
-                KnowYourBusinessStatus.PENDING,
-                BusinessStatus.ONBOARDING));
+            Business.builder()
+                .legalName(legalName)
+                .address(address)
+                .employerIdentificationNumber(employerIdentificationNumber)
+                .email(new NullableEncryptedString(email))
+                .phone(new NullableEncryptedString(phone))
+                .formationDate(formationDate)
+                .onboardingStep(BusinessOnboardingStep.COMPLETE)
+                .knowYourBusinessStatus(KnowYourBusinessStatus.PENDING)
+                .status(BusinessStatus.ONBOARDING)
+                .build());
 
     accountService.createAccount(
         business.getId(), AccountType.BUSINESS, business.getId(), Currency.USD);

@@ -5,6 +5,7 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LedgerAccountType;
 import javax.persistence.Entity;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,7 @@ import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Data
+@Builder
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor

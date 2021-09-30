@@ -9,7 +9,6 @@ import com.tranwall.capital.data.repository.AccountRepository;
 import java.math.BigDecimal;
 import java.util.UUID;
 import javax.transaction.Transactional;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +18,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AccountService {
 
-  @NonNull private final AccountRepository accountRepository;
+  private final AccountRepository accountRepository;
 
-  @NonNull private final LedgerService ledgerService;
+  private final LedgerService ledgerService;
 
   @Transactional
   public Account createAccount(UUID businessId, AccountType type, UUID ownerId, Currency currency) {

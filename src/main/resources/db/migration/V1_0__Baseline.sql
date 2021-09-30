@@ -104,7 +104,7 @@ create table if not exists business
     address_country                varchar(3),
     employer_identification_number varchar(9)                  not null,
     business_email_encrypted       bytea,
-    business_phone_encrypted       varchar(20),
+    business_phone_encrypted       bytea,
     formation_date                 date,
     -- EDD (enhanced due diligence) will result in articles of incorporation and board/shareholder information uploaded directly to Alloy
     -- ..., complete (terminal)

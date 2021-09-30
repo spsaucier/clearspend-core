@@ -10,7 +10,6 @@ import com.tranwall.capital.data.repository.UserRepository;
 import io.micrometer.core.instrument.util.StringUtils;
 import java.util.UUID;
 import javax.transaction.Transactional;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,9 +19,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UserService {
 
-  @NonNull private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-  @NonNull private final FusionAuthClient fusionAuthClient;
+  private final FusionAuthClient fusionAuthClient;
 
   @Transactional
   public User createUser(
@@ -34,16 +33,16 @@ public class UserService {
       String email,
       String phone,
       String password) {
-    User user =
-        new User(
-            businessId,
-            type,
-            new NullableEncryptedString(firstName),
-            new NullableEncryptedString(lastName),
-            address,
-            new RequiredEncryptedString(email),
-            new RequiredEncryptedString(phone),
-            null);
+    User user = User.builder()
+        .businessId(businessId)
+        .type(type)
+        .firstName(new NullableEncryptedString(firstName))
+        .lastName(new NullableEncryptedString(lastName))
+        .address(address)
+        .email(new RequiredEncryptedString(email))
+        .phone(new RequiredEncryptedString(phone))
+        .subjectRef(null)
+        .build();
 
     if (StringUtils.isNotBlank(password)) {
       user.setSubjectRef(fusionAuthClient.createUser(businessId, user.getId(), email, password));
