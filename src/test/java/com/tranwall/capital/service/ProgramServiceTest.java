@@ -2,7 +2,9 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.data.model.Bin;
+import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.repository.ProgramRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,8 @@ class ProgramServiceTest {
 
   @Autowired private ProgramService programService;
   @Autowired private ServiceHelper serviceHelper;
+
+  @Autowired private ProgramRepository programRepository;
 
   private Bin bin;
 
@@ -24,6 +28,7 @@ class ProgramServiceTest {
 
   @Test
   void createProgram() {
-    programService.createProgram("", bin.getBin(), FundingType.POOLED);
+    Program program = programService.createProgram("", bin.getBin(), FundingType.POOLED);
+    Program foundProgram = programRepository.findById(program.getId()).orElseThrow();
   }
 }

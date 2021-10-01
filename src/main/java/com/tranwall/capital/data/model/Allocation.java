@@ -7,21 +7,19 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Transient;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Data
-@Builder
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@AllArgsConstructor
+@RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
 public class Allocation extends Mutable {
@@ -40,7 +38,6 @@ public class Allocation extends Mutable {
   @Column(updatable = false)
   private UUID parentAllocationId;
 
-  @Transient
   private List<UUID> ancestorAllocationIds;
 
   @NonNull private String name;

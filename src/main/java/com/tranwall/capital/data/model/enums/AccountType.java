@@ -5,7 +5,7 @@ public enum AccountType {
   ALLOCATION(LedgerAccountType.ALLOCATION),
   CARD(LedgerAccountType.CARD);
 
-  private LedgerAccountType ledgerAccountType;
+  private final LedgerAccountType ledgerAccountType;
 
   AccountType(LedgerAccountType ledgerAccountType) {
     this.ledgerAccountType = ledgerAccountType;

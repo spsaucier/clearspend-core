@@ -1,6 +1,9 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
+import com.tranwall.capital.data.model.enums.AccountType;
+import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -14,13 +17,23 @@ public class AllocationService {
 
   private final AllocationRepository allocationRepository;
 
-  public Allocation createAllocation(
-      UUID programId, UUID businessId, UUID parentAllocationId, String name) {
-    Allocation allocation = new Allocation(programId, businessId, parentAllocationId, null, name);
+  private final AccountService accountService;
+
+  public record AllocationRecord(Allocation allocation, Account acccount) {}
+
+  public AllocationRecord createAllocation(
+      UUID programId, UUID businessId, UUID parentAllocationId, String name, Currency currency) {
+    Allocation allocation = new Allocation(programId, businessId, name);
 
     if (parentAllocationId != null) {
-      Allocation parent = allocationRepository.findById(parentAllocationId)
-          .orElseThrow(() -> new IllegalArgumentException("Parent allocation not found: " + parentAllocationId));
+      allocation.setParentAllocationId(parentAllocationId);
+      Allocation parent =
+          allocationRepository
+              .findById(parentAllocationId)
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Parent allocation not found: " + parentAllocationId));
 
       if (parent.getBusinessId().equals(businessId)) {
         throw new IllegalArgumentException(
@@ -31,8 +44,11 @@ public class AllocationService {
           allocationRepository.retrieveAncestorAllocationIds(parentAllocationId));
     }
 
-    // FIXME(kuchlein): need to create allocation account
+    allocation = allocationRepository.save(allocation);
+    Account account =
+        accountService.createAccount(
+            businessId, AccountType.ALLOCATION, allocation.getId(), currency);
 
-    return allocationRepository.save(allocation);
+    return new AllocationRecord(allocation, account);
   }
 }

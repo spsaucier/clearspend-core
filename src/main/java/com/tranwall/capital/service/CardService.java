@@ -40,14 +40,14 @@ public class CardService {
     AddCardResponseRoot response =
         i2Client.addCard(new AddCardRequestRoot(AddCardRequest.builder().build()));
 
-    Card card = Card.builder()
-        .businessId(businessId)
-        .allocationId(allocationId)
-        .userId(userId)
-        .bin(bin)
-        .accountId(null)
-        .i2cCardRef(response.getResponse().getReferenceId())
-        .build();
+    Card card =
+        new Card(
+            businessId,
+            allocationId,
+            userId,
+            bin,
+            programId);
+    card.setI2cCardRef(response.getResponse().getReferenceId());
 
     if (fundingType == FundingType.INDIVIDUAL) {
       Account account =

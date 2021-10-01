@@ -33,16 +33,15 @@ public class UserService {
       String email,
       String phone,
       String password) {
-    User user = User.builder()
-        .businessId(businessId)
-        .type(type)
-        .firstName(new NullableEncryptedString(firstName))
-        .lastName(new NullableEncryptedString(lastName))
-        .address(address)
-        .email(new RequiredEncryptedString(email))
-        .phone(new RequiredEncryptedString(phone))
-        .subjectRef(null)
-        .build();
+    User user =
+        new User(
+            businessId,
+            type,
+            new RequiredEncryptedString(email),
+            new RequiredEncryptedString(phone));
+    user.setFirstName(new NullableEncryptedString(firstName));
+    user.setLastName(new NullableEncryptedString(lastName));
+    user.setAddress(address);
 
     if (StringUtils.isNotBlank(password)) {
       user.setSubjectRef(fusionAuthClient.createUser(businessId, user.getId(), email, password));

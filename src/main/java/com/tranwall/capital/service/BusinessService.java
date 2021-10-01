@@ -2,7 +2,6 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
-import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
@@ -12,6 +11,7 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
+import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -40,23 +40,24 @@ public class BusinessService {
       String email,
       String phone,
       LocalDate formationDate,
-      List<UUID> programIds) {
+      List<UUID> programIds,
+      Currency currency) {
     Business business =
-        businessRepository.save(
-            Business.builder()
-                .legalName(legalName)
-                .address(address)
-                .employerIdentificationNumber(employerIdentificationNumber)
-                .email(new NullableEncryptedString(email))
-                .phone(new NullableEncryptedString(phone))
-                .formationDate(formationDate)
-                .onboardingStep(BusinessOnboardingStep.COMPLETE)
-                .knowYourBusinessStatus(KnowYourBusinessStatus.PENDING)
-                .status(BusinessStatus.ONBOARDING)
-                .build());
+        new Business(
+            legalName,
+            address,
+            employerIdentificationNumber,
+            BusinessOnboardingStep.COMPLETE,
+            KnowYourBusinessStatus.PENDING,
+            BusinessStatus.ONBOARDING);
+    business.setEmail(new NullableEncryptedString(email));
+    business.setPhone(new NullableEncryptedString(phone));
+    business.setFormationDate(formationDate);
+
+    business = businessRepository.save(business);
 
     accountService.createAccount(
-        business.getId(), AccountType.BUSINESS, business.getId(), Currency.USD);
+        business.getId(), AccountType.BUSINESS, business.getId(), currency);
 
     for (UUID programId : programIds) {
       Optional<Program> programOptional = programRepository.findById(programId);
@@ -64,15 +65,19 @@ public class BusinessService {
         throw new IllegalArgumentException("Program not found: " + programId);
       }
 
-      Allocation allocation =
+      AllocationRecord allocationRecord =
           allocationService.createAllocation(
               programId,
               business.getId(),
               null,
-              business.getLegalName() + " - " + programOptional.get().getName());
+              business.getLegalName() + " - " + programOptional.get().getName(),
+              currency);
 
       accountService.createAccount(
-          business.getId(), AccountType.ALLOCATION, allocation.getId(), Currency.USD);
+          business.getId(),
+          AccountType.ALLOCATION,
+          allocationRecord.acccount().getId(),
+          Currency.USD);
     }
 
     return business;

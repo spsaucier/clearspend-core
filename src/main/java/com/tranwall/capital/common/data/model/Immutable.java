@@ -20,13 +20,7 @@ import org.hibernate.annotations.GenericGenerator;
 @NoArgsConstructor
 public class Immutable {
 
-  @Id
-  @GeneratedValue(generator = "UUID")
-  @GenericGenerator(
-      name = "UUID",
-      strategy = "org.hibernate.id.UUIDGenerator"
-  )
-  private UUID id;
+  @Id private UUID id = UUID.randomUUID();
 
   @Column(nullable = false, updatable = false)
   @JsonIgnore

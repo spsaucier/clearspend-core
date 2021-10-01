@@ -22,13 +22,7 @@ import org.springframework.data.annotation.ReadOnlyProperty;
 @NoArgsConstructor
 public class Mutable {
 
-  @Id
-  @GeneratedValue(generator = "UUID")
-  @GenericGenerator(
-      name = "UUID",
-      strategy = "org.hibernate.id.UUIDGenerator"
-  )
-  private UUID id;
+  @Id private UUID id = UUID.randomUUID();
 
   @Version
   @ReadOnlyProperty

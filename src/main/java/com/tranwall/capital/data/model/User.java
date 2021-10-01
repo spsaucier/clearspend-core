@@ -14,21 +14,19 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Data
-@Builder
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@AllArgsConstructor
+@RequiredArgsConstructor
 @DynamicUpdate
 @Table(name = "users")
 @Slf4j
@@ -49,9 +47,9 @@ public class User extends Mutable {
 
   @Embedded private Address address;
 
-  @Sensitive @Embedded private RequiredEncryptedString email;
+  @Sensitive @Embedded @NonNull private RequiredEncryptedString email;
 
-  @Sensitive @Embedded private RequiredEncryptedString phone;
+  @Sensitive @Embedded @NonNull private RequiredEncryptedString phone;
 
   // link to FusionAuth
   private String subjectRef;
