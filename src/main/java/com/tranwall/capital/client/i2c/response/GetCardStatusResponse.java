@@ -13,10 +13,10 @@ import lombok.Value;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GetCardStatusResponse {
 
-    @JsonProperty("isBadPinTriesExceeded")
-    @JsonDeserialize(using = I2CBooleanDeserializer.class)
-    private boolean badPinTriesExceeded;
+  @JsonProperty("isBadPinTriesExceeded")
+  @JsonDeserialize(using = I2CBooleanDeserializer.class)
+  private boolean badPinTriesExceeded;
 
-    @JsonProperty("status")
-    private CardStatus status;
+  @JsonProperty("status")
+  private CardStatus status;
 }

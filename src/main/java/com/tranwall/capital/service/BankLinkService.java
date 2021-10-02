@@ -9,9 +9,13 @@ import org.springframework.stereotype.Service;
 @Service
 @Data
 public class BankLinkService {
-	@NonNull private PlaidClient plaidClient;
+  @NonNull private PlaidClient plaidService;
 
-	public String getLinkToken() throws IOException {
-		return plaidClient.createLinkToken();
-	}
+  public String getLinkToken() throws IOException {
+    return plaidService.createLinkToken();
+  }
+
+  public String getAccounts(String linkToken) throws IOException {
+    return plaidService.getAccounts(linkToken);
+  }
 }

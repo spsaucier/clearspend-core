@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @FeignClient(name = "i2client", url = "${feign.url.i2c}")
 public interface I2Client {
 
-    @RequestMapping(method = RequestMethod.POST, value = "getCardStatus", produces = MediaType.APPLICATION_JSON_VALUE)
-	GetCardStatusResponseRoot getCardStatusResponse(@RequestBody GetCardStatusRequestRoot request);
+  @RequestMapping(
+      method = RequestMethod.POST,
+      value = "getCardStatus",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  GetCardStatusResponseRoot getCardStatusResponse(@RequestBody GetCardStatusRequestRoot request);
 }

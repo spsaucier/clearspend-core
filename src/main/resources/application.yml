@@ -13,6 +13,8 @@ feign:
     i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
   okhttp:
     enabled: true
+
+logging.level.com.tranwall.capital: DEBUG
 ---
 
 #Docker profile

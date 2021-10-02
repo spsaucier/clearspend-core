@@ -10,10 +10,10 @@ import lombok.Value;
 @Builder
 public class CardStatus {
 
-    @JsonProperty("code")
-    @JsonDeserialize(using = CardStatusCodeDeserializer.class)
-    private CardStatusCode code;
+  @JsonProperty("code")
+  @JsonDeserialize(using = CardStatusCodeDeserializer.class)
+  private CardStatusCode code;
 
-    @JsonProperty("description")
-    private String description;
+  @JsonProperty("description")
+  private String description;
 }

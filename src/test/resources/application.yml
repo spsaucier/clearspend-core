@@ -2,9 +2,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  flyway:
+    enabled: false
 
 feign:
   url:
     i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
   okhttp:
     enabled: true
+
+plaid:
+  clientId: 6148efa64491e20011af5b75
+  environment: SANDBOX
