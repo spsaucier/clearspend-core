@@ -39,6 +39,7 @@ dependencies {
     implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
 
     annotationProcessor("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     implementation("com.plaid:plaid-java:9.0.0")
