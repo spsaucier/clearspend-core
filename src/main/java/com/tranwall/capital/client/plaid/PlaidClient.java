@@ -1,19 +1,12 @@
 package com.tranwall.capital.client.plaid;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.plaid.client.model.AccountsBalanceGetRequest;
-import com.plaid.client.model.AccountsGetResponse;
-import com.plaid.client.model.CountryCode;
-import com.plaid.client.model.ItemPublicTokenExchangeRequest;
-import com.plaid.client.model.ItemPublicTokenExchangeResponse;
-import com.plaid.client.model.LinkTokenCreateRequest;
-import com.plaid.client.model.LinkTokenCreateRequestUser;
-import com.plaid.client.model.LinkTokenCreateResponse;
-import com.plaid.client.model.Products;
+import com.plaid.client.model.*;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,17 +20,16 @@ public class PlaidClient {
   public static final String PLAID_CLIENT_NAME = "Tranwall";
   public static final String LANGUAGE = "en";
   @NonNull private PlaidApi plaidApi;
-  @NonNull private ObjectMapper objectMapper;
+  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {};
 
-  public String createLinkToken() throws IOException {
-    // TODO: User ID instead of random UUID
+  public String createLinkToken(UUID businessId) throws IOException {
     LinkTokenCreateRequest request =
         new LinkTokenCreateRequest()
             .clientName(PLAID_CLIENT_NAME)
             .language(LANGUAGE)
             .countryCodes(Collections.singletonList(CountryCode.US))
-            .products(Collections.singletonList(Products.TRANSACTIONS))
-            .user(new LinkTokenCreateRequestUser().clientUserId(UUID.randomUUID().toString()));
+            .products(Collections.singletonList(Products.AUTH))
+            .user(new LinkTokenCreateRequestUser().clientUserId(businessId.toString()));
     Response<LinkTokenCreateResponse> response = plaidApi.linkTokenCreate(request).execute();
     log.debug("{}", response.code());
     log.debug("{}", response.body());
@@ -50,9 +42,7 @@ public class PlaidClient {
     return response.body().getLinkToken();
   }
 
-  public String getAccounts(String linkToken) throws IOException {
-    // TODO: Check for already existing access token
-
+  public AccountsResponse getAccounts(String linkToken) throws IOException {
     Response<ItemPublicTokenExchangeResponse> response = exchangePublicToken(linkToken);
 
     if (!response.isSuccessful() || response.body() == null) {
@@ -61,19 +51,19 @@ public class PlaidClient {
       throw new RuntimeException(errorMessage);
     }
 
-    AccountsBalanceGetRequest accountsBalanceGetRequest =
-        new AccountsBalanceGetRequest().accessToken(response.body().getAccessToken());
-    Response<AccountsGetResponse> accountsGetResponse =
-        plaidApi.accountsBalanceGet(accountsBalanceGetRequest).execute();
-    log.debug("{}", accountsGetResponse.code());
-    log.debug("{}", accountsGetResponse.body());
+    AuthGetRequest authGetRequest =
+        new AuthGetRequest().accessToken(response.body().getAccessToken());
+    Response<AuthGetResponse> authGetResponse = plaidApi.authGet(authGetRequest).execute();
+    log.debug("{}", authGetResponse.code());
+    log.debug("{}", authGetResponse.body());
     log.debug(
-        "{}",
-        accountsGetResponse.errorBody() != null ? accountsGetResponse.errorBody().string() : "");
+        "{}", authGetResponse.errorBody() != null ? authGetResponse.errorBody().string() : "");
 
-    // TODO: Insert into bank account table
+    if (authGetResponse.isSuccessful() && authGetResponse.body() != null)  {
+      return new AccountsResponse(response.body().getAccessToken(), authGetResponse.body().getNumbers().getAch());
+    }
 
-    return objectMapper.writeValueAsString(accountsGetResponse.body());
+    return null;
   }
 
   private Response<ItemPublicTokenExchangeResponse> exchangePublicToken(String linkToken)

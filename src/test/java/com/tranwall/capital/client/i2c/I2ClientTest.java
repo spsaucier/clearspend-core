@@ -25,7 +25,7 @@ public class I2ClientTest {
 
     // when
     GetCardStatusResponse response =
-        i2Client.getCardStatusResponse(new GetCardStatusRequestRoot(request)).getResponse();
+        i2Client.getCardStatus(new GetCardStatusRequestRoot(request)).getResponse();
 
     // then
     assertThat(response).isNotNull();

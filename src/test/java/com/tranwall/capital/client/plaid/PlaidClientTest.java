@@ -1,6 +1,7 @@
 package com.tranwall.capital.client.plaid;
 
 import java.io.IOException;
+import java.util.UUID;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,6 @@ class PlaidClientTest {
   @Disabled(
       "This will require the plaid secret to run, will need to run as part of CI on a pod with secrets injected")
   void createLinkToken() throws IOException {
-    underTest.createLinkToken();
+    underTest.createLinkToken(UUID.randomUUID());
   }
 }

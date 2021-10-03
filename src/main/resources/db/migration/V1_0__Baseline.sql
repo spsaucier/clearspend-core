@@ -158,10 +158,12 @@ create table if not exists business_bank_account
     updated                  timestamp without time zone not null,
     version                  bigint                      not null,
     business_id              uuid                        not null references business (id),
-    routing_number_encrypted varchar(100)                not null,
-    routing_number_hash      varchar(100)                not null,
-    account_number_encrypted varchar(100)                not null,
-    account_number_hash      varchar(100)                not null,
+    routing_number_encrypted bytea                       not null,
+    routing_number_hash      bytea                       not null,
+    account_number_encrypted bytea                       not null,
+    account_number_hash      bytea                       not null,
+    access_token_encrypted   bytea                       not null,
+    access_token_hash        bytea                       not null,
     unique (business_id, routing_number_encrypted, account_number_encrypted)
 );
 
