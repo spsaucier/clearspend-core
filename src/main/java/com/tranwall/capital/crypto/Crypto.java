@@ -127,9 +127,11 @@ public class Crypto {
       byte[] keyHash = HashUtil.calculateHash(entry.key);
       Integer keyRef = existingKeys.get(keyHash);
       if (keyRef == null) {
-        Key key = new Key(nextKeyRef++, keyHash);
+        keyRef = nextKeyRef;
+        Key key = new Key(keyRef, keyHash);
         keyRepository.save(key);
         existingKeys.put(key.getKeyHash(), key.getKeyRef());
+        nextKeyRef++;
       }
       keyMap.put(keyRef, entry.key);
     }

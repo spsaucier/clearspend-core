@@ -5,6 +5,7 @@ import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.UserType;
 import java.util.UUID;
 import javax.persistence.Column;
@@ -47,7 +48,7 @@ public class User extends Mutable {
 
   @Embedded private Address address;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedString email;
+  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash email;
 
   @Sensitive @Embedded @NonNull private RequiredEncryptedString phone;
 

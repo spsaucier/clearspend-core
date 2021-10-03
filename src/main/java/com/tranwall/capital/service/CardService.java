@@ -25,7 +25,7 @@ public class CardService {
 
   private final AccountService accountService;
 
-  private I2Client i2Client;
+  private final I2Client i2Client;
 
   @Transactional
   Card issueCard(

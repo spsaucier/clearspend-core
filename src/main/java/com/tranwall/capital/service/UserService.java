@@ -4,6 +4,7 @@ import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
@@ -37,7 +38,7 @@ public class UserService {
         new User(
             businessId,
             type,
-            new RequiredEncryptedString(email),
+            new RequiredEncryptedStringWithHash(email),
             new RequiredEncryptedString(phone));
     user.setFirstName(new NullableEncryptedString(firstName));
     user.setLastName(new NullableEncryptedString(lastName));

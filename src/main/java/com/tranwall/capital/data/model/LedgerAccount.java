@@ -4,6 +4,8 @@ import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LedgerAccountType;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -21,7 +23,11 @@ import org.hibernate.annotations.DynamicUpdate;
 @Slf4j
 public class LedgerAccount extends Mutable {
 
-  @NonNull private LedgerAccountType type;
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private LedgerAccountType type;
 
-  @NonNull private Currency currency;
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private Currency currency;
 }

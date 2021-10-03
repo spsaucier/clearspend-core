@@ -20,4 +20,6 @@ import org.hibernate.annotations.DynamicUpdate;
 public class Bin extends Mutable {
 
   @NonNull private String bin;
+
+  @NonNull private String name;
 }

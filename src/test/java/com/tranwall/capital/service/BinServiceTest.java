@@ -1,5 +1,7 @@
 package com.tranwall.capital.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.repository.BinRepository;
@@ -19,5 +21,7 @@ class BinServiceTest {
   void createBin() {
     Bin bin = serviceHelper.createBin();
     Bin foundBin = binRepository.findById(bin.getId()).orElseThrow();
+    assertThat(foundBin).isNotNull();
+    assertThat(foundBin.getBin()).isEqualTo(bin.getBin());
   }
 }

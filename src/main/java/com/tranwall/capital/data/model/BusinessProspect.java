@@ -2,12 +2,11 @@ package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
-import java.util.UUID;
-import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -23,14 +22,16 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class BusinessBankAccount extends Mutable {
+public class BusinessProspect extends Mutable {
 
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "business")
-  @Column(updatable = false)
-  private UUID businessId;
+  @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash email;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
+  @Sensitive @NonNull @Embedded private NullableEncryptedString firstName;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
+  @Sensitive @NonNull @Embedded private NullableEncryptedString lastName;
+
+  @Sensitive @Embedded private NullableEncryptedStringWithHash phone;
+
+  // link to FusionAuth
+  private String subjectRef;
 }

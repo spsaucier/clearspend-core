@@ -1,5 +1,8 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.common.error.BusinessIdMismatchException;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.enums.AccountType;
@@ -19,25 +22,21 @@ public class AllocationService {
 
   private final AccountService accountService;
 
-  public record AllocationRecord(Allocation allocation, Account acccount) {}
+  public record AllocationRecord(Allocation allocation, Account account) {}
 
   public AllocationRecord createAllocation(
       UUID programId, UUID businessId, UUID parentAllocationId, String name, Currency currency) {
-    Allocation allocation = new Allocation(programId, businessId, name);
+    Allocation allocation = new Allocation(businessId, programId, name);
 
     if (parentAllocationId != null) {
       allocation.setParentAllocationId(parentAllocationId);
       Allocation parent =
           allocationRepository
               .findById(parentAllocationId)
-              .orElseThrow(
-                  () ->
-                      new IllegalArgumentException(
-                          "Parent allocation not found: " + parentAllocationId));
+              .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, parentAllocationId));
 
       if (parent.getBusinessId().equals(businessId)) {
-        throw new IllegalArgumentException(
-            "Parent allocation not owned by business: " + parentAllocationId);
+        throw new BusinessIdMismatchException(businessId, parent.getBusinessId());
       }
 
       allocation.setAncestorAllocationIds(

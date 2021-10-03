@@ -62,8 +62,6 @@ dependencies {
 
     runtimeOnly("org.postgresql:postgresql")
 
-    testAnnotationProcessor("org.projectlombok:lombok")
-
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.h2database:h2")
     testImplementation("com.github.javafaker:javafaker:1.0.1")

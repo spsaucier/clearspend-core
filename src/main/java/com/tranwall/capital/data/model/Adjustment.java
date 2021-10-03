@@ -33,7 +33,6 @@ public class Adjustment extends Mutable {
   @Column(updatable = false)
   private UUID businessId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   private UUID allocationId;
@@ -62,6 +61,7 @@ public class Adjustment extends Mutable {
   @Enumerated(EnumType.STRING)
   private AdjustmentType type;
 
+  @NonNull
   private OffsetDateTime effectiveDate;
 
   @NonNull @Embedded private Amount amount;

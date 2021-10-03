@@ -5,6 +5,7 @@ import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.BusinessOwnerStatus;
 import com.tranwall.capital.data.model.enums.BusinessOwnerType;
 import com.tranwall.capital.data.model.enums.Country;
@@ -58,7 +59,7 @@ public class BusinessOwner extends Mutable {
 
   @Sensitive @NonNull private String employerIdentificationNumber;
 
-  @Sensitive @Embedded private RequiredEncryptedString email;
+  @Sensitive @Embedded private RequiredEncryptedStringWithHash email;
 
   @Sensitive @Embedded private RequiredEncryptedString phone;
 

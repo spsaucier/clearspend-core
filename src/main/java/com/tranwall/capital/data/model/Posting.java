@@ -30,14 +30,14 @@ import org.hibernate.annotations.DynamicUpdate;
 public class Posting extends Mutable {
 
   @NonNull
+  @JsonIgnore
+  @ManyToOne(cascade = CascadeType.ALL)
+  private JournalEntry journalEntry;
+
+  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "ledger_account")
   @Column(updatable = false)
   private UUID ledgerAccountId;
-
-  @JsonIgnore
-  @ManyToOne(cascade = CascadeType.ALL)
-  @NotNull
-  private JournalEntry journalEntry;
 
   @NonNull @Embedded private Amount amount;
 

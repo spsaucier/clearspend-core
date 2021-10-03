@@ -1,18 +1,23 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.common.data.model.Address;
+import com.tranwall.capital.common.data.model.ClearAddress;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
+import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,10 +37,14 @@ public class BusinessService {
   private final AllocationService allocationService;
   private final AccountService accountService;
 
+  public record BusinessRecord(
+      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {}
+
   @Transactional
-  Business createBusiness(
+  BusinessRecord createBusiness(
       String legalName,
-      Address address,
+      BusinessType type,
+      ClearAddress clearAddress,
       String employerIdentificationNumber,
       String email,
       String phone,
@@ -45,41 +54,38 @@ public class BusinessService {
     Business business =
         new Business(
             legalName,
-            address,
+            type,
+            clearAddress,
             employerIdentificationNumber,
             BusinessOnboardingStep.COMPLETE,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING);
-    business.setEmail(new NullableEncryptedString(email));
-    business.setPhone(new NullableEncryptedString(phone));
+    business.setBusinessEmail(new NullableEncryptedString(email));
+    business.setBusinessPhone(new NullableEncryptedString(phone));
     business.setFormationDate(formationDate);
 
     business = businessRepository.save(business);
 
-    accountService.createAccount(
-        business.getId(), AccountType.BUSINESS, business.getId(), currency);
+    Account account =
+        accountService.createAccount(
+            business.getId(), AccountType.BUSINESS, business.getId(), currency);
 
+    List<AllocationRecord> allocationRecords = new ArrayList<>(programIds.size());
     for (UUID programId : programIds) {
       Optional<Program> programOptional = programRepository.findById(programId);
       if (programOptional.isEmpty()) {
-        throw new IllegalArgumentException("Program not found: " + programId);
+        throw new RecordNotFoundException(Table.PROGRAM, programId);
       }
 
-      AllocationRecord allocationRecord =
+      allocationRecords.add(
           allocationService.createAllocation(
               programId,
               business.getId(),
               null,
               business.getLegalName() + " - " + programOptional.get().getName(),
-              currency);
-
-      accountService.createAccount(
-          business.getId(),
-          AccountType.ALLOCATION,
-          allocationRecord.acccount().getId(),
-          Currency.USD);
+              currency));
     }
 
-    return business;
+    return new BusinessRecord(business, account, allocationRecords);
   }
 }

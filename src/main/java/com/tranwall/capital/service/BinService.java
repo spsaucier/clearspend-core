@@ -13,7 +13,7 @@ public class BinService {
 
   private final BinRepository binRepository;
 
-  public Bin createBin(String bin) {
-    return binRepository.save(new Bin(bin));
+  public Bin createBin(String bin, String name) {
+    return binRepository.save(new Bin(bin, name));
   }
 }
