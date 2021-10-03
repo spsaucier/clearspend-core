@@ -348,14 +348,14 @@ create table if not exists business_prospect
     email_hash           bytea                       not null,
     email_verified       bool                        not null,
     phone_encrypted      bytea,
-    phone_hash           bytea,
-    phone_verified       bool,
+    phone_verified       bool                        not null,
     subject_ref          varchar(100)
 );
 create index if not exists business_prospect_idx1 on business_prospect (email_hash);
 
 insert into bin (id, created, updated, version, bin, name)
-values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288', 'Manually created test BIN');
+values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',
+        'Manually created test BIN');
 
 insert into program (id, created, updated, version, name, bin, funding_type)
 values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program', '401288',

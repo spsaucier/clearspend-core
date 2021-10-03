@@ -1,5 +1,6 @@
 package com.tranwall.capital.common.data.model;
 
+import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.enums.Country;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +36,15 @@ public class ClearAddress {
   @Enumerated(EnumType.STRING)
   private Country country;
 
+  public Address toAddress() {
+    return new Address(
+        new EncryptedString(streetLine1),
+        new EncryptedString(streetLine2),
+        locality,
+        region,
+        new EncryptedString(postalCode),
+        country);
+  }
   public static String getSingleStreetLine(String... streetLines) {
     return Stream.of(streetLines)
         .filter(s -> s != null && !s.isBlank())

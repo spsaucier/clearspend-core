@@ -26,10 +26,11 @@ public class PlaidClient {
 
   @Autowired
   public PlaidClient(PlaidProperties plaidProperties) {
-    ApiClient apiClient = new ApiClient(Map.of(
-        "clientId", plaidProperties.getClientId(),
-        "secret", plaidProperties.getSecret()
-    ));
+    ApiClient apiClient =
+        new ApiClient(
+            Map.of(
+                "clientId", plaidProperties.getClientId(),
+                "secret", plaidProperties.getSecret()));
 
     if (plaidProperties.getEnvironment().equalsIgnoreCase("SANDBOX")) {
       apiClient.setPlaidAdapter(ApiClient.Sandbox);
@@ -46,7 +47,6 @@ public class PlaidClient {
 
     // Set up PlaidClient
     plaidClient = apiClient.createService(PlaidApi.class);
-
   }
 
   public String createLinkToken() throws IOException {

@@ -15,6 +15,7 @@ public class RecordNotFoundException extends RuntimeException {
     ACCOUNT("Account"),
     ALLOCATION("Allocation"),
     BUSINESS("Business"),
+    BUSINESS_PROSPECT("BusinessProspect"),
     LEDGER_ACCOUNT("LedgerAccount"),
     PROGRAM("Program"),
     USER("user");

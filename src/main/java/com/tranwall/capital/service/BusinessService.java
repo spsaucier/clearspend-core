@@ -57,7 +57,7 @@ public class BusinessService {
             type,
             clearAddress,
             employerIdentificationNumber,
-            BusinessOnboardingStep.COMPLETE,
+            BusinessOnboardingStep.ONBOARDING,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING);
     business.setBusinessEmail(new NullableEncryptedString(email));
