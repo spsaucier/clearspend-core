@@ -5,6 +5,7 @@ import com.tranwall.capital.data.model.enums.BusinessType;
 import java.time.LocalDate;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @Data
@@ -13,14 +14,18 @@ import lombok.RequiredArgsConstructor;
 public class ConvertBusinessProspectRequest {
 
   @JsonProperty("legalName")
+  @NonNull
   private String legalName;
 
   @JsonProperty("businessType")
+  @NonNull
   private BusinessType businessType;
 
   @JsonProperty("formationDate")
+  @NonNull
   private LocalDate formationDate;
 
   @JsonProperty("address")
+  @NonNull
   private Address address;
 }

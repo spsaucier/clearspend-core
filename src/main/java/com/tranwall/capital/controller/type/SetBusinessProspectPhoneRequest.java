@@ -6,6 +6,7 @@ import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @Data
@@ -16,6 +17,7 @@ public class SetBusinessProspectPhoneRequest {
 
   @Sensitive
   @JsonProperty("phone")
+  @NonNull
   @ApiModelProperty(value = "Phone number in e.164 format", example = "+1234567890")
   @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
   private String phone;

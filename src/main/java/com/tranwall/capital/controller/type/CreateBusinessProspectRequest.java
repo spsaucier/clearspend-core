@@ -19,6 +19,8 @@ public class CreateBusinessProspectRequest {
 
   @Sensitive
   @JsonProperty("email")
+  @NonNull
+  @NotNull(message = "email required")
   @ApiModelProperty(
       value = "Email address of the prospect",
       required = true,
