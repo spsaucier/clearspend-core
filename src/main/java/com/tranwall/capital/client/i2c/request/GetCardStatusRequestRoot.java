@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GetCardStatusRequestRoot {
 
-    @JsonProperty("getCardStatus")
-    private GetCardStatusRequest request;
+  @JsonProperty("getCardStatus")
+  private GetCardStatusRequest request;
 }

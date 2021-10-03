@@ -10,9 +10,9 @@ import lombok.Value;
 @Builder
 public class GetCardStatusRequest {
 
-    @JsonProperty("acquirer")
-    private Acquirer acquirer;
+  @JsonProperty("acquirer")
+  private Acquirer acquirer;
 
-    @JsonProperty("card")
-    private Card card;
+  @JsonProperty("card")
+  private Card card;
 }

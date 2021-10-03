@@ -9,31 +9,29 @@ import com.plaid.client.model.Products;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import javax.annotation.PostConstruct;
-import lombok.Data;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import retrofit2.Response;
 
 @Component
-@Data
 @Slf4j
 public class PlaidClient {
   public static final String PLAID_CLIENT_NAME = "Tranwall";
   public static final String LANGUAGE = "en";
-  private PlaidApi plaidClient;
-  @NonNull private PlaidProperties plaidProperties;
 
-  @PostConstruct
-  public void init() {
-    // Set up ApiClient
-    HashMap<String, String> apiKeys = new HashMap<>();
-    apiKeys.put("clientId", plaidProperties.getClientId());
-    apiKeys.put("secret", plaidProperties.getSecret());
-    ApiClient apiClient = new ApiClient(apiKeys);
+  private final PlaidApi plaidClient;
+
+  @Autowired
+  public PlaidClient(PlaidProperties plaidProperties) {
+    ApiClient apiClient =
+        new ApiClient(
+            Map.of(
+                "clientId", plaidProperties.getClientId(),
+                "secret", plaidProperties.getSecret()));
+
     if (plaidProperties.getEnvironment().equalsIgnoreCase("SANDBOX")) {
       apiClient.setPlaidAdapter(ApiClient.Sandbox);
     } else if (plaidProperties.getEnvironment().equalsIgnoreCase("DEVELOPMENT")) {

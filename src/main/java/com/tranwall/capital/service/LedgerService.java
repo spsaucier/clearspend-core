@@ -1,0 +1,99 @@
+package com.tranwall.capital.service;
+
+import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.data.model.JournalEntry;
+import com.tranwall.capital.data.model.LedgerAccount;
+import com.tranwall.capital.data.model.Posting;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LedgerAccountType;
+import com.tranwall.capital.data.repository.JournalEntryRepository;
+import com.tranwall.capital.data.repository.LedgerAccountRepository;
+import java.util.List;
+import java.util.UUID;
+import javax.transaction.Transactional;
+import javax.transaction.Transactional.TxType;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class LedgerService {
+
+  private final JournalEntryRepository journalEntryRepository;
+  private final LedgerAccountRepository ledgerAccountRepository;
+
+  public record BankJournalEntry(
+      JournalEntry journalEntry, Posting bankPosting, Posting accountPosting) {}
+
+  public record ReallocationJournalEntry(
+      JournalEntry journalEntry, Posting fromPosting, Posting toPosting) {}
+
+  // this method will create a new account for an allocation, a business or a card
+  public LedgerAccount createLedgerAccount(LedgerAccountType type, Currency currency) {
+    if (!LedgerAccountType.createOnlySet.contains(type)) {
+      throw new IllegalArgumentException("Invalid ledgerAccountType: " + type);
+    }
+
+    return ledgerAccountRepository.save(new LedgerAccount(type, currency));
+  }
+
+  // this method will create or get an existing system ledgerAccount for non-BUSINESS, ALLOCATION,
+  // CARD ledger accounts
+  public LedgerAccount getOrCreateLedgerAccount(LedgerAccountType type, Currency currency) {
+    return ledgerAccountRepository
+        .findByTypeAndCurrency(type, currency)
+        .orElseGet(() -> ledgerAccountRepository.save(new LedgerAccount(type, currency)));
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public BankJournalEntry depositFunds(UUID ledgerAccountId, Amount amount) {
+    return bankFunds(ledgerAccountId, amount);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public BankJournalEntry withdrawFunds(UUID ledgerAccountId, Amount amount) {
+    return bankFunds(ledgerAccountId, Amount.negate(amount));
+  }
+
+  private BankJournalEntry bankFunds(UUID ledgerAccountId, Amount amount) {
+    LedgerAccount businessAccount = getLedgerAccount(ledgerAccountId);
+    LedgerAccount bankAccount =
+        getOrCreateLedgerAccount(LedgerAccountType.BANK, amount.getCurrency());
+
+    JournalEntry journalEntry = new JournalEntry();
+    Posting accountPosting = new Posting(journalEntry, businessAccount.getId(), amount);
+    Posting bankPosting = new Posting(journalEntry, bankAccount.getId(), Amount.negate(amount));
+
+    journalEntry.setPostings(List.of(bankPosting, accountPosting));
+    journalEntry = journalEntryRepository.save(journalEntry);
+
+    return new BankJournalEntry(journalEntry, bankPosting, accountPosting);
+  }
+
+  private LedgerAccount getLedgerAccount(UUID ledgerAccountId) {
+    return ledgerAccountRepository
+        .findById(ledgerAccountId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.LEDGER_ACCOUNT, ledgerAccountId));
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public ReallocationJournalEntry reallocateFunds(
+      UUID fromLedgerAccountId, UUID toLedgerAccountId, Amount amount) {
+    LedgerAccount fromLedgerAccount = getLedgerAccount(fromLedgerAccountId);
+    LedgerAccount toLedgerAccount = getLedgerAccount(toLedgerAccountId);
+
+    JournalEntry journalEntry = new JournalEntry();
+    Posting fromPosting =
+        new Posting(journalEntry, fromLedgerAccount.getId(), Amount.negate(amount));
+    Posting toPosting = new Posting(journalEntry, toLedgerAccount.getId(), amount);
+
+    journalEntry.setPostings(List.of(fromPosting, toPosting));
+    journalEntryRepository.save(journalEntry);
+
+    return new ReallocationJournalEntry(journalEntry, fromPosting, toPosting);
+  }
+}

@@ -8,21 +8,15 @@ import lombok.Value;
 @Builder
 public class Acquirer {
 
-    /**
-     * Acquirer Identification Code
-     */
-    @JsonProperty("id")
-    private String id;
+  /** Acquirer Identification Code */
+  @JsonProperty("id")
+  private String id;
 
-    /**
-     * Acquirer’s user ID assigned by MCP
-     */
-    @JsonProperty("userId")
-    private String userId;
+  /** Acquirer’s user ID assigned by MCP */
+  @JsonProperty("userId")
+  private String userId;
 
-    /**
-     * Acquirer’s password assigned by MCP or encrypted string.
-     */
-    @JsonProperty("password")
-    private String password;
+  /** Acquirer’s password assigned by MCP or encrypted string. */
+  @JsonProperty("password")
+  private String password;
 }
