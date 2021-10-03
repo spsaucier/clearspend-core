@@ -36,25 +36,35 @@ dependencies {
     val springCloudVersion = "2020.0.3"
 
     //spring cloud BOM
-    implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
-
-    annotationProcessor("org.projectlombok:lombok")
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
-    implementation("com.plaid:plaid-java:9.0.0")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
 
+    implementation("com.google.code.gson:gson:2.8.8")
+    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("com.idealista:format-preserving-encryption:1.0.0")
+    implementation("com.plaid:plaid-java:9.0.0")
+    implementation("com.squareup.okhttp3:okhttp") // to be used by feign as a http client
+    implementation("commons-codec:commons-codec:1.9")
+    implementation("org.apache.commons:commons-lang3:3.0")
     implementation("org.flywaydb:flyway-core")
-    //to be used by feign as a http client
-    implementation("com.squareup.okhttp3:okhttp")
+
+    annotationProcessor("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
 
     compileOnly("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
 
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.h2database:h2")
+    testImplementation("com.github.javafaker:javafaker:1.0.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
