@@ -61,9 +61,9 @@ public class Crypto {
     // load existing keys
     // variables used to load the keys
     int nextKeyRef = 0;
-    HashMap<byte[], Integer> existingKeys = new HashMap<>();
+    HashMap<String, Integer> existingKeys = new HashMap<>();
     for (Key key : keyRepository.findAll()) {
-      existingKeys.put(key.getKeyHash(), key.getKeyRef());
+      existingKeys.put(Base64.toBase64String(key.getKeyHash()), key.getKeyRef());
       if (nextKeyRef < key.getKeyRef()) {
         nextKeyRef = key.getKeyRef() + 1;
       }
@@ -125,12 +125,13 @@ public class Crypto {
     // and create any missing key records as needed
     for (EnvironmentKey entry : environmentKeys) {
       byte[] keyHash = HashUtil.calculateHash(entry.key);
-      Integer keyRef = existingKeys.get(keyHash);
+      String keyHashStr = Base64.toBase64String(keyHash);
+      Integer keyRef = existingKeys.get(keyHashStr);
       if (keyRef == null) {
         keyRef = nextKeyRef;
         Key key = new Key(keyRef, keyHash);
         keyRepository.save(key);
-        existingKeys.put(key.getKeyHash(), key.getKeyRef());
+        existingKeys.put(keyHashStr, key.getKeyRef());
         nextKeyRef++;
       }
       keyMap.put(keyRef, entry.key);
