@@ -53,11 +53,9 @@ public class BusinessOwner extends Mutable {
   @Enumerated(EnumType.STRING)
   private RelationshipToBusiness relationshipToBusiness;
 
-  @Embedded @NonNull private Address address;
+  @NonNull @Embedded private Address address;
 
-  @Sensitive @Embedded private RequiredEncryptedString taxIdentificationNumber;
-
-  @Sensitive @NonNull private String employerIdentificationNumber;
+  @Sensitive @Embedded private NullableEncryptedString taxIdentificationNumber;
 
   @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash email;
 

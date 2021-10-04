@@ -3,10 +3,12 @@ package com.tranwall.capital.controller;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.controller.type.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.CreateBusinessProspectRequest;
+import com.tranwall.capital.controller.type.CreateBusinessProspectResponse;
 import com.tranwall.capital.controller.type.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.SetBusinessProspectPhoneRequest;
 import com.tranwall.capital.controller.type.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.service.BusinessProspectService;
+import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
 import io.swagger.annotations.ApiParam;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +25,15 @@ public class BusinessOnboardingController {
   private final BusinessProspectService businessProspectService;
 
   @PostMapping("/business-prospect")
-  private UUID createBusinessProspect(
+  private CreateBusinessProspectResponse createBusinessProspect(
       @Validated @RequestBody CreateBusinessProspectRequest request) {
-    return businessProspectService
-        .createBusinessProspect(request.getFirstName(), request.getLastName(), request.getEmail())
-        .getId();
+    CreateBusinessProspectRecord createBusinessProspectRecord =
+        businessProspectService.createBusinessProspect(
+            request.getFirstName(), request.getLastName(), request.getEmail());
+
+    return new CreateBusinessProspectResponse(
+        createBusinessProspectRecord.businessProspect().getId(),
+        createBusinessProspectRecord.otp());
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/validate-identifier")
@@ -45,7 +51,7 @@ public class BusinessOnboardingController {
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/phone")
-  private void setBusinessProspectPhone(
+  private String setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
           @ApiParam(
               required = true,
@@ -54,7 +60,9 @@ public class BusinessOnboardingController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
-    businessProspectService.setBusinessProspectPhone(businessProspectId, request.getPhone());
+    return businessProspectService
+        .setBusinessProspectPhone(businessProspectId, request.getPhone())
+        .otp();
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/password")

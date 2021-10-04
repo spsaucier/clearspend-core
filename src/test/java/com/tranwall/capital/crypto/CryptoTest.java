@@ -103,10 +103,12 @@ public class CryptoTest {
     String current = HashUtil.generateKeyString();
     String next = HashUtil.generateKeyString();
     String randomKey = HashUtil.generateKeyString();
+    String randomKey2 = HashUtil.generateKeyString();
     env.setProperty(Crypto.envPrefix + "current", current);
     env.setProperty(Crypto.envPrefix + "next", next);
-    env.setProperty(Crypto.envPrefix + "0", randomKey + "|" + current);
-    env.setProperty(Crypto.envPrefix + "1", current);
+    env.setProperty(Crypto.envPrefix + "0", randomKey);
+    env.setProperty(Crypto.envPrefix + "1", randomKey2 + "|" + randomKey);
+    env.setProperty(Crypto.envPrefix + "2", current);
 
     assertThrows(Throwable.class, () -> new Crypto(env, keyRepository));
   }
@@ -152,12 +154,13 @@ public class CryptoTest {
         String clearText = RandomStringUtils.randomAlphanumeric(i + j);
         byte[] cipherText = crypto.encrypt(clearText);
         byte[] hash = HashUtil.calculateHash(clearText);
-//        log.info("clearText: {}, hash: {}, cipherText: {}", clearText, hash, cipherText);
-        assertThat(cipherText).isNotEqualTo(clearText);
+        log.info("clearText: {}, hash: {}, cipherText: {}", clearText, hash, cipherText);
+        assertThat(cipherText).isNotEqualTo(clearText.getBytes());
         assertThat(hash).isNotNull();
-        assertThat(hash).isNotEqualTo("");
+        assertThat(hash).isNotEqualTo("".getBytes());
 
-        String clearText2 = new String(crypto.decrypt(cipherText));
+        byte[] clearText2Bytes = crypto.decrypt(cipherText);
+        String clearText2 = new String(clearText2Bytes);
         byte[] hash2 = HashUtil.calculateHash(clearText);
         assertThat(clearText2).isEqualTo(clearText);
         assertThat(hash2).isEqualTo(hash);
@@ -258,7 +261,7 @@ public class CryptoTest {
         (HashMap<Integer, byte[]>) ReflectionTestUtils.getField(crypto, "keyMap");
     assertThat(keyMap).isNotNull();
     assertThat(keyMap.size()).isEqualTo(3);
-    assertThat(ReflectionTestUtils.getField(crypto, "currentPasswordAndSaltRef")).isEqualTo(11);
+    assertThat(ReflectionTestUtils.getField(crypto, "currentKeyRef")).isEqualTo(11);
     assertThat(keyMap.get(10)).isNotNull();
     assertThat(keyMap.get(11)).isNotNull();
     assertThat(keyMap.get(12)).isNotNull();

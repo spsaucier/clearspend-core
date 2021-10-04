@@ -128,8 +128,8 @@ create table if not exists business_owner
     business_id                         uuid                        not null references business (id),
     -- Principle Ownership, Ultimate Beneficial Owner
     type                                varchar(50)                 not null,
-    first_name_encrypted                varchar(100)                not null,
-    last_name_encrypted                 varchar(100)                not null,
+    first_name_encrypted                bytea                       not null,
+    last_name_encrypted                 bytea                       not null,
     -- Founder, Executive, Senior Leadership, Other
     relationship_to_business            varchar(20)                 not null,
     address_street_line1_encrypted      bytea,
@@ -138,14 +138,14 @@ create table if not exists business_owner
     address_region                      varchar(255),
     address_postal_code_encrypted       bytea,
     address_country                     varchar(3),
-    tax_identification_number_encrypted bytea                       not null,
+    tax_identification_number_encrypted bytea,
     email_encrypted                     bytea                       not null,
     email_hash                          bytea                       not null,
     phone_encrypted                     bytea                       not null,
     date_of_birth                       date,
-    country_of_citizenship              varchar(3)                  not null,
+    country_of_citizenship              varchar(11)                 not null,
     subject_ref                         varchar(100),
-    kyc_status                          varchar(20)                 not null,
+    know_your_customer_status           varchar(20)                 not null,
     -- active, retired
     status                              varchar(20)                 not null,
     unique (business_id, email_hash)
@@ -158,10 +158,10 @@ create table if not exists business_bank_account
     updated                  timestamp without time zone not null,
     version                  bigint                      not null,
     business_id              uuid                        not null references business (id),
-    routing_number_encrypted varchar(100)                not null,
-    routing_number_hash      varchar(100)                not null,
-    account_number_encrypted varchar(100)                not null,
-    account_number_hash      varchar(100)                not null,
+    routing_number_encrypted bytea                       not null,
+    routing_number_hash      bytea                       not null,
+    account_number_encrypted bytea                       not null,
+    account_number_hash      bytea                       not null,
     unique (business_id, routing_number_encrypted, account_number_encrypted)
 );
 
@@ -173,8 +173,8 @@ create table if not exists users
     version                        bigint                      not null,
     business_id                    uuid                        not null references business (id),
     type                           varchar(50)                 not null,
-    first_name_encrypted           varchar(100)                not null,
-    last_name_encrypted            varchar(100)                not null,
+    first_name_encrypted           bytea                       not null,
+    last_name_encrypted            bytea                       not null,
     -- we may not need the addresses of the user
     address_street_line1_encrypted bytea,
     address_street_line2_encrypted bytea,
@@ -342,8 +342,8 @@ create table if not exists business_prospect
     created              timestamp without time zone not null,
     updated              timestamp without time zone not null,
     version              bigint                      not null,
-    first_name_encrypted varchar(100)                not null,
-    last_name_encrypted  varchar(100)                not null,
+    first_name_encrypted bytea                       not null,
+    last_name_encrypted  bytea                       not null,
     email_encrypted      bytea                       not null,
     email_hash           bytea                       not null,
     email_verified       bool                        not null,

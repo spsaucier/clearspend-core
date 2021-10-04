@@ -13,6 +13,8 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -77,7 +79,7 @@ public class Crypto {
 
     // then numbered keys
     record EnvironmentKey (byte[] key, String name) {}
-    ArrayList<EnvironmentKey> environmentKeys = new ArrayList<>();
+    Map<String, EnvironmentKey> environmentKeys = new LinkedHashMap<>();
     Loop:
     for (int i = 0; i < maxKeys; i++) {
       String envString = env.getProperty(envPrefix + i);
@@ -95,10 +97,10 @@ public class Crypto {
             byte[] key = Base64.decode(keyString);
             EnvironmentKey environmentKey = new EnvironmentKey(key, String.valueOf(i));
 
-            if (environmentKeys.contains(environmentKey)) {
+            if (environmentKeys.containsKey(keyString)) {
               throw new RuntimeException("Duplicate key " + i);
             }
-            environmentKeys.add(environmentKey);
+            environmentKeys.put(keyString, environmentKey);
 
             if (Arrays.equals(currentKey, key)) {
               // the current index key matches the current key
@@ -111,19 +113,22 @@ public class Crypto {
           throw new RuntimeException("Invalid key found for " + i);
       }
     }
-    // finally "next" key
+    // finally, "next" key
     String nextKeyString = env.getProperty(envPrefix + "next");
     org.springframework.util.Assert.isTrue(
         Strings.isNotBlank(nextKeyString), "next aes key is null or empty");
-    byte[] nextKey = Base64.decode(nextKeyString);
-    environmentKeys.add(new EnvironmentKey(nextKey, "next"));
+    EnvironmentKey nextKey = new EnvironmentKey(Base64.decode(nextKeyString), "next");
+    if (environmentKeys.containsKey(nextKeyString)) {
+      throw new RuntimeException("Duplicate next key");
+    }
+    environmentKeys.put(nextKeyString, nextKey);
 
     // at a minimum we should have 2 keys, the "current" and  the "next" keys
     org.springframework.util.Assert.isTrue(
         environmentKeys.size() >= 2, "invalid environment size: " + environmentKeys.size());
 
     // and create any missing key records as needed
-    for (EnvironmentKey entry : environmentKeys) {
+    for (EnvironmentKey entry : environmentKeys.values()) {
       byte[] keyHash = HashUtil.calculateHash(entry.key);
       String keyHashStr = Base64.toBase64String(keyHash);
       Integer keyRef = existingKeys.get(keyHashStr);
@@ -136,6 +141,8 @@ public class Crypto {
       }
       keyMap.put(keyRef, entry.key);
     }
+
+    currentKeyRef = existingKeys.get(Base64.toBase64String(HashUtil.calculateHash(currentKey)));
   }
 
   public byte[] encrypt(String clearText) {

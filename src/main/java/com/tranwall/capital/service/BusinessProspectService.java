@@ -4,6 +4,7 @@ import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.controller.type.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.BusinessProspect;
@@ -29,25 +30,38 @@ public class BusinessProspectService {
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
 
+  public record CreateBusinessProspectRecord(BusinessProspect businessProspect, String otp){
+}
+
   @Transactional
-  public BusinessProspect createBusinessProspect(String firstName, String lastName, String email) {
-    return businessProspectRepository.save(
+  public CreateBusinessProspectRecord createBusinessProspect(String firstName, String lastName, String email) {
+    BusinessProspect businessProspect = businessProspectRepository.save(
         new BusinessProspect(
             new RequiredEncryptedString(firstName),
             new RequiredEncryptedString(lastName),
             new RequiredEncryptedStringWithHash(email)));
+
+    // TODO(kuchlein): need to call Twilio to generate OTP
+    String otp = "1234";
+
+    return new CreateBusinessProspectRecord(businessProspect, otp);
   }
 
   @Transactional
-  public BusinessProspect setBusinessProspectPhone(UUID businessProspectId, String phone) {
+  public CreateBusinessProspectRecord setBusinessProspectPhone(UUID businessProspectId, String phone) {
     BusinessProspect businessProspect = businessProspectRepository
         .findById(businessProspectId)
         .orElseThrow(
             () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
 
-    businessProspect.setEmail(new RequiredEncryptedStringWithHash(phone));
+    businessProspect.setPhone(new NullableEncryptedString(phone));
 
-    return businessProspectRepository.save(businessProspect);
+    // TODO(kuchlein): need to call Twilio to generate OTP
+    String otp = "1234";
+
+    businessProspect =  businessProspectRepository.save(businessProspect);
+
+    return new CreateBusinessProspectRecord(businessProspect, otp);
   }
 
   @Transactional
@@ -89,15 +103,17 @@ public class BusinessProspectService {
         .orElseThrow(
             () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
 
-    BusinessRecord businessRecord = businessService.createBusiness(legalName, businessType, address, "", businessProspect.getEmail().getEncrypted(),
-        businessProspect.getPhone().getEncrypted(), formationDate, Collections.emptyList(), Currency.USD);
+    BusinessRecord businessRecord = businessService.createBusiness(legalName, businessType, address,
+        "", businessProspect.getEmail().getEncrypted(), businessProspect.getPhone().getEncrypted(),
+        formationDate, Collections.emptyList(), Currency.USD);
 
     businessOwnerService.createBusinessOwner(businessRecord.business().getId(),
         businessProspect.getFirstName().getEncrypted(),
         businessProspect.getLastName().getEncrypted(),
         address.toAddress(),
         businessProspect.getEmail().getEncrypted(),
-        businessProspect.getPhone().getEncrypted() );
+        businessProspect.getPhone().getEncrypted(),
+        businessProspect.getSubjectRef());
 
     return businessRecord;
   }

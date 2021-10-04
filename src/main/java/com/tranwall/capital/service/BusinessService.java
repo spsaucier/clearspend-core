@@ -3,7 +3,7 @@ package com.tranwall.capital.service;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
-import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
@@ -60,8 +60,8 @@ public class BusinessService {
             BusinessOnboardingStep.ONBOARDING,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING);
-    business.setBusinessEmail(new NullableEncryptedString(email));
-    business.setBusinessPhone(new NullableEncryptedString(phone));
+    business.setBusinessEmail(new RequiredEncryptedString(email));
+    business.setBusinessPhone(new RequiredEncryptedString(phone));
     business.setFormationDate(formationDate);
 
     business = businessRepository.save(business);

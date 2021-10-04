@@ -3,9 +3,7 @@ package com.tranwall.capital.controller;
 import static java.util.UUID.randomUUID;
 
 import com.github.javafaker.Faker;
-import com.tranwall.capital.common.data.model.Address;
-import com.tranwall.capital.common.data.model.ClearAddress;
-import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
+import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.util.PhoneUtil;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +17,6 @@ public class ControllerHelper {
 
   private final Faker faker = new Faker();
 
-  public String generatePhone() {
-    return PhoneUtil.randomPhoneNumber();
-  }
-
-  public String generateEmail() {
-    return randomUUID() + "@tranwall.com";
-  }
-
   public String generateFirstName() {
     return faker.name().firstName();
   }
@@ -35,23 +25,29 @@ public class ControllerHelper {
     return faker.name().lastName();
   }
 
-  public ClearAddress generateAddress() {
-    return new ClearAddress(
+  public String generateEmail() {
+    return randomUUID() + "@tranwall.com";
+  }
+
+  public String generatePhone() {
+    return PhoneUtil.randomPhoneNumber();
+  }
+
+  public String generatePassword() {
+    return faker.internet().password(10, 32, true, true, true);
+  }
+
+  public String generateBusinessName() {
+    return faker.company().name();
+  }
+
+  public Address generateAddress() {
+    return new Address(
         faker.address().streetAddress(),
         faker.address().secondaryAddress(),
         faker.address().city(),
         faker.address().state(),
         faker.address().zipCode(),
-        Country.USA);
-  }
-
-  public Address generateSensitiveAddress() {
-    return new Address(
-        new EncryptedString(faker.address().streetAddress()),
-        new EncryptedString(faker.address().secondaryAddress()),
-        faker.address().city(),
-        faker.address().state(),
-        new EncryptedString(faker.address().zipCode()),
         Country.USA);
   }
 }

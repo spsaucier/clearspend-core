@@ -7,11 +7,9 @@ import javax.persistence.MappedSuperclass;
 import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Embeddable
 @Data
-@NoArgsConstructor // required for Hibernate but shouldn't be used otherwise
 @AllArgsConstructor
 @MappedSuperclass
 public class Address {

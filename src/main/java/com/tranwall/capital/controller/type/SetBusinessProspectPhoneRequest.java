@@ -5,12 +5,10 @@ import com.tranwall.capital.common.masking.annotation.Sensitive;
 import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.Pattern;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @RequiredArgsConstructor
 public class SetBusinessProspectPhoneRequest {
   public static final String PHONE_PATTERN = "^\\+[1-9][0-9]{9,14}$";

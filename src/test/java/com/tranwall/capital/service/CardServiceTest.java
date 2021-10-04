@@ -48,7 +48,7 @@ class CardServiceTest {
             program,
             FundingType.POOLED,
             Currency.USD);
-    Card foundCard = cardRepository.findById(user.getId()).orElseThrow();
+    Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
 }
