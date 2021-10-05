@@ -2,10 +2,12 @@ package com.tranwall.capital.controller;
 
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.controller.type.ConvertBusinessProspectRequest;
+import com.tranwall.capital.controller.type.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.CreateBusinessProspectRequest;
 import com.tranwall.capital.controller.type.CreateBusinessProspectResponse;
 import com.tranwall.capital.controller.type.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.SetBusinessProspectPhoneRequest;
+import com.tranwall.capital.controller.type.SetBusinessProspectPhoneResponse;
 import com.tranwall.capital.controller.type.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
@@ -51,7 +53,7 @@ public class BusinessOnboardingController {
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/phone")
-  private String setBusinessProspectPhone(
+  private SetBusinessProspectPhoneResponse setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
           @ApiParam(
               required = true,
@@ -60,9 +62,10 @@ public class BusinessOnboardingController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
-    return businessProspectService
-        .setBusinessProspectPhone(businessProspectId, request.getPhone())
-        .otp();
+    return new SetBusinessProspectPhoneResponse(
+        businessProspectService
+            .setBusinessProspectPhone(businessProspectId, request.getPhone())
+            .otp());
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/password")
@@ -79,7 +82,7 @@ public class BusinessOnboardingController {
   }
 
   @PostMapping("/business-prospect/{businessProspectId}/convert")
-  private UUID convertBusinessProspect(
+  private ConvertBusinessProspectResponse convertBusinessProspect(
       @PathVariable(value = "businessProspectId")
           @ApiParam(
               required = true,
@@ -88,20 +91,21 @@ public class BusinessOnboardingController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody ConvertBusinessProspectRequest request) {
-    return businessProspectService
-        .convertBusinessProspect(
-            businessProspectId,
-            request.getLegalName(),
-            request.getBusinessType(),
-            request.getFormationDate(),
-            new ClearAddress(
-                request.getAddress().getStreetLine1(),
-                request.getAddress().getStreetLine2(),
-                request.getAddress().getLocality(),
-                request.getAddress().getRegion(),
-                request.getAddress().getPostalCode(),
-                request.getAddress().getCountry()))
-        .business()
-        .getId();
+    return new ConvertBusinessProspectResponse(
+        businessProspectService
+            .convertBusinessProspect(
+                businessProspectId,
+                request.getLegalName(),
+                request.getBusinessType(),
+                request.getFormationDate(),
+                new ClearAddress(
+                    request.getAddress().getStreetLine1(),
+                    request.getAddress().getStreetLine2(),
+                    request.getAddress().getLocality(),
+                    request.getAddress().getRegion(),
+                    request.getAddress().getPostalCode(),
+                    request.getAddress().getCountry()))
+            .business()
+            .getId());
   }
 }

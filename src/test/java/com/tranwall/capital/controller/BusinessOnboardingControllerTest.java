@@ -11,10 +11,12 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.controller.type.ConvertBusinessProspectRequest;
+import com.tranwall.capital.controller.type.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.CreateBusinessProspectRequest;
 import com.tranwall.capital.controller.type.CreateBusinessProspectResponse;
 import com.tranwall.capital.controller.type.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.SetBusinessProspectPhoneRequest;
+import com.tranwall.capital.controller.type.SetBusinessProspectPhoneResponse;
 import com.tranwall.capital.controller.type.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.controller.type.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.data.model.BusinessProspect;
@@ -120,7 +122,10 @@ class BusinessOnboardingControllerTest {
             .andReturn()
             .getResponse();
 
-    return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    return objectMapper
+        .readValue(
+            response.getContentAsString(), new TypeReference<SetBusinessProspectPhoneResponse>() {})
+        .getOtp();
   }
 
   @Test
@@ -191,7 +196,10 @@ class BusinessOnboardingControllerTest {
             .andReturn()
             .getResponse();
 
-    return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    return objectMapper
+        .readValue(
+            response.getContentAsString(), new TypeReference<ConvertBusinessProspectResponse>() {})
+        .getBusinessId();
   }
 
   @Test

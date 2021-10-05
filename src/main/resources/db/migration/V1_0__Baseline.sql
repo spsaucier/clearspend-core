@@ -351,7 +351,7 @@ create table if not exists business_prospect
     phone_verified       bool                        not null,
     subject_ref          varchar(100)
 );
-create index if not exists business_prospect_idx1 on business_prospect (email_hash);
+create unique index if not exists business_prospect_ux1 on business_prospect (email_hash);
 
 insert into bin (id, created, updated, version, bin, name)
 values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',
