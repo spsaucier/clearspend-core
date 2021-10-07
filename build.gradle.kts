@@ -4,6 +4,7 @@ plugins {
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("org.flywaydb.flyway") version "8.0.0-beta1"
     id("com.google.cloud.tools.jib") version "3.1.4"
+    id("io.snyk.gradle.plugin.snykplugin") version "0.4"
 }
 
 group = "com.example"
@@ -23,6 +24,12 @@ jib {
     to.image = "capital/core"
 }
 
+snyk {
+    setApi("3becf623-120a-4d33-9b41-5573ff4c4f87")
+    setAutoDownload(true)
+    setAutoUpdate(true)
+}
+
 tasks {
     test {
         useJUnitPlatform()
@@ -33,11 +40,7 @@ tasks {
 }
 
 dependencies {
-    val springCloudVersion = "2020.0.4"
     val testContainersVersion = "1.16.0"
-
-    //spring cloud BOM
-    implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
 
     //annotation processor and dependencies
     annotationProcessor("org.projectlombok:lombok")
@@ -51,7 +54,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     //3rd party libs managed by spring BOM
     implementation("org.apache.commons:commons-lang3")
@@ -59,8 +62,6 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
-    //to be used by feign as a http client
-    implementation("com.squareup.okhttp3:okhttp")
     runtimeOnly("org.postgresql:postgresql")
 
     //other 3rd party libs

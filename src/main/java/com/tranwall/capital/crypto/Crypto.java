@@ -10,8 +10,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,7 +24,6 @@ import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
-import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -65,7 +64,7 @@ public class Crypto {
     int nextKeyRef = 0;
     HashMap<String, Integer> existingKeys = new HashMap<>();
     for (Key key : keyRepository.findAll()) {
-      existingKeys.put(Base64.toBase64String(key.getKeyHash()), key.getKeyRef());
+      existingKeys.put(Base64.getEncoder().encodeToString(key.getKeyHash()), key.getKeyRef());
       if (nextKeyRef < key.getKeyRef()) {
         nextKeyRef = key.getKeyRef() + 1;
       }
@@ -75,7 +74,7 @@ public class Crypto {
     // first the "current" key
     String currentKeyString = env.getProperty(envPrefix + "current");
     Assert.isTrue(Strings.isNotBlank(currentKeyString), "current aes key is null or empty");
-    currentKey = Base64.decode(currentKeyString);
+    currentKey = Base64.getDecoder().decode(currentKeyString);
 
     // then numbered keys
     record EnvironmentKey (byte[] key, String name) {}
@@ -94,7 +93,7 @@ public class Crypto {
         case 1:
           // add either one or two keys
           for (String keyString : envParts) {
-            byte[] key = Base64.decode(keyString);
+            byte[] key = Base64.getDecoder().decode(keyString);
             EnvironmentKey environmentKey = new EnvironmentKey(key, String.valueOf(i));
 
             if (environmentKeys.containsKey(keyString)) {
@@ -117,7 +116,7 @@ public class Crypto {
     String nextKeyString = env.getProperty(envPrefix + "next");
     org.springframework.util.Assert.isTrue(
         Strings.isNotBlank(nextKeyString), "next aes key is null or empty");
-    EnvironmentKey nextKey = new EnvironmentKey(Base64.decode(nextKeyString), "next");
+    EnvironmentKey nextKey = new EnvironmentKey(Base64.getDecoder().decode(nextKeyString), "next");
     if (environmentKeys.containsKey(nextKeyString)) {
       throw new RuntimeException("Duplicate next key");
     }
@@ -130,7 +129,7 @@ public class Crypto {
     // and create any missing key records as needed
     for (EnvironmentKey entry : environmentKeys.values()) {
       byte[] keyHash = HashUtil.calculateHash(entry.key);
-      String keyHashStr = Base64.toBase64String(keyHash);
+      String keyHashStr = Base64.getEncoder().encodeToString(keyHash);
       Integer keyRef = existingKeys.get(keyHashStr);
       if (keyRef == null) {
         keyRef = nextKeyRef;
@@ -142,7 +141,7 @@ public class Crypto {
       keyMap.put(keyRef, entry.key);
     }
 
-    currentKeyRef = existingKeys.get(Base64.toBase64String(HashUtil.calculateHash(currentKey)));
+    currentKeyRef = existingKeys.get(Base64.getEncoder().encodeToString(HashUtil.calculateHash(currentKey)));
   }
 
   public byte[] encrypt(String clearText) {

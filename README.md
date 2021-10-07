@@ -1,10 +1,13 @@
-#To get started
-`./gradlew build`
+# To get started
+
+`./gradlew jibDockerBuild`
 
 `docker compose --profile full up`
 
 # Business Onboarding
+
 Sequence of APIs:
+
 - POST `/business-prospect`
 - POST `/business-prospect/{businessProspectId}/validate-identifier` (email)
 - POST `/business-prospect/{businessProspectId}/phone`
