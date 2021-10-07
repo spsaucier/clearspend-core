@@ -1,6 +1,6 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.CapitalTest;
+import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Program;
@@ -9,13 +9,13 @@ import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.BusinessService.BusinessRecord;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@CapitalTest
-class AccountServiceTest {
+import java.math.BigDecimal;
+
+class AccountServiceTest extends BaseCapitalTest {
 
   @Autowired private ServiceHelper serviceHelper;
   @Autowired private AccountService accountService;

@@ -1,7 +1,8 @@
 spring:
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
+  datasource:
+    url: ${TC_DB_URL}
+    username: ${TC_DB_USERNAME}
+    password: ${TC_DB_PASSWORD}
 
 feign:
   url:

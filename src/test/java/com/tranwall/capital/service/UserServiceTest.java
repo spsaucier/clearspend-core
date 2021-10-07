@@ -1,10 +1,7 @@
 package com.tranwall.capital.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.tranwall.capital.CapitalTest;
+import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.data.model.Bin;
-import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.repository.UserRepository;
@@ -13,8 +10,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@CapitalTest
-class UserServiceTest {
+import static org.assertj.core.api.Assertions.assertThat;
+
+class UserServiceTest extends BaseCapitalTest {
 
   @Autowired private ServiceHelper serviceHelper;
 

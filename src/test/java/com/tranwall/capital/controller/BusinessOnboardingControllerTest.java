@@ -1,15 +1,15 @@
 package com.tranwall.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.tranwall.capital.CapitalTest;
+import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.controller.type.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.CreateBusinessProspectRequest;
@@ -28,14 +28,11 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
-@CapitalTest
-@AutoConfigureMockMvc
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
-class BusinessOnboardingControllerTest {
+class BusinessOnboardingControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final ControllerHelper controllerHelper;

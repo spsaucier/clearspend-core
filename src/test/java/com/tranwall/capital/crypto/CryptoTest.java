@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.io.BaseEncoding;
-import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.crypto.data.model.Key;
 import com.tranwall.capital.crypto.data.repository.KeyRepository;
 import java.util.Collections;
@@ -16,15 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@CapitalTest
 @Slf4j
 public class CryptoTest {
-  @Mock KeyRepository keyRepository;
+  private KeyRepository keyRepository = Mockito.mock(KeyRepository.class);
 
   static MockEnvironment getMockEnvironment(byte[] key) {
     MockEnvironment env = new MockEnvironment();
