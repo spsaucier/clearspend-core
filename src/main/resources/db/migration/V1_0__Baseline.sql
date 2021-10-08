@@ -162,6 +162,8 @@ create table if not exists business_bank_account
     routing_number_hash      bytea                       not null,
     account_number_encrypted bytea                       not null,
     account_number_hash      bytea                       not null,
+    access_token_encrypted   bytea                       not null,
+    access_token_hash        bytea                       not null,
     unique (business_id, routing_number_encrypted, account_number_encrypted)
 );
 

@@ -13,7 +13,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=docker
       - SPRING_JPA_HIBERNATE_DDL_AUTO=none
       - SPRING_PROFILES_ACTIVE=docker
-      - PLAID_SECRET=${PLAID_SECRET}
+      - CLIENT_PLAID_SECRET=${CLIENT_PLAID_SECRET}
     ports:
       - '8080:8080'
 

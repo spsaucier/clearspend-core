@@ -44,18 +44,17 @@ public enum CardStatusCode implements I2CEnumSerializable<CardStatusCode> {
   /** Fraud block */
   FRAUD_BLOCK("S");
 
-  @Getter private final String code;
-
   private static final Map<String, CardStatusCode> codesMap =
       EnumSet.allOf(CardStatusCode.class).stream()
           .collect(Collectors.toUnmodifiableMap(CardStatusCode::getCode, Function.identity()));
+  @Getter private final String code;
+
+  public static CardStatusCode fromCode(String code) {
+    return codesMap.get(code);
+  }
 
   @Override
   public String serialize() {
     return code;
-  }
-
-  public static CardStatusCode fromCode(String code) {
-    return codesMap.get(code);
   }
 }

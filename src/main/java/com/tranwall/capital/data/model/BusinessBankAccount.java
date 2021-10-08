@@ -33,4 +33,6 @@ public class BusinessBankAccount extends Mutable {
   @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
 
   @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
+
+  @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
 }
