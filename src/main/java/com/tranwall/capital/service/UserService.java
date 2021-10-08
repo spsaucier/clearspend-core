@@ -39,7 +39,7 @@ public class UserService {
             businessId,
             type,
             new RequiredEncryptedStringWithHash(email),
-            new RequiredEncryptedString(phone));
+            new RequiredEncryptedStringWithHash(phone));
     user.setFirstName(new NullableEncryptedString(firstName));
     user.setLastName(new NullableEncryptedString(lastName));
     user.setAddress(address);

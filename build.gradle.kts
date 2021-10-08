@@ -1,9 +1,10 @@
 plugins {
     java
-    id("org.springframework.boot") version "2.5.4"
+    id("org.springframework.boot") version "2.5.5"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("org.flywaydb.flyway") version "8.0.0-beta1"
     id("com.google.cloud.tools.jib") version "3.1.4"
+    id("io.snyk.gradle.plugin.snykplugin") version "0.4"
 }
 
 group = "com.example"
@@ -23,6 +24,12 @@ jib {
     to.image = "capital/core"
 }
 
+snyk {
+    setApi("3becf623-120a-4d33-9b41-5573ff4c4f87")
+    setAutoDownload(true)
+    setAutoUpdate(true)
+}
+
 tasks {
     test {
         useJUnitPlatform()
@@ -33,38 +40,47 @@ tasks {
 }
 
 dependencies {
-    val springCloudVersion = "2020.0.3"
+    val testContainersVersion = "1.16.0"
 
-    //spring cloud BOM
+    //annotation processor and dependencies
+    annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    compileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
+
+    //spring boot starters
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
-    implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
-    implementation("com.google.code.gson:gson:2.8.8")
-    implementation("com.google.guava:guava:30.1.1-jre")
-    implementation("com.idealista:format-preserving-encryption:1.0.0")
-    implementation("com.plaid:plaid-java:9.0.0")
-    implementation("com.squareup.okhttp3:okhttp") // to be used by feign as a http client
-    implementation("commons-codec:commons-codec:1.9")
-    implementation("org.apache.commons:commons-lang3:3.0")
+    //3rd party libs managed by spring BOM
+    implementation("org.apache.commons:commons-lang3")
+    implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
-
-    annotationProcessor("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
-
-    compileOnly("org.projectlombok:lombok")
-    testCompileOnly("org.projectlombok:lombok")
-
+    implementation("com.google.code.gson:gson")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     runtimeOnly("org.postgresql:postgresql")
 
+    //other 3rd party libs
+    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
+    implementation("com.plaid:plaid-java:9.0.0")
+    implementation("com.idealista:format-preserving-encryption:1.0.0")
+
+    // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("com.h2database:h2")
-    testImplementation("com.github.javafaker:javafaker:1.0.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("com.github.javafaker:javafaker:1.0.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+
+    //test containers
+    testImplementation("org.testcontainers:postgresql:$testContainersVersion") {
+        exclude("junit.junit")
+    }
+    testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion") {
+        exclude("junit.junit")
+    }
 }

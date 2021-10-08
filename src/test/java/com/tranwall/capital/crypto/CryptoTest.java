@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.io.BaseEncoding;
-import com.tranwall.capital.CapitalTest;
 import com.tranwall.capital.crypto.data.model.Key;
 import com.tranwall.capital.crypto.data.repository.KeyRepository;
 import java.util.Collections;
@@ -16,15 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@CapitalTest
 @Slf4j
 public class CryptoTest {
-  @Mock KeyRepository keyRepository;
+  private KeyRepository keyRepository = Mockito.mock(KeyRepository.class);
 
   static MockEnvironment getMockEnvironment(byte[] key) {
     MockEnvironment env = new MockEnvironment();
@@ -103,10 +100,12 @@ public class CryptoTest {
     String current = HashUtil.generateKeyString();
     String next = HashUtil.generateKeyString();
     String randomKey = HashUtil.generateKeyString();
+    String randomKey2 = HashUtil.generateKeyString();
     env.setProperty(Crypto.envPrefix + "current", current);
     env.setProperty(Crypto.envPrefix + "next", next);
-    env.setProperty(Crypto.envPrefix + "0", randomKey + "|" + current);
-    env.setProperty(Crypto.envPrefix + "1", current);
+    env.setProperty(Crypto.envPrefix + "0", randomKey);
+    env.setProperty(Crypto.envPrefix + "1", randomKey2 + "|" + randomKey);
+    env.setProperty(Crypto.envPrefix + "2", current);
 
     assertThrows(Throwable.class, () -> new Crypto(env, keyRepository));
   }
@@ -152,12 +151,13 @@ public class CryptoTest {
         String clearText = RandomStringUtils.randomAlphanumeric(i + j);
         byte[] cipherText = crypto.encrypt(clearText);
         byte[] hash = HashUtil.calculateHash(clearText);
-//        log.info("clearText: {}, hash: {}, cipherText: {}", clearText, hash, cipherText);
-        assertThat(cipherText).isNotEqualTo(clearText);
+        log.info("clearText: {}, hash: {}, cipherText: {}", clearText, hash, cipherText);
+        assertThat(cipherText).isNotEqualTo(clearText.getBytes());
         assertThat(hash).isNotNull();
-        assertThat(hash).isNotEqualTo("");
+        assertThat(hash).isNotEqualTo("".getBytes());
 
-        String clearText2 = new String(crypto.decrypt(cipherText));
+        byte[] clearText2Bytes = crypto.decrypt(cipherText);
+        String clearText2 = new String(clearText2Bytes);
         byte[] hash2 = HashUtil.calculateHash(clearText);
         assertThat(clearText2).isEqualTo(clearText);
         assertThat(hash2).isEqualTo(hash);
@@ -258,7 +258,7 @@ public class CryptoTest {
         (HashMap<Integer, byte[]>) ReflectionTestUtils.getField(crypto, "keyMap");
     assertThat(keyMap).isNotNull();
     assertThat(keyMap.size()).isEqualTo(3);
-    assertThat(ReflectionTestUtils.getField(crypto, "currentPasswordAndSaltRef")).isEqualTo(11);
+    assertThat(ReflectionTestUtils.getField(crypto, "currentKeyRef")).isEqualTo(11);
     assertThat(keyMap.get(10)).isNotNull();
     assertThat(keyMap.get(11)).isNotNull();
     assertThat(keyMap.get(12)).isNotNull();

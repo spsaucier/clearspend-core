@@ -1,5 +1,6 @@
-#To get started
-`./gradlew build`
+# To get started
+
+`./gradlew jibDockerBuild`
 
 `docker compose --profile full up`
 
@@ -10,7 +11,9 @@ include it if you don't plan on linking bank accounts. If you do wish to use pla
 secret key in an env var named `PLAID_SECRET`. This value can be found in the Plaid dashboard.
 
 # Business Onboarding
+
 Sequence of APIs:
+
 - POST `/business-prospect`
 - POST `/business-prospect/{businessProspectId}/validate-identifier` (email)
 - POST `/business-prospect/{businessProspectId}/phone`

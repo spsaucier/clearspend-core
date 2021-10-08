@@ -3,7 +3,7 @@ package com.tranwall.capital.data.model;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
-import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.BusinessType;
@@ -52,9 +52,9 @@ public class Business extends Mutable {
 
   @Sensitive @NonNull private String employerIdentificationNumber;
 
-  @Sensitive @Embedded private NullableEncryptedString businessEmail;
+  @Sensitive @Embedded private RequiredEncryptedString businessEmail;
 
-  @Sensitive @Embedded private NullableEncryptedString businessPhone;
+  @Sensitive @Embedded private RequiredEncryptedString businessPhone;
 
   private LocalDate formationDate;
 

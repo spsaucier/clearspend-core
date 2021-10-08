@@ -1,5 +1,6 @@
 package com.tranwall.capital.crypto;
 
+import static org.apache.commons.codec.digest.DigestUtils.sha256;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.crypto.HashUtil;
@@ -10,12 +11,14 @@ import org.junit.jupiter.api.Test;
 class HashUtilTest {
 
   @Test
-  void calculateHash() {
-  }
+  void calculateHash() {}
 
   @Test
   public void testCrypto_alreadyHashed() {
-    byte[] hash = "h:IAmAlreadyHashed".getBytes();
+    byte[] hash = new byte[2 + 32];
+    hash[0] = (byte) 0x68;
+    hash[1] = (byte) 0x3a;
+    System.arraycopy(sha256("IAmAlreadyHashed"), 0, hash, 2, 32);
     assertThat(hash).isEqualTo(HashUtil.calculateHash(hash));
   }
 
@@ -26,42 +29,32 @@ class HashUtilTest {
   }
 
   @Test
-  void testCalculateHash() {
-  }
+  void testCalculateHash() {}
 
   @Test
-  void calculateHash256() {
-  }
+  void calculateHash256() {}
 
   @Test
-  void calculateHash512NoPrefix() {
-  }
+  void calculateHash512NoPrefix() {}
 
   @Test
-  void normalizedHash() {
-  }
+  void normalizedHash() {}
 
   @Test
-  void hashAndCompareTo() {
-  }
+  void hashAndCompareTo() {}
 
   @Test
-  void generateKeyString() {
-  }
+  void generateKeyString() {}
 
   @Test
-  void testGenerateKeyString() {
-  }
+  void testGenerateKeyString() {}
 
   @Test
-  void generateKey() {
-  }
+  void generateKey() {}
 
   @Test
-  void testGenerateKey() {
-  }
+  void testGenerateKey() {}
 
   @Test
-  void testGenerateKey1() {
-  }
+  void testGenerateKey1() {}
 }

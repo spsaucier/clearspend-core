@@ -1,15 +1,8 @@
 spring:
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-  flyway:
-    enabled: false
-
-feign:
-  url:
-    i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
-  okhttp:
-    enabled: true
+  datasource:
+    url: ${TC_DB_URL}
+    username: ${TC_DB_USERNAME}
+    password: ${TC_DB_PASSWORD}
 
 plaid:
   clientId: 6148efa64491e20011af5b75

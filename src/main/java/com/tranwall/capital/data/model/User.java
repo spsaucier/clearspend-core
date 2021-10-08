@@ -50,7 +50,7 @@ public class User extends Mutable {
 
   @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash email;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedString phone;
+  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash phone;
 
   // link to FusionAuth
   private String subjectRef;

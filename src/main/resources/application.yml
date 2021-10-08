@@ -1,11 +1,6 @@
-plaid:
-  clientId: 6148efa64491e20011af5b75
-  secret:
-  environment: SANDBOX
-
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
+    url: jdbc:postgresql://localhost:5432/capital
     username: postgres
     password: docker
   jpa:
@@ -20,6 +15,9 @@ spring:
         format_sql: true
   flyway:
     clean-on-validation-error: true
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
 
 tranwall:
   encryption:
@@ -33,13 +31,25 @@ tranwall:
         key: 148F8C2650959006B52D67A1E927A4D83DF6C967B8D4BA30C457EAF492F7C825
         tweak: 9F1E1761
 
-feign:
-  url:
-    i2c: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
-  okhttp:
-    enabled: true
+client:
+  plaid:
+    clientId: 6148efa64491e20011af5b75
+    secret:
+    environment: SANDBOX
+  alloy:
+    url: https://sandbox.alloy.co/v1/
+    individual:
+      token: hyGpn2Lrdo04eLiolXSHAAsUJghQHxO4
+      secret: s25ZtYvujLaIypNeXbw5ZvhpYh5RD3VQ
+    business:
+      token: ylU99zgb9lI8EtVfHzYWmGBEWqqYHUdX
+      secret: oLvy6KLi7I0kAcIYsc4RpsYfoSVBdx4s
+  i2c:
+    url: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
+    acquirerId: TranTest
+    userId: TranTest
+    password: 754NM@l1LT9
 
-logging.level.com.tranwall.capital: DEBUG
 ---
 
 #Docker profile

@@ -31,8 +31,9 @@ public class BusinessOwnerService {
       String lastName,
       Address address,
       String email,
-      String phone) {
-    BusinessOwner business =
+      String phone,
+      String subjectRef) {
+    BusinessOwner businessOwner =
         new BusinessOwner(
             businessId,
             BusinessOwnerType.UNSPECIFIED,
@@ -40,13 +41,13 @@ public class BusinessOwnerService {
             new NullableEncryptedString(lastName),
             RelationshipToBusiness.UNSPECIFIED,
             address,
-            "",
             new RequiredEncryptedStringWithHash(email),
             new RequiredEncryptedString(phone),
             Country.UNSPECIFIED,
             KnowYourCustomerStatus.PENDING,
             BusinessOwnerStatus.ACTIVE);
+    businessOwner.setSubjectRef(subjectRef);
 
-    return businessOwnerRepository.save(business);
+    return businessOwnerRepository.save(businessOwner);
   }
 }

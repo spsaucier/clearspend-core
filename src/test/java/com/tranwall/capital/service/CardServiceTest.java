@@ -1,8 +1,6 @@
 package com.tranwall.capital.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.tranwall.capital.CapitalTest;
+import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
@@ -15,8 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@CapitalTest
-class CardServiceTest {
+import static org.assertj.core.api.Assertions.assertThat;
+
+class CardServiceTest extends BaseCapitalTest {
 
   @Autowired private ServiceHelper serviceHelper;
 
@@ -48,7 +47,7 @@ class CardServiceTest {
             program,
             FundingType.POOLED,
             Currency.USD);
-    Card foundCard = cardRepository.findById(user.getId()).orElseThrow();
+    Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
 }
