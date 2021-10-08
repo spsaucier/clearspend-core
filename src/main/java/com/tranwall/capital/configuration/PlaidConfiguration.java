@@ -5,15 +5,20 @@ import com.plaid.client.request.PlaidApi;
 import com.tranwall.capital.client.plaid.PlaidProperties;
 import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class PlaidConfiguration {
 
   @Bean
   public PlaidApi plaidApi(PlaidProperties plaidProperties) {
+    log.debug("{}", plaidProperties.getEnvironment());
+    log.debug("{}", plaidProperties.getClientId());
+    log.debug("Plaid secret is set: {}", plaidProperties.getSecret() != null);
     // Set up ApiClient
     HashMap<String, String> apiKeys = new HashMap<>();
     apiKeys.put("clientId", plaidProperties.getClientId());

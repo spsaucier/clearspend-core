@@ -47,6 +47,7 @@ public class PlaidClient {
 
     if (!response.isSuccessful() || response.body() == null) {
       String errorMessage = "Error while exchanging public token";
+      log.debug(response.errorBody().string());
       log.error(errorMessage);
       throw new RuntimeException(errorMessage);
     }

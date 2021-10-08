@@ -34,7 +34,6 @@ tranwall:
 client:
   plaid:
     clientId: 6148efa64491e20011af5b75
-    secret:
     environment: SANDBOX
   alloy:
     url: https://sandbox.alloy.co/v1/
@@ -64,3 +63,4 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+logging.level.com.tranwall.capital: DEBUG

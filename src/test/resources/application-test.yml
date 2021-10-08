@@ -3,7 +3,3 @@ spring:
     url: ${TC_DB_URL}
     username: ${TC_DB_USERNAME}
     password: ${TC_DB_PASSWORD}
-
-plaid:
-  clientId: 6148efa64491e20011af5b75
-  environment: SANDBOX
