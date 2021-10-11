@@ -45,7 +45,7 @@ definitions:
     postgres:
       image: postgres
       variables:
-        POSTGRES_DB: 'postgres'
+        POSTGRES_DB: 'capital'
         POSTGRES_USER: 'postgres'
         POSTGRES_PASSWORD: 'docker'
 
