@@ -1,22 +1,24 @@
 package com.tranwall.capital.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.repository.BusinessRepository;
-import com.tranwall.capital.service.BusinessService.BusinessRecord;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class BusinessServiceTest extends BaseCapitalTest {
 
-  @Autowired private ServiceHelper serviceHelper;
+  @Autowired
+  private ServiceHelper serviceHelper;
 
-  @Autowired private BusinessRepository businessRepository;
+  @Autowired
+  private BusinessRepository businessRepository;
 
   private Bin bin;
   private Program program;
@@ -31,9 +33,10 @@ class BusinessServiceTest extends BaseCapitalTest {
 
   @Test
   void createBusiness() {
-    BusinessRecord businessRecord = serviceHelper.createBusiness(program);
+    BusinessAndAllocationsRecord businessAndAllocationsRecord =
+        serviceHelper.createBusiness(program);
     Business foundBusiness =
-        businessRepository.findById(businessRecord.business().getId()).orElseThrow();
+        businessRepository.findById(businessAndAllocationsRecord.business().getId()).orElseThrow();
     assertThat(foundBusiness).isNotNull();
   }
 }

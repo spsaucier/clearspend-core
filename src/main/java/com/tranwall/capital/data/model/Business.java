@@ -1,5 +1,6 @@
 package com.tranwall.capital.data.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
@@ -7,8 +8,8 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.BusinessType;
+import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
-import java.time.LocalDate;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
@@ -32,7 +33,9 @@ import org.hibernate.annotations.DynamicUpdate;
 @DynamicUpdate
 @Slf4j
 public class Business extends Mutable {
-  @NonNull private String legalName;
+
+  @NonNull
+  private String legalName;
 
   @NonNull
   @Enumerated(EnumType.STRING)
@@ -50,13 +53,22 @@ public class Business extends Mutable {
   })
   private ClearAddress clearAddress;
 
-  @Sensitive @NonNull private String employerIdentificationNumber;
+  @Sensitive
+  @NonNull
+  private String employerIdentificationNumber;
 
-  @Sensitive @Embedded private RequiredEncryptedString businessEmail;
+  @Sensitive
+  @Embedded
+  private RequiredEncryptedString businessEmail;
 
-  @Sensitive @Embedded private RequiredEncryptedString businessPhone;
+  @Sensitive
+  @Embedded
+  private RequiredEncryptedString businessPhone;
 
-  private LocalDate formationDate;
+  @Enumerated(value = EnumType.STRING)
+  @NonNull
+  @JsonProperty("currency")
+  private Currency currency;
 
   @NonNull
   @Enumerated(EnumType.STRING)

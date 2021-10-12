@@ -5,6 +5,7 @@ plugins {
     id("org.flywaydb.flyway") version "8.0.0-beta1"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
+    id("com.diffplug.spotless") version "5.16.0"
 }
 
 group = "com.example"
@@ -22,6 +23,12 @@ java {
 jib {
     from.image = "openjdk:17-jdk-alpine3.13"
     to.image = "capital/core"
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
 }
 
 snyk {

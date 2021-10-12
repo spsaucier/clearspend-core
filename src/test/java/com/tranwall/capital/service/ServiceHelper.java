@@ -2,7 +2,6 @@ package com.tranwall.capital.service;
 
 import com.github.javafaker.Faker;
 import com.tranwall.capital.common.data.model.Address;
-import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
@@ -15,7 +14,7 @@ import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.model.enums.UserType;
-import com.tranwall.capital.service.BusinessService.BusinessRecord;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -59,15 +58,15 @@ public class ServiceHelper {
         UUID.randomUUID().toString(), bin.getBin(), FundingType.POOLED);
   }
 
-  public BusinessRecord createBusiness(Program program) {
+  public BusinessAndAllocationsRecord createBusiness(Program program) {
     return businessService.createBusiness(
+        null,
         faker.company().name(),
         BusinessType.LLC,
         generateAddress(),
         faker.number().digits(9),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        null,
         List.of(program.getId()),
         Currency.USD);
   }
@@ -78,7 +77,7 @@ public class ServiceHelper {
         UserType.EMPLOYEE,
         faker.name().firstName(),
         faker.name().lastName(),
-        generateSensitiveAddress(),
+        generateAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
         UUID.randomUUID().toString());
@@ -102,17 +101,7 @@ public class ServiceHelper {
         currency);
   }
 
-  public ClearAddress generateAddress() {
-    return new ClearAddress(
-        faker.address().streetAddress(),
-        faker.address().secondaryAddress(),
-        faker.address().city(),
-        faker.address().state(),
-        faker.address().zipCode(),
-        Country.USA);
-  }
-
-  public Address generateSensitiveAddress() {
+  public Address generateAddress() {
     return new Address(
         new EncryptedString(faker.address().streetAddress()),
         new EncryptedString(faker.address().secondaryAddress()),

@@ -1,9 +1,8 @@
 package com.tranwall.capital.controller.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Value;
-
 import java.util.List;
+import lombok.Value;
 
 @Value
 public class AlloyManualReviewCallback {

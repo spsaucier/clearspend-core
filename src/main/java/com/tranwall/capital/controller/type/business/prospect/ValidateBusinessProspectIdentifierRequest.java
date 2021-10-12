@@ -1,8 +1,8 @@
-package com.tranwall.capital.controller.type;
+package com.tranwall.capital.controller.type.business.prospect;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,12 @@ public class ValidateBusinessProspectIdentifierRequest {
   @Sensitive
   @NonNull
   @JsonProperty("identifierType")
-  @ApiModelProperty(value = "Type of Identifier to validate", example = "EMAIL")
+  @Schema(name = "Type of Identifier to validate", example = "EMAIL")
   private IdentifierType identifierType;
 
   @Sensitive
   @NonNull
   @JsonProperty("otp")
-  @ApiModelProperty(value = "OTP received via email/phone", example = "67890")
+  @Schema(name = "OTP received via email/phone", example = "67890")
   private String otp;
 }

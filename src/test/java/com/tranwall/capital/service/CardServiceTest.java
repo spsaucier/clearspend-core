@@ -1,5 +1,7 @@
 package com.tranwall.capital.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Card;
@@ -8,20 +10,20 @@ import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.CardRepository;
-import com.tranwall.capital.service.BusinessService.BusinessRecord;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class CardServiceTest extends BaseCapitalTest {
 
-  @Autowired private ServiceHelper serviceHelper;
+  @Autowired
+  private ServiceHelper serviceHelper;
 
-  @Autowired private CardRepository cardRepository;
+  @Autowired
+  private CardRepository cardRepository;
 
-  private BusinessRecord businessRecord;
+  private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;
   private Program program;
   private User user;
@@ -31,8 +33,8 @@ class CardServiceTest extends BaseCapitalTest {
     if (bin == null) {
       bin = serviceHelper.createBin();
       program = serviceHelper.createProgram(bin);
-      businessRecord = serviceHelper.createBusiness(program);
-      user = serviceHelper.createUser(businessRecord.business());
+      businessAndAllocationsRecord = serviceHelper.createBusiness(program);
+      user = serviceHelper.createUser(businessAndAllocationsRecord.business());
     }
   }
 
@@ -40,8 +42,8 @@ class CardServiceTest extends BaseCapitalTest {
   void issueCard() {
     Card card =
         serviceHelper.issueCard(
-            businessRecord.business(),
-            businessRecord.allocationRecords().get(0).allocation(),
+            businessAndAllocationsRecord.business(),
+            businessAndAllocationsRecord.allocationRecords().get(0).allocation(),
             user,
             bin,
             program,

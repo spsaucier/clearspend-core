@@ -1,7 +1,6 @@
 package com.tranwall.capital.data.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.sun.istack.NotNull;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.Mutable;
 import java.time.OffsetDateTime;
@@ -39,7 +38,9 @@ public class Posting extends Mutable {
   @Column(updatable = false)
   private UUID ledgerAccountId;
 
-  @NonNull @Embedded private Amount amount;
+  @NonNull
+  @Embedded
+  private Amount amount;
 
   private OffsetDateTime effectiveDate;
 }

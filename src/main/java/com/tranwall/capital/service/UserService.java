@@ -3,7 +3,6 @@ package com.tranwall.capital.service;
 import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
-import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;

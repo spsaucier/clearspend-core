@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.enums.Country;
 import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
@@ -36,4 +37,14 @@ public class Address {
   @JsonProperty("country")
   @Size(min = 3, max = 3, message = "3 characters")
   private Country country;
+
+  public com.tranwall.capital.common.data.model.Address toAddress() {
+    return new com.tranwall.capital.common.data.model.Address(
+        new EncryptedString(streetLine1),
+        new EncryptedString(streetLine2),
+        locality,
+        region,
+        new EncryptedString(postalCode),
+        country);
+  }
 }

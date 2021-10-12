@@ -1,4 +1,4 @@
-package com.tranwall.capital.controller.type;
+package com.tranwall.capital.controller.type.adjustment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class ConvertBusinessProspectResponse {
+public class CreateAdjustmentResponse {
 
-  @JsonProperty("businessId")
+  @JsonProperty("adjustmentId")
   @NonNull
-  private UUID businessId;
+  private UUID adjustmentId;
 }

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
@@ -12,7 +11,6 @@ import javax.persistence.PreUpdate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.GenericGenerator;
 
 @Getter
 @Setter
@@ -20,7 +18,8 @@ import org.hibernate.annotations.GenericGenerator;
 @NoArgsConstructor
 public class Immutable {
 
-  @Id private UUID id = UUID.randomUUID();
+  @Id
+  private UUID id = UUID.randomUUID();
 
   @Column(nullable = false, updatable = false)
   @JsonIgnore

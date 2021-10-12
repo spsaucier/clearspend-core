@@ -1,12 +1,20 @@
 package com.tranwall.capital.client.plaid;
 
-import com.plaid.client.model.*;
+import com.plaid.client.model.AuthGetRequest;
+import com.plaid.client.model.AuthGetResponse;
+import com.plaid.client.model.CountryCode;
+import com.plaid.client.model.ItemPublicTokenExchangeRequest;
+import com.plaid.client.model.ItemPublicTokenExchangeResponse;
+import com.plaid.client.model.LinkTokenCreateRequest;
+import com.plaid.client.model.LinkTokenCreateRequestUser;
+import com.plaid.client.model.LinkTokenCreateResponse;
+import com.plaid.client.model.NumbersACH;
+import com.plaid.client.model.Products;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +25,15 @@ import retrofit2.Response;
 @RequiredArgsConstructor
 @Slf4j
 public class PlaidClient {
+
   public static final String PLAID_CLIENT_NAME = "Tranwall";
   public static final String LANGUAGE = "en";
-  @NonNull private PlaidApi plaidApi;
-  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {};
+  @NonNull
+  private PlaidApi plaidApi;
+
+  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {
+
+  }
 
   public String createLinkToken(UUID businessId) throws IOException {
     LinkTokenCreateRequest request =
@@ -60,8 +73,9 @@ public class PlaidClient {
     log.debug(
         "{}", authGetResponse.errorBody() != null ? authGetResponse.errorBody().string() : "");
 
-    if (authGetResponse.isSuccessful() && authGetResponse.body() != null)  {
-      return new AccountsResponse(response.body().getAccessToken(), authGetResponse.body().getNumbers().getAch());
+    if (authGetResponse.isSuccessful() && authGetResponse.body() != null) {
+      return new AccountsResponse(
+          response.body().getAccessToken(), authGetResponse.body().getNumbers().getAch());
     }
 
     return null;

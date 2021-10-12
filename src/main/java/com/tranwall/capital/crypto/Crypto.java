@@ -32,6 +32,7 @@ import org.springframework.util.Assert;
 @Component
 @Slf4j
 public class Crypto {
+
   static String envPrefix = "tranwall.encryption.key.aes.";
   private static final int maxKeys = 1000;
   private static final String keyDelimiter = "\\|";
@@ -77,7 +78,9 @@ public class Crypto {
     currentKey = Base64.getDecoder().decode(currentKeyString);
 
     // then numbered keys
-    record EnvironmentKey (byte[] key, String name) {}
+    record EnvironmentKey(byte[] key, String name) {
+
+    }
     Map<String, EnvironmentKey> environmentKeys = new LinkedHashMap<>();
     Loop:
     for (int i = 0; i < maxKeys; i++) {
@@ -141,7 +144,8 @@ public class Crypto {
       keyMap.put(keyRef, entry.key);
     }
 
-    currentKeyRef = existingKeys.get(Base64.getEncoder().encodeToString(HashUtil.calculateHash(currentKey)));
+    currentKeyRef =
+        existingKeys.get(Base64.getEncoder().encodeToString(HashUtil.calculateHash(currentKey)));
   }
 
   public byte[] encrypt(String clearText) {
@@ -233,8 +237,7 @@ public class Crypto {
     int encKeyRef = VarInt.getVarInt(buffer);
 
     Assert.isTrue(
-        keyMap.containsKey(encKeyRef),
-        String.format("key not found for keyRef %d", encKeyRef));
+        keyMap.containsKey(encKeyRef), String.format("key not found for keyRef %d", encKeyRef));
 
     byte[] key = keyMap.get(encKeyRef);
 

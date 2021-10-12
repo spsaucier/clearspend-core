@@ -3,6 +3,8 @@ package com.tranwall.capital.service;
 import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddCardResponseRoot;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.enums.AccountType;
@@ -11,6 +13,7 @@ import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.CardRepository;
 import java.util.UUID;
 import javax.transaction.Transactional;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,10 @@ public class CardService {
   private final AccountService accountService;
 
   private final I2Client i2Client;
+
+  public record CardRecord(Card card, Account account) {
+
+  }
 
   @Transactional
   Card issueCard(
@@ -54,5 +61,18 @@ public class CardService {
     }
 
     return cardRepository.save(card);
+  }
+
+  public CardRecord getCard(
+      UUID businessId, @NonNull UUID allocationId, @NonNull UUID cardId, Currency currency) {
+    Card card =
+        cardRepository
+            .findByBusinessIdAndAllocationIdAndId(businessId, allocationId, cardId)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(Table.BUSINESS, businessId, allocationId, cardId));
+    Account account = accountService.retrieveCardAccount(businessId, currency, cardId);
+
+    return new CardRecord(card, account);
   }
 }

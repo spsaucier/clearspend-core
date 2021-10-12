@@ -3,6 +3,8 @@ package com.tranwall.capital.data.model;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.data.model.enums.AccountType;
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -10,6 +12,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
+import javax.persistence.Transient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -45,5 +48,23 @@ public class Account extends Mutable {
   @Column(updatable = false)
   private UUID ownerId;
 
-  @NonNull @Embedded private Amount ledgerBalance;
+  @NonNull
+  @Embedded
+  private Amount ledgerBalance;
+
+  @Transient
+  private Amount availableBalance;
+  @Transient
+  private List<Hold> holds;
+
+  public void setHolds(List<Hold> holds) {
+    this.holds = holds;
+    this.availableBalance.setAmount(
+        ledgerBalance
+            .getAmount()
+            .subtract(
+                holds.stream()
+                    .map(e -> e.getAmount().getAmount())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)));
+  }
 }

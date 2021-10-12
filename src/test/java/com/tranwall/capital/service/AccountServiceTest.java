@@ -8,21 +8,25 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
-import com.tranwall.capital.service.BusinessService.BusinessRecord;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import java.math.BigDecimal;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.math.BigDecimal;
-
+@Slf4j
 class AccountServiceTest extends BaseCapitalTest {
 
-  @Autowired private ServiceHelper serviceHelper;
-  @Autowired private AccountService accountService;
+  @Autowired
+  private ServiceHelper serviceHelper;
+  @Autowired
+  private AccountService accountService;
 
-  @Autowired private UserRepository userRepository;
+  @Autowired
+  private UserRepository userRepository;
 
-  private BusinessRecord businessRecord;
+  private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;
   private Program program;
 
@@ -31,41 +35,42 @@ class AccountServiceTest extends BaseCapitalTest {
     if (bin == null) {
       bin = serviceHelper.createBin();
       program = serviceHelper.createProgram(bin);
-      businessRecord = serviceHelper.createBusiness(program);
+      businessAndAllocationsRecord = serviceHelper.createBusiness(program);
     }
   }
 
   @Test
-  void createAccount() {}
+  void createAccount() {
+  }
 
   @Test
   void depositFunds() {
     AdjustmentRecord adjustmentRecord =
         accountService.depositFunds(
-            businessRecord.businessAccount().getId(),
+            businessAndAllocationsRecord.business().getId(),
             Amount.of(Currency.USD, new BigDecimal("1000")));
   }
 
   @Test
   void withdrawFunds() {
     accountService.depositFunds(
-        businessRecord.businessAccount().getId(),
+        businessAndAllocationsRecord.business().getId(),
         Amount.of(Currency.USD, new BigDecimal("700.51")));
     AdjustmentRecord adjustmentRecord =
         accountService.withdrawFunds(
-            businessRecord.businessAccount().getId(),
+            businessAndAllocationsRecord.business().getId(),
             Amount.of(Currency.USD, new BigDecimal("241.85")));
   }
 
   @Test
   void reallocateFunds() {
     accountService.depositFunds(
-        businessRecord.businessAccount().getId(),
+        businessAndAllocationsRecord.business().getId(),
         Amount.of(Currency.USD, new BigDecimal("700.51")));
     AccountReallocateFundsRecord adjustmentRecord =
         accountService.reallocateFunds(
-            businessRecord.businessAccount().getId(),
-            businessRecord.allocationRecords().get(0).account().getId(),
+            businessAndAllocationsRecord.businessAccount().getId(),
+            businessAndAllocationsRecord.allocationRecords().get(0).account().getId(),
             Amount.of(Currency.USD, new BigDecimal("241.85")));
   }
 }

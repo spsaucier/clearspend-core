@@ -3,7 +3,6 @@ package com.tranwall.capital.crypto;
 import static org.apache.commons.codec.digest.DigestUtils.sha256;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tranwall.capital.crypto.HashUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +10,8 @@ import org.junit.jupiter.api.Test;
 class HashUtilTest {
 
   @Test
-  void calculateHash() {}
+  void calculateHash() {
+  }
 
   @Test
   public void testCrypto_alreadyHashed() {
@@ -29,32 +29,42 @@ class HashUtilTest {
   }
 
   @Test
-  void testCalculateHash() {}
+  void testCalculateHash() {
+  }
 
   @Test
-  void calculateHash256() {}
+  void calculateHash256() {
+  }
 
   @Test
-  void calculateHash512NoPrefix() {}
+  void calculateHash512NoPrefix() {
+  }
 
   @Test
-  void normalizedHash() {}
+  void normalizedHash() {
+  }
 
   @Test
-  void hashAndCompareTo() {}
+  void hashAndCompareTo() {
+  }
 
   @Test
-  void generateKeyString() {}
+  void generateKeyString() {
+  }
 
   @Test
-  void testGenerateKeyString() {}
+  void testGenerateKeyString() {
+  }
 
   @Test
-  void generateKey() {}
+  void generateKey() {
+  }
 
   @Test
-  void testGenerateKey() {}
+  void testGenerateKey() {
+  }
 
   @Test
-  void testGenerateKey1() {}
+  void testGenerateKey1() {
+  }
 }

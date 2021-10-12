@@ -30,9 +30,18 @@ public class BusinessBankAccount extends Mutable {
   @Column(updatable = false)
   private UUID businessId;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
+  @Sensitive
+  private String name;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
+  @Sensitive
+  @Embedded
+  private RequiredEncryptedStringWithHash routingNumber;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
+  @Sensitive
+  @Embedded
+  private RequiredEncryptedStringWithHash accountNumber;
+
+  @Sensitive
+  @Embedded
+  private RequiredEncryptedStringWithHash accessToken;
 }

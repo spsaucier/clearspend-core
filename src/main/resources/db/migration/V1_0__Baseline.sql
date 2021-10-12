@@ -109,6 +109,7 @@ create table if not exists business
     business_email_encrypted       bytea                       not null,
     business_phone_encrypted       bytea                       not null,
     formation_date                 date,
+    currency                       varchar(10)                 not null,
     -- EDD (enhanced due diligence) will result in articles of incorporation and board/shareholder information uploaded directly to Alloy
     -- ..., complete (terminal)
     onboarding_step                varchar(20)                 not null,
@@ -344,6 +345,8 @@ create table if not exists business_prospect
     created              timestamp without time zone not null,
     updated              timestamp without time zone not null,
     version              bigint                      not null,
+    business_id          uuid                        not null,
+    business_owner_id    uuid                        not null,
     first_name_encrypted bytea                       not null,
     last_name_encrypted  bytea                       not null,
     email_encrypted      bytea                       not null,
@@ -366,10 +369,10 @@ values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall 
 insert into business (id, created, updated, version, type, legal_name, address_street_line1,
                       address_street_line2, address_locality, address_region, address_postal_code,
                       address_country, employer_identification_number, business_email_encrypted,
-                      business_phone_encrypted, formation_date, onboarding_step,
+                      business_phone_encrypted, formation_date, currency, onboarding_step,
                       know_your_business_status, status)
 values ('82a79d15-9e47-421b-ab8f-78532f4f8bc7', now(), now(), 1, 'LLC', 'Tranwall', '', '', '', '',
-        '', 'USA', '123654789', '', '', '2021-01-01', 'COMPLETE', 'PASS', 'ACTIVE');
+        '', 'USA', '123654789', '', '', '2021-01-01', 'USD', 'COMPLETE', 'PASS', 'ACTIVE');
 insert into ledger_account (id, created, updated, version, type, currency)
 values ('b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1', now(), now(), 1, 'BUSINESS', 'USD');
 insert into account (id, created, updated, version, business_id, type, owner_id,

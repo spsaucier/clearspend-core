@@ -3,7 +3,6 @@ package com.tranwall.capital.common.data.model;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
@@ -13,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.annotation.ReadOnlyProperty;
 
 @Getter
@@ -22,7 +20,8 @@ import org.springframework.data.annotation.ReadOnlyProperty;
 @NoArgsConstructor
 public class Mutable {
 
-  @Id private UUID id = UUID.randomUUID();
+  @Id
+  private UUID id = UUID.randomUUID();
 
   @Version
   @ReadOnlyProperty

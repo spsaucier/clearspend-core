@@ -1,5 +1,7 @@
 package com.tranwall.capital.client.i2c;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequestRoot;
 import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
@@ -8,13 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @SpringBootTest
 @Disabled
 public class I2ClientTest {
 
-  @Autowired private I2Client i2Client;
+  @Autowired
+  private I2Client i2Client;
 
   @Test
   public void getCardStatusRequest() {

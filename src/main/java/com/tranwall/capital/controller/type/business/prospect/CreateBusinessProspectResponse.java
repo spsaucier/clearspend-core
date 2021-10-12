@@ -1,4 +1,4 @@
-package com.tranwall.capital.controller.type;
+package com.tranwall.capital.controller.type.business.prospect;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
@@ -10,7 +10,6 @@ import lombok.NonNull;
 @Data
 @AllArgsConstructor
 public class CreateBusinessProspectResponse {
-  public static final String EMAIL_PATTERN = "^[^@]+@[^@.]+\\.[^@]+$";
 
   @JsonProperty("businessProspectId")
   @NonNull

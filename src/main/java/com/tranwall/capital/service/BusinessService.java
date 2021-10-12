@@ -1,6 +1,10 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.common.data.model.Address;
+import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.ClearAddress;
+import com.tranwall.capital.common.error.IdMismatchException;
+import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
@@ -12,16 +16,19 @@ import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
+import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,32 +44,42 @@ public class BusinessService {
   private final AllocationService allocationService;
   private final AccountService accountService;
 
-  public record BusinessRecord(
-      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {}
+  public record BusinessRecord(Business business, Account businessAccount) {
 
+  }
+
+  public record BusinessAndAllocationsRecord(
+      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {
+
+  }
+
+  @SneakyThrows
   @Transactional
-  BusinessRecord createBusiness(
+  BusinessAndAllocationsRecord createBusiness(
+      UUID businessId,
       String legalName,
       BusinessType type,
-      ClearAddress clearAddress,
+      Address address,
       String employerIdentificationNumber,
       String email,
       String phone,
-      LocalDate formationDate,
       List<UUID> programIds,
       Currency currency) {
     Business business =
         new Business(
             legalName,
             type,
-            clearAddress,
+            ClearAddress.of(address),
             employerIdentificationNumber,
+            currency,
             BusinessOnboardingStep.ONBOARDING,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING);
+    if (businessId != null) {
+      business.setId(businessId);
+    }
     business.setBusinessEmail(new RequiredEncryptedString(email));
     business.setBusinessPhone(new RequiredEncryptedString(phone));
-    business.setFormationDate(formationDate);
 
     business = businessRepository.save(business);
 
@@ -86,6 +103,40 @@ public class BusinessService {
               currency));
     }
 
-    return new BusinessRecord(business, account, allocationRecords);
+    return new BusinessAndAllocationsRecord(business, account, allocationRecords);
+  }
+
+  public Business retrieveBusiness(UUID businessId) {
+    return businessRepository
+        .findById(businessId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+  }
+
+  public BusinessRecord getBusiness(UUID businessId) {
+    Business business = retrieveBusiness(businessId);
+    Account account = accountService.retrieveBusinessAccount(businessId, business.getCurrency());
+    return new BusinessRecord(business, account);
+  }
+
+  @Transactional
+  public AccountReallocateFundsRecord reallocateBusinessFunds(
+      UUID businessId,
+      @NonNull UUID allocationId,
+      @NonNull UUID accountId,
+      @NonNull FundsTransactType fundsTransactType,
+      Amount amount) {
+    BusinessRecord businessRecord = getBusiness(businessId);
+    AllocationRecord allocation =
+        allocationService.getAllocation(businessRecord.business, allocationId);
+    if (!allocation.account().getId().equals(accountId)) {
+      throw new IdMismatchException(IdType.ACCOUNT_ID, accountId, allocation.account().getId());
+    }
+
+    return switch (fundsTransactType) {
+      case DEPOSIT -> accountService.reallocateFunds(
+          allocation.account().getId(), businessRecord.businessAccount.getId(), amount);
+      case WITHDRAW -> accountService.reallocateFunds(
+          businessRecord.businessAccount.getId(), allocation.account().getId(), amount);
+    };
   }
 }

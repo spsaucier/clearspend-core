@@ -64,5 +64,7 @@ public class Adjustment extends Mutable {
   @NonNull
   private OffsetDateTime effectiveDate;
 
-  @NonNull @Embedded private Amount amount;
+  @NonNull
+  @Embedded
+  private Amount amount;
 }

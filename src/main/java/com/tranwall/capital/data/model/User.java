@@ -4,7 +4,6 @@ import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Mutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
-import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.UserType;
 import java.util.UUID;
@@ -42,15 +41,26 @@ public class User extends Mutable {
   @Enumerated(EnumType.STRING)
   private UserType type;
 
-  @Sensitive @Embedded private NullableEncryptedString firstName;
+  @Sensitive
+  @Embedded
+  private NullableEncryptedString firstName;
 
-  @Sensitive @Embedded private NullableEncryptedString lastName;
+  @Sensitive
+  @Embedded
+  private NullableEncryptedString lastName;
 
-  @Embedded private Address address;
+  @Embedded
+  private Address address;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash email;
+  @Sensitive
+  @Embedded
+  @NonNull
+  private RequiredEncryptedStringWithHash email;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash phone;
+  @Sensitive
+  @Embedded
+  @NonNull
+  private RequiredEncryptedStringWithHash phone;
 
   // link to FusionAuth
   private String subjectRef;
