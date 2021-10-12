@@ -48,7 +48,15 @@ client:
     acquirerId: TranTest
     userId: TranTest
     password: 754NM@l1LT9
-
+  twilio:
+    account-sid: ${TWILIO_ACCOUNT_SID:AC08834a8aab6f817ea96ae7149e8befff}
+    auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}
+    message-service-id: ${TWILIO_MESSAGE_SERVICE_ID:MGe85d68add5ac0ddb5a2526241aa0369f}
+    verify-service-id: ${TWILIO_VERIFY_SERVICE_ID:VAbaf002bd328d70c5aadf45f92d8c49ac}
+  sendgrid:
+    api-key: ${SENDGRID_API_KEY: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}
+    notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:Tranwall <notifications@em6632.tranwall.com>}
+    notifications-email-subject: ${SENDGRID_NOTIFICATIONS_EMAIL_SUBJECT:Tranwall}
 ---
 
 #Docker profile

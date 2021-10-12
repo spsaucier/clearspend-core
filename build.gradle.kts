@@ -68,6 +68,8 @@ dependencies {
     implementation("com.google.guava:guava:30.1.1-jre")
     implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
     implementation("com.plaid:plaid-java:9.0.0")
+    implementation("com.twilio.sdk:twilio:8.19.2")
+    implementation("com.sendgrid:sendgrid-java:4.7.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
 
     // test section
