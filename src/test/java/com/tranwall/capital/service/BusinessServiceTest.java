@@ -14,11 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class BusinessServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private ServiceHelper serviceHelper;
+  @Autowired private ServiceHelper serviceHelper;
 
-  @Autowired
-  private BusinessRepository businessRepository;
+  @Autowired private BusinessRepository businessRepository;
 
   private Bin bin;
   private Program program;

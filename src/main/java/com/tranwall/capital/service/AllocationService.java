@@ -43,9 +43,7 @@ public class AllocationService {
   private final CardService cardService;
   private final ProgramService programService;
 
-  public record AllocationRecord(Allocation allocation, Account account) {
-
-  }
+  public record AllocationRecord(Allocation allocation, Account account) {}
 
   @Transactional
   public AllocationRecord createAllocation(

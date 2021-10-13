@@ -14,15 +14,11 @@ import org.springframework.validation.annotation.Validated;
 @Setter
 public class TwilioProperties {
 
-  @NotBlank
-  private String accountSid;
+  @NotBlank private String accountSid;
 
-  @NotBlank
-  private String authToken;
+  @NotBlank private String authToken;
 
-  @NotBlank
-  private String messageServiceId;
+  @NotBlank private String messageServiceId;
 
-  @NotBlank
-  private String verifyServiceId;
+  @NotBlank private String verifyServiceId;
 }

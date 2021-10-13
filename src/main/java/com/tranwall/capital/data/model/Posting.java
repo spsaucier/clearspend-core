@@ -38,9 +38,7 @@ public class Posting extends Mutable {
   @Column(updatable = false)
   private UUID ledgerAccountId;
 
-  @NonNull
-  @Embedded
-  private Amount amount;
+  @NonNull @Embedded private Amount amount;
 
   private OffsetDateTime effectiveDate;
 }

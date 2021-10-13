@@ -44,11 +44,11 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/validate-identifier")
   private void validateBusinessProspectEmail(
       @PathVariable(value = "businessProspectId")
-      @ApiParam(
-          required = true,
-          name = "businessProspectId",
-          value = "ID of the businessProspect record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessProspectId",
+              value = "ID of the businessProspect record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody ValidateBusinessProspectIdentifierRequest request) {
     businessProspectService.validateBusinessProspectIdentifier(
@@ -58,11 +58,11 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/phone")
   private SetBusinessProspectPhoneResponse setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
-      @ApiParam(
-          required = true,
-          name = "businessProspectId",
-          value = "ID of the businessProspect record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessProspectId",
+              value = "ID of the businessProspect record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
     return new SetBusinessProspectPhoneResponse(
@@ -74,11 +74,11 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/password")
   private void setBusinessProspectPassword(
       @PathVariable(value = "businessProspectId")
-      @ApiParam(
-          required = true,
-          name = "businessProspectId",
-          value = "ID of the businessProspect record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessProspectId",
+              value = "ID of the businessProspect record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody SetBusinessProspectPasswordRequest request) {
     BusinessProspect businessProspect =
@@ -89,11 +89,11 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/convert")
   private ConvertBusinessProspectResponse convertBusinessProspect(
       @PathVariable(value = "businessProspectId")
-      @ApiParam(
-          required = true,
-          name = "businessProspectId",
-          value = "ID of the businessProspect record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessProspectId",
+              value = "ID of the businessProspect record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessProspectId,
       @Validated @RequestBody ConvertBusinessProspectRequest request) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =

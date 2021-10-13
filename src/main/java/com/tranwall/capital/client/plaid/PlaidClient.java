@@ -28,12 +28,9 @@ public class PlaidClient {
 
   public static final String PLAID_CLIENT_NAME = "Tranwall";
   public static final String LANGUAGE = "en";
-  @NonNull
-  private PlaidApi plaidApi;
+  @NonNull private PlaidApi plaidApi;
 
-  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {
-
-  }
+  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {}
 
   public String createLinkToken(UUID businessId) throws IOException {
     LinkTokenCreateRequest request =

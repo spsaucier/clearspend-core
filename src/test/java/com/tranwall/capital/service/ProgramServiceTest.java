@@ -12,13 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class ProgramServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private ProgramService programService;
-  @Autowired
-  private ServiceHelper serviceHelper;
+  @Autowired private ProgramService programService;
+  @Autowired private ServiceHelper serviceHelper;
 
-  @Autowired
-  private ProgramRepository programRepository;
+  @Autowired private ProgramRepository programRepository;
 
   private Bin bin;
 

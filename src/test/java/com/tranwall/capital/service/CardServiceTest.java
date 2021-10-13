@@ -17,11 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class CardServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private ServiceHelper serviceHelper;
+  @Autowired private ServiceHelper serviceHelper;
 
-  @Autowired
-  private CardRepository cardRepository;
+  @Autowired private CardRepository cardRepository;
 
   private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;

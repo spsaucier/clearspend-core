@@ -10,14 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class BinServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private BinService binService;
+  @Autowired private BinService binService;
 
-  @Autowired
-  private ServiceHelper serviceHelper;
+  @Autowired private ServiceHelper serviceHelper;
 
-  @Autowired
-  private BinRepository binRepository;
+  @Autowired private BinRepository binRepository;
 
   @Test
   void createBin() {

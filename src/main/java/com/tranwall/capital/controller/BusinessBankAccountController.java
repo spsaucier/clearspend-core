@@ -31,8 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class BusinessBankAccountController {
 
-  @NonNull
-  private BusinessBankAccountService businessBankAccountService;
+  @NonNull private BusinessBankAccountService businessBankAccountService;
 
   @GetMapping("/link-token")
   private String linkToken(@RequestHeader(name = "businessId") UUID businessId) throws IOException {
@@ -69,11 +68,11 @@ public class BusinessBankAccountController {
   private CreateAdjustmentResponse transact(
       @RequestHeader(name = "businessId") UUID businessId,
       @PathVariable(value = "businessBankAccountId")
-      @ApiParam(
-          required = true,
-          name = "businessBankAccountId",
-          value = "ID of the businessBankAccount record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessBankAccountId",
+              value = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {
     // TODO: Get business UUID from JWT

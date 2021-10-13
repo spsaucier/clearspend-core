@@ -48,8 +48,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     MockHttpServletResponse response =
         mvc.perform(
                 patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+                        String.format(
+                            "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
                     .contentType("application/json")
                     .content(body))
             .andExpect(status().isOk())

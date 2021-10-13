@@ -18,13 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 class AccountServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private ServiceHelper serviceHelper;
-  @Autowired
-  private AccountService accountService;
+  @Autowired private ServiceHelper serviceHelper;
+  @Autowired private AccountService accountService;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
   private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;
@@ -40,8 +37,7 @@ class AccountServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void createAccount() {
-  }
+  void createAccount() {}
 
   @Test
   void depositFunds() {

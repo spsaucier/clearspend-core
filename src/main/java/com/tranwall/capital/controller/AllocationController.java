@@ -52,11 +52,11 @@ public class AllocationController {
   private Allocation getAllocation(
       @RequestHeader(name = "businessId") UUID businessId,
       @PathVariable(value = "allocationId")
-      @ApiParam(
-          required = true,
-          name = "allocationId",
-          value = "ID of the allocation record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "allocationId",
+              value = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID allocationId) {
     AllocationRecord allocationRecord =
         allocationService.getAllocation(businessService.retrieveBusiness(businessId), allocationId);
@@ -72,11 +72,11 @@ public class AllocationController {
   private List<Allocation> getAllocationChildren(
       @RequestHeader(name = "businessId") UUID businessId,
       @PathVariable(value = "allocationId")
-      @ApiParam(
-          required = true,
-          name = "allocationId",
-          value = "ID of the allocation record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "allocationId",
+              value = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID allocationId) {
     return allocationService
         .getAllocationChildren(businessService.retrieveBusiness(businessId), allocationId)
@@ -95,11 +95,11 @@ public class AllocationController {
   private AllocationFundCardResponse reallocateAllocationFunds(
       @RequestHeader(name = "businessId") UUID businessId,
       @PathVariable(value = "allocationId")
-      @ApiParam(
-          required = true,
-          name = "allocationId",
-          value = "ID of the allocation record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "allocationId",
+              value = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID allocationId,
       @RequestBody @Validated AllocationFundCardRequest request) {
 

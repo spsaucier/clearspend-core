@@ -29,9 +29,7 @@ public class CardService {
 
   private final I2Client i2Client;
 
-  public record CardRecord(Card card, Account account) {
-
-  }
+  public record CardRecord(Card card, Account account) {}
 
   @Transactional
   Card issueCard(

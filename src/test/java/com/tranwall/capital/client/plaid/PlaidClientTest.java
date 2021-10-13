@@ -1,14 +1,13 @@
 package com.tranwall.capital.client.plaid;
 
+import com.tranwall.capital.BaseCapitalTest;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class PlaidClientTest {
+class PlaidClientTest extends BaseCapitalTest {
   @Autowired private PlaidClient underTest;
 
   @Test

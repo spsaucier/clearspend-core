@@ -39,26 +39,15 @@ public class BusinessProspect extends Mutable {
   @Column(updatable = false)
   private UUID businessOwnerId = UUID.randomUUID();
 
-  @Sensitive
-  @NonNull
-  @Embedded
-  private RequiredEncryptedString firstName;
+  @Sensitive @NonNull @Embedded private RequiredEncryptedString firstName;
 
-  @Sensitive
-  @NonNull
-  @Embedded
-  private RequiredEncryptedString lastName;
+  @Sensitive @NonNull @Embedded private RequiredEncryptedString lastName;
 
-  @Sensitive
-  @NonNull
-  @Embedded
-  private RequiredEncryptedStringWithHash email;
+  @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash email;
 
   private boolean emailVerified;
 
-  @Sensitive
-  @Embedded
-  private NullableEncryptedString phone;
+  @Sensitive @Embedded private NullableEncryptedString phone;
 
   private boolean phoneVerified;
 

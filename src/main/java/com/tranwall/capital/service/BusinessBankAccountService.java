@@ -33,9 +33,7 @@ public class BusinessBankAccountService {
   public record BusinessBankAccountRecord(
       RequiredEncryptedStringWithHash routingNumber,
       RequiredEncryptedStringWithHash accountNumber,
-      RequiredEncryptedStringWithHash accessToken) {
-
-  }
+      RequiredEncryptedStringWithHash accessToken) {}
 
   @Transactional
   public BusinessBankAccountRecord createBusinessBankAccount(

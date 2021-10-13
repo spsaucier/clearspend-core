@@ -20,10 +20,7 @@ public class CreateBusinessProspectRequest {
   @JsonProperty("email")
   @NonNull
   @NotNull(message = "email required")
-  @Schema(
-      name = "Email address of the prospect",
-      required = true,
-      example = "johnw@hightable.com")
+  @Schema(name = "Email address of the prospect", required = true, example = "johnw@hightable.com")
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
   @Size(max = 100, message = "The email should not be more than 100 characters.")
   private String email;

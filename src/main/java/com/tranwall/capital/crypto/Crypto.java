@@ -78,9 +78,8 @@ public class Crypto {
     currentKey = Base64.getDecoder().decode(currentKeyString);
 
     // then numbered keys
-    record EnvironmentKey(byte[] key, String name) {
+    record EnvironmentKey(byte[] key, String name) {}
 
-    }
     Map<String, EnvironmentKey> environmentKeys = new LinkedHashMap<>();
     Loop:
     for (int i = 0; i < maxKeys; i++) {

@@ -60,9 +60,7 @@ public class ControllerHelper {
   private final Faker faker = new Faker();
 
   record OnboardBusinessRecord(
-      Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {
-
-  }
+      Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {}
 
   public String generateFirstName() {
     return faker.name().firstName();
@@ -147,8 +145,7 @@ public class ControllerHelper {
             .getResponse();
 
     CreateBusinessProspectResponse createBusinessProspectResponse =
-        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {
-        });
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
 
     BusinessProspect businessProspect =
         businessProspectRepository
@@ -171,7 +168,7 @@ public class ControllerHelper {
     MockHttpServletResponse response =
         mvc.perform(
                 post(String.format(
-                    "/business-prospects/%s/validate-identifier", businessProspectId))
+                        "/business-prospects/%s/validate-identifier", businessProspectId))
                     .contentType("application/json")
                     .content(body))
             .andExpect(status().isOk())
@@ -194,8 +191,7 @@ public class ControllerHelper {
 
     return objectMapper
         .readValue(
-            response.getContentAsString(), new TypeReference<SetBusinessProspectPhoneResponse>() {
-            })
+            response.getContentAsString(), new TypeReference<SetBusinessProspectPhoneResponse>() {})
         .getOtp();
   }
 
@@ -219,7 +215,6 @@ public class ControllerHelper {
             .andReturn()
             .getResponse();
 
-    return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {
-    });
+    return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
   }
 }

@@ -39,14 +39,10 @@ public class AccountService {
   private final LedgerService ledgerService;
   private final AdjustmentService adjustmentService;
 
-  public record AdjustmentRecord(Account account, Adjustment adjustment) {
-
-  }
+  public record AdjustmentRecord(Account account, Adjustment adjustment) {}
 
   public record AccountReallocateFundsRecord(
-      Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {
-
-  }
+      Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {}
 
   @Transactional(TxType.REQUIRED)
   public Account createAccount(UUID businessId, AccountType type, UUID ownerId, Currency currency) {
@@ -166,5 +162,4 @@ public class AccountService {
 
     return new AccountReallocateFundsRecord(fromAccount, toAccount, reallocateFundsRecord);
   }
-
 }

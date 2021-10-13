@@ -38,10 +38,7 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("dateOfBirth")
   @NonNull
   @NotNull(message = "dateOfBirth required")
-  @Schema(
-      name = "The date of birth of the person",
-      required = true,
-      example = "1990-01-01")
+  @Schema(name = "The date of birth of the person", required = true, example = "1990-01-01")
   private LocalDate dateOfBirth;
 
   @Sensitive
@@ -59,14 +56,10 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("email")
   @NonNull
   @NotNull(message = "email required")
-  @Schema(
-      name = "Email address of the person",
-      required = true,
-      example = "johnw@hightable.com")
+  @Schema(name = "Email address of the person", required = true, example = "johnw@hightable.com")
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
   @Size(max = 100, message = "The email should not be more than 100 characters.")
   private String email;
 
-  @NonNull
-  private Address address;
+  @NonNull private Address address;
 }

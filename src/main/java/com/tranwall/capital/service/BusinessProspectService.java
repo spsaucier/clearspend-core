@@ -36,9 +36,7 @@ public class BusinessProspectService {
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthClient fusionAuthClient;
 
-  public record CreateBusinessProspectRecord(BusinessProspect businessProspect, String otp) {
-
-  }
+  public record CreateBusinessProspectRecord(BusinessProspect businessProspect, String otp) {}
 
   @Transactional
   public CreateBusinessProspectRecord createBusinessProspect(
@@ -116,9 +114,7 @@ public class BusinessProspectService {
       Business business,
       Account businessAccount,
       List<AllocationRecord> allocationRecords,
-      BusinessOwner businessOwner) {
-
-  }
+      BusinessOwner businessOwner) {}
 
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(

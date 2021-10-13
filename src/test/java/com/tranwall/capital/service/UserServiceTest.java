@@ -14,11 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class UserServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private ServiceHelper serviceHelper;
+  @Autowired private ServiceHelper serviceHelper;
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
   private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;

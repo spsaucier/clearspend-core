@@ -28,9 +28,7 @@ public class TwilioService {
   private final SendGridProperties sendGridProperties;
   private final SendGrid sendGrid;
 
-  public TwilioService(
-      TwilioProperties twilioProperties,
-      SendGridProperties sendGridProperties) {
+  public TwilioService(TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {
     this.twilioProperties = twilioProperties;
     this.sendGridProperties = sendGridProperties;
 
@@ -48,8 +46,7 @@ public class TwilioService {
   }
 
   public Message sendNotificationSms(String to, String messageText) {
-    return Message
-        .creator(
+    return Message.creator(
             new com.twilio.type.PhoneNumber(to),
             twilioProperties.getMessageServiceId(),
             messageText)
@@ -57,11 +54,12 @@ public class TwilioService {
   }
 
   public Response sendNotificationEmail(String to, String messageText) throws IOException {
-    Mail mail = new Mail(
-        new Email(sendGridProperties.getNotificationsSenderEmail()),
-        sendGridProperties.getNotificationsEmailSubject(),
-        new Email(to),
-        new Content("text/plain", messageText));
+    Mail mail =
+        new Mail(
+            new Email(sendGridProperties.getNotificationsSenderEmail()),
+            sendGridProperties.getNotificationsEmailSubject(),
+            new Email(to),
+            new Content("text/plain", messageText));
     Request request = new Request();
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");
@@ -70,27 +68,17 @@ public class TwilioService {
   }
 
   public Verification sendVerificationSms(String to) {
-    return Verification
-        .creator(
-            twilioProperties.getVerifyServiceId(),
-            to,
-            Channel.SMS.toString())
+    return Verification.creator(twilioProperties.getVerifyServiceId(), to, Channel.SMS.toString())
         .create();
   }
 
   public Verification sendVerificationEmail(String to) {
-    return Verification.creator(
-            twilioProperties.getVerifyServiceId(),
-            to,
-            Channel.EMAIL.toString())
+    return Verification.creator(twilioProperties.getVerifyServiceId(), to, Channel.EMAIL.toString())
         .create();
   }
 
   public VerificationCheck checkVerification(String subject, String challenge) {
-    return VerificationCheck
-        .creator(
-            twilioProperties.getVerifyServiceId(),
-            challenge)
+    return VerificationCheck.creator(twilioProperties.getVerifyServiceId(), challenge)
         .setTo(subject)
         .create();
   }

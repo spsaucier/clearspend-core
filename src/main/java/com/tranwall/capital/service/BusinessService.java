@@ -44,14 +44,10 @@ public class BusinessService {
   private final AllocationService allocationService;
   private final AccountService accountService;
 
-  public record BusinessRecord(Business business, Account businessAccount) {
-
-  }
+  public record BusinessRecord(Business business, Account businessAccount) {}
 
   public record BusinessAndAllocationsRecord(
-      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {
-
-  }
+      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {}
 
   @SneakyThrows
   @Transactional

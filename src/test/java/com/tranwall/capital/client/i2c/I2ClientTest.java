@@ -14,8 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Disabled
 public class I2ClientTest {
 
-  @Autowired
-  private I2Client i2Client;
+  @Autowired private I2Client i2Client;
 
   @Test
   public void getCardStatusRequest() {

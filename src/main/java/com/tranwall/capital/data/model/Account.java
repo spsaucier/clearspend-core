@@ -48,14 +48,10 @@ public class Account extends Mutable {
   @Column(updatable = false)
   private UUID ownerId;
 
-  @NonNull
-  @Embedded
-  private Amount ledgerBalance;
+  @NonNull @Embedded private Amount ledgerBalance;
 
-  @Transient
-  private Amount availableBalance;
-  @Transient
-  private List<Hold> holds;
+  @Transient private Amount availableBalance;
+  @Transient private List<Hold> holds;
 
   public void setHolds(List<Hold> holds) {
     this.holds = holds;

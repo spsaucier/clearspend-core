@@ -26,9 +26,7 @@ public class AdjustmentService {
   public record ReallocateFundsRecord(
       ReallocationJournalEntry bankJournalEntry,
       Adjustment fromAdjustment,
-      Adjustment toAdjustment) {
-
-  }
+      Adjustment toAdjustment) {}
 
   @Transactional(TxType.REQUIRED)
   public Adjustment depositFunds(Account account, Amount amount) {

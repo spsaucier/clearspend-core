@@ -14,12 +14,9 @@ import org.springframework.validation.annotation.Validated;
 @Setter
 public class SendGridProperties {
 
-  @NotBlank
-  private String apiKey;
+  @NotBlank private String apiKey;
 
-  @NotBlank
-  private String notificationsSenderEmail;
+  @NotBlank private String notificationsSenderEmail;
 
-  @NotBlank
-  private String notificationsEmailSubject;
+  @NotBlank private String notificationsEmailSubject;
 }

@@ -20,8 +20,7 @@ import org.springframework.data.annotation.ReadOnlyProperty;
 @NoArgsConstructor
 public class Mutable {
 
-  @Id
-  private UUID id = UUID.randomUUID();
+  @Id private UUID id = UUID.randomUUID();
 
   @Version
   @ReadOnlyProperty

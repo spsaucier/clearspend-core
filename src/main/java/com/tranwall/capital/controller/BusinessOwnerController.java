@@ -22,11 +22,11 @@ public class BusinessOwnerController {
   @PatchMapping("/{businessOwnerId}")
   private void updateBusinessOwner(
       @PathVariable(value = "businessOwnerId")
-      @ApiParam(
-          required = true,
-          name = "businessOwnerId",
-          value = "ID of the businessOwner record.",
-          example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @ApiParam(
+              required = true,
+              name = "businessOwnerId",
+              value = "ID of the businessOwner record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           UUID businessOwnerId,
       @Validated @RequestBody UpdateBusinessOwnerRequest request) {
     businessOwnerService.updateBusinessOwner(

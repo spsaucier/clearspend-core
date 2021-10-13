@@ -18,8 +18,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Immutable {
 
-  @Id
-  private UUID id = UUID.randomUUID();
+  @Id private UUID id = UUID.randomUUID();
 
   @Column(nullable = false, updatable = false)
   @JsonIgnore

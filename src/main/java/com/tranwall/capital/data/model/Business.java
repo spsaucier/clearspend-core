@@ -34,8 +34,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @Slf4j
 public class Business extends Mutable {
 
-  @NonNull
-  private String legalName;
+  @NonNull private String legalName;
 
   @NonNull
   @Enumerated(EnumType.STRING)
@@ -44,26 +43,20 @@ public class Business extends Mutable {
   @Embedded
   @NonNull
   @AttributeOverrides({
-      @AttributeOverride(name = "streetLine1", column = @Column(name = "address_street_line1")),
-      @AttributeOverride(name = "streetLine2", column = @Column(name = "address_street_line2")),
-      @AttributeOverride(name = "locality", column = @Column(name = "address_locality")),
-      @AttributeOverride(name = "region", column = @Column(name = "address_region")),
-      @AttributeOverride(name = "postalCode", column = @Column(name = "address_postal_code")),
-      @AttributeOverride(name = "country", column = @Column(name = "address_country")),
+    @AttributeOverride(name = "streetLine1", column = @Column(name = "address_street_line1")),
+    @AttributeOverride(name = "streetLine2", column = @Column(name = "address_street_line2")),
+    @AttributeOverride(name = "locality", column = @Column(name = "address_locality")),
+    @AttributeOverride(name = "region", column = @Column(name = "address_region")),
+    @AttributeOverride(name = "postalCode", column = @Column(name = "address_postal_code")),
+    @AttributeOverride(name = "country", column = @Column(name = "address_country")),
   })
   private ClearAddress clearAddress;
 
-  @Sensitive
-  @NonNull
-  private String employerIdentificationNumber;
+  @Sensitive @NonNull private String employerIdentificationNumber;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString businessEmail;
+  @Sensitive @Embedded private RequiredEncryptedString businessEmail;
 
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedString businessPhone;
+  @Sensitive @Embedded private RequiredEncryptedString businessPhone;
 
   @Enumerated(value = EnumType.STRING)
   @NonNull
