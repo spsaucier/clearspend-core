@@ -1,6 +1,10 @@
 package com.tranwall.capital.controller.type.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.data.model.enums.AccountType;
 import java.util.UUID;
@@ -16,17 +20,17 @@ public class Account {
   @JsonProperty("accountId")
   @NonNull
   @NotNull(message = "accountId required")
-  private UUID accountId;
+  private TypedId<AccountId> accountId;
 
   @JsonProperty("businessId")
   @NonNull
   @NotNull(message = "businessId required")
-  private UUID businessId;
+  private TypedId<BusinessId> businessId;
 
   @JsonProperty("ledgerAccountId")
   @NonNull
   @NotNull(message = "ledgerAccountId required")
-  private UUID ledgerAccountId;
+  private TypedId<LedgerAccountId> ledgerAccountId;
 
   @JsonProperty("type")
   @NonNull

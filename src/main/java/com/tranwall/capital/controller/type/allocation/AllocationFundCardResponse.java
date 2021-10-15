@@ -1,8 +1,9 @@
 package com.tranwall.capital.controller.type.allocation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.typedid.data.AdjustmentId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
-import java.util.UUID;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ public class AllocationFundCardResponse {
 
   @JsonProperty("businessAdjustmentId")
   @NonNull
-  private UUID businessAdjustmentId;
+  private TypedId<AdjustmentId> businessAdjustmentId;
 
   @JsonProperty("businessLedgerBalance")
   @NonNull
@@ -21,7 +22,7 @@ public class AllocationFundCardResponse {
 
   @JsonProperty("allocationAdjustmentId")
   @NonNull
-  private UUID allocationAdjustmentId;
+  private TypedId<AdjustmentId> allocationAdjustmentId;
 
   @JsonProperty("allocationLedgerBalance")
   @NonNull

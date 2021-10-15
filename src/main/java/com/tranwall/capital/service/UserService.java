@@ -2,13 +2,14 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import io.micrometer.core.instrument.util.StringUtils;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ public class UserService {
 
   @Transactional
   public User createUser(
-      UUID businessId,
+      TypedId<BusinessId> businessId,
       UserType type,
       String firstName,
       String lastName,

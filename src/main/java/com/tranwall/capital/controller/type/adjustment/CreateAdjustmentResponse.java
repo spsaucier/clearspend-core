@@ -1,7 +1,8 @@
 package com.tranwall.capital.controller.type.adjustment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
+import com.tranwall.capital.common.typedid.data.AdjustmentId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -12,5 +13,5 @@ public class CreateAdjustmentResponse {
 
   @JsonProperty("adjustmentId")
   @NonNull
-  private UUID adjustmentId;
+  private TypedId<AdjustmentId> adjustmentId;
 }

@@ -159,6 +159,7 @@ create table if not exists business_bank_account
     updated                  timestamp without time zone not null,
     version                  bigint                      not null,
     business_id              uuid                        not null references business (id),
+    name                     varchar(100),
     routing_number_encrypted bytea                       not null,
     routing_number_hash      bytea                       not null,
     account_number_encrypted bytea                       not null,
@@ -289,7 +290,7 @@ create table if not exists hold
     status          varchar(20)                 not null,
     amount_currency varchar(10)                 not null,
     amount_amount   numeric                     not null,
-    expiry          timestamp without time zone not null
+    expiration_date timestamp without time zone not null
 );
 create index if not exists hold_idx1 on hold (business_id, account_id);
 
@@ -363,34 +364,38 @@ values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',
         'Manually created test BIN');
 
 insert into program (id, created, updated, version, name, bin, funding_type)
-values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program', '401288',
-        'POOLED');
+values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program - pooled',
+        '401288', 'POOLED');
 
-insert into business (id, created, updated, version, type, legal_name, address_street_line1,
-                      address_street_line2, address_locality, address_region, address_postal_code,
-                      address_country, employer_identification_number, business_email_encrypted,
-                      business_phone_encrypted, formation_date, currency, onboarding_step,
-                      know_your_business_status, status)
-values ('82a79d15-9e47-421b-ab8f-78532f4f8bc7', now(), now(), 1, 'LLC', 'Tranwall', '', '', '', '',
-        '', 'USA', '123654789', '', '', '2021-01-01', 'USD', 'COMPLETE', 'PASS', 'ACTIVE');
-insert into ledger_account (id, created, updated, version, type, currency)
-values ('b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1', now(), now(), 1, 'BUSINESS', 'USD');
-insert into account (id, created, updated, version, business_id, type, owner_id,
-                     ledger_balance_currency, ledger_balance_amount, ledger_account_id)
-values ('334b6925-7621-4e72-99ec-f3877587437d', now(), now(), 1,
-        '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'BUSINESS', '82a79d15-9e47-421b-ab8f-78532f4f8bc7',
-        'USD', 100, 'b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1');
+insert into program (id, created, updated, version, name, bin, funding_type)
+values ('033955d1-f18e-497e-9905-88ba71e90208', now(), now(), 1,
+        'Test Tranwall Program - individual', '401288', 'INDIVIDUAL');
 
-insert into allocation (id, created, updated, version, program_id, business_id,
-                        parent_allocation_id, ancestor_allocation_ids, name)
-values ('9f3356de-6e2f-4221-af39-cf7063645b92', now(), now(), 1,
-        '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', null, null,
-        'Tranwall Test Allocation');
-insert into ledger_account (id, created, updated, version, type, currency)
-values ('29a443b9-fb41-4d80-b2ea-7a9dd87be061', now(), now(), 1, 'BUSINESS', 'USD');
-insert into account (id, created, updated, version, business_id, type, owner_id,
-                     ledger_balance_currency, ledger_balance_amount, ledger_account_id)
-values ('bb4652e8-064e-4818-aca3-6d871e749980', now(), now(), 1,
-        '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'ALLOCATION',
-        '9f3356de-6e2f-4221-af39-cf7063645b92', 'USD', 100,
-        '29a443b9-fb41-4d80-b2ea-7a9dd87be061');
+-- insert into business (id, created, updated, version, type, legal_name, address_street_line1,
+--                       address_street_line2, address_locality, address_region, address_postal_code,
+--                       address_country, employer_identification_number, business_email_encrypted,
+--                       business_phone_encrypted, formation_date, currency, onboarding_step,
+--                       know_your_business_status, status)
+-- values ('82a79d15-9e47-421b-ab8f-78532f4f8bc7', now(), now(), 1, 'LLC', 'Tranwall', '', '', '', '',
+--         '', 'USA', '123654789', null, null, '2021-01-01', 'USD', 'COMPLETE', 'PASS', 'ACTIVE');
+-- insert into ledger_account (id, created, updated, version, type, currency)
+-- values ('b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1', now(), now(), 1, 'BUSINESS', 'USD');
+-- insert into account (id, created, updated, version, business_id, type, owner_id,
+--                      ledger_balance_currency, ledger_balance_amount, ledger_account_id)
+-- values ('334b6925-7621-4e72-99ec-f3877587437d', now(), now(), 1,
+--         '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'BUSINESS', '82a79d15-9e47-421b-ab8f-78532f4f8bc7',
+--         'USD', 100, 'b2d62ef0-ea67-4bb4-bbb4-bada7c3c0ad1');
+--
+-- insert into allocation (id, created, updated, version, program_id, business_id,
+--                         parent_allocation_id, ancestor_allocation_ids, name)
+-- values ('9f3356de-6e2f-4221-af39-cf7063645b92', now(), now(), 1,
+--         '6faf3838-b2d7-422c-8d6f-c2294ebc73b4', '82a79d15-9e47-421b-ab8f-78532f4f8bc7', null, null,
+--         'Tranwall Test Allocation');
+-- insert into ledger_account (id, created, updated, version, type, currency)
+-- values ('29a443b9-fb41-4d80-b2ea-7a9dd87be061', now(), now(), 1, 'BUSINESS', 'USD');
+-- insert into account (id, created, updated, version, business_id, type, owner_id,
+--                      ledger_balance_currency, ledger_balance_amount, ledger_account_id)
+-- values ('bb4652e8-064e-4818-aca3-6d871e749980', now(), now(), 1,
+--         '82a79d15-9e47-421b-ab8f-78532f4f8bc7', 'ALLOCATION',
+--         '9f3356de-6e2f-4221-af39-cf7063645b92', 'USD', 100,
+--         '29a443b9-fb41-4d80-b2ea-7a9dd87be061');

@@ -8,50 +8,50 @@ import lombok.Value;
 public class AlloyManualReviewCallback {
 
   @JsonProperty("entity_token")
-  private String entityToken;
+  String entityToken;
 
   @JsonProperty("external_entity_id")
-  private Object externalEntityId;
+  Object externalEntityId;
 
   @JsonProperty("group_token")
-  private Object groupToken;
+  Object groupToken;
 
   @JsonProperty("external_group_id")
-  private Object externalGroupId;
+  Object externalGroupId;
 
   @JsonProperty("review_token")
-  private String reviewToken;
+  String reviewToken;
 
   @JsonProperty("application_token")
-  private String applicationToken;
+  String applicationToken;
 
   @JsonProperty("application_name")
-  private String applicationName;
+  String applicationName;
 
   @JsonProperty("outcome")
-  private String outcome;
+  String outcome;
 
   @JsonProperty("reason")
-  private String reason;
+  String reason;
 
   @JsonProperty("reasons")
-  private List<String> reasons = null;
+  List<String> reasons = null;
 
   @JsonProperty("started")
-  private Long started;
+  Long started;
 
   @JsonProperty("timestamp")
-  private Long timestamp;
+  Long timestamp;
 
   @JsonProperty("completed")
-  private Long completed;
+  Long completed;
 
   @JsonProperty("reviewer")
-  private String reviewer;
+  String reviewer;
 
   @JsonProperty("agent")
-  private List<Object> notes = null;
+  List<Object> notes = null;
 
   @JsonProperty("child_entities")
-  private List<Object> childEntities = null;
+  List<Object> childEntities = null;
 }

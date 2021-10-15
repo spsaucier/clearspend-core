@@ -5,13 +5,18 @@ import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddCardResponseRoot;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.CardRepository;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -32,12 +37,12 @@ public class CardService {
   public record CardRecord(Card card, Account account) {}
 
   @Transactional
-  Card issueCard(
-      UUID businessId,
-      UUID allocationId,
-      UUID userId,
+  public Card issueCard(
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      TypedId<UserId> userId,
       String bin,
-      UUID programId,
+      TypedId<ProgramId> programId,
       FundingType fundingType,
       Currency currency) {
 
@@ -54,7 +59,8 @@ public class CardService {
 
     if (fundingType == FundingType.INDIVIDUAL) {
       Account account =
-          accountService.createAccount(businessId, AccountType.CARD, card.getId(), currency);
+          accountService.createAccount(
+              businessId, AccountType.CARD, card.getId().toUuid(), currency);
       card.setAccountId(account.getId());
     }
 
@@ -62,7 +68,10 @@ public class CardService {
   }
 
   public CardRecord getCard(
-      UUID businessId, @NonNull UUID allocationId, @NonNull UUID cardId, Currency currency) {
+      TypedId<BusinessId> businessId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull TypedId<CardId> cardId,
+      Currency currency) {
     Card card =
         cardRepository
             .findByBusinessIdAndAllocationIdAndId(businessId, allocationId, cardId)

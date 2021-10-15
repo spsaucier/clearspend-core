@@ -8,6 +8,11 @@ import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.LedgerAccount;
@@ -45,7 +50,8 @@ public class AccountService {
       Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {}
 
   @Transactional(TxType.REQUIRED)
-  public Account createAccount(UUID businessId, AccountType type, UUID ownerId, Currency currency) {
+  public Account createAccount(
+      TypedId<BusinessId> businessId, AccountType type, UUID ownerId, Currency currency) {
     LedgerAccount ledgerAccount =
         ledgerService.createLedgerAccount(type.getLedgerAccountType(), currency);
 
@@ -59,7 +65,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord depositFunds(UUID businessId, Amount amount) {
+  public AdjustmentRecord depositFunds(TypedId<BusinessId> businessId, Amount amount) {
     if (!amount.isPositive()) {
       throw new AmountException(AmountType.POSITIVE, amount);
     }
@@ -73,7 +79,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord withdrawFunds(UUID businessId, Amount amount) {
+  public AdjustmentRecord withdrawFunds(TypedId<BusinessId> businessId, Amount amount) {
     if (!amount.isPositive()) {
       throw new AmountException(AmountType.POSITIVE, amount);
     }
@@ -90,32 +96,34 @@ public class AccountService {
     return new AdjustmentRecord(account, adjustment);
   }
 
-  private Account retrieveAccount(UUID accountId) {
+  private Account retrieveAccount(TypedId<AccountId> accountId) {
     return accountRepository
         .findById(accountId)
         .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT, accountId));
   }
 
-  public Account retrieveBusinessAccount(UUID businessId, Currency currency) {
+  public Account retrieveBusinessAccount(TypedId<BusinessId> businessId, Currency currency) {
     return accountRepository
         .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
-            businessId, AccountType.BUSINESS, businessId, currency)
+            businessId, AccountType.BUSINESS, businessId.toUuid(), currency)
         .orElseThrow(
             () ->
                 new RecordNotFoundException(
                     Table.ACCOUNT, businessId, AccountType.BUSINESS, businessId, currency));
   }
 
-  public Account retrieveAllocationAccount(UUID businessId, Currency currency, UUID allocationId) {
-    return retrieveAccount(businessId, currency, AccountType.ALLOCATION, allocationId);
+  public Account retrieveAllocationAccount(
+      TypedId<BusinessId> businessId, Currency currency, TypedId<AllocationId> allocationId) {
+    return retrieveAccount(businessId, currency, AccountType.ALLOCATION, allocationId.toUuid());
   }
 
-  public Account retrieveCardAccount(UUID businessId, Currency currency, UUID cardId) {
-    return retrieveAccount(businessId, currency, AccountType.CARD, cardId);
+  public Account retrieveCardAccount(
+      TypedId<BusinessId> businessId, Currency currency, TypedId<CardId> cardId) {
+    return retrieveAccount(businessId, currency, AccountType.CARD, cardId.toUuid());
   }
 
   private Account retrieveAccount(
-      UUID businessId, Currency currency, AccountType type, UUID ownerId) {
+      TypedId<BusinessId> businessId, Currency currency, AccountType type, UUID ownerId) {
     Account account =
         accountRepository
             .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
@@ -130,14 +138,19 @@ public class AccountService {
   }
 
   public List<Account> retrieveAllocationAccounts(
-      UUID businessId, Currency currency, List<UUID> allocationIds) {
+      TypedId<BusinessId> businessId,
+      Currency currency,
+      List<TypedId<AllocationId>> allocationIds) {
     return accountRepository.findByBusinessIdAndTypeAndOwnerIdIsInAndLedgerBalance_Currency(
-        businessId, AccountType.ALLOCATION, allocationIds, currency);
+        businessId,
+        AccountType.ALLOCATION,
+        allocationIds.stream().map(TypedId::toUuid).toList(),
+        currency);
   }
 
   @Transactional
   public AccountReallocateFundsRecord reallocateFunds(
-      UUID fromAccountId, UUID toAccountId, Amount amount) {
+      TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
     if (!amount.isPositive()) {
       throw new AmountException(AmountType.POSITIVE, amount);
     }

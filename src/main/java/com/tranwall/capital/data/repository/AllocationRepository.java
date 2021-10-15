@@ -1,37 +1,21 @@
 package com.tranwall.capital.data.repository;
 
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Allocation;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
-public interface AllocationRepository extends JpaRepository<Allocation, UUID> {
+public interface AllocationRepository
+    extends JpaRepository<Allocation, TypedId<AllocationId>>, AllocationRepositoryCustom {
 
-  @Query(
-      value =
-          """
-              with recursive ancestors as (
-                  select id, parent_allocation_id, 1 as level
-                  from allocation
-                  where id = :allocationId
-                  union all
-                  select allocation.id, allocation.parent_allocation_id, ancestors.level + 1 as level
-                  from allocation
-                           join ancestors on ancestors.parent_allocation_id = allocation.id
-              )
-              select id
-              from ancestors
-              order by level desc;
-              """,
-      nativeQuery = true)
-  List<UUID> retrieveAncestorAllocationIds(UUID allocationId);
+  Optional<Allocation> findByBusinessIdAndId(
+      TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId);
 
-  Optional<Allocation> findByBusinessIdAndId(UUID businessId, UUID allocationId);
-
-  List<Allocation> findByBusinessIdAndParentAllocationIdIsNull(UUID businessId);
+  List<Allocation> findByBusinessIdAndParentAllocationIdIsNull(TypedId<BusinessId> businessId);
 
   List<Allocation> findByBusinessIdAndParentAllocationId(
-      UUID businessId, UUID parentBusinessAllocationId);
+      TypedId<BusinessId> businessId, TypedId<AllocationId> parentBusinessAllocationId);
 }

@@ -1,6 +1,7 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LedgerAccountType;
 import javax.persistence.Entity;
@@ -21,7 +22,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class LedgerAccount extends Mutable {
+public class LedgerAccount extends TypedMutable<LedgerAccountId> {
 
   @NonNull
   @Enumerated(EnumType.STRING)

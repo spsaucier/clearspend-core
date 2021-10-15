@@ -1,5 +1,6 @@
 package com.tranwall.capital.common.data.type;
 
+import com.tranwall.capital.common.typedid.data.TypedId;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,7 +16,8 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
 import org.springframework.util.ObjectUtils;
 
-public class UUIDArrayType implements UserType {
+@SuppressWarnings({"rawtypes", "unchecked"})
+public class TypedIdArrayType implements UserType {
 
   @Override
   public int[] sqlTypes() {
@@ -44,8 +46,8 @@ public class UUIDArrayType implements UserType {
     if (names != null && names[0] != null && rs != null) {
       java.sql.Array values = rs.getArray(names[0]);
       if (values != null) {
-        return Arrays.stream((String[]) values.getArray())
-            .map(UUID::fromString)
+        return Arrays.stream((UUID[]) values.getArray())
+            .map(TypedId::new)
             .collect(Collectors.toList());
       }
     }
@@ -57,7 +59,8 @@ public class UUIDArrayType implements UserType {
       PreparedStatement st, Object value, int index, SharedSessionContractImplementor session)
       throws HibernateException, SQLException {
     if (value != null) {
-      String[] values = ((List<UUID>) value).stream().map(UUID::toString).toArray(String[]::new);
+      String[] values =
+          ((List<TypedId>) value).stream().map(TypedId::toString).toArray(String[]::new);
       st.setArray(index, session.connection().createArrayOf("uuid", values));
     } else {
       st.setArray(index, session.connection().createArrayOf("uuid", new String[0]));
@@ -67,7 +70,7 @@ public class UUIDArrayType implements UserType {
   @Override
   public Object deepCopy(Object value) throws HibernateException {
     if (value != null) {
-      return new ArrayList<UUID>((List) value);
+      return new ArrayList<TypedId>((List) value);
     }
     return new ArrayList();
   }

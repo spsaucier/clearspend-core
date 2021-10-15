@@ -2,7 +2,8 @@ package com.tranwall.capital.controller.type.business.prospect;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
-import java.util.UUID;
+import com.tranwall.capital.common.typedid.data.BusinessProspectId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
@@ -13,7 +14,7 @@ public class CreateBusinessProspectResponse {
 
   @JsonProperty("businessProspectId")
   @NonNull
-  private UUID businessProspectId;
+  private TypedId<BusinessProspectId> businessProspectId;
 
   @Sensitive
   @JsonProperty("otp")

@@ -1,7 +1,9 @@
 package com.tranwall.capital.controller.type.business.prospect;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,9 @@ public class ConvertBusinessProspectResponse {
 
   @JsonProperty("businessId")
   @NonNull
-  private UUID businessId;
+  private TypedId<BusinessId> businessId;
 
   @JsonProperty("businessOwnerId")
   @NonNull
-  private UUID businessOwnerId;
+  private TypedId<BusinessOwnerId> businessOwnerId;
 }

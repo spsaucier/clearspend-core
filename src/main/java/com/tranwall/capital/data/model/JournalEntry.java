@@ -1,8 +1,9 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.JournalEntryId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import java.util.List;
-import java.util.UUID;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString.Exclude;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -25,15 +27,17 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class JournalEntry extends Mutable {
+public class JournalEntry extends TypedMutable<JournalEntryId> {
 
   @JoinColumn(referencedColumnName = "id", table = "journal_entry")
   @Column(columnDefinition = "binary(16)")
-  private UUID reversedJournalEntryId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<JournalEntryId> reversedJournalEntryId;
 
   @JoinColumn(referencedColumnName = "id", table = "journal_entry")
   @Column(columnDefinition = "binary(16)")
-  private UUID reversalJournalEntryId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<JournalEntryId> reversalJournalEntryId;
 
   @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   @Exclude

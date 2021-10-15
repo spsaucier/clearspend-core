@@ -3,6 +3,7 @@ package com.tranwall.capital.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
@@ -17,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class CardServiceTest extends BaseCapitalTest {
 
-  @Autowired private ServiceHelper serviceHelper;
+  @Autowired private TestHelper testHelper;
 
   @Autowired private CardRepository cardRepository;
 
@@ -29,17 +30,17 @@ class CardServiceTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     if (bin == null) {
-      bin = serviceHelper.createBin();
-      program = serviceHelper.createProgram(bin);
-      businessAndAllocationsRecord = serviceHelper.createBusiness(program);
-      user = serviceHelper.createUser(businessAndAllocationsRecord.business());
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+      businessAndAllocationsRecord = testHelper.createBusiness(program);
+      user = testHelper.createUser(businessAndAllocationsRecord.business());
     }
   }
 
   @Test
   void issueCard() {
     Card card =
-        serviceHelper.issueCard(
+        testHelper.issueCard(
             businessAndAllocationsRecord.business(),
             businessAndAllocationsRecord.allocationRecords().get(0).allocation(),
             user,

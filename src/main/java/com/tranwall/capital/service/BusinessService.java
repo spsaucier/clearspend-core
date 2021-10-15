@@ -7,6 +7,11 @@ import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
@@ -25,7 +30,6 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -51,15 +55,15 @@ public class BusinessService {
 
   @SneakyThrows
   @Transactional
-  BusinessAndAllocationsRecord createBusiness(
-      UUID businessId,
+  public BusinessAndAllocationsRecord createBusiness(
+      TypedId<BusinessId> businessId,
       String legalName,
       BusinessType type,
       Address address,
       String employerIdentificationNumber,
       String email,
       String phone,
-      List<UUID> programIds,
+      List<TypedId<ProgramId>> programIds,
       Currency currency) {
     Business business =
         new Business(
@@ -81,10 +85,10 @@ public class BusinessService {
 
     Account account =
         accountService.createAccount(
-            business.getId(), AccountType.BUSINESS, business.getId(), currency);
+            business.getId(), AccountType.BUSINESS, business.getId().toUuid(), currency);
 
     List<AllocationRecord> allocationRecords = new ArrayList<>(programIds.size());
-    for (UUID programId : programIds) {
+    for (TypedId<ProgramId> programId : programIds) {
       Optional<Program> programOptional = programRepository.findById(programId);
       if (programOptional.isEmpty()) {
         throw new RecordNotFoundException(Table.PROGRAM, programId);
@@ -102,13 +106,13 @@ public class BusinessService {
     return new BusinessAndAllocationsRecord(business, account, allocationRecords);
   }
 
-  public Business retrieveBusiness(UUID businessId) {
+  public Business retrieveBusiness(TypedId<BusinessId> businessId) {
     return businessRepository
         .findById(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
   }
 
-  public BusinessRecord getBusiness(UUID businessId) {
+  public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
     Business business = retrieveBusiness(businessId);
     Account account = accountService.retrieveBusinessAccount(businessId, business.getCurrency());
     return new BusinessRecord(business, account);
@@ -116,9 +120,9 @@ public class BusinessService {
 
   @Transactional
   public AccountReallocateFundsRecord reallocateBusinessFunds(
-      UUID businessId,
-      @NonNull UUID allocationId,
-      @NonNull UUID accountId,
+      TypedId<BusinessId> businessId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull TypedId<AccountId> accountId,
       @NonNull FundsTransactType fundsTransactType,
       Amount amount) {
     BusinessRecord businessRecord = getBusiness(businessId);

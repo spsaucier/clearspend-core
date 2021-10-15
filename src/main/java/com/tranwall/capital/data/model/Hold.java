@@ -1,10 +1,12 @@
 package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.HoldId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.HoldStatus;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -18,6 +20,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -26,12 +29,13 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Hold extends Mutable {
+public class Hold extends TypedMutable<HoldId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
-  private UUID accountId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AccountId> accountId;
 
   @NonNull
   @Enumerated(EnumType.STRING)

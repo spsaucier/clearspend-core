@@ -4,7 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tranwall.capital.BaseCapitalTest;
-import com.tranwall.capital.controller.ControllerHelper.OnboardBusinessRecord;
+import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.OnboardBusinessRecord;
 import com.tranwall.capital.controller.type.business.owner.UpdateBusinessOwnerRequest;
 import com.tranwall.capital.data.model.BusinessProspect;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +20,14 @@ import org.springframework.test.web.servlet.MockMvc;
 class BusinessOwnerControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
-  private final ControllerHelper controllerHelper;
+  private final TestHelper testHelper;
 
   OnboardBusinessRecord onboardBusinessRecord;
 
   @BeforeEach
   void init() throws Exception {
     if (onboardBusinessRecord == null) {
-      onboardBusinessRecord = controllerHelper.onboardBusiness();
+      onboardBusinessRecord = testHelper.onboardBusiness();
     }
   }
 
@@ -38,10 +39,10 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         new UpdateBusinessOwnerRequest(
             businessProspect.getFirstName().getEncrypted(),
             businessProspect.getLastName().getEncrypted(),
-            controllerHelper.generateDateOfBirth(),
-            controllerHelper.generateTaxIdentificationNumber(),
+            testHelper.generateDateOfBirth(),
+            testHelper.generateTaxIdentificationNumber(),
             businessProspect.getEmail().getEncrypted(),
-            controllerHelper.generateAddress());
+            testHelper.generateApiAddress());
 
     String body = objectMapper.writeValueAsString(request);
 

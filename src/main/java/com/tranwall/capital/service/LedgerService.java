@@ -3,6 +3,8 @@ package com.tranwall.capital.service;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.JournalEntry;
 import com.tranwall.capital.data.model.LedgerAccount;
 import com.tranwall.capital.data.model.Posting;
@@ -11,7 +13,6 @@ import com.tranwall.capital.data.model.enums.LedgerAccountType;
 import com.tranwall.capital.data.repository.JournalEntryRepository;
 import com.tranwall.capital.data.repository.LedgerAccountRepository;
 import java.util.List;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -50,16 +51,16 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry depositFunds(UUID ledgerAccountId, Amount amount) {
+  public BankJournalEntry depositFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, amount);
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry withdrawFunds(UUID ledgerAccountId, Amount amount) {
+  public BankJournalEntry withdrawFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, Amount.negate(amount));
   }
 
-  private BankJournalEntry bankFunds(UUID ledgerAccountId, Amount amount) {
+  private BankJournalEntry bankFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount businessAccount = getLedgerAccount(ledgerAccountId);
     LedgerAccount bankAccount =
         getOrCreateLedgerAccount(LedgerAccountType.BANK, amount.getCurrency());
@@ -74,7 +75,7 @@ public class LedgerService {
     return new BankJournalEntry(journalEntry, bankPosting, accountPosting);
   }
 
-  private LedgerAccount getLedgerAccount(UUID ledgerAccountId) {
+  private LedgerAccount getLedgerAccount(TypedId<LedgerAccountId> ledgerAccountId) {
     return ledgerAccountRepository
         .findById(ledgerAccountId)
         .orElseThrow(() -> new RecordNotFoundException(Table.LEDGER_ACCOUNT, ledgerAccountId));
@@ -82,7 +83,9 @@ public class LedgerService {
 
   @Transactional(TxType.REQUIRED)
   public ReallocationJournalEntry reallocateFunds(
-      UUID fromLedgerAccountId, UUID toLedgerAccountId, Amount amount) {
+      TypedId<LedgerAccountId> fromLedgerAccountId,
+      TypedId<LedgerAccountId> toLedgerAccountId,
+      Amount amount) {
     LedgerAccount fromLedgerAccount = getLedgerAccount(fromLedgerAccountId);
     LedgerAccount toLedgerAccount = getLedgerAccount(toLedgerAccountId);
 

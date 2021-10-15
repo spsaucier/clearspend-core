@@ -1,6 +1,7 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.BinId;
 import javax.persistence.Entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,7 +18,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Bin extends Mutable {
+public class Bin extends TypedMutable<BinId> {
 
   @NonNull private String bin;
 

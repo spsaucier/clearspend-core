@@ -11,10 +11,11 @@ import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Products;
 import com.plaid.client.request.PlaidApi;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class PlaidClient {
 
   public record AccountsResponse(String accessToken, List<NumbersACH> achList) {}
 
-  public String createLinkToken(UUID businessId) throws IOException {
+  public String createLinkToken(TypedId<BusinessId> businessId) throws IOException {
     LinkTokenCreateRequest request =
         new LinkTokenCreateRequest()
             .clientName(PLAID_CLIENT_NAME)

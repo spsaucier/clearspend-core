@@ -2,8 +2,9 @@ package com.tranwall.capital.controller.type.program;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.FundingType;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
@@ -14,7 +15,7 @@ public class Program {
 
   @JsonProperty("programId")
   @NonNull
-  private UUID programId;
+  private TypedId<ProgramId> programId;
 
   @Sensitive
   @JsonProperty("name")

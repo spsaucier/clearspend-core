@@ -6,6 +6,9 @@ import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
@@ -13,7 +16,6 @@ import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +39,11 @@ public class BusinessBankAccountService {
 
   @Transactional
   public BusinessBankAccountRecord createBusinessBankAccount(
-      String routingNumber, String accountNumber, String accessToken, UUID businessID) {
-    BusinessBankAccount businessBankAccount = new BusinessBankAccount(businessID);
+      String routingNumber,
+      String accountNumber,
+      String accessToken,
+      TypedId<BusinessId> businessId) {
+    BusinessBankAccount businessBankAccount = new BusinessBankAccount(businessId);
     businessBankAccount.setRoutingNumber(new RequiredEncryptedStringWithHash(routingNumber));
     businessBankAccount.setAccountNumber(new RequiredEncryptedStringWithHash(accountNumber));
     businessBankAccount.setAccessToken(new RequiredEncryptedStringWithHash(accessToken));
@@ -51,13 +56,21 @@ public class BusinessBankAccountService {
         businessBankAccount.getAccessToken());
   }
 
-  public String getLinkToken(UUID businessId) throws IOException {
+  public BusinessBankAccount retrieveBusinessBankAccount(
+      TypedId<BusinessBankAccountId> businessBankAccountId) {
+    return businessBankAccountRepository
+        .findById(businessBankAccountId)
+        .orElseThrow(
+            () -> new RecordNotFoundException(Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+  }
+
+  public String getLinkToken(TypedId<BusinessId> businessId) throws IOException {
     return plaidClient.createLinkToken(businessId);
   }
 
   @Transactional
   public List<BusinessBankAccountService.BusinessBankAccountRecord> getAccounts(
-      String linkToken, UUID businessId) throws IOException {
+      String linkToken, TypedId<BusinessId> businessId) throws IOException {
     // TODO: Check for already existing access token
     // Will need some unique ID to look up in the database but can't use routing/account since that
     // is not in the plaid metadata
@@ -78,14 +91,14 @@ public class BusinessBankAccountService {
         .collect(Collectors.toList());
   }
 
-  public List<BusinessBankAccount> getAccounts(UUID businessId) {
+  public List<BusinessBankAccount> getAccounts(TypedId<BusinessId> businessId) {
     return businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId);
   }
 
   @Transactional
   public AdjustmentRecord transactBankAccount(
-      UUID businessId,
-      UUID businessBankAccountId,
+      TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       @NonNull FundsTransactType bankAccountTransactType,
       Amount amount) {
 
@@ -96,7 +109,7 @@ public class BusinessBankAccountService {
                 () ->
                     new RecordNotFoundException(
                         Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
-    if (businessId.equals(businessBankAccount.getBusinessId())) {
+    if (!businessId.equals(businessBankAccount.getBusinessId())) {
       throw new IdMismatchException(
           IdType.BUSINESS_ID, businessId, businessBankAccount.getBusinessId());
     }

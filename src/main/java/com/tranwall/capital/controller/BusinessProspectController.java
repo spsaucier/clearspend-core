@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import com.tranwall.capital.common.typedid.data.BusinessProspectId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
@@ -13,7 +15,6 @@ import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
 import io.swagger.annotations.ApiParam;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,7 +50,7 @@ public class BusinessProspectController {
               name = "businessProspectId",
               value = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          UUID businessProspectId,
+          TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ValidateBusinessProspectIdentifierRequest request) {
     businessProspectService.validateBusinessProspectIdentifier(
         businessProspectId, request.getIdentifierType(), request.getOtp());
@@ -63,7 +64,7 @@ public class BusinessProspectController {
               name = "businessProspectId",
               value = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          UUID businessProspectId,
+          TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
     return new SetBusinessProspectPhoneResponse(
         businessProspectService
@@ -79,7 +80,7 @@ public class BusinessProspectController {
               name = "businessProspectId",
               value = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          UUID businessProspectId,
+          TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPasswordRequest request) {
     BusinessProspect businessProspect =
         businessProspectService.setBusinessProspectPassword(
@@ -94,7 +95,7 @@ public class BusinessProspectController {
               name = "businessProspectId",
               value = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          UUID businessProspectId,
+          TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ConvertBusinessProspectRequest request) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(

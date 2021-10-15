@@ -1,6 +1,7 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Program;
@@ -18,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 class AccountServiceTest extends BaseCapitalTest {
 
-  @Autowired private ServiceHelper serviceHelper;
+  @Autowired private TestHelper testHelper;
   @Autowired private AccountService accountService;
 
   @Autowired private UserRepository userRepository;
@@ -30,9 +31,9 @@ class AccountServiceTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     if (bin == null) {
-      bin = serviceHelper.createBin();
-      program = serviceHelper.createProgram(bin);
-      businessAndAllocationsRecord = serviceHelper.createBusiness(program);
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+      businessAndAllocationsRecord = testHelper.createBusiness(program);
     }
   }
 

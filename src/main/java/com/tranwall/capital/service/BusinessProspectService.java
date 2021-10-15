@@ -2,8 +2,11 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
+import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.BusinessProspectId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
@@ -19,9 +22,9 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,7 @@ public class BusinessProspectService {
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthClient fusionAuthClient;
+  private final TwilioService twilioService;
 
   public record CreateBusinessProspectRecord(BusinessProspect businessProspect, String otp) {}
 
@@ -49,6 +53,8 @@ public class BusinessProspectService {
                 new RequiredEncryptedStringWithHash(email)));
 
     // TODO(kuchlein): need to call Twilio to generate OTP
+    //    Verification verification = twilioService.sendVerificationEmail(
+    //        businessProspect.getEmail().getEncrypted());
     String otp = "1234";
 
     return new CreateBusinessProspectRecord(businessProspect, otp);
@@ -56,16 +62,23 @@ public class BusinessProspectService {
 
   @Transactional
   public CreateBusinessProspectRecord setBusinessProspectPhone(
-      UUID businessProspectId, String phone) {
+      TypedId<BusinessProspectId> businessProspectId, String phone) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
 
+    if (businessProspect.getPhone() != null
+        && StringUtils.isNotBlank(businessProspect.getPhone().getEncrypted())) {
+      throw new InvalidRequestException("phone already set");
+    }
+
     businessProspect.setPhone(new NullableEncryptedString(phone));
 
     // TODO(kuchlein): need to call Twilio to generate OTP
+    //    Verification verification = twilioService.sendVerificationSms(
+    //        businessProspect.getPhone().getEncrypted());
     String otp = "1234";
 
     businessProspect = businessProspectRepository.save(businessProspect);
@@ -75,30 +88,62 @@ public class BusinessProspectService {
 
   @Transactional
   public BusinessProspect validateBusinessProspectIdentifier(
-      UUID businessProspectId, IdentifierType identifierType, String otp) {
+      TypedId<BusinessProspectId> businessProspectId, IdentifierType identifierType, String otp) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
 
-    // TODO(kuchlein): validate OTP
-
     switch (identifierType) {
-      case EMAIL -> businessProspect.setEmailVerified(true);
-      case PHONE -> businessProspect.setPhoneVerified(true);
+      case EMAIL -> {
+        if (businessProspect.isEmailVerified()) {
+          throw new InvalidRequestException("email already validated");
+        }
+
+        // TODO(kuchlein): validate OTP
+        //   VerificationCheck check = twilioService.checkVerification(
+        //       businessProspect.getEmail().getEncrypted(), otp);
+        //   if (!check.getValid()) {
+        //     throw new InvalidRequestException("email otp does not match");
+        //   }
+
+        businessProspect.setEmailVerified(true);
+      }
+      case PHONE -> {
+        if (!businessProspect.isEmailVerified()) {
+          throw new InvalidRequestException("email not yet validated");
+        }
+        if (businessProspect.isPhoneVerified()) {
+          throw new InvalidRequestException("phone already validated");
+        }
+
+        // TODO(kuchlein): validate OTP
+        //   VerificationCheck check = twilioService.checkVerification(
+        //       businessProspect.getPhone().getEncrypted(), otp);
+        //   if (!check.getValid()) {
+        //     throw new InvalidRequestException("phone otp does not match");
+        //   }
+
+        businessProspect.setPhoneVerified(true);
+      }
     }
 
     return businessProspectRepository.save(businessProspect);
   }
 
   @Transactional
-  public BusinessProspect setBusinessProspectPassword(UUID businessProspectId, String password) {
+  public BusinessProspect setBusinessProspectPassword(
+      TypedId<BusinessProspectId> businessProspectId, String password) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+
+    if (StringUtils.isNotBlank(businessProspect.getSubjectRef())) {
+      throw new InvalidRequestException("password already set");
+    }
 
     businessProspect.setSubjectRef(
         fusionAuthClient.createBusinessOwner(
@@ -118,7 +163,7 @@ public class BusinessProspectService {
 
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
-      UUID businessProspectId,
+      TypedId<BusinessProspectId> businessProspectId,
       String legalName,
       BusinessType businessType,
       String businessPhone,
@@ -129,6 +174,10 @@ public class BusinessProspectService {
             .findById(businessProspectId)
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+
+    if (StringUtils.isBlank(businessProspect.getSubjectRef())) {
+      throw new InvalidRequestException("password has not been set");
+    }
 
     BusinessAndAllocationsRecord businessAndAllocationsRecord =
         businessService.createBusiness(
@@ -152,6 +201,10 @@ public class BusinessProspectService {
             businessProspect.getEmail().getEncrypted(),
             businessProspect.getPhone().getEncrypted(),
             businessProspect.getSubjectRef());
+
+    // delete the business prospect so that the owner of the email could register a new business
+    // later
+    businessProspectRepository.delete(businessProspect);
 
     return new ConvertBusinessProspectRecord(
         businessAndAllocationsRecord.business(),

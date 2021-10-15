@@ -1,13 +1,19 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.error.TypeMismatchException;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
@@ -47,7 +53,11 @@ public class AllocationService {
 
   @Transactional
   public AllocationRecord createAllocation(
-      UUID programId, UUID businessId, UUID parentAllocationId, String name, Currency currency) {
+      TypedId<ProgramId> programId,
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> parentAllocationId,
+      String name,
+      Currency currency) {
     Allocation allocation = new Allocation(businessId, programId, name);
 
     if (parentAllocationId != null) {
@@ -57,7 +67,7 @@ public class AllocationService {
               .findById(parentAllocationId)
               .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, parentAllocationId));
 
-      if (parent.getBusinessId().equals(businessId)) {
+      if (!parent.getBusinessId().equals(businessId)) {
         throw new IdMismatchException(IdType.BUSINESS_ID, businessId, parent.getBusinessId());
       }
 
@@ -68,18 +78,19 @@ public class AllocationService {
     allocation = allocationRepository.save(allocation);
     Account account =
         accountService.createAccount(
-            businessId, AccountType.ALLOCATION, allocation.getId(), currency);
+            businessId, AccountType.ALLOCATION, allocation.getId().toUuid(), currency);
 
     return new AllocationRecord(allocation, account);
   }
 
-  public Allocation retrieveAllocation(UUID businessId, UUID allocationId) {
+  public Allocation retrieveAllocation(
+      TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
     return allocationRepository
         .findByBusinessIdAndId(businessId, allocationId)
         .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
   }
 
-  public AllocationRecord getAllocation(Business business, UUID allocationId) {
+  public AllocationRecord getAllocation(Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
 
     Account account =
@@ -89,7 +100,8 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
-  public List<AllocationRecord> getAllocationChildren(Business business, UUID allocationId) {
+  public List<AllocationRecord> getAllocationChildren(
+      Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId
     List<Allocation> allocations;
     if (allocationId == null) {
@@ -107,8 +119,8 @@ public class AllocationService {
 
     // get list of accounts to go with the allocations and put into map to make the response easier
     // to create. Expect count to be equal
-    List<UUID> allocationIds =
-        allocations.stream().map(Mutable::getId).collect(Collectors.toList());
+    List<TypedId<AllocationId>> allocationIds =
+        allocations.stream().map(TypedMutable::getId).collect(Collectors.toList());
     List<Account> accounts =
         accountService.retrieveAllocationAccounts(
             business.getId(), business.getCurrency(), allocationIds);
@@ -119,16 +131,16 @@ public class AllocationService {
         accounts.stream().collect(Collectors.toMap(Account::getOwnerId, Function.identity()));
 
     return allocations.stream()
-        .map(e -> new AllocationRecord(e, accountMap.get(e.getId())))
+        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
         .collect(Collectors.toList());
   }
 
   @Transactional
   public AccountReallocateFundsRecord reallocateAllocationFunds(
       Business business,
-      @NonNull UUID allocationId,
-      @NonNull UUID accountId,
-      @NonNull UUID cardId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull TypedId<AccountId> accountId,
+      @NonNull TypedId<CardId> cardId,
       @NonNull FundsTransactType fundsTransactType,
       @NonNull Amount amount) {
     AllocationRecord allocationRecord = getAllocation(business, allocationId);
@@ -151,6 +163,7 @@ public class AllocationService {
           throw new InsufficientFundsException(
               allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
+
         return accountService.reallocateFunds(
             allocationRecord.account.getId(), card.account().getId(), amount);
       }
@@ -159,6 +172,7 @@ public class AllocationService {
           throw new InsufficientFundsException(
               allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
+
         return accountService.reallocateFunds(
             card.account().getId(), allocationRecord.account.getId(), amount);
       }

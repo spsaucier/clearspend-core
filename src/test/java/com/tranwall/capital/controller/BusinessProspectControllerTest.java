@@ -4,11 +4,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.common.typedid.data.BusinessProspectId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,20 +21,19 @@ import org.springframework.test.web.servlet.MockMvc;
 class BusinessProspectControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
-  private final ControllerHelper controllerHelper;
+  private final TestHelper testHelper;
 
   private final BusinessProspectRepository businessProspectRepository;
 
   @Test
   void createBusinessProspect_success() throws Exception {
-    controllerHelper.createBusinessProspect();
+    testHelper.createBusinessProspect();
   }
 
   @Test
   void validateBusinessProspectEmail_success() throws Exception {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
-        controllerHelper.createBusinessProspect();
-    controllerHelper.validateBusinessProspectIdentifier(
+    CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
         createBusinessProspectRecord.otp());
@@ -40,34 +41,32 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void setBusinessProspectPhone_success() throws Exception {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
-        controllerHelper.createBusinessProspect();
-    controllerHelper.validateBusinessProspectIdentifier(
+    CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
         createBusinessProspectRecord.otp());
-    controllerHelper.setBusinessProspectPhone(
-        createBusinessProspectRecord.businessProspect().getId());
+    testHelper.setBusinessProspectPhone(createBusinessProspectRecord.businessProspect().getId());
   }
 
   @Test
   void validateBusinessProspectPhone_success() throws Exception {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
-        controllerHelper.createBusinessProspect();
-    controllerHelper.validateBusinessProspectIdentifier(
+    CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
         createBusinessProspectRecord.otp());
     String otp =
-        controllerHelper.setBusinessProspectPhone(
+        testHelper.setBusinessProspectPhone(
             createBusinessProspectRecord.businessProspect().getId());
-    controllerHelper.validateBusinessProspectIdentifier(
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
   }
 
-  void setBusinessProspectPassword(UUID businessProspectId) throws Exception {
+  void setBusinessProspectPassword(TypedId<BusinessProspectId> businessProspectId)
+      throws Exception {
     SetBusinessProspectPasswordRequest request =
-        new SetBusinessProspectPasswordRequest(controllerHelper.generatePassword());
+        new SetBusinessProspectPasswordRequest(testHelper.generatePassword());
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
@@ -82,35 +81,32 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void setBusinessProspectPassword_success() throws Exception {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
-        controllerHelper.createBusinessProspect();
-    controllerHelper.validateBusinessProspectIdentifier(
+    CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
         createBusinessProspectRecord.otp());
     String otp =
-        controllerHelper.setBusinessProspectPhone(
+        testHelper.setBusinessProspectPhone(
             createBusinessProspectRecord.businessProspect().getId());
-    controllerHelper.validateBusinessProspectIdentifier(
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
     setBusinessProspectPassword(createBusinessProspectRecord.businessProspect().getId());
   }
 
   @Test
   void convertBusinessProspect_success() throws Exception {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
-        controllerHelper.createBusinessProspect();
-    controllerHelper.validateBusinessProspectIdentifier(
+    CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
         createBusinessProspectRecord.otp());
     String otp =
-        controllerHelper.setBusinessProspectPhone(
+        testHelper.setBusinessProspectPhone(
             createBusinessProspectRecord.businessProspect().getId());
-    controllerHelper.validateBusinessProspectIdentifier(
+    testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
     setBusinessProspectPassword(createBusinessProspectRecord.businessProspect().getId());
-    controllerHelper.convertBusinessProspect(
-        createBusinessProspectRecord.businessProspect().getId());
+    testHelper.convertBusinessProspect(createBusinessProspectRecord.businessProspect().getId());
   }
 }

@@ -2,7 +2,8 @@ package com.tranwall.capital.controller.type.business.bankaccount;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
-import java.util.UUID;
+import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
@@ -13,7 +14,7 @@ public class BankAccount {
 
   @JsonProperty("businessBankAccountId")
   @NonNull
-  private UUID businessBankAccountId;
+  private TypedId<BusinessBankAccountId> businessBankAccountId;
 
   @Sensitive
   @JsonProperty("name")

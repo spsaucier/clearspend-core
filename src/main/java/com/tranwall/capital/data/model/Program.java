@@ -1,6 +1,7 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.data.model.enums.FundingType;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -20,7 +21,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Program extends Mutable {
+public class Program extends TypedMutable<ProgramId> {
 
   @NonNull private String name;
 

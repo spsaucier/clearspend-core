@@ -1,7 +1,11 @@
 package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.AccountType;
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,6 +24,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -28,17 +33,19 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Account extends Mutable {
+public class Account extends TypedMutable<AccountId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
-  private UUID businessId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<BusinessId> businessId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "ledger_account")
   @Column(updatable = false)
-  private UUID ledgerAccountId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<LedgerAccountId> ledgerAccountId;
 
   @NonNull
   @Enumerated(EnumType.STRING)
@@ -55,6 +62,12 @@ public class Account extends Mutable {
 
   public void setHolds(List<Hold> holds) {
     this.holds = holds;
+
+    // FIXME: if statement is here to make sure that AllocationTestController passes
+    if (availableBalance == null) {
+      availableBalance = new Amount();
+    }
+
     this.availableBalance.setAmount(
         ledgerBalance
             .getAmount()

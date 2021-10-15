@@ -2,9 +2,11 @@ package com.tranwall.capital.data.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
+import com.tranwall.capital.common.typedid.data.PostingId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -18,6 +20,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -26,7 +29,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Posting extends Mutable {
+public class Posting extends TypedMutable<PostingId> {
 
   @NonNull
   @JsonIgnore
@@ -36,7 +39,8 @@ public class Posting extends Mutable {
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "ledger_account")
   @Column(updatable = false)
-  private UUID ledgerAccountId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<LedgerAccountId> ledgerAccountId;
 
   @NonNull @Embedded private Amount amount;
 

@@ -2,8 +2,9 @@ package com.tranwall.capital.data.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.ClearAddress;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
@@ -32,7 +33,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Business extends Mutable {
+public class Business extends TypedMutable<BusinessId> {
 
   @NonNull private String legalName;
 

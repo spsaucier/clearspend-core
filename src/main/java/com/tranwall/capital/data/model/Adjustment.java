@@ -1,10 +1,17 @@
 package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.AccountId;
+import com.tranwall.capital.common.typedid.data.AdjustmentId;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.JournalEntryId;
+import com.tranwall.capital.common.typedid.data.LedgerAccountId;
+import com.tranwall.capital.common.typedid.data.PostingId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -18,6 +25,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -26,36 +34,42 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Adjustment extends Mutable {
+public class Adjustment extends TypedMutable<AdjustmentId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
-  private UUID businessId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<BusinessId> businessId;
 
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
-  private UUID allocationId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AllocationId> allocationId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
-  private UUID accountId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AccountId> accountId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "ledger_account")
   @Column(updatable = false)
-  private UUID ledgerAccountId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<LedgerAccountId> ledgerAccountId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "journal_entry")
   @Column(updatable = false)
-  private UUID journalEntryId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<JournalEntryId> journalEntryId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "posting")
   @Column(updatable = false)
-  private UUID postingId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<PostingId> postingId;
 
   @NonNull
   @Enumerated(EnumType.STRING)

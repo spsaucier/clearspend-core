@@ -1,10 +1,13 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Mutable;
-import com.tranwall.capital.common.data.type.UUIDArrayType;
+import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.data.type.TypedIdArrayType;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
@@ -25,27 +28,30 @@ import org.hibernate.annotations.TypeDefs;
 @NoArgsConstructor
 @RequiredArgsConstructor
 @DynamicUpdate
-@TypeDefs({@TypeDef(name = "uuid-array", typeClass = UUIDArrayType.class)})
+@TypeDefs({@TypeDef(name = "uuid-array", typeClass = TypedIdArrayType.class)})
 @Slf4j
-public class Allocation extends Mutable {
+public class Allocation extends TypedMutable<AllocationId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
-  private UUID businessId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<BusinessId> businessId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "program")
   @Column(updatable = false)
-  private UUID programId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<ProgramId> programId;
 
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
-  private UUID parentAllocationId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AllocationId> parentAllocationId;
 
   @Column(columnDefinition = "uuid[]")
   @Type(type = "uuid-array")
-  private List<UUID> ancestorAllocationIds = new ArrayList<>();
+  private List<TypedId<AllocationId>> ancestorAllocationIds = new ArrayList<>();
 
   @NonNull private String name;
 }

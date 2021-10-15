@@ -1,6 +1,6 @@
 package com.tranwall.capital.common.error;
 
-import java.util.UUID;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -8,7 +8,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class IdMismatchException extends RuntimeException {
 
-  public IdMismatchException(IdType idType, UUID expected, UUID have) {
+  public <T> IdMismatchException(IdType idType, TypedId<T> expected, TypedId<T> have) {
     super(String.format("%s mismatch, expected %s but have %s", idType, expected, have));
   }
 

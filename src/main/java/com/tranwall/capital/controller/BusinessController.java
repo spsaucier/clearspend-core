@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
@@ -9,7 +11,6 @@ import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.BusinessService;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -30,7 +31,7 @@ public class BusinessController {
 
   @PostMapping("/transactions")
   private BusinessFundAllocationResponse reallocateBusinessFunds(
-      @RequestHeader(name = "businessId") UUID businessId,
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @RequestBody @Validated BusinessFundAllocationRequest request) {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
@@ -49,7 +50,8 @@ public class BusinessController {
   }
 
   @GetMapping("/allocations")
-  private List<Allocation> getRootAllocations(@RequestHeader(name = "businessId") UUID businessId) {
+  private List<Allocation> getRootAllocations(
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
     return allocationService
         .getAllocationChildren(businessService.retrieveBusiness(businessId), null)
         .stream()

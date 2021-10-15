@@ -1,12 +1,14 @@
 package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Address;
-import com.tranwall.capital.common.data.model.Mutable;
+import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.UserType;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -21,6 +23,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Data
@@ -30,12 +33,13 @@ import org.hibernate.annotations.DynamicUpdate;
 @DynamicUpdate
 @Table(name = "users")
 @Slf4j
-public class User extends Mutable {
+public class User extends TypedMutable<UserId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
-  private UUID businessId;
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<BusinessId> businessId;
 
   @NonNull
   @Enumerated(EnumType.STRING)
