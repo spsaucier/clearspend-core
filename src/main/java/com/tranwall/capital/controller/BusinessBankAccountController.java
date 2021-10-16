@@ -35,27 +35,31 @@ public class BusinessBankAccountController {
 
   @NonNull private BusinessBankAccountService businessBankAccountService;
 
+  public record LinkTokenResponse(String linkToken) {}
+
   @GetMapping("/link-token")
-  private String linkToken(@RequestHeader(name = "businessId") TypedId<BusinessId> businessId)
-      throws IOException {
+  private LinkTokenResponse linkToken(
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) throws IOException {
     // TODO: Get business UUID from JWT
-    return businessBankAccountService.getLinkToken(businessId);
+    return new LinkTokenResponse(businessBankAccountService.getLinkToken(businessId));
   }
 
-  @GetMapping(value = "/accounts/{linkToken}", produces = MediaType.APPLICATION_JSON_VALUE)
-  private List<BusinessBankAccountService.BusinessBankAccountRecord> accounts(
+  @GetMapping(
+      value = "/link-token/{linkToken}/accounts",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  private List<BusinessBankAccountService.BusinessBankAccountRecord> linkedAccounts(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable String linkToken)
       throws IOException {
     // TODO: Get business UUID from JWT
-    return businessBankAccountService.getAccounts(linkToken, businessId);
+    return businessBankAccountService.getBusinessBankAccounts(linkToken, businessId);
   }
 
   @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
   private List<BankAccount> accounts(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
     // TODO: Get business UUID from JWT
-    return businessBankAccountService.getAccounts(businessId).stream()
+    return businessBankAccountService.getBusinessBankAccounts(businessId).stream()
         .map(
             e ->
                 new BankAccount(

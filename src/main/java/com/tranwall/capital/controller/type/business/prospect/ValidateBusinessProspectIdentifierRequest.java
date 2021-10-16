@@ -19,12 +19,12 @@ public class ValidateBusinessProspectIdentifierRequest {
   @Sensitive
   @NonNull
   @JsonProperty("identifierType")
-  @Schema(name = "Type of Identifier to validate", example = "EMAIL")
+  @Schema(title = "Type of Identifier to validate", example = "EMAIL")
   private IdentifierType identifierType;
 
   @Sensitive
   @NonNull
   @JsonProperty("otp")
-  @Schema(name = "OTP received via email/phone", example = "67890")
+  @Schema(title = "OTP received via email/phone", example = "67890")
   private String otp;
 }

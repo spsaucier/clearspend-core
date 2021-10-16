@@ -29,7 +29,7 @@ public class ConvertBusinessProspectRequest {
 
   @JsonProperty("businessPhone")
   @NonNull
-  @Schema(name = "Phone number in e.164 format", example = "+1234567890")
+  @Schema(title = "Phone number in e.164 format", example = "+1234567890")
   @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
   private String businessPhone;
 

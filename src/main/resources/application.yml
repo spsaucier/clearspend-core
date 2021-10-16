@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/capital
-    username: postgres
-    password: docker
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:docker}
   jpa:
     open-in-view: false
     hibernate:

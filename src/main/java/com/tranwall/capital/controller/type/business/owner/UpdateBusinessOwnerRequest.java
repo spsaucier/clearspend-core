@@ -22,7 +22,7 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("firstName")
   @NonNull
   @NotNull(message = "firstName required")
-  @Schema(name = "The first name of the person", required = true, example = "John")
+  @Schema(title = "The first name of the person", required = true, example = "John")
   @Size(max = 100, message = "The first name should not be more than 100 characters.")
   private String firstName;
 
@@ -30,7 +30,7 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("lastName")
   @NonNull
   @NotNull(message = "lastName required")
-  @Schema(name = "The last name of the person", required = true, example = "Wick")
+  @Schema(title = "The last name of the person", required = true, example = "Wick")
   @Size(max = 100, message = "The last name should not be more than 100 characters.")
   private String lastName;
 
@@ -38,7 +38,7 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("dateOfBirth")
   @NonNull
   @NotNull(message = "dateOfBirth required")
-  @Schema(name = "The date of birth of the person", required = true, example = "1990-01-01")
+  @Schema(title = "The date of birth of the person", required = true, example = "1990-01-01")
   private LocalDate dateOfBirth;
 
   @Sensitive
@@ -46,7 +46,7 @@ public class UpdateBusinessOwnerRequest {
   @NonNull
   @NotNull(message = "taxIdentificationNumber required")
   @Schema(
-      name = "The tax identification number of the person",
+      title = "The tax identification number of the person",
       required = true,
       example = "091827364")
   @Size(max = 10, message = "The email should not be more than 10 characters.")
@@ -56,7 +56,7 @@ public class UpdateBusinessOwnerRequest {
   @JsonProperty("email")
   @NonNull
   @NotNull(message = "email required")
-  @Schema(name = "Email address of the person", required = true, example = "johnw@hightable.com")
+  @Schema(title = "Email address of the person", required = true, example = "johnw@hightable.com")
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
   @Size(max = 100, message = "The email should not be more than 100 characters.")
   private String email;

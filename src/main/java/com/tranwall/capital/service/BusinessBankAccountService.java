@@ -69,7 +69,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  public List<BusinessBankAccountService.BusinessBankAccountRecord> getAccounts(
+  public List<BusinessBankAccountService.BusinessBankAccountRecord> getBusinessBankAccounts(
       String linkToken, TypedId<BusinessId> businessId) throws IOException {
     // TODO: Check for already existing access token
     // Will need some unique ID to look up in the database but can't use routing/account since that
@@ -91,7 +91,7 @@ public class BusinessBankAccountService {
         .collect(Collectors.toList());
   }
 
-  public List<BusinessBankAccount> getAccounts(TypedId<BusinessId> businessId) {
+  public List<BusinessBankAccount> getBusinessBankAccounts(TypedId<BusinessId> businessId) {
     return businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId);
   }
 

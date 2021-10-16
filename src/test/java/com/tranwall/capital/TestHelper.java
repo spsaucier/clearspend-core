@@ -2,6 +2,7 @@ package com.tranwall.capital;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +20,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.BusinessBankAccountController.LinkTokenResponse;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
@@ -186,7 +188,7 @@ public class TestHelper {
     validateBusinessProspectIdentifier(
         IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
 
-    // validate phone OTP
+    // set business owner password
     businessProspectService.setBusinessProspectPassword(
         createBusinessProspectRecord.businessProspect().getId(), generatePassword());
 
@@ -332,6 +334,21 @@ public class TestHelper {
         Currency.USD);
   }
 
+  public String getLinkToken(TypedId<BusinessId> businessId) throws Exception {
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/business-bank-accounts/link-token")
+                    .header("businessId", businessId.toString())
+                    .contentType("application/json"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    return objectMapper
+        .readValue(response.getContentAsString(), new TypeReference<LinkTokenResponse>() {})
+        .linkToken();
+  }
+
   public BusinessBankAccountRecord createBusinessBankAccount() {
     return businessBankAccountService.createBusinessBankAccount(
         generateRoutingNumber(), generateAccountNumber(), UUID.randomUUID().toString(), businessId);
@@ -345,13 +362,14 @@ public class TestHelper {
     return businessBankAccounts.get(0);
   }
 
-  public AdjustmentRecord transactBankAccount(BigDecimal amount) {
+  public AdjustmentRecord transactBankAccount(
+      FundsTransactType fundsTransactType, BigDecimal amount) {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
     Account businessAccount = accountService.retrieveBusinessAccount(businessId, Currency.USD);
     return businessBankAccountService.transactBankAccount(
         businessId,
         businessBankAccount.getId(),
-        FundsTransactType.DEPOSIT,
+        fundsTransactType,
         new Amount(businessAccount.getLedgerBalance().getCurrency(), amount));
   }
 

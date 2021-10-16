@@ -117,7 +117,8 @@ class AllocationControllerTest extends BaseCapitalTest {
     Business business = testHelper.retrieveBusiness();
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
-    AdjustmentRecord deposit = testHelper.transactBankAccount(amount.getAmount());
+    AdjustmentRecord deposit =
+        testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount());
     AllocationRecord allocationRecord =
         testHelper.createAllocation(program.getId(), business.getId(), null);
     Card card =
