@@ -6,6 +6,7 @@ import com.tranwall.capital.common.error.CurrencyMismatchException;
 import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.enums.Currency;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -30,7 +31,8 @@ public class Amount {
   private BigDecimal amount;
 
   public static Amount of(Currency currency, BigDecimal amount) {
-    return new Amount(currency, amount);
+    return new Amount(
+        currency, amount.setScale(currency.getDecimalScale(), RoundingMode.UNNECESSARY));
   }
 
   public static Amount add(Amount amount, Amount other) {

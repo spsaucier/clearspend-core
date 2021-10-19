@@ -14,6 +14,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Adjustment;
+import com.tranwall.capital.data.model.Hold;
 import com.tranwall.capital.data.model.LedgerAccount;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
@@ -64,15 +65,26 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord depositFunds(TypedId<BusinessId> businessId, Amount amount) {
+  public AdjustmentRecord depositFunds(
+      TypedId<BusinessId> businessId, Amount amount, boolean placeHold) {
     if (!amount.isPositive()) {
       throw new AmountException(AmountType.POSITIVE, amount);
     }
 
-    Account account = retrieveBusinessAccount(businessId, amount.getCurrency());
+    Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), false);
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(account, amount);
     account.setLedgerBalance(Amount.add(account.getLedgerBalance(), amount));
+
+    if (placeHold) {
+      holdRepository.save(
+          new Hold(
+              businessId,
+              account.getId(),
+              HoldStatus.PLACED,
+              Amount.negate(amount),
+              OffsetDateTime.now().plusDays(5)));
+    }
 
     return new AdjustmentRecord(account, adjustment);
   }
@@ -83,8 +95,8 @@ public class AccountService {
       throw new AmountException(AmountType.POSITIVE, amount);
     }
 
-    Account account = retrieveBusinessAccount(businessId, amount.getCurrency());
-    if (account.getLedgerBalance().isSmallerThan(amount)) {
+    Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), true);
+    if (account.getAvailableBalance().isSmallerThan(amount)) {
       throw new InsufficientFundsException(account.getId(), AdjustmentType.WITHDRAW, amount);
     }
 
@@ -95,20 +107,39 @@ public class AccountService {
     return new AdjustmentRecord(account, adjustment);
   }
 
-  private Account retrieveAccount(TypedId<AccountId> accountId) {
-    return accountRepository
-        .findById(accountId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT, accountId));
+  private Account retrieveAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
+    Account account =
+        accountRepository
+            .findById(accountId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT, accountId));
+
+    fetchHolds(account, fetchHolds);
+
+    return account;
   }
 
-  public Account retrieveBusinessAccount(TypedId<BusinessId> businessId, Currency currency) {
-    return accountRepository
-        .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
-            businessId, AccountType.BUSINESS, businessId.toUuid(), currency)
-        .orElseThrow(
-            () ->
-                new RecordNotFoundException(
-                    Table.ACCOUNT, businessId, AccountType.BUSINESS, businessId, currency));
+  public Account retrieveBusinessAccount(
+      TypedId<BusinessId> businessId, Currency currency, boolean fetchHolds) {
+    Account account =
+        accountRepository
+            .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
+                businessId, AccountType.BUSINESS, businessId.toUuid(), currency)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.ACCOUNT, businessId, AccountType.BUSINESS, businessId, currency));
+
+    fetchHolds(account, fetchHolds);
+
+    return account;
+  }
+
+  private void fetchHolds(Account account, boolean fetchHolds) {
+    if (fetchHolds) {
+      account.setHolds(
+          holdRepository.findByAccountIdAndStatusAndExpirationDateAfter(
+              account.getId(), HoldStatus.PLACED, OffsetDateTime.now()));
+    }
   }
 
   public Account retrieveAllocationAccount(
@@ -117,7 +148,7 @@ public class AccountService {
   }
 
   public Account retrieveCardAccount(TypedId<AccountId> accountId) {
-    return retrieveAccount(accountId);
+    return retrieveAccount(accountId, true);
   }
 
   private Account retrieveAccount(
@@ -128,9 +159,8 @@ public class AccountService {
                 businessId, type, ownerId, currency)
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.ACCOUNT, businessId, type, businessId));
-    account.setHolds(
-        holdRepository.findByAccountIdAndStatusOrExpirationDateAfter(
-            account.getId(), HoldStatus.PLACED, OffsetDateTime.now()));
+
+    fetchHolds(account, true);
 
     return account;
   }
@@ -153,13 +183,13 @@ public class AccountService {
       throw new AmountException(AmountType.POSITIVE, amount);
     }
 
-    Account fromAccount = retrieveAccount(fromAccountId);
-    Account toAccount = retrieveAccount(toAccountId);
+    Account fromAccount = retrieveAccount(fromAccountId, true);
+    Account toAccount = retrieveAccount(toAccountId, true);
     if (!fromAccount.getBusinessId().equals(toAccount.getBusinessId())) {
       throw new IdMismatchException(
           IdType.BUSINESS_ID, fromAccount.getBusinessId(), toAccount.getBusinessId());
     }
-    if (fromAccount.getLedgerBalance().isSmallerThan(amount)) {
+    if (fromAccount.getAvailableBalance().isSmallerThan(amount)) {
       throw new InsufficientFundsException(fromAccountId, AdjustmentType.REALLOCATE, amount);
     }
 

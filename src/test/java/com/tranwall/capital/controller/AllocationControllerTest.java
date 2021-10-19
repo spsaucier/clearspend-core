@@ -117,7 +117,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
     AdjustmentRecord deposit =
-        testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount());
+        testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount(), false);
     AllocationRecord allocationRecord =
         testHelper.createAllocation(program.getId(), business.getId(), null);
     Card card =
@@ -129,7 +129,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             program,
             amount.getCurrency());
     Account businessAccount =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency());
+        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(
             businessAccount.getId(), allocationRecord.account().getId(), amount);

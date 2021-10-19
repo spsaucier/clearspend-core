@@ -116,7 +116,8 @@ public class BusinessService {
 
   public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
     Business business = retrieveBusiness(businessId);
-    Account account = accountService.retrieveBusinessAccount(businessId, business.getCurrency());
+    Account account =
+        accountService.retrieveBusinessAccount(businessId, business.getCurrency(), false);
     return new BusinessRecord(business, account);
   }
 

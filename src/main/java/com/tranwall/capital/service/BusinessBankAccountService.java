@@ -38,7 +38,7 @@ public class BusinessBankAccountService {
       RequiredEncryptedStringWithHash accessToken) {}
 
   @Transactional
-  public BusinessBankAccountRecord createBusinessBankAccount(
+  public TypedId<BusinessBankAccountId> createBusinessBankAccount(
       String routingNumber,
       String accountNumber,
       String accessToken,
@@ -48,12 +48,7 @@ public class BusinessBankAccountService {
     businessBankAccount.setAccountNumber(new RequiredEncryptedStringWithHash(accountNumber));
     businessBankAccount.setAccessToken(new RequiredEncryptedStringWithHash(accessToken));
 
-    businessBankAccountRepository.save(businessBankAccount);
-
-    return new BusinessBankAccountRecord(
-        businessBankAccount.getRoutingNumber(),
-        businessBankAccount.getAccountNumber(),
-        businessBankAccount.getAccessToken());
+    return businessBankAccountRepository.save(businessBankAccount).getId();
   }
 
   public BusinessBankAccount retrieveBusinessBankAccount(
@@ -100,7 +95,8 @@ public class BusinessBankAccountService {
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
       @NonNull FundsTransactType bankAccountTransactType,
-      Amount amount) {
+      Amount amount,
+      boolean placeHold) {
 
     BusinessBankAccount businessBankAccount =
         businessBankAccountRepository
@@ -117,7 +113,7 @@ public class BusinessBankAccountService {
     // TODO(kuchlein): Need to call someone to actually move the money
 
     return switch (bankAccountTransactType) {
-      case DEPOSIT -> accountService.depositFunds(businessId, amount);
+      case DEPOSIT -> accountService.depositFunds(businessId, amount, placeHold);
       case WITHDRAW -> accountService.withdrawFunds(businessId, amount);
     };
   }

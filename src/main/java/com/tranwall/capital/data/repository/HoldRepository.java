@@ -11,6 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface HoldRepository extends JpaRepository<Hold, TypedId<HoldId>> {
 
-  List<Hold> findByAccountIdAndStatusOrExpirationDateAfter(
+  List<Hold> findByAccountIdAndStatusAndExpirationDateAfter(
       TypedId<AccountId> accountId, HoldStatus holdStatus, OffsetDateTime expirationDate);
 }

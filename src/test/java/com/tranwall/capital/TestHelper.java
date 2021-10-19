@@ -16,6 +16,7 @@ import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BinId;
+import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
@@ -57,7 +58,6 @@ import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BinService;
 import com.tranwall.capital.service.BusinessBankAccountService;
-import com.tranwall.capital.service.BusinessBankAccountService.BusinessBankAccountRecord;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
@@ -348,7 +348,11 @@ public class TestHelper {
         .linkToken();
   }
 
-  public BusinessBankAccountRecord createBusinessBankAccount() {
+  public TypedId<BusinessBankAccountId> createBusinessBankAccount() {
+    return createBusinessBankAccount(businessId);
+  }
+
+  public TypedId<BusinessBankAccountId> createBusinessBankAccount(TypedId<BusinessId> businessId) {
     return businessBankAccountService.createBusinessBankAccount(
         generateRoutingNumber(), generateAccountNumber(), UUID.randomUUID().toString(), businessId);
   }
@@ -362,14 +366,16 @@ public class TestHelper {
   }
 
   public AdjustmentRecord transactBankAccount(
-      FundsTransactType fundsTransactType, BigDecimal amount) {
+      FundsTransactType fundsTransactType, BigDecimal amount, boolean placeHold) {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
-    Account businessAccount = accountService.retrieveBusinessAccount(businessId, Currency.USD);
+    Account businessAccount =
+        accountService.retrieveBusinessAccount(businessId, Currency.USD, false);
     return businessBankAccountService.transactBankAccount(
         businessId,
         businessBankAccount.getId(),
         fundsTransactType,
-        new Amount(businessAccount.getLedgerBalance().getCurrency(), amount));
+        new Amount(businessAccount.getLedgerBalance().getCurrency(), amount),
+        placeHold);
   }
 
   public AllocationRecord createAllocation(

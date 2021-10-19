@@ -90,7 +90,8 @@ public class BusinessBankAccountController {
             businessId,
             businessBankAccountId,
             request.getBankAccountTransactType(),
-            request.getAmount().toAmount());
+            request.getAmount().toAmount(),
+            true);
     return new CreateAdjustmentResponse(adjustmentRecord.adjustment().getId());
   }
 }

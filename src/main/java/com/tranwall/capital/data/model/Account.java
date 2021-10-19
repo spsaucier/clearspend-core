@@ -22,12 +22,14 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 
 @Entity
 @Data
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor
@@ -63,17 +65,10 @@ public class Account extends TypedMutable<AccountId> {
   public void setHolds(List<Hold> holds) {
     this.holds = holds;
 
-    // FIXME: if statement is here to make sure that AllocationTestController passes
-    if (availableBalance == null) {
-      availableBalance = new Amount();
-    }
+    BigDecimal holdAmount =
+        holds.stream().map(e -> e.getAmount().getAmount()).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    this.availableBalance.setAmount(
-        ledgerBalance
-            .getAmount()
-            .subtract(
-                holds.stream()
-                    .map(e -> e.getAmount().getAmount())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)));
+    availableBalance =
+        Amount.add(ledgerBalance, new Amount(ledgerBalance.getCurrency(), holdAmount));
   }
 }
