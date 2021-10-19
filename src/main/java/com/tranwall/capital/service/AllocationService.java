@@ -154,8 +154,7 @@ public class AllocationService {
       throw new TypeMismatchException(FundingType.INDIVIDUAL, program.getFundingType());
     }
 
-    CardRecord card =
-        cardService.getCard(business.getId(), allocationId, cardId, amount.getCurrency());
+    CardRecord card = cardService.getCard(business.getId(), cardId);
 
     switch (fundsTransactType) {
       case DEPOSIT -> {

@@ -29,6 +29,7 @@ import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspec
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneResponse;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.tranwall.capital.crypto.PasswordUtil;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
@@ -65,7 +66,9 @@ import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
+import com.tranwall.capital.service.UserService.CreateUserRecord;
 import com.tranwall.capital.util.PhoneUtil;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -163,10 +166,6 @@ public class TestHelper {
     return new java.sql.Date(faker.date().birthday(18, 100).getTime()).toLocalDate();
   }
 
-  public String generatePassword() {
-    return faker.internet().password(10, 32, true, true, true);
-  }
-
   public String generateBusinessName() {
     return faker.company().name();
   }
@@ -190,7 +189,7 @@ public class TestHelper {
 
     // set business owner password
     businessProspectService.setBusinessProspectPassword(
-        createBusinessProspectRecord.businessProspect().getId(), generatePassword());
+        createBusinessProspectRecord.businessProspect().getId(), PasswordUtil.generatePassword());
 
     // convert the prospect to a business
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
@@ -381,7 +380,7 @@ public class TestHelper {
         programId, businessId, parentAllocationId, "", Currency.USD);
   }
 
-  public User createUser(Business business) {
+  public CreateUserRecord createUser(Business business) throws IOException {
     return userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -390,7 +389,7 @@ public class TestHelper {
         generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        UUID.randomUUID().toString());
+        true);
   }
 
   public Card issueCard(
@@ -399,16 +398,9 @@ public class TestHelper {
       User user,
       Bin bin,
       Program program,
-      FundingType fundingType,
       Currency currency) {
     return cardService.issueCard(
-        business.getId(),
-        allocation.getId(),
-        user.getId(),
-        bin.getBin(),
-        program.getId(),
-        fundingType,
-        currency);
+        bin.getBin(), program, business.getId(), allocation.getId(), user.getId(), currency);
   }
 
   public Address generateEntityAddress() {

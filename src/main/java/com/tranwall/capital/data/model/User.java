@@ -6,7 +6,6 @@ import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
-import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.UserType;
 import javax.persistence.Column;
@@ -45,15 +44,15 @@ public class User extends TypedMutable<UserId> {
   @Enumerated(EnumType.STRING)
   private UserType type;
 
-  @Sensitive @Embedded private NullableEncryptedString firstName;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash firstName;
 
-  @Sensitive @Embedded private NullableEncryptedString lastName;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash lastName;
 
   @Embedded private Address address;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash email;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash email;
 
-  @Sensitive @Embedded @NonNull private RequiredEncryptedStringWithHash phone;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash phone;
 
   // link to FusionAuth
   private String subjectRef;

@@ -11,7 +11,6 @@ import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Adjustment;
@@ -72,7 +71,7 @@ public class AccountService {
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency());
 
-    Adjustment adjustment = adjustmentService.depositFunds(account, amount);
+    Adjustment adjustment = adjustmentService.recordDepositFunds(account, amount);
     account.setLedgerBalance(Amount.add(account.getLedgerBalance(), amount));
 
     return new AdjustmentRecord(account, adjustment);
@@ -89,7 +88,7 @@ public class AccountService {
       throw new InsufficientFundsException(account.getId(), AdjustmentType.WITHDRAW, amount);
     }
 
-    Adjustment adjustment = adjustmentService.withdrawFunds(account, amount);
+    Adjustment adjustment = adjustmentService.recordWithdrawFunds(account, amount);
     account.setLedgerBalance(Amount.sub(account.getLedgerBalance(), amount));
     account = accountRepository.save(account);
 
@@ -117,9 +116,8 @@ public class AccountService {
     return retrieveAccount(businessId, currency, AccountType.ALLOCATION, allocationId.toUuid());
   }
 
-  public Account retrieveCardAccount(
-      TypedId<BusinessId> businessId, Currency currency, TypedId<CardId> cardId) {
-    return retrieveAccount(businessId, currency, AccountType.CARD, cardId.toUuid());
+  public Account retrieveCardAccount(TypedId<AccountId> accountId) {
+    return retrieveAccount(accountId);
   }
 
   private Account retrieveAccount(

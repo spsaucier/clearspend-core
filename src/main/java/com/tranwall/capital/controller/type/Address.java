@@ -47,4 +47,23 @@ public class Address {
         new EncryptedString(postalCode),
         country);
   }
+
+  public Address(com.tranwall.capital.common.data.model.Address address) {
+    if (address == null) {
+      return;
+    }
+
+    if (address.getStreetLine1() != null) {
+      streetLine1 = address.getStreetLine1().getEncrypted();
+    }
+    if (address.getStreetLine2() != null) {
+      streetLine2 = address.getStreetLine2().getEncrypted();
+    }
+    locality = address.getLocality();
+    region = address.getRegion();
+    if (address.getPostalCode() != null) {
+      postalCode = address.getPostalCode().getEncrypted();
+    }
+    country = address.getCountry();
+  }
 }

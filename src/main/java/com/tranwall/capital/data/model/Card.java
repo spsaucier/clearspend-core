@@ -8,8 +8,13 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.data.model.enums.CardStatus;
+import com.tranwall.capital.data.model.enums.CardStatusReason;
+import com.tranwall.capital.data.model.enums.FundingType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,6 +35,17 @@ import org.hibernate.annotations.Type;
 public class Card extends TypedMutable<CardId> {
 
   @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "bin")
+  @Column(updatable = false)
+  private String bin;
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "program")
+  @Column(updatable = false)
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<ProgramId> programId;
+
+  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
@@ -47,21 +63,22 @@ public class Card extends TypedMutable<CardId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<UserId> userId;
 
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "bin")
-  @Column(updatable = false)
-  private String bin;
-
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "program")
-  @Column(updatable = false)
-  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<ProgramId> programId;
-
   @JoinColumn(referencedColumnName = "id", table = "accountId")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private CardStatus status;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private CardStatusReason statusReason;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private FundingType fundingType;
 
   private String i2cCardRef;
 }

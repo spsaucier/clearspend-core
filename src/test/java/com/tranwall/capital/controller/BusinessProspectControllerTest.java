@@ -9,6 +9,7 @@ import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.tranwall.capital.crypto.PasswordUtil;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +67,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   void setBusinessProspectPassword(TypedId<BusinessProspectId> businessProspectId)
       throws Exception {
     SetBusinessProspectPasswordRequest request =
-        new SetBusinessProspectPasswordRequest(testHelper.generatePassword());
+        new SetBusinessProspectPasswordRequest(PasswordUtil.generatePassword());
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =

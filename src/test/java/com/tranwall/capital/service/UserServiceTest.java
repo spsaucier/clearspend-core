@@ -9,6 +9,8 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import com.tranwall.capital.service.UserService.CreateUserRecord;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,10 +34,11 @@ class UserServiceTest extends BaseCapitalTest {
     }
   }
 
+  @SneakyThrows
   @Test
   void createUser() {
-    User user = testHelper.createUser(businessAndAllocationsRecord.business());
-    User foundUser = userRepository.findById(user.getId()).orElseThrow();
+    CreateUserRecord userRecord = testHelper.createUser(businessAndAllocationsRecord.business());
+    User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
   }
 }

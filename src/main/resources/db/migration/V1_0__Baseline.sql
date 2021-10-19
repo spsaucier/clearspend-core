@@ -117,7 +117,9 @@ create table if not exists business
     know_your_business_status      varchar(20)                 not null,
     -- on-boarding, active, suspended, closed (terminal)
     status                         varchar(20)                 not null,
-    unique (legal_name, status)
+    status_reason                  varchar(30)                 not null,
+    unique (legal_name, status),
+    unique (employer_identification_number)
 );
 
 create table if not exists business_owner
@@ -178,7 +180,9 @@ create table if not exists users
     business_id                    uuid                        not null references business (id),
     type                           varchar(50)                 not null,
     first_name_encrypted           bytea                       not null,
+    first_name_hash                bytea                       not null,
     last_name_encrypted            bytea                       not null,
+    last_name_hash                 bytea                       not null,
     -- we may not need the addresses of the user
     address_street_line1_encrypted bytea,
     address_street_line2_encrypted bytea,
@@ -300,12 +304,15 @@ create table if not exists card
     created       timestamp without time zone not null,
     updated       timestamp without time zone not null,
     version       bigint                      not null,
+    bin           varchar(6)                  not null references bin (bin),
+    program_id    uuid                        not null references program (id),
     business_id   uuid                        not null references business (id), -- denormalized column
     allocation_id uuid                        not null references allocation (id),
     user_id       uuid                        not null references users (id),
-    bin           varchar(6)                  not null references bin (bin),
-    program_id    uuid                        not null references program (id),
     account_id    uuid references account (id),
+    status        varchar(20)                 not null,
+    status_reason varchar(30)                 not null,
+    funding_type  varchar(20)                 not null,
     -- i2c cardReferenceId
     i2c_card_ref  varchar(50)                 not null
 );

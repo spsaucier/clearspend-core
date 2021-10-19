@@ -16,7 +16,6 @@ import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -125,10 +124,9 @@ class AllocationControllerTest extends BaseCapitalTest {
         testHelper.issueCard(
             business,
             allocationRecord.allocation(),
-            testHelper.createUser(business),
+            testHelper.createUser(business).user(),
             bin,
             program,
-            FundingType.INDIVIDUAL,
             amount.getCurrency());
     Account businessAccount =
         accountService.retrieveBusinessAccount(business.getId(), business.getCurrency());

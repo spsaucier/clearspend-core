@@ -29,9 +29,9 @@ public class AdjustmentService {
       Adjustment toAdjustment) {}
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment depositFunds(Account account, Amount amount) {
+  public Adjustment recordDepositFunds(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
-        ledgerService.depositFunds(account.getLedgerAccountId(), amount);
+        ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
 
     return adjustmentRepository.save(
         new Adjustment(
@@ -46,9 +46,9 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment withdrawFunds(Account account, Amount amount) {
+  public Adjustment recordWithdrawFunds(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
-        ledgerService.withdrawFunds(account.getLedgerAccountId(), amount);
+        ledgerService.recordWithdrawFunds(account.getLedgerAccountId(), amount);
 
     return adjustmentRepository.save(
         new Adjustment(
@@ -66,7 +66,7 @@ public class AdjustmentService {
   public ReallocateFundsRecord reallocateFunds(
       Account fromAccount, Account toAccount, Amount amount) {
     ReallocationJournalEntry bankJournalEntry =
-        ledgerService.reallocateFunds(
+        ledgerService.recordReallocateFunds(
             fromAccount.getLedgerAccountId(), toAccount.getLedgerAccountId(), amount);
 
     Adjustment fromAdjustment =

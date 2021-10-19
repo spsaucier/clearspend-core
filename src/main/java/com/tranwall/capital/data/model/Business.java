@@ -8,6 +8,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
+import com.tranwall.capital.data.model.enums.BusinessStatusReason;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
@@ -75,4 +76,8 @@ public class Business extends TypedMutable<BusinessId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessStatus status;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private BusinessStatusReason statusReason;
 }

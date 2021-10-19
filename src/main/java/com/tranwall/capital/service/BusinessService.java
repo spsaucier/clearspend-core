@@ -19,6 +19,7 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
+import com.tranwall.capital.data.model.enums.BusinessStatusReason;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
@@ -74,7 +75,8 @@ public class BusinessService {
             currency,
             BusinessOnboardingStep.ONBOARDING,
             KnowYourBusinessStatus.PENDING,
-            BusinessStatus.ONBOARDING);
+            BusinessStatus.ONBOARDING,
+            BusinessStatusReason.NONE);
     if (businessId != null) {
       business.setId(businessId);
     }

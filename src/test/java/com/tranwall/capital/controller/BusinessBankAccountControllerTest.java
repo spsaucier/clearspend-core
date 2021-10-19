@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.client.plaid.PlaidProperties;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.tranwall.capital.data.model.BusinessBankAccount;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final PlaidProperties plaidProperties;
 
   @BeforeEach
   void init() {
@@ -36,12 +39,19 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void linkToken_success() {
+    if (StringUtils.isBlank(plaidProperties.getSecret())) {
+      return;
+    }
     testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
   }
 
   @SneakyThrows
   @Test
   void linkedAccounts_success() {
+    if (StringUtils.isBlank(plaidProperties.getSecret())) {
+      log.warn("skipping test due to missing Plaid credentials");
+      return;
+    }
     String linkToken = testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
     MockHttpServletResponse response =
         mvc.perform(
@@ -57,6 +67,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void accounts_success() {
+    if (StringUtils.isBlank(plaidProperties.getSecret())) {
+      return;
+    }
     MockHttpServletResponse response =
         mvc.perform(
                 get("/business-bank-accounts")

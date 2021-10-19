@@ -6,6 +6,7 @@ import com.tranwall.capital.common.typedid.data.BinId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.repository.BinRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,16 @@ public class BinService {
   public Bin retrieveBin(String bin) {
     return binRepository
         .findByBin(bin)
-        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, bin));
+        .orElseThrow(() -> new RecordNotFoundException(Table.BIN, bin));
+  }
+
+  public List<Bin> findAllBins() {
+    return binRepository.findAll();
   }
 
   public Bin retrieveBin(TypedId<BinId> binId) {
     return binRepository
         .findById(binId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, binId));
+        .orElseThrow(() -> new RecordNotFoundException(Table.BIN, binId));
   }
 }

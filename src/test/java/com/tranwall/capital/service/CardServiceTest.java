@@ -7,11 +7,11 @@ import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
-import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.CardRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import com.tranwall.capital.service.UserService.CreateUserRecord;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,15 +25,16 @@ class CardServiceTest extends BaseCapitalTest {
   private BusinessAndAllocationsRecord businessAndAllocationsRecord;
   private Bin bin;
   private Program program;
-  private User user;
+  private CreateUserRecord userRecord;
 
+  @SneakyThrows
   @BeforeEach
   public void setup() {
     if (bin == null) {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
       businessAndAllocationsRecord = testHelper.createBusiness(program);
-      user = testHelper.createUser(businessAndAllocationsRecord.business());
+      userRecord = testHelper.createUser(businessAndAllocationsRecord.business());
     }
   }
 
@@ -43,10 +44,9 @@ class CardServiceTest extends BaseCapitalTest {
         testHelper.issueCard(
             businessAndAllocationsRecord.business(),
             businessAndAllocationsRecord.allocationRecords().get(0).allocation(),
-            user,
+            userRecord.user(),
             bin,
             program,
-            FundingType.POOLED,
             Currency.USD);
     Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();

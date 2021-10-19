@@ -27,4 +27,11 @@ public class Program {
 
   @JsonProperty("fundingType")
   private FundingType fundingType;
+
+  public Program(com.tranwall.capital.data.model.Program program) {
+    this.programId = program.getId();
+    this.name = program.getName();
+    this.bin = program.getBin();
+    this.fundingType = program.getFundingType();
+  }
 }

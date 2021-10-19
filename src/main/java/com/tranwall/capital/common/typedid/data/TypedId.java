@@ -9,7 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import org.hibernate.type.UUIDBinaryType;
 
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = false)
 @JsonSerialize(using = TypedIdSerializer.class)
 @JsonDeserialize(using = TypedIdDeserializer.class)
 public final class TypedId<E> extends UUIDBinaryType {

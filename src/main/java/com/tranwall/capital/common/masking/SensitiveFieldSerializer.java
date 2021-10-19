@@ -8,6 +8,8 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,9 +49,10 @@ public class SensitiveFieldSerializer extends JsonSerializer<Object> {
 
     // custom logic to support adding @Mask to Map<String, String>
     if (objectValue instanceof Map) {
-      Map map = new HashMap((Map) objectValue);
-      for (Object x : map.keySet()) {
-        map.put(x, maskString(map.get(x)));
+      Set<? extends Entry<?, ?>> entries = ((Map<?, ?>) objectValue).entrySet();
+      Map<Object, String> map = new HashMap<>();
+      for (Entry<?, ?> entry : entries) {
+        map.put(entry.getKey(), maskString(entry.getValue()));
       }
 
       return new Gson().toJson(map);

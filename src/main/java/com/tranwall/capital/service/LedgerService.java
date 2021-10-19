@@ -51,12 +51,14 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry depositFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+  public BankJournalEntry recordDepositFunds(
+      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, amount);
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry withdrawFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+  public BankJournalEntry recordWithdrawFunds(
+      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, Amount.negate(amount));
   }
 
@@ -82,7 +84,7 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public ReallocationJournalEntry reallocateFunds(
+  public ReallocationJournalEntry recordReallocateFunds(
       TypedId<LedgerAccountId> fromLedgerAccountId,
       TypedId<LedgerAccountId> toLedgerAccountId,
       Amount amount) {

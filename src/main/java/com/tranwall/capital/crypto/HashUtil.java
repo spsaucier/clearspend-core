@@ -37,7 +37,7 @@ public class HashUtil {
   }
 
   public byte[] calculateHash(String clearText) {
-    if (StringUtils.isEmpty(clearText)) {
+    if (!StringUtils.hasLength(clearText)) {
       return null;
     }
 
@@ -85,7 +85,7 @@ public class HashUtil {
   // calculates a hash with Sha512 for the given input
   public String calculateHash512NoPrefix(String clearText, String salt) {
 
-    if (StringUtils.isEmpty(clearText)) {
+    if (!StringUtils.hasLength(clearText)) {
       // a null input results in a null output
       return null;
     }

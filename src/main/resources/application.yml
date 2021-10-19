@@ -35,6 +35,7 @@ client:
   plaid:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX
+    secret: ${PLAID_SECRET:}
   alloy:
     url: https://sandbox.alloy.co/v1/
     individual:
