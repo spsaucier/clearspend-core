@@ -353,8 +353,13 @@ public class TestHelper {
   }
 
   public TypedId<BusinessBankAccountId> createBusinessBankAccount(TypedId<BusinessId> businessId) {
-    return businessBankAccountService.createBusinessBankAccount(
-        generateRoutingNumber(), generateAccountNumber(), UUID.randomUUID().toString(), businessId);
+    return businessBankAccountService
+        .createBusinessBankAccount(
+            generateRoutingNumber(),
+            generateAccountNumber(),
+            UUID.randomUUID().toString(),
+            businessId)
+        .getId();
   }
 
   public BusinessBankAccount retrieveBusinessBankAccount() {

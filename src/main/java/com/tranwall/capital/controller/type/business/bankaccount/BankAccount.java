@@ -21,6 +21,10 @@ public class BankAccount {
   private String name;
 
   @Sensitive
-  @JsonProperty("accountLastFour")
-  private String accountLastFour;
+  @JsonProperty("routingNumber")
+  private String routingNumber;
+
+  @Sensitive
+  @JsonProperty("accountNumber")
+  private String accountNumber;
 }

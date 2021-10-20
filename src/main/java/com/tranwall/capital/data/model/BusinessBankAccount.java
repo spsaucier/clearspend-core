@@ -36,9 +36,9 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId> {
 
   @Sensitive private String name;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
 }

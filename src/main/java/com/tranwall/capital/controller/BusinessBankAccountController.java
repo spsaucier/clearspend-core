@@ -6,12 +6,12 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.tranwall.capital.controller.type.business.bankaccount.BankAccount;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
+import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import io.swagger.annotations.ApiParam;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -47,28 +47,32 @@ public class BusinessBankAccountController {
   @GetMapping(
       value = "/link-token/{linkToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private List<BusinessBankAccountService.BusinessBankAccountRecord> linkedAccounts(
+  private List<BankAccount> linkBusinessBankAccounts(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable String linkToken)
       throws IOException {
     // TODO: Get business UUID from JWT
-    return businessBankAccountService.getBusinessBankAccounts(linkToken, businessId);
+    return toListBankAccount(
+        businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId));
   }
 
-  @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
-  private List<BankAccount> accounts(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
-    // TODO: Get business UUID from JWT
-    return businessBankAccountService.getBusinessBankAccounts(businessId).stream()
+  private List<BankAccount> toListBankAccount(List<BusinessBankAccount> businessBankAccounts) {
+    return businessBankAccounts.stream()
         .map(
             e ->
                 new BankAccount(
                     e.getId(),
                     e.getName(),
-                    e.getAccountNumber()
-                        .getEncrypted()
-                        .substring(e.getAccountNumber().getEncrypted().length() - 4)))
-        .collect(Collectors.toList());
+                    e.getRoutingNumber().getEncrypted(),
+                    e.getAccountNumber().getEncrypted()))
+        .toList();
+  }
+
+  @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
+  private List<BankAccount> getBusinessBankAccounts(
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
+    // TODO: Get business UUID from JWT
+    return toListBankAccount(businessBankAccountService.getBusinessBankAccounts(businessId));
   }
 
   @PostMapping(

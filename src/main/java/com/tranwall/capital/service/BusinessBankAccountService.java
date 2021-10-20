@@ -16,7 +16,6 @@ import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,17 +37,19 @@ public class BusinessBankAccountService {
       RequiredEncryptedStringWithHash accessToken) {}
 
   @Transactional
-  public TypedId<BusinessBankAccountId> createBusinessBankAccount(
+  public BusinessBankAccount createBusinessBankAccount(
       String routingNumber,
       String accountNumber,
       String accessToken,
       TypedId<BusinessId> businessId) {
-    BusinessBankAccount businessBankAccount = new BusinessBankAccount(businessId);
-    businessBankAccount.setRoutingNumber(new RequiredEncryptedStringWithHash(routingNumber));
-    businessBankAccount.setAccountNumber(new RequiredEncryptedStringWithHash(accountNumber));
-    businessBankAccount.setAccessToken(new RequiredEncryptedStringWithHash(accessToken));
+    BusinessBankAccount businessBankAccount =
+        new BusinessBankAccount(
+            businessId,
+            new RequiredEncryptedStringWithHash(routingNumber),
+            new RequiredEncryptedStringWithHash(accountNumber),
+            new RequiredEncryptedStringWithHash(accessToken));
 
-    return businessBankAccountRepository.save(businessBankAccount).getId();
+    return businessBankAccountRepository.save(businessBankAccount);
   }
 
   public BusinessBankAccount retrieveBusinessBankAccount(
@@ -64,7 +65,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  public List<BusinessBankAccountService.BusinessBankAccountRecord> getBusinessBankAccounts(
+  public List<BusinessBankAccount> linkBusinessBankAccounts(
       String linkToken, TypedId<BusinessId> businessId) throws IOException {
     // TODO: Check for already existing access token
     // Will need some unique ID to look up in the database but can't use routing/account since that
@@ -73,17 +74,10 @@ public class BusinessBankAccountService {
     PlaidClient.AccountsResponse accountsResponse = plaidClient.getAccounts(linkToken);
     return plaidClient.getAccounts(linkToken).achList().stream()
         .map(
-            ach -> {
-              BusinessBankAccountService.BusinessBankAccountRecord businessBankAccountRecord =
-                  new BusinessBankAccountService.BusinessBankAccountRecord(
-                      new RequiredEncryptedStringWithHash(ach.getRouting()),
-                      new RequiredEncryptedStringWithHash(ach.getAccount()),
-                      new RequiredEncryptedStringWithHash(accountsResponse.accessToken()));
-              createBusinessBankAccount(
-                  ach.getRouting(), ach.getAccount(), accountsResponse.accessToken(), businessId);
-              return businessBankAccountRecord;
-            })
-        .collect(Collectors.toList());
+            ach ->
+                createBusinessBankAccount(
+                    ach.getRouting(), ach.getAccount(), accountsResponse.accessToken(), businessId))
+        .toList();
   }
 
   public List<BusinessBankAccount> getBusinessBankAccounts(TypedId<BusinessId> businessId) {
