@@ -14,9 +14,7 @@ import org.springframework.validation.annotation.Validated;
 @Setter
 public class FusionAuthProperties {
 
-  @NotBlank
-  private String apiKey;
+  @NotBlank private String apiKey;
 
-  @NotBlank
-  private String baseUrl;
+  @NotBlank private String baseUrl;
 }

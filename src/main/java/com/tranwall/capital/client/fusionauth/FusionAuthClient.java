@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FusionAuthClient {
 
-  private final static String BUSINESS_ID_KEY = "businessId";
+  private static final String BUSINESS_ID_KEY = "businessId";
 
   private final io.fusionauth.client.FusionAuthClient client;
 
@@ -34,10 +34,7 @@ public class FusionAuthClient {
   }
 
   public String createUser(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      String username,
-      String password) {
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, String username, String password) {
     return create(businessId, userId.toUuid(), username, password);
   }
 
@@ -50,8 +47,7 @@ public class FusionAuthClient {
     user.password = password;
     user.data.put(BUSINESS_ID_KEY, businessId.toUuid());
     userRequest.user = user;
-    ClientResponse<UserResponse, Errors> response = client.createUser(userId,
-        userRequest);
+    ClientResponse<UserResponse, Errors> response = client.createUser(userId, userRequest);
 
     if (response.wasSuccessful()) {
       return response.successResponse.user.id.toString();

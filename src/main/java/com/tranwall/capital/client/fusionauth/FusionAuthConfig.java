@@ -8,7 +8,7 @@ public class FusionAuthConfig {
 
   @Bean("fusionAuthClientLib")
   io.fusionauth.client.FusionAuthClient fusionAuthClient(FusionAuthProperties properties) {
-    return new io.fusionauth.client.FusionAuthClient(properties.getApiKey(),
-        properties.getBaseUrl());
+    return new io.fusionauth.client.FusionAuthClient(
+        properties.getApiKey(), properties.getBaseUrl());
   }
 }

@@ -1,9 +1,9 @@
 package com.tranwall.capital.controller.nonprod;
 
 import com.tranwall.capital.client.fusionauth.FusionAuthClient;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.fusionauth.CreateBusinessOwnerRequest;
 import com.tranwall.capital.controller.nonprod.fusionauth.CreateUserRequest;
-import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
