@@ -78,6 +78,7 @@ dependencies {
     implementation("com.twilio.sdk:twilio:8.19.2")
     implementation("com.sendgrid:sendgrid-java:4.7.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
+    implementation("io.fusionauth:fusionauth-java-client:1.30.2")
 
     // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")

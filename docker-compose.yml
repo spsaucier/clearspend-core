@@ -26,3 +26,31 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=docker
       - POSTGRES_DB=capital
+
+  fusionauth-db:
+    image: 'postgres:13.4-alpine'
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_USER=fusionauth
+      - POSTGRES_PASSWORD=docker
+    # Un-comment to access the db service directly
+    #   ports:
+    #     - 5433:5432
+    restart: unless-stopped
+
+  fusionauth:
+    image: 'fusionauth/fusionauth-app:1.30.2'
+    depends_on:
+      - fusionauth-db
+    environment:
+      - DATABASE_URL=jdbc:postgresql://fusionauth-db:5432/fusionauth
+      - DATABASE_ROOT_USERNAME=fusionauth
+      - DATABASE_ROOT_PASSWORD=docker
+      - DATABASE_USERNAME=fusionauth
+      - DATABASE_PASSWORD=docker
+      - FUSIONAUTH_APP_MEMORY=128m
+      - FUSIONAUTH_APP_RUNTIME_MODE=development
+      - FUSIONAUTH_APP_URL=http://fusionauth:9011
+      - SEARCH_TYPE=database
+    ports:
+      - '9011:9011'
