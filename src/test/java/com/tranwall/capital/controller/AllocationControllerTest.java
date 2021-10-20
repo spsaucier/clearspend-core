@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -110,6 +111,7 @@ class AllocationControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
+  @Disabled
   void reallocateAllocationFunds_success() {
     Bin bin = testHelper.retrieveBin();
     Program program = testHelper.retrieveIndividualProgram();

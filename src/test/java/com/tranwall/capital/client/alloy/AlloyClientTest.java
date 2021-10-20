@@ -9,6 +9,7 @@ import com.tranwall.capital.client.alloy.request.OnboardBusinessRequest;
 import com.tranwall.capital.client.alloy.request.OnboardIndividualRequest;
 import com.tranwall.capital.client.alloy.response.OnboardResponse;
 import java.time.LocalDate;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,6 +36,7 @@ public class AlloyClientTest extends BaseCapitalTest {
   }
 
   @Test
+  @Disabled
   public void testIndividual() {
     OnboardIndividualRequest request =
         new OnboardIndividualRequest(
@@ -55,6 +57,7 @@ public class AlloyClientTest extends BaseCapitalTest {
   }
 
   @Test
+  @Disabled
   public void testBusiness() {
     OnboardBusinessRequest request = new OnboardBusinessRequest("Test business");
 

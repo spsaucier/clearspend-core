@@ -13,6 +13,7 @@ import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -39,6 +40,7 @@ class CardServiceTest extends BaseCapitalTest {
   }
 
   @Test
+  @Disabled
   void issueCard() {
     Card card =
         testHelper.issueCard(
