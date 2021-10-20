@@ -18,9 +18,11 @@ import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Slf4j
+@Profile("!test")
 @Service
 public class TwilioService {
 
@@ -36,12 +38,12 @@ public class TwilioService {
   }
 
   @PostConstruct
-  void initTwilio() {
+  protected void initTwilio() {
     Twilio.init(twilioProperties.getAccountSid(), twilioProperties.getAuthToken());
   }
 
   @PreDestroy
-  void destroyTwilio() {
+  protected void destroyTwilio() {
     Twilio.destroy();
   }
 

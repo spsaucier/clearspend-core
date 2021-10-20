@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@Disabled
 public class AlloyClientTest extends BaseCapitalTest {
 
   @Autowired private ObjectMapper mapper;

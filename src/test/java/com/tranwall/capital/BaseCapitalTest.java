@@ -4,13 +4,25 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.BeforeEach;
+import org.mockserver.client.MockServerClient;
+import org.mockserver.springtest.MockServerTest;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @CapitalTest
 @Testcontainers
+@MockServerTest("server.url=http://localhost:${mockServerPort}")
 public abstract class BaseCapitalTest {
+
+  private MockServerClient mockServerClient;
+  protected MockServerHelper mockServerHelper;
+
+  @BeforeEach
+  void mockServerHelper() {
+    mockServerHelper = new MockServerHelper(mockServerClient);
+  }
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()

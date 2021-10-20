@@ -11,11 +11,13 @@ import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@Slf4j
 class UserServiceTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;

@@ -38,8 +38,7 @@ public class BusinessProspectController {
             request.getFirstName(), request.getLastName(), request.getEmail());
 
     return new CreateBusinessProspectResponse(
-        createBusinessProspectRecord.businessProspect().getId(),
-        createBusinessProspectRecord.otp());
+        createBusinessProspectRecord.businessProspect().getId());
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
@@ -66,10 +65,8 @@ public class BusinessProspectController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
-    return new SetBusinessProspectPhoneResponse(
-        businessProspectService
-            .setBusinessProspectPhone(businessProspectId, request.getPhone())
-            .otp());
+    businessProspectService.setBusinessProspectPhone(businessProspectId, request.getPhone());
+    return new SetBusinessProspectPhoneResponse("");
   }
 
   @PostMapping("/{businessProspectId}/password")

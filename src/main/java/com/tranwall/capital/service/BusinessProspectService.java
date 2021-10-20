@@ -1,6 +1,5 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
@@ -20,8 +19,11 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import com.twilio.rest.verify.v2.service.Verification;
+import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -37,10 +39,11 @@ public class BusinessProspectService {
 
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
-  private final FusionAuthClient fusionAuthClient;
+  private final UserService userService;
+  private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
-  public record CreateBusinessProspectRecord(BusinessProspect businessProspect, String otp) {}
+  public record CreateBusinessProspectRecord(BusinessProspect businessProspect) {}
 
   @Transactional
   public CreateBusinessProspectRecord createBusinessProspect(
@@ -52,12 +55,12 @@ public class BusinessProspectService {
                 new RequiredEncryptedString(lastName),
                 new RequiredEncryptedStringWithHash(email)));
 
-    // TODO(kuchlein): need to call Twilio to generate OTP
-    //    Verification verification = twilioService.sendVerificationEmail(
-    //        businessProspect.getEmail().getEncrypted());
-    String otp = "1234";
-
-    return new CreateBusinessProspectRecord(businessProspect, otp);
+    Verification verification = twilioService.sendVerificationEmail(email);
+    log.info("createBusinessProspect: {}", verification);
+    if (Objects.equals(verification.getStatus(), "pending")) {
+      return new CreateBusinessProspectRecord(businessProspect);
+    }
+    throw new RuntimeException();
   }
 
   @Transactional
@@ -76,14 +79,12 @@ public class BusinessProspectService {
 
     businessProspect.setPhone(new NullableEncryptedString(phone));
 
-    // TODO(kuchlein): need to call Twilio to generate OTP
-    //    Verification verification = twilioService.sendVerificationSms(
-    //        businessProspect.getPhone().getEncrypted());
-    String otp = "1234";
+    Verification verification = twilioService.sendVerificationSms(phone);
+    log.info("verification: {}", verification);
 
     businessProspect = businessProspectRepository.save(businessProspect);
 
-    return new CreateBusinessProspectRecord(businessProspect, otp);
+    return new CreateBusinessProspectRecord(businessProspect);
   }
 
   @Transactional
@@ -100,14 +101,12 @@ public class BusinessProspectService {
         if (businessProspect.isEmailVerified()) {
           throw new InvalidRequestException("email already validated");
         }
-
-        // TODO(kuchlein): validate OTP
-        //   VerificationCheck check = twilioService.checkVerification(
-        //       businessProspect.getEmail().getEncrypted(), otp);
-        //   if (!check.getValid()) {
-        //     throw new InvalidRequestException("email otp does not match");
-        //   }
-
+        VerificationCheck check =
+            twilioService.checkVerification(businessProspect.getEmail().getEncrypted(), otp);
+        log.info("check: {}", check);
+        if (!check.getValid()) {
+          throw new InvalidRequestException("email otp does not match");
+        }
         businessProspect.setEmailVerified(true);
       }
       case PHONE -> {
@@ -117,14 +116,12 @@ public class BusinessProspectService {
         if (businessProspect.isPhoneVerified()) {
           throw new InvalidRequestException("phone already validated");
         }
-
-        // TODO(kuchlein): validate OTP
-        //   VerificationCheck check = twilioService.checkVerification(
-        //       businessProspect.getPhone().getEncrypted(), otp);
-        //   if (!check.getValid()) {
-        //     throw new InvalidRequestException("phone otp does not match");
-        //   }
-
+        VerificationCheck check =
+            twilioService.checkVerification(businessProspect.getPhone().getEncrypted(), otp);
+        log.info("check: {}", check);
+        if (!check.getValid()) {
+          throw new InvalidRequestException("phone otp does not match");
+        }
         businessProspect.setPhoneVerified(true);
       }
     }
@@ -146,7 +143,7 @@ public class BusinessProspectService {
     }
 
     businessProspect.setSubjectRef(
-        fusionAuthClient.createBusinessOwner(
+        fusionAuthService.createBusinessOwner(
             businessProspect.getBusinessId(),
             businessProspect.getBusinessOwnerId(),
             businessProspect.getEmail().getEncrypted(),

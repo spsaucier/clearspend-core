@@ -178,7 +178,8 @@ public class TestHelper {
     validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
         createBusinessProspectRecord.businessProspect().getId(),
-        createBusinessProspectRecord.otp());
+        // TODO delete otp?
+        "");
 
     // set business phone (returns phone OTP)
     String otp = setBusinessProspectPhone(createBusinessProspectRecord.businessProspect().getId());
@@ -225,8 +226,7 @@ public class TestHelper {
     assertThat(businessProspect.getFirstName().getEncrypted()).isEqualTo(request.getFirstName());
     assertThat(businessProspect.getLastName().getEncrypted()).isEqualTo(request.getLastName());
 
-    return new CreateBusinessProspectRecord(
-        businessProspect, createBusinessProspectResponse.getOtp());
+    return new CreateBusinessProspectRecord(businessProspect);
   }
 
   public void validateBusinessProspectIdentifier(

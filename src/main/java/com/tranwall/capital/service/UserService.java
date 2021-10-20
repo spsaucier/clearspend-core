@@ -1,6 +1,5 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.client.fusionauth.FusionAuthClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
@@ -25,7 +24,7 @@ public class UserService {
 
   private final UserRepository userRepository;
 
-  private final FusionAuthClient fusionAuthClient;
+  private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
   public record CreateUserRecord(User user, String password) {}
@@ -54,7 +53,7 @@ public class UserService {
     String password = null;
     if (generatePassword) {
       password = PasswordUtil.generatePassword();
-      user.setSubjectRef(fusionAuthClient.createUser(businessId, user.getId(), email, password));
+      user.setSubjectRef(fusionAuthService.createUser(businessId, user.getId(), email, password));
       twilioService.sendNotificationEmail(
           user.getEmail().getEncrypted(),
           String.format("Welcome to Tranwall, your password is %s", password));

@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
+@Disabled
 class AllocationControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

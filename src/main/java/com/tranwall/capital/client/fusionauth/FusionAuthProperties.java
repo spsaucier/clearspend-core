@@ -9,6 +9,7 @@ import org.springframework.validation.annotation.Validated;
 
 @Validated
 @Component
+// @Profile("!test")
 @ConfigurationProperties(prefix = "client.fusionauth")
 @Getter
 @Setter
