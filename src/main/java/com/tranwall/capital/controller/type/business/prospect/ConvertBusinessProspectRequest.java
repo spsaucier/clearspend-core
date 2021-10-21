@@ -1,5 +1,6 @@
 package com.tranwall.capital.controller.type.business.prospect;
 
+import static com.tranwall.capital.controller.type.Constants.EIN_PATTERN;
 import static com.tranwall.capital.controller.type.Constants.PHONE_PATTERN;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,6 +26,7 @@ public class ConvertBusinessProspectRequest {
 
   @JsonProperty("employerIdentificationNumber")
   @NonNull
+  @Pattern(regexp = EIN_PATTERN, message = "EIN should consist of 9 digits")
   private String employerIdentificationNumber;
 
   @JsonProperty("businessPhone")
