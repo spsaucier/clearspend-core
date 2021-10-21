@@ -57,6 +57,6 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> {
 
   private boolean phoneVerified;
 
-  /** Link to FusionAuth */
+  // link to FusionAuth
   private String subjectRef;
 }

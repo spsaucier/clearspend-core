@@ -1,7 +1,6 @@
 package com.tranwall.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockserver.model.HttpRequest.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,7 +38,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.expectOtpViaEmail();
 
     // when
-    BusinessProspect businessProspect = testHelper.createBusinessProspect().businessProspect();
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
 
     // then
     BusinessProspect dbRecord =
@@ -57,7 +56,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.expectEmailVerification("123456");
 
     // when
-    BusinessProspect businessProspect = testHelper.createBusinessProspect().businessProspect();
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "123456");
 
@@ -77,7 +76,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.expectPhoneVerification("766255906");
 
     // when
-    BusinessProspect businessProspect = testHelper.createBusinessProspect().businessProspect();
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "234567890");
 
@@ -98,7 +97,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.expectPhoneVerification("766255906");
 
     // when
-    BusinessProspect businessProspect = testHelper.createBusinessProspect().businessProspect();
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
 
@@ -146,15 +145,15 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.expectPhoneVerification("766255906");
 
     // when
-    BusinessProspect businessProspect = testHelper.createBusinessProspect().businessProspect();
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
 
     // then
-    BusinessProspect dbRecord =
+    BusinessProspect dbBusinessProspect =
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
-    assertThat(dbRecord.isEmailVerified()).isTrue();
-    assertThat(dbRecord.isPhoneVerified()).isFalse();
+    assertThat(dbBusinessProspect.isEmailVerified()).isTrue();
+    assertThat(dbBusinessProspect.isPhoneVerified()).isFalse();
 
     // when
     testHelper.setBusinessProspectPhone(businessProspect.getId());
@@ -162,9 +161,10 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         IdentifierType.PHONE, businessProspect.getId(), "766255906");
 
     // then
-    dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
-    assertThat(dbRecord.isEmailVerified()).isTrue();
-    assertThat(dbRecord.isPhoneVerified()).isTrue();
+    dbBusinessProspect =
+        businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    assertThat(dbBusinessProspect.isEmailVerified()).isTrue();
+    assertThat(dbBusinessProspect.isPhoneVerified()).isTrue();
     mockServerHelper.verifyEmailVerificationCalled(1);
     mockServerHelper.verifyPhoneVerificationCalled(1);
 
@@ -183,15 +183,15 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
       CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
       testHelper.validateBusinessProspectIdentifier(
           IdentifierType.EMAIL,
-          createBusinessProspectRecord.businessProspect().getId(),
+          createBusinessProspectRecord.getId(),
           createBusinessProspectRecord.otp());
       String otp =
           testHelper.setBusinessProspectPhone(
-              createBusinessProspectRecord.businessProspect().getId());
+              createBusinessProspectRecord.getId());
       testHelper.validateBusinessProspectIdentifier(
-          IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
-      setBusinessProspectPassword(createBusinessProspectRecord.businessProspect().getId());
-      testHelper.convertBusinessProspect(createBusinessProspectRecord.businessProspect().getId());
+          IdentifierType.PHONE, createBusinessProspectRecord.getId(), otp);
+      setBusinessProspectPassword(createBusinessProspectRecord.getId());
+      testHelper.convertBusinessProspect(createBusinessProspectRecord.getId());
     }
   */
 }

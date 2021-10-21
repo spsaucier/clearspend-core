@@ -8,12 +8,10 @@ import com.tranwall.capital.controller.type.business.prospect.CreateBusinessPros
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
-import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneResponse;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.data.model.BusinessProspect;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
-import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -33,12 +31,11 @@ public class BusinessProspectController {
   @PostMapping("")
   private CreateBusinessProspectResponse createBusinessProspect(
       @Validated @RequestBody CreateBusinessProspectRequest request) {
-    CreateBusinessProspectRecord createBusinessProspectRecord =
+    BusinessProspect businessProspect =
         businessProspectService.createBusinessProspect(
             request.getFirstName(), request.getLastName(), request.getEmail());
 
-    return new CreateBusinessProspectResponse(
-        createBusinessProspectRecord.businessProspect().getId());
+    return new CreateBusinessProspectResponse(businessProspect.getId());
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
@@ -56,7 +53,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/phone")
-  private SetBusinessProspectPhoneResponse setBusinessProspectPhone(
+  private void setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
           @ApiParam(
               required = true,
@@ -66,7 +63,6 @@ public class BusinessProspectController {
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
     businessProspectService.setBusinessProspectPhone(businessProspectId, request.getPhone());
-    return new SetBusinessProspectPhoneResponse("");
   }
 
   @PostMapping("/{businessProspectId}/password")

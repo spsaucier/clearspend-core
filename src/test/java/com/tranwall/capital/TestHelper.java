@@ -27,7 +27,6 @@ import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessPro
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
-import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneResponse;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.crypto.PasswordUtil;
@@ -60,7 +59,6 @@ import com.tranwall.capital.service.BinService;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
-import com.tranwall.capital.service.BusinessProspectService.CreateBusinessProspectRecord;
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
@@ -172,39 +170,37 @@ public class TestHelper {
 
   public OnboardBusinessRecord onboardBusiness() throws Exception {
     // create business prospect including setting email (returns email OTP)
-    CreateBusinessProspectRecord createBusinessProspectRecord = createBusinessProspect();
+    BusinessProspect businessProspect = createBusinessProspect();
 
     // validate email OTP
     validateBusinessProspectIdentifier(
         IdentifierType.EMAIL,
-        createBusinessProspectRecord.businessProspect().getId(),
+        businessProspect.getId(),
         // TODO delete otp?
         "");
 
     // set business phone (returns phone OTP)
-    String otp = setBusinessProspectPhone(createBusinessProspectRecord.businessProspect().getId());
+    setBusinessProspectPhone(businessProspect.getId());
 
     // validate phone OTP
-    validateBusinessProspectIdentifier(
-        IdentifierType.PHONE, createBusinessProspectRecord.businessProspect().getId(), otp);
+    validateBusinessProspectIdentifier(IdentifierType.PHONE, businessProspect.getId(), "");
 
     // set business owner password
     businessProspectService.setBusinessProspectPassword(
-        createBusinessProspectRecord.businessProspect().getId(), PasswordUtil.generatePassword());
+        businessProspect.getId(), PasswordUtil.generatePassword());
 
     // convert the prospect to a business
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
-        convertBusinessProspect(createBusinessProspectRecord.businessProspect().getId());
+        convertBusinessProspect(businessProspect.getId());
 
     return new OnboardBusinessRecord(
-        businessService.retrieveBusiness(
-            createBusinessProspectRecord.businessProspect().getBusinessId()),
+        businessService.retrieveBusiness(businessProspect.getBusinessId()),
         businessOwnerService.retrieveBusinessOwner(
             convertBusinessProspectResponse.getBusinessOwnerId()),
-        createBusinessProspectRecord.businessProspect());
+        businessProspect);
   }
 
-  public CreateBusinessProspectRecord createBusinessProspect() throws Exception {
+  public BusinessProspect createBusinessProspect() throws Exception {
     CreateBusinessProspectRequest request =
         new CreateBusinessProspectRequest(generateEmail(), generateFirstName(), generateLastName());
     String body = objectMapper.writeValueAsString(request);
@@ -226,7 +222,7 @@ public class TestHelper {
     assertThat(businessProspect.getFirstName().getEncrypted()).isEqualTo(request.getFirstName());
     assertThat(businessProspect.getLastName().getEncrypted()).isEqualTo(request.getLastName());
 
-    return new CreateBusinessProspectRecord(businessProspect);
+    return businessProspect;
   }
 
   public void validateBusinessProspectIdentifier(
@@ -247,7 +243,7 @@ public class TestHelper {
             .getResponse();
   }
 
-  public String setBusinessProspectPhone(TypedId<BusinessProspectId> businessProspectId)
+  public void setBusinessProspectPhone(TypedId<BusinessProspectId> businessProspectId)
       throws Exception {
     SetBusinessProspectPhoneRequest request = new SetBusinessProspectPhoneRequest(generatePhone());
     String body = objectMapper.writeValueAsString(request);
@@ -260,11 +256,6 @@ public class TestHelper {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
-
-    return objectMapper
-        .readValue(
-            response.getContentAsString(), new TypeReference<SetBusinessProspectPhoneResponse>() {})
-        .getOtp();
   }
 
   public ConvertBusinessProspectResponse convertBusinessProspect(

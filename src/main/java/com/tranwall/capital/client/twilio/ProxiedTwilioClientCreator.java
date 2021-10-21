@@ -17,6 +17,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContextBuilder;
 
+// from: https://www.twilio.com/docs/libraries/java/custom-http-clients-java
 public class ProxiedTwilioClientCreator {
 
   private String username;

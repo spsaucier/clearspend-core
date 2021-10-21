@@ -23,7 +23,6 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -39,15 +38,11 @@ public class BusinessProspectService {
 
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
-  private final UserService userService;
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
-  public record CreateBusinessProspectRecord(BusinessProspect businessProspect) {}
-
   @Transactional
-  public CreateBusinessProspectRecord createBusinessProspect(
-      String firstName, String lastName, String email) {
+  public BusinessProspect createBusinessProspect(String firstName, String lastName, String email) {
     BusinessProspect businessProspect =
         businessProspectRepository.save(
             new BusinessProspect(
@@ -56,15 +51,17 @@ public class BusinessProspectService {
                 new RequiredEncryptedStringWithHash(email)));
 
     Verification verification = twilioService.sendVerificationEmail(email);
-    log.info("createBusinessProspect: {}", verification);
-    if (Objects.equals(verification.getStatus(), "pending")) {
-      return new CreateBusinessProspectRecord(businessProspect);
+    log.debug("createBusinessProspect: {}", verification);
+    if (!"pending".equals(verification.getStatus())) {
+      throw new RuntimeException(
+          String.format("expected pending, got %s", verification.getStatus()));
     }
-    throw new RuntimeException();
+
+    return businessProspect;
   }
 
   @Transactional
-  public CreateBusinessProspectRecord setBusinessProspectPhone(
+  public BusinessProspect setBusinessProspectPhone(
       TypedId<BusinessProspectId> businessProspectId, String phone) {
     BusinessProspect businessProspect =
         businessProspectRepository
@@ -80,11 +77,9 @@ public class BusinessProspectService {
     businessProspect.setPhone(new NullableEncryptedString(phone));
 
     Verification verification = twilioService.sendVerificationSms(phone);
-    log.info("verification: {}", verification);
+    log.debug("verification: {}", verification);
 
-    businessProspect = businessProspectRepository.save(businessProspect);
-
-    return new CreateBusinessProspectRecord(businessProspect);
+    return businessProspectRepository.save(businessProspect);
   }
 
   @Transactional
@@ -101,10 +96,10 @@ public class BusinessProspectService {
         if (businessProspect.isEmailVerified()) {
           throw new InvalidRequestException("email already validated");
         }
-        VerificationCheck check =
+        VerificationCheck verificationCheck =
             twilioService.checkVerification(businessProspect.getEmail().getEncrypted(), otp);
-        log.info("check: {}", check);
-        if (!check.getValid()) {
+        log.debug("verificationCheck: {}", verificationCheck);
+        if (!verificationCheck.getValid()) {
           throw new InvalidRequestException("email otp does not match");
         }
         businessProspect.setEmailVerified(true);
@@ -116,10 +111,10 @@ public class BusinessProspectService {
         if (businessProspect.isPhoneVerified()) {
           throw new InvalidRequestException("phone already validated");
         }
-        VerificationCheck check =
+        VerificationCheck verificationCheck =
             twilioService.checkVerification(businessProspect.getPhone().getEncrypted(), otp);
-        log.info("check: {}", check);
-        if (!check.getValid()) {
+        log.debug("verificationCheck: {}", verificationCheck);
+        if (!verificationCheck.getValid()) {
           throw new InvalidRequestException("phone otp does not match");
         }
         businessProspect.setPhoneVerified(true);
