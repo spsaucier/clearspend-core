@@ -1,6 +1,6 @@
 package com.tranwall.capital.controller.nonprod;
 
-import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.tranwall.capital.crypto.HashUtil;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
@@ -27,13 +27,24 @@ public class OnboardingDemoController {
   @DeleteMapping("/onboarding/{email}")
   public String deleteEmail(@PathVariable String email) {
     prospectRepository
-        .findByEmail(new RequiredEncryptedStringWithHash(email))
+        .findByEmailHash(HashUtil.calculateHash(email))
         .ifPresent(
             p -> {
-              businessRepository.deleteById(p.getBusinessId());
-              businessOwnerRepository.deleteById(p.getBusinessOwnerId());
-              fusionAuthClient.deleteUser(UUID.fromString(p.getSubjectRef()));
-              prospectRepository.deleteById(p.getId());
+              if (businessRepository.existsById(p.getBusinessId())) {
+                businessRepository.deleteById(p.getBusinessId());
+              }
+
+              if (businessOwnerRepository.existsById(p.getBusinessOwnerId())) {
+                businessOwnerRepository.deleteById(p.getBusinessOwnerId());
+              }
+
+              if (p.getSubjectRef() != null) {
+                fusionAuthClient.deleteUser(UUID.fromString(p.getSubjectRef()));
+              }
+
+              if (prospectRepository.existsById(p.getId())) {
+                prospectRepository.deleteById(p.getId());
+              }
             });
     return "OK";
   }
