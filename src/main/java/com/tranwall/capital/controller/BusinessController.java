@@ -5,16 +5,19 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
+import com.tranwall.capital.controller.type.business.Business;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.BusinessService;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -63,5 +66,17 @@ public class BusinessController {
                     e.allocation().getName(),
                     Account.of(e.account())))
         .collect(Collectors.toList());
+  }
+
+  @GetMapping("/{businessId}")
+  private Business getBusiness(
+      @PathVariable(value = "businessId")
+          @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessId> businessId) {
+    return new Business(businessService.retrieveBusiness(businessId));
   }
 }

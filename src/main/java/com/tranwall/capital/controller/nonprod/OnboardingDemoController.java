@@ -1,0 +1,40 @@
+package com.tranwall.capital.controller.nonprod;
+
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.tranwall.capital.data.repository.BusinessOwnerRepository;
+import com.tranwall.capital.data.repository.BusinessProspectRepository;
+import com.tranwall.capital.data.repository.BusinessRepository;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Profile("!prod")
+@RestController
+@RequestMapping("/non-production")
+@RequiredArgsConstructor
+public class OnboardingDemoController {
+  private final BusinessProspectRepository prospectRepository;
+  private final BusinessOwnerRepository businessOwnerRepository;
+  private final BusinessRepository businessRepository;
+  private final io.fusionauth.client.FusionAuthClient fusionAuthClient;
+
+  @Transactional
+  @DeleteMapping("/onboarding/{email}")
+  public String deleteEmail(@PathVariable String email) {
+    prospectRepository
+        .findByEmail(new RequiredEncryptedStringWithHash(email))
+        .ifPresent(
+            p -> {
+              businessRepository.deleteById(p.getBusinessId());
+              businessOwnerRepository.deleteById(p.getBusinessOwnerId());
+              fusionAuthClient.deleteUser(UUID.fromString(p.getSubjectRef()));
+              prospectRepository.deleteById(p.getId());
+            });
+    return "OK";
+  }
+}

@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.enums.Country;
 import javax.persistence.Embeddable;
@@ -63,6 +64,25 @@ public class Address {
     region = address.getRegion();
     if (address.getPostalCode() != null) {
       postalCode = address.getPostalCode().getEncrypted();
+    }
+    country = address.getCountry();
+  }
+
+  public Address(ClearAddress address) {
+    if (address == null) {
+      return;
+    }
+
+    if (address.getStreetLine1() != null) {
+      streetLine1 = address.getStreetLine1();
+    }
+    if (address.getStreetLine2() != null) {
+      streetLine2 = address.getStreetLine2();
+    }
+    locality = address.getLocality();
+    region = address.getRegion();
+    if (address.getPostalCode() != null) {
+      postalCode = address.getPostalCode();
     }
     country = address.getCountry();
   }

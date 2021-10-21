@@ -30,7 +30,6 @@ import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -73,7 +72,7 @@ public class BusinessService {
             ClearAddress.of(address),
             employerIdentificationNumber,
             currency,
-            BusinessOnboardingStep.ONBOARDING,
+            BusinessOnboardingStep.BUSINESS_OWNERS,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE);
@@ -91,17 +90,17 @@ public class BusinessService {
 
     List<AllocationRecord> allocationRecords = new ArrayList<>(programIds.size());
     for (TypedId<ProgramId> programId : programIds) {
-      Optional<Program> programOptional = programRepository.findById(programId);
-      if (programOptional.isEmpty()) {
-        throw new RecordNotFoundException(Table.PROGRAM, programId);
-      }
+      Program program =
+          programRepository
+              .findById(programId)
+              .orElseThrow(() -> new RecordNotFoundException(Table.PROGRAM, programId));
 
       allocationRecords.add(
           allocationService.createAllocation(
               programId,
               business.getId(),
               null,
-              business.getLegalName() + " - " + programOptional.get().getName(),
+              business.getLegalName() + " - " + program.getName(),
               currency));
     }
 
