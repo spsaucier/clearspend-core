@@ -5,9 +5,6 @@
 
 # Prerequisites: appropriate project structure should exist in the repository.
 
-options:
-  docker: true
-
 pipelines:
   branches:
     master:
