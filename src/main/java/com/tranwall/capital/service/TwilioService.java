@@ -2,13 +2,14 @@ package com.tranwall.capital.service;
 
 import com.sendgrid.Method;
 import com.sendgrid.Request;
-import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
+import com.sendgrid.helpers.mail.objects.Personalization;
 import com.tranwall.capital.client.sendgrid.SendGridProperties;
 import com.tranwall.capital.client.twilio.TwilioProperties;
+import com.tranwall.capital.data.model.BusinessProspect;
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.rest.verify.v2.service.Verification;
@@ -17,6 +18,7 @@ import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import org.springframework.stereotype.Service;
 @Profile("!test")
 @Service
 public class TwilioService {
+
+  private static final String FIRST_NAME_KEY = "first_name";
 
   private final TwilioProperties twilioProperties;
   private final SendGridProperties sendGridProperties;
@@ -55,18 +59,37 @@ public class TwilioService {
         .create();
   }
 
-  public Response sendNotificationEmail(String to, String messageText) throws IOException {
-    Mail mail =
+  @SneakyThrows
+  public void sendNotificationEmail(String to, String messageText) {
+    send(
         new Mail(
             new Email(sendGridProperties.getNotificationsSenderEmail()),
             sendGridProperties.getNotificationsEmailSubject(),
             new Email(to),
-            new Content("text/plain", messageText));
+            new Content("text/plain", messageText)));
+  }
+
+  @SneakyThrows
+  public void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getOnboardingWelcomeEmailTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(
+        FIRST_NAME_KEY, businessProspect.getFirstName().getEncrypted());
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  private void send(Mail mail) throws IOException {
     Request request = new Request();
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");
     request.setBody(mail.build());
-    return sendGrid.api(request);
+    sendGrid.api(request);
   }
 
   public Verification sendVerificationSms(String to) {

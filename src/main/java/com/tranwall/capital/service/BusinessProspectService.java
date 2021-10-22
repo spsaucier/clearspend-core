@@ -144,6 +144,9 @@ public class BusinessProspectService {
             businessProspect.getEmail().getEncrypted(),
             password));
 
+    twilioService.sendOnboardingWelcomeEmail(
+        businessProspect.getEmail().toString(), businessProspect);
+
     return businessProspectRepository.save(businessProspect);
   }
 
