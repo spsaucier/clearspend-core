@@ -231,5 +231,4 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
   }
-
 }

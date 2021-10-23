@@ -61,7 +61,7 @@ public class AccountActivityService {
             adjustment.getBusinessId(),
             adjustment.getAccountId(),
             type,
-            "Allocation Name", //TODO allocation Record or specific name of activity record
+            "Allocation Name", // TODO allocation Record or specific name of activity record
             adjustment.getEffectiveDate(),
             adjustment.getAmount());
     accountActivity.setAllocationId(adjustment.getAllocationId());
