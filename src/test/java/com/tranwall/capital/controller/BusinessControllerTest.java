@@ -1,13 +1,30 @@
 package com.tranwall.capital.controller;
 
+import static java.math.BigDecimal.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.controller.type.Address;
+import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
+import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
+import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.service.AccountService;
+import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import java.math.BigDecimal;
+import java.util.List;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +36,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
+@Transactional
 public class BusinessControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final AccountService accountService;
 
   @BeforeEach
   void init() {
@@ -61,4 +80,156 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .isEqualTo(business.getKnowYourBusinessStatus());
     assertThat(jsonBusiness.getStatus()).isEqualTo(business.getStatus());
   }
+
+  @SneakyThrows
+  @Test
+  public void reallocateBusinessFundsByWithdrawFromBusiness_Success() {
+    Program program = testHelper.retrievePooledProgram();
+    Business business = testHelper.retrieveBusiness();
+
+    accountService.depositFunds(
+        business.getId(),
+        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
+        false);
+
+    AllocationRecord parentAllocationRecord =
+        testHelper.createAllocation(program.getId(), business.getId(), null);
+
+    BusinessFundAllocationRequest businessFundAllocationRequest =
+        new BusinessFundAllocationRequest(
+            parentAllocationRecord.allocation().getId(),
+            parentAllocationRecord.account().getId(),
+            FundsTransactType.WITHDRAW,
+            new Amount(Currency.USD, valueOf(100)));
+
+    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
+
+    MockHttpServletResponse mockHttpServletResponse =
+        mvc.perform(
+                post("/businesses/transactions")
+                    .header("businessId", business.getId())
+                    .content(body)
+                    .contentType(APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    BusinessFundAllocationResponse responseDto =
+        objectMapper.readValue(
+            mockHttpServletResponse.getContentAsString(), BusinessFundAllocationResponse.class);
+    assertEquals(
+        900.00,
+        responseDto.getBusinessLedgerBalance().getAmount().doubleValue(),
+        "The businessLedgerBalance result is not as expected");
+    assertEquals(
+        100.00,
+        responseDto.getAllocationLedgerBalance().getAmount().doubleValue(),
+        "The allocationLedgerBalance result is not as expected");
+  }
+
+  @SneakyThrows
+  @Test
+  public void reallocateBusinessFundsByDepositToBusiness_Success() {
+    Program program = testHelper.retrievePooledProgram();
+    Business business = testHelper.retrieveBusiness();
+
+    accountService.depositFunds(
+        business.getId(),
+        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
+        false);
+    Account account =
+        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+    AllocationRecord parentAllocationRecord =
+        testHelper.createAllocation(program.getId(), business.getId(), null);
+    accountService.reallocateFunds(
+        account.getId(),
+        parentAllocationRecord.account().getId(),
+        new com.tranwall.capital.common.data.model.Amount(Currency.USD, valueOf(300)));
+
+    BusinessFundAllocationRequest businessFundAllocationRequest =
+        new BusinessFundAllocationRequest(
+            parentAllocationRecord.allocation().getId(),
+            parentAllocationRecord.account().getId(),
+            FundsTransactType.DEPOSIT,
+            new Amount(Currency.USD, valueOf(100)));
+
+    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/businesses/transactions")
+                    .header("businessId", business.getId())
+                    .content(body)
+                    .contentType(APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    BusinessFundAllocationResponse responseDto =
+        objectMapper.readValue(response.getContentAsString(), BusinessFundAllocationResponse.class);
+    assertEquals(
+        200.00,
+        responseDto.getBusinessLedgerBalance().getAmount().doubleValue(),
+        "Wrong expected result");
+    assertEquals(
+        800.00,
+        responseDto.getAllocationLedgerBalance().getAmount().doubleValue(),
+        "Wrong expected result");
+  }
+
+  @SneakyThrows
+  @Test
+  public void reallocateBusinessFunds_FailWhenNotSufficientBalance() {
+    Program program = testHelper.retrievePooledProgram();
+    Business business = testHelper.retrieveBusiness();
+    AllocationRecord parentAllocationRecord =
+        testHelper.createAllocation(program.getId(), business.getId(), null);
+    BusinessFundAllocationRequest businessFundAllocationRequest =
+        new BusinessFundAllocationRequest(
+            parentAllocationRecord.allocation().getId(),
+            parentAllocationRecord.account().getId(),
+            FundsTransactType.DEPOSIT,
+            new Amount(Currency.USD, valueOf(100)));
+
+    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
+
+    mvc.perform(
+            post("/businesses/transactions")
+                .header("businessId", business.getId())
+                .content(body)
+                .contentType(APPLICATION_JSON_VALUE))
+        .andExpect(status().is4xxClientError())
+        .andReturn()
+        .getResponse();
+  }
+
+  @SneakyThrows
+  @Test
+  public void getRootAllocation_Success() {
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/businesses/allocations")
+                    .header("businessId", testHelper.retrieveBusiness().getId())
+                    .contentType(APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    List<Allocation> responseAllocationList =
+        objectMapper.readValue(response.getContentAsString(), List.class);
+    assertEquals(2, responseAllocationList.size(), "The expected result is not ok");
+  }
+
+  @SneakyThrows
+  @Test
+  public void getRootAllocation_ForUnknownBusinessId_expectStatus500InvalidUUIDString() {
+    mvc.perform(
+            get("/businesses/allocations")
+                .header("businessId", "businessId")
+                .contentType(APPLICATION_JSON_VALUE))
+        .andExpect(status().is5xxServerError())
+        .andReturn()
+        .getResponse();
+  }
+
 }

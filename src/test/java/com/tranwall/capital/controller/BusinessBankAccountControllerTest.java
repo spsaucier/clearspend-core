@@ -13,6 +13,7 @@ import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import java.math.BigDecimal;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
+@Transactional
 class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
