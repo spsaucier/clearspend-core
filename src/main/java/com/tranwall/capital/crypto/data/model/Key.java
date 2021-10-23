@@ -17,11 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @Slf4j
 public class Key extends Immutable {
-  // table that holds a list of all keyHashes that the application is and has been using to encrypt
-  // data
 
-  // a numeric key reference that's used as part of the encrypted data to determine which key was
-  // used
+  // table that holds a list of all keyHashes that the application is and has been using to encrypt
+  // data a numeric key reference that's used as part of the encrypted data to determine which key
+  // was used
   @NonNull private Integer keyRef;
 
   @Column(length = 50)

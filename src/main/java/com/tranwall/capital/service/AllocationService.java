@@ -1,5 +1,9 @@
 package com.tranwall.capital.service;
 
+import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
+import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_WITHDRAWAL;
+import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
+
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -18,6 +22,7 @@ import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
@@ -45,6 +50,7 @@ public class AllocationService {
 
   private final AllocationRepository allocationRepository;
 
+  private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
   private final ProgramService programService;
@@ -156,6 +162,7 @@ public class AllocationService {
 
     CardRecord card = cardService.getCard(business.getId(), cardId);
 
+    AccountReallocateFundsRecord reallocateFundsRecord;
     switch (fundsTransactType) {
       case DEPOSIT -> {
         if (allocationRecord.account.getLedgerBalance().isSmallerThan(amount)) {
@@ -163,8 +170,9 @@ public class AllocationService {
               allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
 
-        return accountService.reallocateFunds(
-            allocationRecord.account.getId(), card.account().getId(), amount);
+        reallocateFundsRecord =
+            accountService.reallocateFunds(
+                allocationRecord.account.getId(), card.account().getId(), amount);
       }
       case WITHDRAW -> {
         if (card.account().getLedgerBalance().isSmallerThan(amount)) {
@@ -172,11 +180,21 @@ public class AllocationService {
               allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
 
-        return accountService.reallocateFunds(
-            card.account().getId(), allocationRecord.account.getId(), amount);
+        reallocateFundsRecord =
+            accountService.reallocateFunds(
+                card.account().getId(), allocationRecord.account.getId(), amount);
       }
       default -> throw new IllegalArgumentException(
           "invalid fundsTransactType " + fundsTransactType);
     }
+
+    // TODO(kuchlein): need to write two account activity records
+    AccountActivityType type = fundsTransactType == DEPOSIT ? BANK_DEPOSIT : BANK_WITHDRAWAL;
+    accountActivityService.recordAccountActivity(
+        type, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
+    accountActivityService.recordAccountActivity(
+        type, reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+
+    return reallocateFundsRecord;
   }
 }

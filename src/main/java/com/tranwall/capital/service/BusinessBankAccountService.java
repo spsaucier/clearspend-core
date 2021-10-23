@@ -1,5 +1,8 @@
 package com.tranwall.capital.service;
 
+import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
+import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
+
 import com.tranwall.capital.client.plaid.PlaidClient;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -11,6 +14,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.BusinessBankAccount;
+import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
@@ -27,6 +31,7 @@ public class BusinessBankAccountService {
 
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
+  private final AccountActivityService accountActivityService;
   private final AccountService accountService;
 
   private final PlaidClient plaidClient;
@@ -106,9 +111,17 @@ public class BusinessBankAccountService {
 
     // TODO(kuchlein): Need to call someone to actually move the money
 
-    return switch (bankAccountTransactType) {
-      case DEPOSIT -> accountService.depositFunds(businessId, amount, placeHold);
-      case WITHDRAW -> accountService.withdrawFunds(businessId, amount);
-    };
+    AdjustmentRecord adjustmentRecord =
+        switch (bankAccountTransactType) {
+          case DEPOSIT -> accountService.depositFunds(businessId, amount, placeHold);
+          case WITHDRAW -> accountService.withdrawFunds(businessId, amount);
+        };
+
+    // TODO(kuchlein): need to write one account activity record
+    AccountActivityType type =
+        bankAccountTransactType == DEPOSIT ? BANK_DEPOSIT : AccountActivityType.BANK_WITHDRAWAL;
+    accountActivityService.recordAccountActivity(type, adjustmentRecord.adjustment());
+
+    return adjustmentRecord;
   }
 }

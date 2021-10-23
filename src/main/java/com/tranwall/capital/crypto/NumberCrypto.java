@@ -13,8 +13,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 public class NumberCrypto {
-  public static final int MINIMUM_CONFIRMATION_NUMBER = 50000000;
-
   // Format Preserving Encryption
   static String fpeEnvPrefix = "tranwall.encryption.fpe.";
   private final byte[] panKey;

@@ -31,12 +31,8 @@ public class PasswordUtil {
         combinedChars.chars().mapToObj(c -> (char) c).collect(Collectors.toList());
     Collections.shuffle(pwdChars);
 
-    String password =
-        pwdChars.stream()
-            .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
-            .substring(0, MINIMUM_PASSWORD_LENGTH);
-    log.debug("password: {}", password);
-
-    return password;
+    return pwdChars.stream()
+        .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+        .substring(0, MINIMUM_PASSWORD_LENGTH);
   }
 }

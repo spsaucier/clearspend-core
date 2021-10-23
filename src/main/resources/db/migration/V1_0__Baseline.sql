@@ -353,8 +353,8 @@ create table if not exists business_prospect
     created              timestamp without time zone not null,
     updated              timestamp without time zone not null,
     version              bigint                      not null,
-    business_id          uuid                        not null,
-    business_owner_id    uuid                        not null,
+    business_id          uuid                        not null, -- not a FK since record may not exist
+    business_owner_id    uuid                        not null, -- not a FK since record may not exist
     first_name_encrypted bytea                       not null,
     last_name_encrypted  bytea                       not null,
     email_encrypted      bytea                       not null,
@@ -365,6 +365,28 @@ create table if not exists business_prospect
     subject_ref          varchar(100)
 );
 create unique index if not exists business_prospect_ux1 on business_prospect (email_hash);
+
+create table if not exists account_activity
+(
+    id              uuid                        not null
+        primary key,
+    created         timestamp without time zone not null,
+    updated         timestamp without time zone not null,
+    version         bigint                      not null,
+    business_id     uuid                        not null references business (id),
+    allocation_id   uuid references allocation (id),
+    account_id      uuid                        not null references account (id),
+    type            varchar(50)                 not null,
+    allocation_name varchar(50)                 not null,
+    merchant_name   varchar(50),
+    merchant_type   varchar(50),
+    card_number     varchar(50),
+    card_owner_encrypted      bytea,
+    card_owner_hash bytea,
+    activity_time   timestamp without time zone not null,
+    amount_currency varchar(10)                 not null,
+    amount_amount   numeric                     not null
+);
 
 insert into bin (id, created, updated, version, bin, name)
 values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',

@@ -41,8 +41,8 @@ public class AccountService {
   private final AccountRepository accountRepository;
   private final HoldRepository holdRepository;
 
-  private final LedgerService ledgerService;
   private final AdjustmentService adjustmentService;
+  private final LedgerService ledgerService;
 
   public record AdjustmentRecord(Account account, Adjustment adjustment) {}
 
@@ -176,7 +176,7 @@ public class AccountService {
         currency);
   }
 
-  @Transactional
+  @Transactional(TxType.REQUIRED)
   public AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
     if (!amount.isPositive()) {

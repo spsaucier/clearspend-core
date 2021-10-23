@@ -16,12 +16,14 @@ import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
+import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
+@Transactional
 class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;
