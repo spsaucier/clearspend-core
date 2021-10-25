@@ -50,7 +50,7 @@ public class BusinessProspectService {
                 new RequiredEncryptedString(lastName),
                 new RequiredEncryptedStringWithHash(email)));
 
-    Verification verification = twilioService.sendVerificationEmail(email);
+    Verification verification = twilioService.sendVerificationEmail(email, businessProspect);
     log.debug("createBusinessProspect: {}", verification);
     if (!"pending".equals(verification.getStatus())) {
       throw new RuntimeException(

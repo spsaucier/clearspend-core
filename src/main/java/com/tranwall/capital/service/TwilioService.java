@@ -16,6 +16,7 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
+import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import lombok.SneakyThrows;
@@ -97,8 +98,10 @@ public class TwilioService {
         .create();
   }
 
-  public Verification sendVerificationEmail(String to) {
+  public Verification sendVerificationEmail(String to, BusinessProspect businessProspect) {
     return Verification.creator(twilioProperties.getVerifyServiceId(), to, Channel.EMAIL.toString())
+        .setChannelConfiguration(
+            Map.of("substitutions", Map.of(FIRST_NAME_KEY, businessProspect.getFirstName())))
         .create();
   }
 
