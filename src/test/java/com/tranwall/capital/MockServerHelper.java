@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.mockserver.client.MockServerClient;
+import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.TimeToLive;
 import org.mockserver.matchers.Times;
 import org.mockserver.model.RegexBody;
@@ -18,7 +18,7 @@ import org.mockserver.verify.VerificationTimes;
 @RequiredArgsConstructor
 public class MockServerHelper {
 
-  @Nonnull private final MockServerClient mockServerClient;
+  @Nonnull private final ClientAndServer mockServerClient;
 
   public void verifyEmailVerificationCalled(int times) {
     mockServerClient.verify(

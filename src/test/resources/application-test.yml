@@ -17,3 +17,8 @@ client:
   fusionauth:
     api-key: kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
     base-url: ${server.url}/fusionauth
+
+logging:
+  level:
+    ROOT: INFO
+    com.tranwall.capital: DEBUG
