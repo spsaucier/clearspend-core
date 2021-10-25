@@ -61,7 +61,7 @@ public class Card {
   @NonNull
   private FundingType fundingType;
 
-  @JsonProperty("fundingType")
+  @JsonProperty("issueDate")
   private OffsetDateTime issueDate;
 
   // date the card expires

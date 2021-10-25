@@ -92,7 +92,9 @@ public class AccountActivityService {
     return accountActivity ->
         AccountActivityResponse.builder()
             .activityTime(accountActivity.getActivityTime())
-            .accountName(accountActivity.getAccountId().getName())
+            // FIXME: AccountId#getName was actually inherited from
+            // org.hibernate.type.UUIDBinaryType
+            // .accountName(accountActivity.getAccountId().getName())
             .card(
                 accountActivity.getCard() != null
                     ? new CardDetails(
