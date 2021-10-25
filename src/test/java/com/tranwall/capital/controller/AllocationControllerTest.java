@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -34,7 +33,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Disabled
 class AllocationControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
@@ -112,7 +110,6 @@ class AllocationControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  @Disabled
   void reallocateAllocationFunds_success() {
     Bin bin = testHelper.retrieveBin();
     Program program = testHelper.retrieveIndividualProgram();

@@ -9,7 +9,7 @@ import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.CardDetails;
 import com.tranwall.capital.controller.type.activity.Merchant;
-import com.tranwall.capital.controller.type.activity.PageRequestDTO;
+import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -72,13 +71,14 @@ public class AccountActivityService {
   public Page<AccountActivityResponse> getFilteredAccountActivity(
       TypedId<BusinessId> businessId, AccountActivityRequest accountActivityRequest) {
 
-    PageRequestDTO pageRequestDTO = accountActivityRequest.getPageRequestDTO();
+    PageRequest pageRequest = accountActivityRequest.getPageRequest();
     Page<AccountActivity> all =
         accountActivityRepository.findAll(
             getAccountActivitySpecifications(businessId, accountActivityRequest),
-            pageRequestDTO != null
-                ? PageRequest.of(pageRequestDTO.getPageNumber(), pageRequestDTO.getPageSize())
-                : PageRequest.ofSize(PAGE_SIZE));
+            pageRequest != null
+                ? org.springframework.data.domain.PageRequest.of(
+                    pageRequest.getPageNumber(), pageRequest.getPageSize())
+                : org.springframework.data.domain.PageRequest.ofSize(PAGE_SIZE));
     return new PageImpl<>(
         all.stream()
             .map(mapAccountActivityToAccountActivityResponse())
@@ -114,7 +114,7 @@ public class AccountActivityService {
       TypedId<BusinessId> businessId, AccountActivityRequest request) {
     return (root, query, criteriaBuilder) -> {
       List<Predicate> predicates = new ArrayList<>();
-      if (request.getAccountId() != null) {
+      if (businessId != null) {
         predicates.add(criteriaBuilder.equal(root.get("businessId"), businessId));
       }
       if (request.getAccountId() != null) {
@@ -131,12 +131,12 @@ public class AccountActivityService {
             criteriaBuilder.between(root.get("activityTime"), request.getFrom(), request.getTo()));
       }
 
-      if (request.getPageRequestDTO() != null
-          && request.getPageRequestDTO().getOrderable() != null
-          && request.getPageRequestDTO().getOrderable().size() > 0) {
+      if (request.getPageRequest() != null
+          && request.getPageRequest().getOrderable() != null
+          && request.getPageRequest().getOrderable().size() > 0) {
 
         query.orderBy(
-            request.getPageRequestDTO().getOrderable().stream()
+            request.getPageRequest().getOrderable().stream()
                 .map(
                     ord ->
                         ord.getDirection() == Direction.ASC

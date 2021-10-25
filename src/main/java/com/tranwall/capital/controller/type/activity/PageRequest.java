@@ -11,7 +11,7 @@ import org.springframework.data.domain.Sort;
 
 @Data
 @Builder
-public class PageRequestDTO {
+public class PageRequest {
 
   @JsonProperty("pageNumber")
   @NonNull

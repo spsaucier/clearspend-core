@@ -26,6 +26,7 @@ import com.tranwall.capital.service.AdjustmentService.ReallocateFundsRecord;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
@@ -174,6 +175,14 @@ public class AccountService {
         AccountType.ALLOCATION,
         allocationIds.stream().map(TypedId::toUuid).toList(),
         currency);
+  }
+
+  // used to fetch a small set of accounts and their available balances/holds. Note this is super
+  // inefficient
+  public List<Account> findAccountsByIds(Set<TypedId<AccountId>> accountIds) {
+    List<Account> accounts = accountRepository.findByIdIn(accountIds);
+    accounts.forEach(account -> fetchHolds(account, true));
+    return accounts;
   }
 
   @Transactional(TxType.REQUIRED)

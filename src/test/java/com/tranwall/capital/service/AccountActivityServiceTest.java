@@ -7,10 +7,8 @@ import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.PageRequestDTO;
+import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.data.model.Account;
-import com.tranwall.capital.data.model.AccountActivity;
-import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
@@ -22,7 +20,6 @@ import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
-import java.util.List;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -68,9 +65,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
 
-    List<AccountActivity> all = accountActivityRepository.findAll();
-
-    Assertions.assertEquals(1, all.size());
+    int count =
+        accountActivityRepository.countByBusinessId(
+            businessAndAllocationsRecord.business().getId());
+    Assertions.assertEquals(1, count);
   }
 
   @Test
@@ -96,24 +94,27 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         FundsTransactType.DEPOSIT,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    List<AccountActivity> all = accountActivityRepository.findAll();
-    Assertions.assertEquals(2, all.size());
+    int count = accountActivityRepository.countByBusinessId(business.getId());
+    Assertions.assertEquals(2, count);
   }
 
   @Test
   void createAccountActivity() {
     Business business = testHelper.createBusiness(program).business();
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        testHelper.createBusinessBankAccount(business.getId());
     Account account =
         accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
-    AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
 
-    Adjustment adjustment =
-        adjustmentService.recordDepositFunds(account, new Amount(Currency.USD, BigDecimal.TEN));
-    accountActivityService.recordAccountActivity(AccountActivityType.BANK_DEPOSIT, adjustment);
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccountId,
+        FundsTransactType.DEPOSIT,
+        Amount.of(Currency.USD, BigDecimal.TEN),
+        true);
 
-    List<AccountActivity> all = accountActivityRepository.findAll();
-    Assertions.assertEquals(1, all.size());
+    int count = accountActivityRepository.countByBusinessId(business.getId());
+    Assertions.assertEquals(1, count);
   }
 
   @Test
@@ -139,8 +140,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequestDTO(
-        PageRequestDTO.builder().pageNumber(0).pageSize(10).orderable(null).build());
+    accountActivityRequest.setPageRequest(
+        PageRequest.builder().pageNumber(0).pageSize(10).orderable(null).build());
     Page<AccountActivityResponse> latestAccountActivity =
         accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);
 
@@ -177,8 +178,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequestDTO(
-        PageRequestDTO.builder().pageNumber(0).pageSize(10).build());
+    accountActivityRequest.setPageRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
     accountActivityRequest.setType(AccountActivityType.BANK_WITHDRAWAL);
     Page<AccountActivityResponse> withdrawalFilteredAccountActivity =
         accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);
@@ -186,8 +186,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Assertions.assertEquals(2, withdrawalFilteredAccountActivity.getTotalElements());
 
     accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequestDTO(
-        PageRequestDTO.builder().pageNumber(0).pageSize(10).build());
+    accountActivityRequest.setPageRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
     accountActivityRequest.setType(AccountActivityType.BANK_DEPOSIT);
     Page<AccountActivityResponse> depositFilteredAccountActivity =
         accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);

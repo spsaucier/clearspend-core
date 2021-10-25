@@ -8,23 +8,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.allocation.Allocation;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.tranwall.capital.data.model.Account;
-import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import java.util.List;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class BusinessControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
@@ -83,22 +83,22 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void reallocateBusinessFundsByWithdrawFromBusiness_Success() {
+  public void reallocateBusinessFundsByWithdrawFromBusiness_success() {
     Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
 
     accountService.depositFunds(
         business.getId(),
         com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
 
-    AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+    AllocationRecord allocationRecord = businessAndAllocationsRecord.allocationRecords().get(0);
 
     BusinessFundAllocationRequest businessFundAllocationRequest =
         new BusinessFundAllocationRequest(
-            parentAllocationRecord.allocation().getId(),
-            parentAllocationRecord.account().getId(),
+            allocationRecord.allocation().getId(),
+            allocationRecord.account().getId(),
             FundsTransactType.WITHDRAW,
             new Amount(Currency.USD, valueOf(100)));
 
@@ -129,9 +129,10 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void reallocateBusinessFundsByDepositToBusiness_Success() {
+  public void reallocateBusinessFundsByDepositToBusiness_success() {
     Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
 
     accountService.depositFunds(
         business.getId(),
@@ -205,18 +206,23 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void getRootAllocation_Success() {
+  public void getRootAllocation_success() {
+    Program program = testHelper.retrieveIndividualProgram();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    testHelper.createAllocation(
+        program.getId(), businessAndAllocationsRecord.business().getId(), null);
+
     MockHttpServletResponse response =
         mvc.perform(
                 get("/businesses/allocations")
-                    .header("businessId", testHelper.retrieveBusiness().getId())
+                    .header("businessId", businessAndAllocationsRecord.business().getId())
                     .contentType(APPLICATION_JSON_VALUE))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
 
     List<Allocation> responseAllocationList =
-        objectMapper.readValue(response.getContentAsString(), List.class);
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
     assertEquals(2, responseAllocationList.size(), "The expected result is not ok");
   }
 

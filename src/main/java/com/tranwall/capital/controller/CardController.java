@@ -38,7 +38,8 @@ public class CardController {
             businessId,
             request.getAllocationId(),
             request.getUserId(),
-            request.getCurrency());
+            request.getCurrency(),
+            request.getCardType());
 
     return new IssueCardResponse(card.getId(), null);
   }

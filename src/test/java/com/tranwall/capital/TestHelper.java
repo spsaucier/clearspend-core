@@ -42,6 +42,7 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.BusinessType;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
@@ -299,7 +300,7 @@ public class TestHelper {
 
   public Program createProgram(Bin bin) {
     return programService.createProgram(
-        UUID.randomUUID().toString(), bin.getBin(), FundingType.POOLED);
+        UUID.randomUUID().toString(), bin.getBin(), FundingType.POOLED, faker.number().digits(8));
   }
 
   public Business retrieveBusiness() {
@@ -402,7 +403,13 @@ public class TestHelper {
       Program program,
       Currency currency) {
     return cardService.issueCard(
-        bin.getBin(), program, business.getId(), allocation.getId(), user.getId(), currency);
+        bin.getBin(),
+        program,
+        business.getId(),
+        allocation.getId(),
+        user.getId(),
+        currency,
+        CardType.VIRTUAL);
   }
 
   public Address generateEntityAddress() {

@@ -30,7 +30,11 @@ public class ProgramController {
       @RequestBody @Validated CreateProgramRequest request) {
     return new CreateProgramResponse(
         programService
-            .createProgram(request.getName(), request.getBin(), request.getFundingType())
+            .createProgram(
+                request.getName(),
+                request.getBin(),
+                request.getFundingType(),
+                request.getI2cProgramRef())
             .getId());
   }
 

@@ -86,7 +86,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequestDTO(null);
+    accountActivityRequest.setPageRequest(null);
     accountActivityRequest.setAccountId(account.getId());
     accountActivityRequest.setType(AccountActivityType.BANK_DEPOSIT);
     accountActivityRequest.setAllocationId(parentAllocationRecord.allocation().getId());

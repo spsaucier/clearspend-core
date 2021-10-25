@@ -29,5 +29,5 @@ public class AccountActivityRequest {
   private OffsetDateTime to;
 
   @JsonProperty("pageRequest")
-  PageRequestDTO pageRequestDTO;
+  PageRequest pageRequest;
 }

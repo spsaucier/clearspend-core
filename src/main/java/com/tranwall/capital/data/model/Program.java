@@ -30,4 +30,7 @@ public class Program extends TypedMutable<ProgramId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private FundingType fundingType;
+
+  // from i2c
+  @NonNull private String i2cCardProgramRef;
 }

@@ -25,4 +25,9 @@ public class CreateProgramRequest {
   @NonNull
   @Enumerated(EnumType.STRING)
   private FundingType fundingType;
+
+  @Sensitive
+  @NonNull
+  @JsonProperty("i2c_program_ref")
+  private String i2cProgramRef;
 }

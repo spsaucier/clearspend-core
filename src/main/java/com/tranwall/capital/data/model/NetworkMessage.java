@@ -9,10 +9,13 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.HoldId;
 import com.tranwall.capital.common.typedid.data.NetworkMessageId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -59,11 +62,17 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedMutable<AdjustmentId> adjustmentId;
 
+  // required when the card number is not known to use (this may be handled directly by issuer)
   @Embedded private NullableEncryptedString cardNumber;
 
   @NonNull
   @Column(updatable = false)
   private UUID networkMessageGroupId;
 
+  @Enumerated(EnumType.STRING)
+  private NetworkMessageType type;
+
   @Embedded @NonNull private Amount amount;
+
+  private String i2cTransactionRef;
 }

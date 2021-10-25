@@ -79,13 +79,14 @@ create table if not exists bin
 
 create table if not exists program
 (
-    id           uuid                        not null primary key,
-    created      timestamp without time zone not null,
-    updated      timestamp without time zone not null,
-    version      bigint                      not null,
-    name         varchar(200)                not null,
-    bin          varchar(6)                  not null references bin (bin),
-    funding_type varchar(20)                 not null,
+    id                   uuid                        not null primary key,
+    created              timestamp without time zone not null,
+    updated              timestamp without time zone not null,
+    version              bigint                      not null,
+    name                 varchar(200)                not null,
+    bin                  varchar(6)                  not null references bin (bin),
+    funding_type         varchar(20)                 not null,
+    i2c_card_program_ref varchar(50)                 not null,
     unique (bin, funding_type)
 );
 
@@ -198,20 +199,6 @@ create table if not exists users
     unique (business_id, email_hash)
 );
 
-create table if not exists allocation
-(
-    id                      uuid                        not null primary key,
-    created                 timestamp without time zone not null,
-    updated                 timestamp without time zone not null,
-    version                 bigint                      not null,
-    business_id             uuid                        not null references business (id),
-    program_id              uuid                        not null references program (id),
-    parent_allocation_id    uuid references allocation (id),
-    ancestor_allocation_ids uuid[],
-    name                    varchar(200)                not null
-);
-create index if not exists allocation_idx1 on allocation (business_id, program_id);
-
 create table if not exists ledger_account
 (
     id       uuid                        not null primary key,
@@ -261,6 +248,21 @@ create table if not exists account -- could be balance
 );
 create index if not exists account_idx1 on account (business_id, owner_id);
 
+create table if not exists allocation
+(
+    id                      uuid                        not null primary key,
+    created                 timestamp without time zone not null,
+    updated                 timestamp without time zone not null,
+    version                 bigint                      not null,
+    business_id             uuid                        not null references business (id),
+    program_id              uuid                        not null references program (id),
+    parent_allocation_id    uuid references allocation (id),
+    ancestor_allocation_ids uuid[],
+    account_id              uuid                        not null references account (id),
+    name                    varchar(200)                not null
+);
+create index if not exists allocation_idx1 on allocation (business_id, program_id);
+
 create table if not exists adjustment
 (
     id                uuid                        not null
@@ -300,21 +302,38 @@ create index if not exists hold_idx1 on hold (business_id, account_id);
 
 create table if not exists card
 (
-    id            uuid                        not null primary key,
-    created       timestamp without time zone not null,
-    updated       timestamp without time zone not null,
-    version       bigint                      not null,
-    bin           varchar(6)                  not null references bin (bin),
-    program_id    uuid                        not null references program (id),
-    business_id   uuid                        not null references business (id), -- denormalized column
-    allocation_id uuid                        not null references allocation (id),
-    user_id       uuid                        not null references users (id),
-    account_id    uuid references account (id),
-    status        varchar(20)                 not null,
-    status_reason varchar(30)                 not null,
-    funding_type  varchar(20)                 not null,
+    id                             uuid                        not null primary key,
+    created                        timestamp without time zone not null,
+    updated                        timestamp without time zone not null,
+    version                        bigint                      not null,
+    bin                            varchar(6)                  not null references bin (bin),
+    program_id                     uuid                        not null references program (id),
+    business_id                    uuid                        not null references business (id), -- denormalized column
+    allocation_id                  uuid                        not null references allocation (id),
+    user_id                        uuid                        not null references users (id),
+    account_id                     uuid references account (id),
+    status                         varchar(20)                 not null,
+    status_reason                  varchar(30)                 not null,
+    funding_type                   varchar(20)                 not null,
+    issue_date                     timestamp without time zone not null,
+    expiration_date                timestamp without time zone not null,
+    activated                      bool                        not null,
+    activation_date                timestamp without time zone,
+    card_line3                     varchar(26)                 not null,
+    card_line4                     varchar(25),
+    type                           varchar(20)                 not null,
+    superseded                     bool                        not null default false,
+    card_number_encrypted          bytea                       not null,
+    card_number_hash               bytea                       not null,
+    last_four                      varchar(4)                  not null,
+    address_street_line1_encrypted bytea,
+    address_street_line2_encrypted bytea,
+    address_locality               varchar(255),
+    address_region                 varchar(255),
+    address_postal_code_encrypted  bytea,
+    address_country                varchar(3),
     -- i2c cardReferenceId
-    i2c_card_ref  varchar(50)                 not null
+    i2c_card_ref                   varchar(50)                 not null
 );
 create index if not exists card_idx1 on card (business_id, user_id);
 
@@ -336,8 +355,10 @@ create table if not exists network_message
     card_number_encrypted    bytea,
     -- used to group multiple messages into a logical group (e.g. auth + completion)
     network_message_group_id uuid                        not null,
+    type                     varchar(30)                 not null,
     amount_currency          varchar(10)                 not null,
-    amount_amount            numeric                     not null
+    amount_amount            numeric                     not null,
+    i2c_transaction_ref      varchar(50)                 not null
     -- mcc
     -- location
     -- mid
@@ -368,37 +389,37 @@ create unique index if not exists business_prospect_ux1 on business_prospect (em
 
 create table if not exists account_activity
 (
-    id              uuid                        not null
+    id                   uuid                        not null
         primary key,
-    created         timestamp without time zone not null,
-    updated         timestamp without time zone not null,
-    version         bigint                      not null,
-    business_id     uuid                        not null references business (id),
-    allocation_id   uuid references allocation (id),
-    account_id      uuid                        not null references account (id),
-    type            varchar(50)                 not null,
-    allocation_name varchar(50)                 not null,
-    merchant_name   varchar(50),
-    merchant_type   varchar(50),
-    card_number     varchar(50),
-    card_owner_encrypted      bytea,
-    card_owner_hash bytea,
-    activity_time   timestamp without time zone not null,
-    amount_currency varchar(10)                 not null,
-    amount_amount   numeric                     not null
+    created              timestamp without time zone not null,
+    updated              timestamp without time zone not null,
+    version              bigint                      not null,
+    business_id          uuid                        not null references business (id),
+    allocation_id        uuid references allocation (id),
+    account_id           uuid                        not null references account (id),
+    type                 varchar(50)                 not null,
+    allocation_name      varchar(50)                 not null,
+    merchant_name        varchar(50),
+    merchant_type        varchar(50),
+    card_number          varchar(50),
+    card_owner_encrypted bytea,
+    card_owner_hash      bytea,
+    activity_time        timestamp without time zone not null,
+    amount_currency      varchar(10)                 not null,
+    amount_amount        numeric                     not null
 );
 
 insert into bin (id, created, updated, version, bin, name)
 values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',
         'Manually created test BIN');
 
-insert into program (id, created, updated, version, name, bin, funding_type)
+insert into program (id, created, updated, version, name, bin, funding_type, i2c_card_program_ref)
 values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program - pooled',
-        '401288', 'POOLED');
+        '401288', 'POOLED', 'i2c reference 1');
 
-insert into program (id, created, updated, version, name, bin, funding_type)
+insert into program (id, created, updated, version, name, bin, funding_type, i2c_card_program_ref)
 values ('033955d1-f18e-497e-9905-88ba71e90208', now(), now(), 1,
-        'Test Tranwall Program - individual', '401288', 'INDIVIDUAL');
+        'Test Tranwall Program - individual', '401288', 'INDIVIDUAL', 'i2c reference 2');
 
 -- insert into business (id, created, updated, version, type, legal_name, address_street_line1,
 --                       address_street_line2, address_locality, address_region, address_postal_code,

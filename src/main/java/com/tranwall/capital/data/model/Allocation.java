@@ -2,6 +2,7 @@ package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.data.type.TypedIdArrayType;
+import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
@@ -52,6 +53,12 @@ public class Allocation extends TypedMutable<AllocationId> {
   @Column(columnDefinition = "uuid[]")
   @Type(type = "uuid-array")
   private List<TypedId<AllocationId>> ancestorAllocationIds = new ArrayList<>();
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "account")
+  @Column(updatable = false)
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AccountId> accountId;
 
   @NonNull private String name;
 }

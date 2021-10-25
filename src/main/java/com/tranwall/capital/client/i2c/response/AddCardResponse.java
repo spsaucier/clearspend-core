@@ -22,4 +22,7 @@ public class AddCardResponse {
 
   @JsonProperty("referenceId")
   private String referenceId;
+
+  @JsonProperty("cardNumber")
+  private String cardNumber;
 }

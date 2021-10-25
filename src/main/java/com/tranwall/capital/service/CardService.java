@@ -3,26 +3,41 @@ package com.tranwall.capital.service;
 import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddCardResponseRoot;
+import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,6 +45,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CardService {
 
+  private final AllocationRepository allocationRepository;
   private final CardRepository cardRepository;
 
   private final AccountService accountService;
@@ -39,6 +55,8 @@ public class CardService {
 
   public record CardRecord(Card card, Account account) {}
 
+  public record UserCardRecord(Card card, Allocation allocation, Account account) {}
+
   @Transactional
   public Card issueCard(
       String bin,
@@ -46,13 +64,15 @@ public class CardService {
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       TypedId<UserId> userId,
-      Currency currency) {
+      Currency currency,
+      CardType cardType) {
 
     // hack until we actually call i2c
-    long l = (long) (5000000000000000L + Math.random() * 999999999999999L);
+    String l = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
+    String pan = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
     AddCardResponseRoot response =
         AddCardResponseRoot.builder()
-            .response(AddCardResponse.builder().referenceId(Long.toString(l)).build())
+            .response(AddCardResponse.builder().cardNumber(pan).referenceId(l).build())
             .build();
     // i2Client.addCard(new AddCardRequestRoot(AddCardRequest.builder().build()));
 
@@ -65,7 +85,17 @@ public class CardService {
             userId,
             CardStatus.OPEN,
             CardStatusReason.NONE,
-            program.getFundingType());
+            program.getFundingType(),
+            OffsetDateTime.now(),
+            OffsetDateTime.now().plusYears(3),
+            "",
+            cardType,
+            new RequiredEncryptedStringWithHash(response.getResponse().getCardNumber()),
+            response
+                .getResponse()
+                .getCardNumber()
+                .substring(response.getResponse().getCardNumber().length() - 4),
+            new Address());
     card.setI2cCardRef(response.getResponse().getReferenceId());
 
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
@@ -89,5 +119,52 @@ public class CardService {
     }
 
     return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId()));
+  }
+
+  public List<UserCardRecord> getUserCards(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
+    // lookup cards for the user
+    List<Card> cards = cardRepository.findByBusinessIdAndUserId(businessId, userId);
+    if (cards.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    // get the accountIds associated with the cards if any
+    Set<TypedId<AccountId>> accountIdSet =
+        cards.stream().map(Card::getAccountId).filter(Objects::nonNull).collect(Collectors.toSet());
+
+    // lookup allocations that the cards are associated with
+    Map<TypedId<AllocationId>, Allocation> allocationMap =
+        allocationRepository
+            .findByBusinessIdAndIdIn(
+                businessId, cards.stream().map(Card::getAllocationId).collect(Collectors.toSet()))
+            .stream()
+            .collect(Collectors.toMap(Allocation::getId, Function.identity()));
+
+    // add the allocation accounts to list of accounts to lookup
+    accountIdSet.addAll(
+        allocationMap.values().stream().map(Allocation::getAccountId).collect(Collectors.toSet()));
+
+    // lookup all the accounts
+    Map<TypedId<AccountId>, Account> accountMap =
+        accountService.findAccountsByIds(accountIdSet).stream()
+            .collect(Collectors.toMap(Account::getId, Function.identity()));
+
+    // TODO(kuchlein): I thought I might need the program but it looks like it's not needed. Keeping
+    //    code for the next week or two
+    // Map<TypedId<ProgramId>, Program> programSet =
+    //   programService
+    //      .findProgramsByIds(cards.stream().map(Card::getProgramId).collect(Collectors.toSet()))
+    //            .stream()
+    //            .collect(Collectors.toMap(Program::getId, Function.identity()));
+
+    return cards.stream()
+        .map(
+            card -> {
+              Allocation allocation = allocationMap.get(card.getAllocationId());
+              TypedId<AccountId> accountId =
+                  ObjectUtils.firstNonNull(card.getAccountId(), allocation.getAccountId());
+              return new UserCardRecord(card, allocation, accountMap.get(accountId));
+            })
+        .toList();
   }
 }

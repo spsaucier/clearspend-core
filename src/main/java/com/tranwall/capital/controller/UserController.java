@@ -3,10 +3,14 @@ package com.tranwall.capital.controller;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.card.Card;
+import com.tranwall.capital.controller.type.card.UserCardResponse;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import io.swagger.annotations.ApiParam;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
 
+  private final CardService cardService;
   private final UserService userService;
 
   @PostMapping("")
@@ -88,5 +93,20 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
     return new User(userService.retrieveUser(userId));
+  }
+
+  @GetMapping("/cards")
+  private List<UserCardResponse> getUserCards(
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = "userId") TypedId<UserId> userId) {
+    return cardService.getUserCards(businessId, userId).stream()
+        .map(
+            userCardRecord ->
+                new UserCardResponse(
+                    new Card(userCardRecord.card()),
+                    Amount.of(userCardRecord.account().getLedgerBalance()),
+                    Amount.of(userCardRecord.account().getAvailableBalance()),
+                    userCardRecord.allocation().getName()))
+        .toList();
   }
 }

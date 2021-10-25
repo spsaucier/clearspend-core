@@ -64,7 +64,17 @@ public class AllocationService {
       TypedId<AllocationId> parentAllocationId,
       String name,
       Currency currency) {
-    Allocation allocation = new Allocation(businessId, programId, name);
+    // create future allocationId so we can create the account first
+    TypedId<AllocationId> allocationId = new TypedId<>();
+
+    // creating the account because the allocation references it
+    Account account =
+        accountService.createAccount(
+            businessId, AccountType.ALLOCATION, allocationId.toUuid(), currency);
+
+    // create new allocation and set its ID to that which was used for the Account record
+    Allocation allocation = new Allocation(businessId, programId, account.getId(), name);
+    allocation.setId(allocationId);
 
     if (parentAllocationId != null) {
       allocation.setParentAllocationId(parentAllocationId);
@@ -82,9 +92,6 @@ public class AllocationService {
     }
 
     allocation = allocationRepository.save(allocation);
-    Account account =
-        accountService.createAccount(
-            businessId, AccountType.ALLOCATION, allocation.getId().toUuid(), currency);
 
     return new AllocationRecord(allocation, account);
   }

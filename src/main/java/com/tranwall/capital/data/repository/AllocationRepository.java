@@ -6,6 +6,7 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Allocation;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AllocationRepository
@@ -13,6 +14,9 @@ public interface AllocationRepository
 
   Optional<Allocation> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId);
+
+  List<Allocation> findByBusinessIdAndIdIn(
+      TypedId<BusinessId> businessId, Set<TypedId<AllocationId>> allocationId);
 
   List<Allocation> findByBusinessIdAndParentAllocationIdIsNull(TypedId<BusinessId> businessId);
 
