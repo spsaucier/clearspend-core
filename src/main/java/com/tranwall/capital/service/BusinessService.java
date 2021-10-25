@@ -4,6 +4,7 @@ import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEP
 import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_WITHDRAWAL;
 import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
 
+import com.tranwall.capital.client.alloy.AlloyClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.ClearAddress;
@@ -53,6 +54,7 @@ public class BusinessService {
   private final AccountActivityService accountActivityService;
   private final AllocationService allocationService;
   private final AccountService accountService;
+  private final AlloyClient alloyClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
 
@@ -87,6 +89,8 @@ public class BusinessService {
     }
     business.setBusinessEmail(new RequiredEncryptedString(email));
     business.setBusinessPhone(new RequiredEncryptedString(phone));
+
+    business.setKnowYourBusinessStatus(alloyClient.onboardBusiness(business));
 
     business = businessRepository.save(business);
 

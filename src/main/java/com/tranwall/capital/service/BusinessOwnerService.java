@@ -1,5 +1,6 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.client.alloy.AlloyClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
@@ -29,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessOwnerService {
 
   private final BusinessOwnerRepository businessOwnerRepository;
+
+  private final AlloyClient alloyClient;
 
   @Transactional
   BusinessOwner createBusinessOwner(
@@ -101,6 +104,8 @@ public class BusinessOwnerService {
     if (address != null) {
       businessOwner.setAddress(address);
     }
+
+    businessOwner.setKnowYourCustomerStatus(alloyClient.onboardIndividual(businessOwner));
 
     return businessOwnerRepository.save(businessOwner);
   }

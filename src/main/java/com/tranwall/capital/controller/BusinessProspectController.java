@@ -101,6 +101,7 @@ public class BusinessProspectController {
 
     return new ConvertBusinessProspectResponse(
         convertBusinessProspectRecord.business().getId(),
-        convertBusinessProspectRecord.businessOwner().getId());
+        convertBusinessProspectRecord.businessOwner().getId(),
+        convertBusinessProspectRecord.business().getKnowYourBusinessStatus());
   }
 }
