@@ -13,6 +13,7 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import java.util.List;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
+@Transactional
 public class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
