@@ -8,13 +8,17 @@ import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.crypto.PasswordUtil;
+import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessProspect;
+import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
+import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.service.FusionAuthService;
-import io.fusionauth.domain.api.UserResponse;
+import io.fusionauth.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -31,6 +35,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   private final FusionAuthService fusionAuthService;
   private final BusinessProspectRepository businessProspectRepository;
+  private final BusinessRepository businessRepository;
 
   @Test
   void createBusinessProspect_success() throws Exception {
@@ -150,10 +155,10 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
 
     // then
-    BusinessProspect dbBusinessProspect =
+    BusinessProspect dbRecord =
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
-    assertThat(dbBusinessProspect.isEmailVerified()).isTrue();
-    assertThat(dbBusinessProspect.isPhoneVerified()).isFalse();
+    assertThat(dbRecord.isEmailVerified()).isTrue();
+    assertThat(dbRecord.isPhoneVerified()).isFalse();
 
     // when
     testHelper.setBusinessProspectPhone(businessProspect.getId());
@@ -161,37 +166,77 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         IdentifierType.PHONE, businessProspect.getId(), "766255906");
 
     // then
-    dbBusinessProspect =
-        businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
-    assertThat(dbBusinessProspect.isEmailVerified()).isTrue();
-    assertThat(dbBusinessProspect.isPhoneVerified()).isTrue();
+    dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    assertThat(dbRecord.isEmailVerified()).isTrue();
+    assertThat(dbRecord.isPhoneVerified()).isTrue();
     mockServerHelper.verifyEmailVerificationCalled(1);
     mockServerHelper.verifyPhoneVerificationCalled(1);
 
     // when
-    mockServerHelper.expectFusionAuthCreateUser(businessProspect.getBusinessOwnerId());
     setBusinessProspectPassword(businessProspect.getId());
 
     // then
-    UserResponse user = fusionAuthService.findUser(businessProspect.getEmail().getEncrypted());
+    User user =
+        fusionAuthService.retrieveUserByUsername(businessProspect.getEmail().getEncrypted()).user;
     log.info("user: {}", user);
+    assertThat(user.username).isEqualTo(businessProspect.getEmail().getEncrypted());
+    dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    log.info("dbRecord: {}", dbRecord);
+    assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());
   }
 
-  /*
-    @Test
-    void convertBusinessProspect_success() throws Exception {
-      CreateBusinessProspectRecord createBusinessProspectRecord = testHelper.createBusinessProspect();
-      testHelper.validateBusinessProspectIdentifier(
-          IdentifierType.EMAIL,
-          createBusinessProspectRecord.getId(),
-          createBusinessProspectRecord.otp());
-      String otp =
-          testHelper.setBusinessProspectPhone(
-              createBusinessProspectRecord.getId());
-      testHelper.validateBusinessProspectIdentifier(
-          IdentifierType.PHONE, createBusinessProspectRecord.getId(), otp);
-      setBusinessProspectPassword(createBusinessProspectRecord.getId());
-      testHelper.convertBusinessProspect(createBusinessProspectRecord.getId());
-    }
-  */
+  @Test
+  void convertBusinessProspect_success() throws Exception {
+    // given
+    mockServerHelper.expectOtpViaEmail();
+    mockServerHelper.expectOtpViaSms();
+    mockServerHelper.expectEmailVerification("777888999");
+    mockServerHelper.expectPhoneVerification("766255906");
+
+    // when
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+
+    // then
+    BusinessProspect dbRecord =
+        businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    assertThat(dbRecord.isEmailVerified()).isTrue();
+    assertThat(dbRecord.isPhoneVerified()).isFalse();
+
+    // when
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.PHONE, businessProspect.getId(), "766255906");
+
+    // then
+    dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    assertThat(dbRecord.isEmailVerified()).isTrue();
+    assertThat(dbRecord.isPhoneVerified()).isTrue();
+    mockServerHelper.verifyEmailVerificationCalled(1);
+    mockServerHelper.verifyPhoneVerificationCalled(1);
+
+    // when
+    setBusinessProspectPassword(businessProspect.getId());
+
+    // then
+    User user =
+        fusionAuthService.retrieveUserByUsername(businessProspect.getEmail().getEncrypted()).user;
+    log.info("user: {}", user);
+    assertThat(user.username).isEqualTo(businessProspect.getEmail().getEncrypted());
+    dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    log.info("dbRecord: {}", dbRecord);
+    assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());
+
+    // when
+    ConvertBusinessProspectResponse convertBusinessProspectResponse =
+        testHelper.convertBusinessProspect(businessProspect.getId());
+    log.info("{}", convertBusinessProspectResponse);
+
+    // then
+    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
+    Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
+    log.info("{}", business);
+    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+  }
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockserver.integration.ClientAndServer;
 import org.springframework.util.SocketUtils;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -24,10 +25,6 @@ public abstract class BaseCapitalTest {
     System.setProperty("mockServerPort", String.valueOf(mockServerPort));
   }
 
-  @Container
-  private static final PostgreSQLContainer<?> postgreSQLContainer =
-      SharedPostgreSQLContainer.getInstance();
-
   public final ObjectMapper objectMapper =
       new ObjectMapper()
           .registerModule(new JavaTimeModule())
@@ -42,4 +39,18 @@ public abstract class BaseCapitalTest {
     mockServer.reset();
     mockServerHelper = new MockServerHelper(mockServer);
   }
+
+  @Container
+  private static final PostgreSQLContainer<?> postgreSQLContainer =
+      SharedPostgreSQLContainer.getInstance();
+
+  static Network fusionAuthNetwork = Network.newNetwork();
+
+  @Container
+  private static final FusionAuthPostgreSQLContainer fusionAuthPostgreSQLContainer =
+      FusionAuthPostgreSQLContainer.getInstance();
+
+  @Container
+  private static final SharedFusionAuthContainer fusionauthContainer =
+      SharedFusionAuthContainer.getInstance();
 }

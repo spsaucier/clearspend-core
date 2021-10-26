@@ -153,6 +153,10 @@ public class TestHelper {
     return faker.number().digits(9);
   }
 
+  public String generateEmployerIdentificationNumber() {
+    return Integer.toString(faker.number().numberBetween(100_000_000, 999_999_999));
+  }
+
   public String generateRoutingNumber() {
     return faker.number().digits(9);
   }
@@ -174,17 +178,13 @@ public class TestHelper {
     BusinessProspect businessProspect = createBusinessProspect();
 
     // validate email OTP
-    validateBusinessProspectIdentifier(
-        IdentifierType.EMAIL,
-        businessProspect.getId(),
-        // TODO delete otp?
-        "");
+    validateBusinessProspectIdentifier(IdentifierType.EMAIL, businessProspect.getId(), "123456");
 
     // set business phone (returns phone OTP)
     setBusinessProspectPhone(businessProspect.getId());
 
     // validate phone OTP
-    validateBusinessProspectIdentifier(IdentifierType.PHONE, businessProspect.getId(), "");
+    validateBusinessProspectIdentifier(IdentifierType.PHONE, businessProspect.getId(), "123456");
 
     // set business owner password
     businessProspectService.setBusinessProspectPassword(
@@ -318,7 +318,7 @@ public class TestHelper {
         faker.company().name(),
         BusinessType.LLC,
         generateEntityAddress(),
-        faker.number().digits(9),
+        generateEmployerIdentificationNumber(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
         Arrays.stream(programs).map(Program::getId).toList(),

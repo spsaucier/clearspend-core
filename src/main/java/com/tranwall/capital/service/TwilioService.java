@@ -33,18 +33,17 @@ public class TwilioService {
 
   private final TwilioProperties twilioProperties;
   private final SendGridProperties sendGridProperties;
-  private final SendGrid sendGrid;
+  protected SendGrid sendGrid;
 
   public TwilioService(TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {
     this.twilioProperties = twilioProperties;
     this.sendGridProperties = sendGridProperties;
-
-    this.sendGrid = new SendGrid(sendGridProperties.getApiKey());
   }
 
   @PostConstruct
   protected void initTwilio() {
     Twilio.init(twilioProperties.getAccountSid(), twilioProperties.getAuthToken());
+    this.sendGrid = new SendGrid(sendGridProperties.getApiKey());
   }
 
   @PreDestroy

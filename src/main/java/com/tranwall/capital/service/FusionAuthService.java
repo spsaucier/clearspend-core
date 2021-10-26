@@ -10,12 +10,10 @@ import com.tranwall.capital.common.typedid.data.UserId;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
-import java.util.Arrays;
 import java.util.UUID;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,11 +24,6 @@ public class FusionAuthService {
   private static final String BUSINESS_ID_KEY = "businessId";
 
   private final io.fusionauth.client.FusionAuthClient client;
-
-  // TODO(kuchlein): determine why @Value blows up
-  //  @Value("${spring.profiles.active:}")
-  //  private String activeProfile;
-  private final Environment environment;
 
   public String createBusinessOwner(
       TypedId<BusinessId> businessId,
@@ -47,13 +40,6 @@ public class FusionAuthService {
 
   private String create(
       TypedId<BusinessId> businessId, @NonNull UUID userId, String username, String password) {
-    //    if (activeProfile != null && activeProfile.contains("test")) {
-    //      return userId.toString();
-    //    }
-    if (Arrays.asList(environment.getActiveProfiles()).contains("test")) {
-      return userId.toString();
-    }
-
     User user = new User();
     user.id = userId;
     user.username = username;
@@ -80,9 +66,9 @@ public class FusionAuthService {
     throw new RuntimeException("shouldn't have got here");
   }
 
-  public UserResponse findUser(String email) {
+  public UserResponse retrieveUserByUsername(String email) {
     ClientResponse<UserResponse, Errors> userResponseErrorsClientResponse =
-        client.retrieveUserByEmail(email);
+        client.retrieveUserByUsername(email);
     return userResponseErrorsClientResponse.successResponse;
   }
 }

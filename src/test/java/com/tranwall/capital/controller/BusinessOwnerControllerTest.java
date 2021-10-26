@@ -11,13 +11,11 @@ import com.tranwall.capital.data.model.BusinessProspect;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
-@Disabled
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 class BusinessOwnerControllerTest extends BaseCapitalTest {
 
@@ -29,6 +27,11 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   @BeforeEach
   void init() throws Exception {
     if (onboardBusinessRecord == null) {
+      mockServerHelper.expectOtpViaEmail();
+      mockServerHelper.expectOtpViaSms();
+      mockServerHelper.expectEmailVerification("123456");
+      mockServerHelper.expectPhoneVerification("123456");
+
       onboardBusinessRecord = testHelper.onboardBusiness();
     }
   }

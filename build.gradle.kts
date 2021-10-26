@@ -40,10 +40,7 @@ snyk {
 tasks {
     test {
         jvmArgs(
-                "-Djavax.net.ssl.trustStore=./src/test/resources/cacerts",
-                "-Djavax.net.ssl.trustStorePassword=changeit",
                 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
-                "-Dcom.sun.net.ssl.checkRevocation=false",
         )
         useJUnitPlatform()
         testLogging {
@@ -86,6 +83,7 @@ dependencies {
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
     implementation("org.mock-server:mockserver-netty:5.11.2")
+    implementation("ch.qos.logback:logback-classic:1.2.6")
 
     // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")

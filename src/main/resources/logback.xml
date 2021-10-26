@@ -1,0 +1,14 @@
+<configuration>
+
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%-15t] %-40.40logger{39} : %msg%n" />
+    <appender name="STDOUT_PLAIN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <root level="${log.level:-info}">
+        <appender-ref ref="STDOUT_PLAIN"/>
+    </root>
+
+</configuration>
