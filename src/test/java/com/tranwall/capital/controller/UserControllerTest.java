@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.UserType;
@@ -43,8 +44,9 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsers() {
-    Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
+    Bin bin = testHelper.createBin();
+    Program program = testHelper.createProgram(bin);
+    Business business = testHelper.createBusiness(program).business();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(program.getId(), business.getId(), null);
 
@@ -85,8 +87,9 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsersForBusinessIdByUserName() {
-    Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
+    Bin bin = testHelper.createBin();
+    Program program = testHelper.createProgram(bin);
+    Business business = testHelper.createBusiness(program).business();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(program.getId(), business.getId(), null);
 
