@@ -14,6 +14,7 @@ import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.FundingType;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import javax.persistence.Embedded;
 import lombok.AllArgsConstructor;
@@ -66,7 +67,7 @@ public class Card {
 
   // date the card expires
   @JsonProperty("expirationDate")
-  private OffsetDateTime expirationDate;
+  private LocalDate expirationDate;
 
   // flag to indicate if the card has been activated and the date that occurred
   @JsonProperty("activated")

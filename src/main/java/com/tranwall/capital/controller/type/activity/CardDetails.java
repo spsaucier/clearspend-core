@@ -14,4 +14,15 @@ public class CardDetails {
   @Sensitive
   @JsonProperty("cardOwner")
   private String owner;
+
+  public CardDetails(com.tranwall.capital.data.model.embedded.CardDetails card) {
+    if (card == null) {
+      return;
+    }
+
+    number = card.getNumber();
+    if (card.getOwner() != null) {
+      owner = card.getOwner().getEncrypted();
+    }
+  }
 }

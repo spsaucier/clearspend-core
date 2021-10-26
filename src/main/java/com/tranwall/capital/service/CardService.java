@@ -12,6 +12,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.crypto.HashUtil;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
@@ -25,6 +26,7 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -87,7 +89,7 @@ public class CardService {
             CardStatusReason.NONE,
             program.getFundingType(),
             OffsetDateTime.now(),
-            OffsetDateTime.now().plusYears(3),
+            LocalDate.now().plusYears(3),
             "",
             cardType,
             new RequiredEncryptedStringWithHash(response.getResponse().getCardNumber()),
@@ -108,17 +110,34 @@ public class CardService {
     return cardRepository.save(card);
   }
 
+  public Card retrieveCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
+    return cardRepository
+        .findByBusinessIdAndId(businessId, cardId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
+  }
+
   public CardRecord getCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
-    Card card =
-        cardRepository
-            .findByBusinessIdAndId(businessId, cardId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
+    Card card = retrieveCard(businessId, cardId);
 
     if (card.getFundingType() == FundingType.POOLED) {
       return new CardRecord(card, null);
     }
 
-    return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId()));
+    return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId(), true));
+  }
+
+  // should only be used by NetworkService
+  public CardRecord getCardByCardNumber(@NonNull String cardNumber) {
+    Card card =
+        cardRepository
+            .findByCardNumberHash(HashUtil.calculateHash(cardNumber))
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardNumber));
+
+    if (card.getFundingType() == FundingType.POOLED) {
+      return new CardRecord(card, null);
+    }
+
+    return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId(), true));
   }
 
   public List<UserCardRecord> getUserCards(TypedId<BusinessId> businessId, TypedId<UserId> userId) {

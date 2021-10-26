@@ -1,23 +1,30 @@
 package com.tranwall.capital.service;
 
+import static com.tranwall.capital.data.model.enums.AccountActivityType.REALLOCATE;
+
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.error.IdMismatchException;
+import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.CardDetails;
 import com.tranwall.capital.controller.type.activity.Merchant;
-import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Adjustment;
+import com.tranwall.capital.data.model.Allocation;
+import com.tranwall.capital.data.model.Hold;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
+import com.tranwall.capital.service.CardService.CardRecord;
+import com.tranwall.capital.service.type.PageToken;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.persistence.criteria.Predicate;
 import javax.transaction.Transactional;
@@ -38,107 +45,154 @@ public class AccountActivityService {
   public static final int PAGE_SIZE = 20;
   private final AccountActivityRepository accountActivityRepository;
 
+  private final CardService cardService;
+
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordAccountActivity(
+  public AccountActivity recordBankAccountAccountActivity(
+      AccountActivityType type, Adjustment adjustment) {
+    return recordAccountActivity(
+        adjustment.getBusinessId(),
+        null,
+        null,
+        adjustment.getAccountId(),
+        type,
+        adjustment.getEffectiveDate(),
+        adjustment.getAmount());
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AccountActivity recordReallocationAccountActivity(
+      String allocationName, Adjustment adjustment) {
+    return recordAccountActivity(
+        adjustment.getBusinessId(),
+        adjustment.getAllocationId(),
+        allocationName,
+        adjustment.getAccountId(),
+        REALLOCATE,
+        adjustment.getEffectiveDate(),
+        adjustment.getAmount());
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AccountActivity recordNetworkHoldAccountAccountActivity(
+      AccountActivityType type, Allocation allocation, Hold hold) {
+    return recordAccountActivity(
+        hold.getBusinessId(),
+        allocation.getId(),
+        allocation.getName(),
+        hold.getAccountId(),
+        type,
+        hold.getCreated(),
+        hold.getAmount());
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AccountActivity recordNetworkAdjustmentAccountAccountActivity(
+      AccountActivityType type, Allocation allocation, Adjustment adjustment) {
+    return recordAccountActivity(
+        adjustment.getBusinessId(),
+        allocation.getId(),
+        allocation.getName(),
+        adjustment.getAccountId(),
+        type,
+        adjustment.getCreated(),
+        adjustment.getAmount());
+  }
+
+  private AccountActivity recordAccountActivity(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
+      String allocationName,
       TypedId<AccountId> accountId,
       AccountActivityType type,
       OffsetDateTime activityTime,
       Amount amount) {
+
     AccountActivity accountActivity =
-        new AccountActivity(businessId, accountId, type, "", activityTime, amount);
+        new AccountActivity(businessId, accountId, type, activityTime, amount);
     accountActivity.setAllocationId(allocationId);
+    accountActivity.setAllocationName(allocationName);
 
     return accountActivityRepository.save(accountActivity);
   }
 
-  @Transactional(TxType.REQUIRED)
-  public AccountActivity recordAccountActivity(AccountActivityType type, Adjustment adjustment) {
-    AccountActivity accountActivity =
-        new AccountActivity(
-            adjustment.getBusinessId(),
-            adjustment.getAccountId(),
-            type,
-            "Allocation Name", // TODO allocation Record or specific name of activity record
-            adjustment.getEffectiveDate(),
-            adjustment.getAmount());
-    accountActivity.setAllocationId(adjustment.getAllocationId());
+  public Page<AccountActivityResponse> getCardAccountActivity(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<CardId> cardId,
+      AccountActivityFilterCriteria accountActivityFilterCriteria) {
+    CardRecord card = cardService.getCard(businessId, cardId);
+    if (!card.card().getUserId().equals(userId)) {
+      throw new IdMismatchException(IdType.USER_ID, userId, card.card().getUserId());
+    }
 
-    return accountActivityRepository.save(accountActivity);
+    accountActivityFilterCriteria.setCardId(card.card().getId());
+    accountActivityFilterCriteria.setAllocationId(card.card().getAllocationId());
+    accountActivityFilterCriteria.setAccountId(card.card().getAccountId());
+
+    return getFilteredAccountActivity(businessId, accountActivityFilterCriteria);
   }
 
   public Page<AccountActivityResponse> getFilteredAccountActivity(
-      TypedId<BusinessId> businessId, AccountActivityRequest accountActivityRequest) {
+      TypedId<BusinessId> businessId, AccountActivityFilterCriteria accountActivityFilterCriteria) {
 
-    PageRequest pageRequest = accountActivityRequest.getPageRequest();
+    PageToken pageToken = accountActivityFilterCriteria.getPageToken();
     Page<AccountActivity> all =
         accountActivityRepository.findAll(
-            getAccountActivitySpecifications(businessId, accountActivityRequest),
-            pageRequest != null
-                ? org.springframework.data.domain.PageRequest.of(
-                    pageRequest.getPageNumber(), pageRequest.getPageSize())
-                : org.springframework.data.domain.PageRequest.ofSize(PAGE_SIZE));
+            getAccountActivitySpecifications(businessId, accountActivityFilterCriteria),
+            org.springframework.data.domain.PageRequest.of(
+                pageToken.getPageNumber(), pageToken.getPageSize()));
+
+    // TODO(kuchlein): we may want to see if we can avoid passing back what is in effect an API type
     return new PageImpl<>(
         all.stream()
-            .map(mapAccountActivityToAccountActivityResponse())
+            .map(
+                accountActivity ->
+                    new AccountActivityResponse(
+                        accountActivity.getActivityTime(),
+                        accountActivity.getAllocationName(),
+                        new CardDetails(accountActivity.getCard()),
+                        new Merchant(accountActivity.getMerchant()),
+                        accountActivity.getType(),
+                        accountActivity.getAmount()))
             .collect(Collectors.toList()),
         all.getPageable(),
         all.getTotalElements());
   }
 
-  private Function<AccountActivity, AccountActivityResponse>
-      mapAccountActivityToAccountActivityResponse() {
-    return accountActivity ->
-        AccountActivityResponse.builder()
-            .activityTime(accountActivity.getActivityTime())
-            // FIXME: AccountId#getName was actually inherited from
-            // org.hibernate.type.UUIDBinaryType
-            // .accountName(accountActivity.getAccountId().getName())
-            .card(
-                accountActivity.getCard() != null
-                    ? new CardDetails(
-                        accountActivity.getCard().getNumber(),
-                        accountActivity.getCard().getOwner().toString())
-                    : null)
-            .merchant(
-                accountActivity.getMerchant() != null
-                    ? new Merchant(
-                        accountActivity.getMerchant().getName(),
-                        accountActivity.getMerchant().getType())
-                    : null)
-            .amount(accountActivity.getAmount())
-            .type(accountActivity.getType())
-            .build();
-  }
-
   private Specification<AccountActivity> getAccountActivitySpecifications(
-      TypedId<BusinessId> businessId, AccountActivityRequest request) {
+      TypedId<BusinessId> businessId, AccountActivityFilterCriteria criteria) {
     return (root, query, criteriaBuilder) -> {
       List<Predicate> predicates = new ArrayList<>();
       if (businessId != null) {
         predicates.add(criteriaBuilder.equal(root.get("businessId"), businessId));
       }
-      if (request.getAccountId() != null) {
-        predicates.add(criteriaBuilder.equal(root.get("accountId"), request.getAccountId()));
+      if (criteria.getAccountId() != null) {
+        predicates.add(criteriaBuilder.equal(root.get("accountId"), criteria.getAccountId()));
       }
-      if (request.getAllocationId() != null) {
-        predicates.add(criteriaBuilder.equal(root.get("allocationId"), request.getAllocationId()));
+      if (criteria.getAllocationId() != null) {
+        predicates.add(criteriaBuilder.equal(root.get("allocationId"), criteria.getAllocationId()));
       }
-      if (request.getType() != null) {
-        predicates.add(criteriaBuilder.equal(root.get("type"), request.getType()));
+      if (criteria.getCardId() != null) {
+        predicates.add(criteriaBuilder.equal(root.get("cardId"), criteria.getCardId()));
       }
-      if (request.getFrom() != null && request.getTo() != null) {
+      if (criteria.getType() != null) {
+        predicates.add(criteriaBuilder.equal(root.get("type"), criteria.getType()));
+      }
+      if (criteria.getFrom() != null) {
         predicates.add(
-            criteriaBuilder.between(root.get("activityTime"), request.getFrom(), request.getTo()));
+            criteriaBuilder.greaterThanOrEqualTo(root.get("activityTime"), criteria.getFrom()));
+      }
+      if (criteria.getTo() != null) {
+        predicates.add(criteriaBuilder.lessThan(root.get("activityTime"), criteria.getTo()));
       }
 
-      if (request.getPageRequest() != null
-          && request.getPageRequest().getOrderable() != null
-          && request.getPageRequest().getOrderable().size() > 0) {
+      if (criteria.getPageToken() != null
+          && criteria.getPageToken().getOrderBy() != null
+          && !criteria.getPageToken().getOrderBy().isEmpty()) {
 
         query.orderBy(
-            request.getPageRequest().getOrderable().stream()
+            criteria.getPageToken().getOrderBy().stream()
                 .map(
                     ord ->
                         ord.getDirection() == Direction.ASC
@@ -148,6 +202,7 @@ public class AccountActivityService {
       } else {
         query.orderBy(criteriaBuilder.desc(root.get("activityTime")));
       }
+
       return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
     };
   }

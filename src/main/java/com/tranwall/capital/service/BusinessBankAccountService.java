@@ -120,7 +120,7 @@ public class BusinessBankAccountService {
     // TODO(kuchlein): need to write one account activity record
     AccountActivityType type =
         bankAccountTransactType == DEPOSIT ? BANK_DEPOSIT : AccountActivityType.BANK_WITHDRAWAL;
-    accountActivityService.recordAccountActivity(type, adjustmentRecord.adjustment());
+    accountActivityService.recordBankAccountAccountActivity(type, adjustmentRecord.adjustment());
 
     return adjustmentRecord;
   }

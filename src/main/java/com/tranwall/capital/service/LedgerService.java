@@ -8,6 +8,7 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.JournalEntry;
 import com.tranwall.capital.data.model.LedgerAccount;
 import com.tranwall.capital.data.model.Posting;
+import com.tranwall.capital.data.model.enums.CreditOrDebit;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LedgerAccountType;
 import com.tranwall.capital.data.repository.JournalEntryRepository;
@@ -15,6 +16,7 @@ import com.tranwall.capital.data.repository.LedgerAccountRepository;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,9 @@ public class LedgerService {
 
   public record BankJournalEntry(
       JournalEntry journalEntry, Posting bankPosting, Posting accountPosting) {}
+
+  public record NetworkJournalEntry(
+      JournalEntry journalEntry, Posting networkPosting, Posting accountPosting) {}
 
   public record ReallocationJournalEntry(
       JournalEntry journalEntry, Posting fromPosting, Posting toPosting) {}
@@ -59,7 +64,7 @@ public class LedgerService {
   @Transactional(TxType.REQUIRED)
   public BankJournalEntry recordWithdrawFunds(
       TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
-    return bankFunds(ledgerAccountId, Amount.negate(amount));
+    return bankFunds(ledgerAccountId, amount.negate());
   }
 
   private BankJournalEntry bankFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
@@ -69,7 +74,7 @@ public class LedgerService {
 
     JournalEntry journalEntry = new JournalEntry();
     Posting accountPosting = new Posting(journalEntry, businessAccount.getId(), amount);
-    Posting bankPosting = new Posting(journalEntry, bankAccount.getId(), Amount.negate(amount));
+    Posting bankPosting = new Posting(journalEntry, bankAccount.getId(), amount.negate());
 
     journalEntry.setPostings(List.of(bankPosting, accountPosting));
     journalEntry = journalEntryRepository.save(journalEntry);
@@ -92,13 +97,39 @@ public class LedgerService {
     LedgerAccount toLedgerAccount = getLedgerAccount(toLedgerAccountId);
 
     JournalEntry journalEntry = new JournalEntry();
-    Posting fromPosting =
-        new Posting(journalEntry, fromLedgerAccount.getId(), Amount.negate(amount));
+    Posting fromPosting = new Posting(journalEntry, fromLedgerAccount.getId(), amount.negate());
     Posting toPosting = new Posting(journalEntry, toLedgerAccount.getId(), amount);
 
     journalEntry.setPostings(List.of(fromPosting, toPosting));
     journalEntryRepository.save(journalEntry);
 
     return new ReallocationJournalEntry(journalEntry, fromPosting, toPosting);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public NetworkJournalEntry recordNetworkAdjustment(
+      TypedId<LedgerAccountId> ledgerAccountId,
+      @NonNull CreditOrDebit creditOrDebit,
+      Amount amount) {
+    amount.ensurePositive();
+
+    LedgerAccount networkLedgerAccount =
+        getOrCreateLedgerAccount(LedgerAccountType.NETWORK, amount.getCurrency());
+    LedgerAccount ledgerAccount = getLedgerAccount(ledgerAccountId);
+
+    JournalEntry journalEntry = new JournalEntry();
+    Posting networkPosting, accountPosting;
+    if (creditOrDebit == CreditOrDebit.DEBIT) {
+      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount.negate());
+      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount);
+    } else {
+      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount.negate());
+      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
+    }
+
+    journalEntry.setPostings(List.of(networkPosting, accountPosting));
+    journalEntryRepository.save(journalEntry);
+
+    return new NetworkJournalEntry(journalEntry, networkPosting, accountPosting);
   }
 }

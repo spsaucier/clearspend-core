@@ -1,9 +1,5 @@
 package com.tranwall.capital.service;
 
-import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
-import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_WITHDRAWAL;
-import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
-
 import com.tranwall.capital.client.alloy.AlloyClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
@@ -21,7 +17,6 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
-import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
@@ -138,26 +133,27 @@ public class BusinessService {
       @NonNull FundsTransactType fundsTransactType,
       Amount amount) {
     BusinessRecord businessRecord = getBusiness(businessId);
-    AllocationRecord allocation =
+    AllocationRecord allocationRecord =
         allocationService.getAllocation(businessRecord.business, allocationId);
-    if (!allocation.account().getId().equals(accountId)) {
-      throw new IdMismatchException(IdType.ACCOUNT_ID, accountId, allocation.account().getId());
+    if (!allocationRecord.account().getId().equals(accountId)) {
+      throw new IdMismatchException(
+          IdType.ACCOUNT_ID, accountId, allocationRecord.account().getId());
     }
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         switch (fundsTransactType) {
           case DEPOSIT -> accountService.reallocateFunds(
-              allocation.account().getId(), businessRecord.businessAccount.getId(), amount);
+              allocationRecord.account().getId(), businessRecord.businessAccount.getId(), amount);
           case WITHDRAW -> accountService.reallocateFunds(
-              businessRecord.businessAccount.getId(), allocation.account().getId(), amount);
+              businessRecord.businessAccount.getId(), allocationRecord.account().getId(), amount);
         };
 
-    // TODO(kuchlein): need to write two account activity records
-    AccountActivityType type = fundsTransactType == DEPOSIT ? BANK_DEPOSIT : BANK_WITHDRAWAL;
-    accountActivityService.recordAccountActivity(
-        type, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
-    accountActivityService.recordAccountActivity(
-        type, reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+    accountActivityService.recordReallocationAccountActivity(
+        allocationRecord.allocation().getName(),
+        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
+    accountActivityService.recordReallocationAccountActivity(
+        allocationRecord.allocation().getName(),
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
   }

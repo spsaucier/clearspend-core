@@ -398,7 +398,7 @@ create table if not exists account_activity
     allocation_id        uuid references allocation (id),
     account_id           uuid                        not null references account (id),
     type                 varchar(50)                 not null,
-    allocation_name      varchar(50)                 not null,
+    allocation_name      varchar(50),
     merchant_name        varchar(50),
     merchant_type        varchar(50),
     card_number          varchar(50),
@@ -407,6 +407,22 @@ create table if not exists account_activity
     activity_time        timestamp without time zone not null,
     amount_currency      varchar(10)                 not null,
     amount_amount        numeric                     not null
+);
+
+create table if not exists receipt
+(
+    id              uuid                        not null
+        primary key,
+    created         timestamp without time zone not null,
+    updated         timestamp without time zone not null,
+    version         bigint                      not null,
+
+    business_id     uuid                        not null references business (id),
+    allocation_id   uuid references allocation (id),
+    account_id      uuid                        not null references account (id),
+    adjustment_id   uuid                        not null references adjustment (id),
+    amount_currency varchar(10)                 not null,
+    amount_amount   numeric                     not null
 );
 
 insert into bin (id, created, updated, version, bin, name)

@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/non-production")
 @RequiredArgsConstructor
-public class NonProductionController {
+public class BusinessBankAccountDemoController {
 
   private final BusinessBankAccountService businessBankAccountService;
 

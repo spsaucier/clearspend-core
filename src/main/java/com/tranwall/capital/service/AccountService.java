@@ -1,8 +1,6 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.error.AmountException;
-import com.tranwall.capital.common.error.AmountException.AmountType;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.InsufficientFundsException;
@@ -18,6 +16,7 @@ import com.tranwall.capital.data.model.Hold;
 import com.tranwall.capital.data.model.LedgerAccount;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
+import com.tranwall.capital.data.model.enums.CreditOrDebit;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.HoldStatus;
 import com.tranwall.capital.data.repository.AccountRepository;
@@ -30,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +46,8 @@ public class AccountService {
   private final LedgerService ledgerService;
 
   public record AdjustmentRecord(Account account, Adjustment adjustment) {}
+
+  public record HoldRecord(Account account, Hold hold) {}
 
   public record AccountReallocateFundsRecord(
       Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {}
@@ -68,14 +70,12 @@ public class AccountService {
   @Transactional(TxType.REQUIRED)
   public AdjustmentRecord depositFunds(
       TypedId<BusinessId> businessId, Amount amount, boolean placeHold) {
-    if (!amount.isPositive()) {
-      throw new AmountException(AmountType.POSITIVE, amount);
-    }
+    amount.ensurePositive();
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), false);
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(account, amount);
-    account.setLedgerBalance(Amount.add(account.getLedgerBalance(), amount));
+    account.setLedgerBalance(account.getLedgerBalance().add(amount));
 
     if (placeHold) {
       holdRepository.save(
@@ -83,7 +83,7 @@ public class AccountService {
               businessId,
               account.getId(),
               HoldStatus.PLACED,
-              Amount.negate(amount),
+              amount.negate(),
               OffsetDateTime.now().plusDays(5)));
     }
 
@@ -92,9 +92,7 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public AdjustmentRecord withdrawFunds(TypedId<BusinessId> businessId, Amount amount) {
-    if (!amount.isPositive()) {
-      throw new AmountException(AmountType.POSITIVE, amount);
-    }
+    amount.ensurePositive();
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), true);
     if (account.getAvailableBalance().isSmallerThan(amount)) {
@@ -102,7 +100,43 @@ public class AccountService {
     }
 
     Adjustment adjustment = adjustmentService.recordWithdrawFunds(account, amount);
-    account.setLedgerBalance(Amount.sub(account.getLedgerBalance(), amount));
+    account.setLedgerBalance(account.getLedgerBalance().sub(amount));
+    account = accountRepository.save(account);
+
+    return new AdjustmentRecord(account, adjustment);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public HoldRecord recordNetworkHold(
+      Account account,
+      @NonNull CreditOrDebit creditOrDebit,
+      Amount amount,
+      OffsetDateTime expirationDate) {
+    amount.ensurePositive();
+    Amount holdAmount = creditOrDebit == CreditOrDebit.DEBIT ? amount.negate() : amount;
+    Hold hold =
+        holdRepository.save(
+            new Hold(
+                account.getBusinessId(),
+                account.getId(),
+                HoldStatus.PLACED,
+                holdAmount,
+                expirationDate));
+
+    account.getHolds().add(hold);
+    account.setAvailableBalance(account.getAvailableBalance().add(holdAmount));
+
+    return new HoldRecord(account, hold);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AdjustmentRecord recordNetworkAdjustment(
+      Account account, @NonNull CreditOrDebit creditOrDebit, @NonNull Amount amount) {
+    amount.ensurePositive();
+
+    Adjustment adjustment =
+        adjustmentService.recordNetworkAdjustment(account, creditOrDebit, amount);
+    account.setLedgerBalance(account.getLedgerBalance().add(adjustment.getAmount()));
     account = accountRepository.save(account);
 
     return new AdjustmentRecord(account, adjustment);
@@ -148,8 +182,8 @@ public class AccountService {
     return retrieveAccount(businessId, currency, AccountType.ALLOCATION, allocationId.toUuid());
   }
 
-  public Account retrieveCardAccount(TypedId<AccountId> accountId) {
-    return retrieveAccount(accountId, true);
+  public Account retrieveCardAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
+    return retrieveAccount(accountId, fetchHolds);
   }
 
   private Account retrieveAccount(
@@ -188,9 +222,7 @@ public class AccountService {
   @Transactional(TxType.REQUIRED)
   public AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
-    if (!amount.isPositive()) {
-      throw new AmountException(AmountType.POSITIVE, amount);
-    }
+    amount.ensurePositive();
 
     Account fromAccount = retrieveAccount(fromAccountId, true);
     Account toAccount = retrieveAccount(toAccountId, true);
@@ -205,8 +237,8 @@ public class AccountService {
     ReallocateFundsRecord reallocateFundsRecord =
         adjustmentService.reallocateFunds(fromAccount, toAccount, amount);
 
-    fromAccount.setLedgerBalance(Amount.add(fromAccount.getLedgerBalance(), Amount.negate(amount)));
-    toAccount.setLedgerBalance(Amount.add(toAccount.getLedgerBalance(), amount));
+    fromAccount.setLedgerBalance(fromAccount.getLedgerBalance().add(amount.negate()));
+    toAccount.setLedgerBalance(toAccount.getLedgerBalance().add(amount));
     fromAccount = accountRepository.save(fromAccount);
     toAccount = accountRepository.save(toAccount);
 

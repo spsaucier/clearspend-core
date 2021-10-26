@@ -4,6 +4,8 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
+import com.tranwall.capital.controller.type.activity.PageRequest;
+import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,15 @@ public class AccountActivityController {
   private Page<AccountActivityResponse> getAccountActivity(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @Validated @RequestBody AccountActivityRequest request) {
-    return accountActivityService.getFilteredAccountActivity(businessId, request);
+    return accountActivityService.getFilteredAccountActivity(
+        businessId,
+        new AccountActivityFilterCriteria(
+            request.getAllocationId(),
+            request.getAccountId(),
+            null,
+            request.getType(),
+            request.getFrom(),
+            request.getTo(),
+            PageRequest.toPageToken(request.getPageRequest())));
   }
 }

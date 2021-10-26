@@ -2,6 +2,8 @@ package com.tranwall.capital.common.data.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.error.AmountException;
+import com.tranwall.capital.common.error.AmountException.AmountType;
 import com.tranwall.capital.common.error.CurrencyMismatchException;
 import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.enums.Currency;
@@ -35,28 +37,32 @@ public class Amount {
         currency, amount.setScale(currency.getDecimalScale(), RoundingMode.UNNECESSARY));
   }
 
-  public static Amount add(Amount amount, Amount other) {
-    if (amount.getCurrency() != other.getCurrency()) {
-      throw new CurrencyMismatchException(amount.getCurrency(), other.getCurrency());
+  public Amount add(Amount amount) {
+    if (currency != amount.getCurrency()) {
+      throw new CurrencyMismatchException(currency, amount.getCurrency());
     }
 
-    return of(amount.currency, amount.getAmount().add(other.getAmount()));
+    return of(currency, this.amount.add(amount.getAmount()));
   }
 
-  public static Amount sub(Amount amount, Amount other) {
-    if (amount.getCurrency() != other.getCurrency()) {
-      throw new CurrencyMismatchException(amount.getCurrency(), other.getCurrency());
+  public Amount sub(Amount amount) {
+    if (currency != amount.getCurrency()) {
+      throw new CurrencyMismatchException(currency, amount.getCurrency());
     }
 
-    return of(amount.currency, amount.getAmount().subtract(other.getAmount()));
+    return of(currency, this.amount.subtract(amount.getAmount()));
   }
 
-  public static Amount negate(Amount amount) {
-    return of(amount.currency, amount.getAmount().negate());
+  public Amount abs() {
+    return of(currency, amount.abs());
+  }
+
+  public Amount negate() {
+    return of(currency, amount.negate());
   }
 
   public boolean isSmallerThan(@NonNull Amount that) {
-    return BigDecimalUtils.isSmallerThan(this.amount, that.amount);
+    return BigDecimalUtils.isSmallerThan(amount, that.amount);
   }
 
   public boolean isNegative() {
@@ -65,5 +71,11 @@ public class Amount {
 
   public boolean isPositive() {
     return BigDecimalUtils.isPositive(amount);
+  }
+
+  public void ensurePositive() {
+    if (isNegative()) {
+      throw new AmountException(AmountType.POSITIVE, this);
+    }
   }
 }

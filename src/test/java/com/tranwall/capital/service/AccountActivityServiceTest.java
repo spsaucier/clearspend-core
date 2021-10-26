@@ -1,13 +1,13 @@
 package com.tranwall.capital.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
@@ -19,6 +19,7 @@ import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import com.tranwall.capital.service.type.PageToken;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -139,13 +140,13 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         FundsTransactType.DEPOSIT,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequest(
-        PageRequest.builder().pageNumber(0).pageSize(10).orderable(null).build());
-    Page<AccountActivityResponse> latestAccountActivity =
-        accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);
+    Page<AccountActivityResponse> accountActivity =
+        accountActivityService.getFilteredAccountActivity(
+            business.getId(),
+            new AccountActivityFilterCriteria(
+                null, null, null, null, null, null, new PageToken(0, 10, null)));
 
-    Assertions.assertEquals(2, latestAccountActivity.getTotalElements());
+    assertThat(accountActivity).hasSize(2);
   }
 
   @Test
@@ -177,20 +178,32 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         FundsTransactType.WITHDRAW,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
-    accountActivityRequest.setType(AccountActivityType.BANK_WITHDRAWAL);
     Page<AccountActivityResponse> withdrawalFilteredAccountActivity =
-        accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);
+        accountActivityService.getFilteredAccountActivity(
+            business.getId(),
+            new AccountActivityFilterCriteria(
+                null,
+                null,
+                null,
+                AccountActivityType.REALLOCATE,
+                null,
+                null,
+                new PageToken(0, 10, null)));
 
-    Assertions.assertEquals(2, withdrawalFilteredAccountActivity.getTotalElements());
+    assertThat(withdrawalFilteredAccountActivity).hasSize(2);
 
-    accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
-    accountActivityRequest.setType(AccountActivityType.BANK_DEPOSIT);
     Page<AccountActivityResponse> depositFilteredAccountActivity =
-        accountActivityService.getFilteredAccountActivity(business.getId(), accountActivityRequest);
+        accountActivityService.getFilteredAccountActivity(
+            business.getId(),
+            new AccountActivityFilterCriteria(
+                null,
+                null,
+                null,
+                AccountActivityType.BANK_DEPOSIT,
+                null,
+                null,
+                new PageToken(0, 10, null)));
 
-    Assertions.assertEquals(1, depositFilteredAccountActivity.getTotalElements());
+    assertThat(depositFilteredAccountActivity).hasSize(1);
   }
 }

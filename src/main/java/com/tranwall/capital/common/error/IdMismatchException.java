@@ -15,5 +15,6 @@ public class IdMismatchException extends RuntimeException {
   public enum IdType {
     ACCOUNT_ID,
     BUSINESS_ID,
+    USER_ID,
   }
 }

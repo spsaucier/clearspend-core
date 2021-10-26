@@ -1,9 +1,5 @@
 package com.tranwall.capital.service;
 
-import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
-import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_WITHDRAWAL;
-import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
-
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -22,7 +18,6 @@ import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
-import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
@@ -195,12 +190,12 @@ public class AllocationService {
           "invalid fundsTransactType " + fundsTransactType);
     }
 
-    // TODO(kuchlein): need to write two account activity records
-    AccountActivityType type = fundsTransactType == DEPOSIT ? BANK_DEPOSIT : BANK_WITHDRAWAL;
-    accountActivityService.recordAccountActivity(
-        type, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
-    accountActivityService.recordAccountActivity(
-        type, reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+    accountActivityService.recordReallocationAccountActivity(
+        allocationRecord.allocation.getName(),
+        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
+    accountActivityService.recordReallocationAccountActivity(
+        allocationRecord.allocation.getName(),
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
   }

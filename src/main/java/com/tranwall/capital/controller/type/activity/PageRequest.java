@@ -1,13 +1,13 @@
 package com.tranwall.capital.controller.type.activity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.service.type.PageToken;
+import com.tranwall.capital.service.type.PageToken.OrderBy;
+import java.util.Collections;
 import java.util.List;
-import javax.validation.constraints.Pattern;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NonNull;
-import org.springframework.data.domain.Sort;
 
 @Data
 @Builder
@@ -21,27 +21,14 @@ public class PageRequest {
   @NonNull
   private Integer pageSize;
 
-  @JsonProperty("orderable")
-  private List<Orderable> orderable;
+  @JsonProperty("orderBy")
+  private List<OrderBy> orderBy;
 
-  @Data
-  @Builder
-  public static class Orderable {
-    @Pattern(regexp = "[a-zA-Z0-9_\\-]*")
-    private OrderItem item;
-
-    private Sort.Direction direction;
-  }
-
-  @Getter
-  public enum OrderItem {
-    DATE("activityTime"),
-    AMOUNT("amount");
-
-    String name;
-
-    OrderItem(String item) {
-      this.name = item;
+  public static PageToken toPageToken(PageRequest pageRequest) {
+    if (pageRequest == null) {
+      return new PageToken(0, 20, Collections.emptyList());
     }
+
+    return new PageToken(pageRequest.pageNumber, pageRequest.pageSize, pageRequest.orderBy);
   }
 }

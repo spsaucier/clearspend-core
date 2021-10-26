@@ -17,6 +17,7 @@ public class AccountActivityResponse {
   @NonNull
   private OffsetDateTime activityTime;
 
+  @JsonProperty("accountName")
   private String accountName;
 
   @Sensitive

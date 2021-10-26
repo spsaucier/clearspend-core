@@ -8,6 +8,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.HoldId;
 import com.tranwall.capital.common.typedid.data.NetworkMessageId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import java.util.UUID;
@@ -39,28 +40,28 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedMutable<BusinessId> businessId;
+  private TypedId<BusinessId> businessId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedMutable<AllocationId> allocationId;
+  private TypedId<AllocationId> allocationId;
 
   @JoinColumn(referencedColumnName = "id", table = "card")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedMutable<CardId> cardId;
+  private TypedId<CardId> cardId;
 
   @JoinColumn(referencedColumnName = "id", table = "hold")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedMutable<HoldId> holdId;
+  private TypedId<HoldId> holdId;
 
   @JoinColumn(referencedColumnName = "id", table = "adjustment")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedMutable<AdjustmentId> adjustmentId;
+  private TypedId<AdjustmentId> adjustmentId;
 
   // required when the card number is not known to use (this may be handled directly by issuer)
   @Embedded private NullableEncryptedString cardNumber;

@@ -68,7 +68,6 @@ public class Account extends TypedMutable<AccountId> {
     BigDecimal holdAmount =
         holds.stream().map(e -> e.getAmount().getAmount()).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    availableBalance =
-        Amount.add(ledgerBalance, new Amount(ledgerBalance.getCurrency(), holdAmount));
+    availableBalance = ledgerBalance.add(new Amount(ledgerBalance.getCurrency(), holdAmount));
   }
 }
