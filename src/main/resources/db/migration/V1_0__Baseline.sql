@@ -398,7 +398,7 @@ create table if not exists account_activity
     allocation_id        uuid references allocation (id),
     account_id           uuid                        not null references account (id),
     type                 varchar(50)                 not null,
-    allocation_name      varchar(50),
+    allocation_name      varchar(200),
     merchant_name        varchar(50),
     merchant_type        varchar(50),
     card_number          varchar(50),

@@ -265,7 +265,7 @@ public class TestHelper {
         new ConvertBusinessProspectRequest(
             generateBusinessName(),
             BusinessType.C_CORP,
-            generateTaxIdentificationNumber(),
+            generateEmployerIdentificationNumber(),
             generatePhone(),
             generateApiAddress());
     String body = objectMapper.writeValueAsString(request);

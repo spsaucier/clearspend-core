@@ -18,7 +18,6 @@ public class FusionAuthPostgreSQLContainer
     withUsername("fusionauth");
     withPassword("docker");
     waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*\\n", 1));
-    withExposedPorts(5433);
   }
 
   public static FusionAuthPostgreSQLContainer getInstance() {

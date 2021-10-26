@@ -6,13 +6,14 @@ import com.tranwall.capital.service.TwilioService;
 import com.twilio.Twilio;
 import com.twilio.http.TwilioRestClient;
 import org.mockito.Mockito;
-import org.mockserver.springtest.MockServerPort;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service("twilioService")
 public class TwilioServiceMock extends TwilioService {
 
-  @MockServerPort Integer mockServerPort;
+  @Value("${mockServerPort}")
+  Integer mockServerPort;
 
   public TwilioServiceMock(
       TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {

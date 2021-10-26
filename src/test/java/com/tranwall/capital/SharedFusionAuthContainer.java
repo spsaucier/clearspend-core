@@ -4,7 +4,6 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
@@ -49,8 +48,6 @@ public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuth
     log.info("fusionauth port: {}", container.getMappedPort(9011));
     System.setProperty(
         "FUSIONAUTH_BASE_URL", String.format("http://localhost:%d", container.getMappedPort(9011)));
-    Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(log);
-    container.followOutput(logConsumer);
   }
 
   @Override

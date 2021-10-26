@@ -82,14 +82,12 @@ dependencies {
     implementation("com.sendgrid:sendgrid-java:4.7.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
-    implementation("org.mock-server:mockserver-netty:5.11.2")
-    implementation("ch.qos.logback:logback-classic:1.2.6")
 
     // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("com.github.javafaker:javafaker:1.0.1")
-    testImplementation("org.mock-server:mockserver-spring-test-listener:5.11.2")
+    testImplementation("org.mock-server:mockserver-netty:5.11.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
     //test containers
