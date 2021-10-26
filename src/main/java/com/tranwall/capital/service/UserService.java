@@ -12,6 +12,7 @@ import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import java.io.IOException;
+import java.util.List;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,5 +67,15 @@ public class UserService {
     return userRepository
         .findById(userId)
         .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+  }
+
+  public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {
+    return userRepository.findByBusinessId(businessId);
+  }
+
+  public List<User> retrieveUsersByUsernameForBusiness(
+      TypedId<BusinessId> businessId, RequiredEncryptedStringWithHash userName) {
+    return userRepository.findByBusinessIdAndFirstNameLikeOrLastNameLike(
+        businessId, userName, userName);
   }
 }

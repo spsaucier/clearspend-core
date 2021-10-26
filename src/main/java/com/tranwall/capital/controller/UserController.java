@@ -16,6 +16,7 @@ import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
+import com.tranwall.capital.controller.type.user.UserData;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
@@ -27,6 +28,8 @@ import io.swagger.annotations.ApiParam;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
@@ -45,6 +48,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class UserController {
 
+  public static final String USER_NAME = "userName";
+  public static final String BUSINESS_ID = "businessId";
   private final AccountActivityService accountActivityService;
   private final CardService cardService;
   private final ReceiptService receiptService;
@@ -52,7 +57,7 @@ public class UserController {
 
   @PostMapping("")
   private CreateUserResponse createUser(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody CreateUserRequest request)
       throws IOException {
 
@@ -72,7 +77,7 @@ public class UserController {
 
   @PostMapping("/bulk")
   private List<CreateUserResponse> bulkCreateUser(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody List<CreateUserRequest> request) {
 
     List<CreateUserResponse> response = new ArrayList<>(request.size());
@@ -111,9 +116,45 @@ public class UserController {
     return new User(userService.retrieveUser(userId));
   }
 
+  @GetMapping(value = "/list")
+  private List<UserData> getUsersByUserName(
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
+      @RequestParam(required = false, name = USER_NAME)
+          @ApiParam(
+              required = false,
+              name = USER_NAME,
+              value = "Name of the user.",
+              example = "Ada")
+          String userName) {
+    List<UserData> userDataList;
+    if (userName == null) {
+      userDataList =
+          userService.retrieveUsersForBusiness(businessId).stream()
+              .map(UserData::new)
+              .collect(Collectors.toList());
+      return userDataList;
+    } else {
+      userDataList =
+          userService.retrieveUsersForBusiness(businessId).stream()
+              .filter(
+                  user ->
+                      user.getFirstName()
+                              .toString()
+                              .toLowerCase(Locale.ROOT)
+                              .contains(userName.toLowerCase(Locale.ROOT))
+                          || user.getLastName()
+                              .toString()
+                              .toLowerCase(Locale.ROOT)
+                              .contains(userName.toLowerCase(Locale.ROOT)))
+              .map(UserData::new)
+              .collect(Collectors.toList());
+    }
+    return userDataList;
+  }
+
   @GetMapping("/cards")
   private List<UserCardResponse> getUserCards(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = "userId") TypedId<UserId> userId) {
     return cardService.getUserCards(businessId, userId).stream()
         .map(
@@ -128,7 +169,7 @@ public class UserController {
 
   @PostMapping("/cards/{cardId}/account-activity")
   private Page<AccountActivityResponse> getCardAccountActivity(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = "userId") TypedId<UserId> userId,
       @PathVariable(value = "cardId")
           @ApiParam(
@@ -152,7 +193,7 @@ public class UserController {
 
   @PostMapping("/cards/{cardId}/adjustments/{adjustmentId}/receipts")
   private CreateReceiptResponse createReceipt(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = "userId") TypedId<UserId> userId,
       @PathVariable(value = "cardId")
           @ApiParam(
