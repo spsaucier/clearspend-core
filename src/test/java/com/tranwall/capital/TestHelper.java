@@ -22,6 +22,7 @@ import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.BusinessBankAccountController.LinkTokenResponse;
+import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
@@ -60,6 +61,7 @@ import com.tranwall.capital.service.BinService;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
+import com.tranwall.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
@@ -199,6 +201,13 @@ public class TestHelper {
         businessOwnerService.retrieveBusinessOwner(
             convertBusinessProspectResponse.getBusinessOwnerId()),
         businessProspect);
+  }
+
+  public void testBusinessProspectState(String email, BusinessProspectStatus status) {
+    BusinessProspectRecord record =
+        businessProspectService.createBusinessProspect(
+            generateFirstName(), generateLastName(), email);
+    assertThat(record.businessProspectStatus()).isEqualTo(status);
   }
 
   public BusinessProspect createBusinessProspect() throws Exception {

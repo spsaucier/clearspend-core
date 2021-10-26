@@ -14,4 +14,8 @@ public class CreateBusinessProspectResponse {
   @JsonProperty("businessProspectId")
   @NonNull
   private TypedId<BusinessProspectId> businessProspectId;
+
+  @JsonProperty("businessProspectStatus")
+  @NonNull
+  private BusinessProspectStatus businessProspectStatus;
 }

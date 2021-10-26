@@ -6,6 +6,7 @@ import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
@@ -23,6 +24,7 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,14 +43,44 @@ public class BusinessProspectService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
+  public record BusinessProspectRecord(
+      BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}
+
   @Transactional
-  public BusinessProspect createBusinessProspect(String firstName, String lastName, String email) {
+  public BusinessProspectRecord createBusinessProspect(
+      String firstName, String lastName, String email) {
     BusinessProspect businessProspect =
-        businessProspectRepository.save(
-            new BusinessProspect(
-                new RequiredEncryptedString(firstName),
-                new RequiredEncryptedString(lastName),
-                new RequiredEncryptedStringWithHash(email)));
+        businessProspectRepository
+            .findByEmailHash(new RequiredEncryptedStringWithHash(email).getHash())
+            .orElseGet(
+                () ->
+                    businessProspectRepository.save(
+                        new BusinessProspect(
+                            new RequiredEncryptedString(firstName),
+                            new RequiredEncryptedString(lastName),
+                            new RequiredEncryptedStringWithHash(email))));
+
+    // Update first/last names in case a prospect has been resumed with different values
+    if (!Objects.equals(businessProspect.getFirstName().getEncrypted(), firstName)) {
+      businessProspect.setFirstName(new RequiredEncryptedString(firstName));
+    }
+
+    if (!Objects.equals(businessProspect.getLastName().getEncrypted(), lastName)) {
+      businessProspect.setLastName(new RequiredEncryptedString(lastName));
+    }
+
+    // calculating the prospect status
+    if (StringUtils.isNotEmpty(businessProspect.getSubjectRef())) {
+      return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.COMPLETED);
+    }
+
+    if (businessProspect.isPhoneVerified()) {
+      return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.MOBILE_VERIFIED);
+    }
+
+    if (businessProspect.isEmailVerified()) {
+      return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.EMAIL_VERIFIED);
+    }
 
     Verification verification = twilioService.sendVerificationEmail(email, businessProspect);
     log.debug("createBusinessProspect: {}", verification);
@@ -57,7 +89,7 @@ public class BusinessProspectService {
           String.format("expected pending, got %s", verification.getStatus()));
     }
 
-    return businessProspect;
+    return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.NEW);
   }
 
   @Transactional

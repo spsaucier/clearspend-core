@@ -8,6 +8,7 @@ import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
@@ -70,6 +71,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     mockServerHelper.verifyEmailVerificationCalled(1);
+
+    testHelper.testBusinessProspectState(
+        dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.EMAIL_VERIFIED);
   }
 
   @Test
@@ -91,6 +95,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isFalse();
     mockServerHelper.verifyEmailVerificationCalled(1);
+
+    testHelper.testBusinessProspectState(
+        dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.EMAIL_VERIFIED);
   }
 
   @Test
@@ -123,6 +130,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     assertThat(dbRecord.isPhoneVerified()).isTrue();
     mockServerHelper.verifyEmailVerificationCalled(1);
     mockServerHelper.verifyPhoneVerificationCalled(1);
+
+    testHelper.testBusinessProspectState(
+        dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.MOBILE_VERIFIED);
   }
 
   void setBusinessProspectPassword(TypedId<BusinessProspectId> businessProspectId)
@@ -183,6 +193,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     log.info("dbRecord: {}", dbRecord);
     assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());
+
+    testHelper.testBusinessProspectState(
+        dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.COMPLETED);
   }
 
   @Test

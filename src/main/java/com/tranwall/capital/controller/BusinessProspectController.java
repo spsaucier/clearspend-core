@@ -11,6 +11,7 @@ import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspec
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.data.model.BusinessProspect;
 import com.tranwall.capital.service.BusinessProspectService;
+import com.tranwall.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.tranwall.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +32,12 @@ public class BusinessProspectController {
   @PostMapping("")
   private CreateBusinessProspectResponse createBusinessProspect(
       @Validated @RequestBody CreateBusinessProspectRequest request) {
-    BusinessProspect businessProspect =
+    BusinessProspectRecord record =
         businessProspectService.createBusinessProspect(
             request.getFirstName(), request.getLastName(), request.getEmail());
 
-    return new CreateBusinessProspectResponse(businessProspect.getId());
+    return new CreateBusinessProspectResponse(
+        record.businessProspect().getId(), record.businessProspectStatus());
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
