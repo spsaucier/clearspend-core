@@ -34,7 +34,7 @@ public class CreateUserRequest {
   @Size(max = 100, message = "The last name should not be more than 100 characters.")
   private String lastName;
 
-  @NonNull private Address address;
+  private Address address;
 
   @Sensitive
   @JsonProperty("email")
@@ -47,7 +47,6 @@ public class CreateUserRequest {
 
   @Sensitive
   @JsonProperty("phone")
-  @NonNull
   @Schema(title = "Phone number in e.164 format", example = "+1234567890")
   @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
   private String phone;

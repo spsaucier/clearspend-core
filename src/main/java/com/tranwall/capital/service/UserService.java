@@ -7,12 +7,14 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.crypto.PasswordUtil;
+import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import java.io.IOException;
 import java.util.List;
+import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +38,7 @@ public class UserService {
       UserType type,
       String firstName,
       String lastName,
-      Address address,
+      @Nullable Address address,
       String email,
       String phone,
       boolean generatePassword)
@@ -48,7 +50,7 @@ public class UserService {
             new RequiredEncryptedStringWithHash(firstName),
             new RequiredEncryptedStringWithHash(lastName),
             new RequiredEncryptedStringWithHash(email),
-            new RequiredEncryptedStringWithHash(phone));
+            new NullableEncryptedStringWithHash(phone));
     user.setAddress(address);
 
     String password = null;

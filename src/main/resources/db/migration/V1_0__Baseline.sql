@@ -193,8 +193,8 @@ create table if not exists users
     address_country                varchar(3),
     email_encrypted                bytea                       not null,
     email_hash                     bytea                       not null,
-    phone_encrypted                bytea                       not null,
-    phone_hash                     bytea                       not null,
+    phone_encrypted                bytea,
+    phone_hash                     bytea,
     subject_ref                    varchar(100) unique,
     unique (business_id, email_hash)
 );

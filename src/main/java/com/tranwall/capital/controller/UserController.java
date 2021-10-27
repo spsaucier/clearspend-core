@@ -67,7 +67,7 @@ public class UserController {
             UserType.EMPLOYEE,
             request.getFirstName(),
             request.getLastName(),
-            request.getAddress().toAddress(),
+            request.getAddress() != null ? request.getAddress().toAddress() : null,
             request.getEmail(),
             request.getPhone(),
             request.isGeneratePassword());
@@ -89,7 +89,9 @@ public class UserController {
                 UserType.EMPLOYEE,
                 createUserRequest.getFirstName(),
                 createUserRequest.getLastName(),
-                createUserRequest.getAddress().toAddress(),
+                createUserRequest.getAddress() != null
+                    ? createUserRequest.getAddress().toAddress()
+                    : null,
                 createUserRequest.getEmail(),
                 createUserRequest.getPhone(),
                 createUserRequest.isGeneratePassword());
