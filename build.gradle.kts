@@ -83,6 +83,9 @@ dependencies {
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
 
+    //just for the non-prod data generator
+    implementation("com.github.javafaker:javafaker:1.0.1")
+
     // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
