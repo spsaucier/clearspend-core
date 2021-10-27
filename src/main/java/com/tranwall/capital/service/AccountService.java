@@ -22,7 +22,6 @@ import com.tranwall.capital.data.model.enums.HoldStatus;
 import com.tranwall.capital.data.repository.AccountRepository;
 import com.tranwall.capital.data.repository.HoldRepository;
 import com.tranwall.capital.service.AdjustmentService.ReallocateFundsRecord;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -59,12 +58,7 @@ public class AccountService {
         ledgerService.createLedgerAccount(type.getLedgerAccountType(), currency);
 
     return accountRepository.save(
-        new Account(
-            businessId,
-            ledgerAccount.getId(),
-            type,
-            ownerId,
-            Amount.of(currency, BigDecimal.ZERO)));
+        new Account(businessId, ledgerAccount.getId(), type, ownerId, Amount.of(currency)));
   }
 
   @Transactional(TxType.REQUIRED)

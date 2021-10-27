@@ -106,7 +106,7 @@ public class BusinessService {
               business.getId(),
               null,
               business.getLegalName() + " - " + program.getName(),
-              currency));
+              Amount.of(currency)));
     }
 
     return new BusinessAndAllocationsRecord(business, account, allocationRecords);

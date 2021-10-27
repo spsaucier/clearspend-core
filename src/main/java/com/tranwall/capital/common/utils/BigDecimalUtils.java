@@ -22,6 +22,10 @@ public class BigDecimalUtils {
     return first.compareTo(second) >= 0;
   }
 
+  public static boolean isLargerThan(@NonNull BigDecimal first, @NonNull BigDecimal second) {
+    return first.compareTo(second) > 0;
+  }
+
   public static boolean isSmallerThanOrEqualTo(
       @NonNull BigDecimal first, @NonNull BigDecimal second) {
     return first.compareTo(second) <= 0;

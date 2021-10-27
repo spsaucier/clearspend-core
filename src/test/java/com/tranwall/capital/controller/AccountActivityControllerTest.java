@@ -73,7 +73,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     Account account =
         accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+        testHelper.createAllocation(program.getId(), business.getId(), "", null);
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

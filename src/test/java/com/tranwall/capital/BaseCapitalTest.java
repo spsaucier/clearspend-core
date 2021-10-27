@@ -3,6 +3,7 @@ package com.tranwall.capital;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockserver.integration.ClientAndServer;
@@ -28,6 +29,7 @@ public abstract class BaseCapitalTest {
   public final ObjectMapper objectMapper =
       new ObjectMapper()
           .registerModule(new JavaTimeModule())
+          .registerModule(new Jdk8Module())
           .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
           .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

@@ -52,6 +52,7 @@ public class CardService {
 
   private final AccountService accountService;
   private final ProgramService programService;
+  private final UserService userService;
 
   private final I2Client i2Client;
 
@@ -61,13 +62,14 @@ public class CardService {
 
   @Transactional
   public Card issueCard(
-      String bin,
       Program program,
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       TypedId<UserId> userId,
       Currency currency,
-      CardType cardType) {
+      CardType cardType,
+      String cardLine3,
+      String cardLine4) {
 
     // hack until we actually call i2c
     String l = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
@@ -80,7 +82,7 @@ public class CardService {
 
     Card card =
         new Card(
-            bin,
+            program.getBin(),
             program.getId(),
             businessId,
             allocationId,
@@ -90,7 +92,7 @@ public class CardService {
             program.getFundingType(),
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
-            "",
+            cardLine3,
             cardType,
             new RequiredEncryptedStringWithHash(response.getResponse().getCardNumber()),
             response
@@ -98,6 +100,7 @@ public class CardService {
                 .getCardNumber()
                 .substring(response.getResponse().getCardNumber().length() - 4),
             new Address());
+    card.setCardLine4(cardLine4);
     card.setI2cCardRef(response.getResponse().getReferenceId());
 
     if (program.getFundingType() == FundingType.INDIVIDUAL) {

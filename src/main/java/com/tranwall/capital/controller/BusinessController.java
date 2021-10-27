@@ -5,6 +5,7 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
+import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.tranwall.capital.controller.type.business.Business;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
@@ -57,6 +58,23 @@ public class BusinessController {
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
     return allocationService
         .getAllocationChildren(businessService.retrieveBusiness(businessId), null)
+        .stream()
+        .map(
+            e ->
+                new Allocation(
+                    e.allocation().getId(),
+                    e.allocation().getProgramId(),
+                    e.allocation().getName(),
+                    Account.of(e.account())))
+        .collect(Collectors.toList());
+  }
+
+  @PostMapping("/allocations")
+  private List<Allocation> searchBusinessAllocations(
+      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestBody @Validated SearchBusinessAllocationRequest request) {
+    return allocationService
+        .searchBusinessAllocations(businessService.retrieveBusiness(businessId), request.getName())
         .stream()
         .map(
             e ->

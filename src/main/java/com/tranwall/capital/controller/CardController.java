@@ -33,13 +33,14 @@ public class CardController {
 
     com.tranwall.capital.data.model.Card card =
         cardService.issueCard(
-            request.getBin(),
             programService.retrieveProgram(request.getProgramId()),
             businessId,
             request.getAllocationId(),
             request.getUserId(),
             request.getCurrency(),
-            request.getCardType());
+            request.getCardType(),
+            request.getCardLine3(),
+            request.getCardLine4().orElse(""));
 
     return new IssueCardResponse(card.getId(), null);
   }

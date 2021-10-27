@@ -14,24 +14,26 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
-import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.CardService.CardRecord;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,14 +60,31 @@ public class AllocationService {
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> parentAllocationId,
       String name,
-      Currency currency) {
+      Amount amount) {
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
+    Account parentAccount = null;
+    if (BigDecimalUtils.isLargerThan(amount.getAmount(), BigDecimal.ZERO)) {
+
+      if (parentAllocationId == null) {
+        parentAccount =
+            accountService.retrieveBusinessAccount(businessId, amount.getCurrency(), true);
+      } else {
+        parentAccount =
+            accountService.retrieveAllocationAccount(
+                businessId, amount.getCurrency(), parentAllocationId);
+      }
+
+      if (parentAccount.getLedgerBalance().isSmallerThan(amount)) {
+        throw new InsufficientFundsException(
+            parentAccount.getId(), AdjustmentType.REALLOCATE, amount);
+      }
+    }
 
     // creating the account because the allocation references it
     Account account =
         accountService.createAccount(
-            businessId, AccountType.ALLOCATION, allocationId.toUuid(), currency);
+            businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
     Allocation allocation = new Allocation(businessId, programId, account.getId(), name);
@@ -87,6 +106,10 @@ public class AllocationService {
     }
 
     allocation = allocationRepository.save(allocation);
+
+    if (parentAccount != null) {
+      accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
+    }
 
     return new AllocationRecord(allocation, account);
   }
@@ -125,6 +148,33 @@ public class AllocationService {
       return Collections.emptyList();
     }
 
+    Map<UUID, Account> accountMap = getAllocationAccountMap(business, allocations);
+
+    return allocations.stream()
+        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
+        .collect(Collectors.toList());
+  }
+
+  public List<AllocationRecord> searchBusinessAllocations(
+      Business business, @NonNull @NotNull(message = "name required") String name) {
+    log.info("all allocations: {}", allocationRepository.findAll());
+    List<Allocation> allocations =
+        allocationRepository.findByBusinessIdAndNameIgnoreCaseContaining(business.getId(), name);
+    log.info("allocations {} {}: {}", business.getId(), name, allocations);
+    // if none, return empty list
+    if (allocations.size() == 0) {
+      return Collections.emptyList();
+    }
+
+    Map<UUID, Account> accountMap = getAllocationAccountMap(business, allocations);
+
+    return allocations.stream()
+        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
+        .collect(Collectors.toList());
+  }
+
+  private Map<UUID, Account> getAllocationAccountMap(
+      Business business, List<Allocation> allocations) {
     // get list of accounts to go with the allocations and put into map to make the response easier
     // to create. Expect count to be equal
     List<TypedId<AllocationId>> allocationIds =
@@ -137,10 +187,7 @@ public class AllocationService {
     }
     Map<UUID, Account> accountMap =
         accounts.stream().collect(Collectors.toMap(Account::getOwnerId, Function.identity()));
-
-    return allocations.stream()
-        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
-        .collect(Collectors.toList());
+    return accountMap;
   }
 
   @Transactional

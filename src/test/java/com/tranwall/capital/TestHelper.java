@@ -387,9 +387,10 @@ public class TestHelper {
   public AllocationRecord createAllocation(
       TypedId<ProgramId> programId,
       TypedId<BusinessId> businessId,
+      String name,
       TypedId<AllocationId> parentAllocationId) {
     return allocationService.createAllocation(
-        programId, businessId, parentAllocationId, "", Currency.USD);
+        programId, businessId, parentAllocationId, name, Amount.of(Currency.USD));
   }
 
   public CreateUserRecord createUser(Business business) throws IOException {
@@ -412,13 +413,14 @@ public class TestHelper {
       Program program,
       Currency currency) {
     return cardService.issueCard(
-        bin.getBin(),
         program,
         business.getId(),
         allocation.getId(),
         user.getId(),
         currency,
-        CardType.VIRTUAL);
+        CardType.VIRTUAL,
+        "",
+        "");
   }
 
   public Address generateEntityAddress() {

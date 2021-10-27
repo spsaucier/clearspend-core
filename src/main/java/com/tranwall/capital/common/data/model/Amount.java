@@ -37,6 +37,10 @@ public class Amount {
         currency, amount.setScale(currency.getDecimalScale(), RoundingMode.UNNECESSARY));
   }
 
+  public static Amount of(Currency currency) {
+    return new Amount(currency, BigDecimal.ZERO);
+  }
+
   public Amount add(Amount amount) {
     if (currency != amount.getCurrency()) {
       throw new CurrencyMismatchException(currency, amount.getCurrency());
@@ -63,6 +67,10 @@ public class Amount {
 
   public boolean isSmallerThan(@NonNull Amount that) {
     return BigDecimalUtils.isSmallerThan(amount, that.amount);
+  }
+
+  public boolean isLargerThan(@NonNull Amount that) {
+    return BigDecimalUtils.isLargerThan(amount, that.amount);
   }
 
   public boolean isNegative() {

@@ -48,7 +48,7 @@ public class UserControllerTest extends BaseCapitalTest {
     Program program = testHelper.createProgram(bin);
     Business business = testHelper.createBusiness(program).business();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+        testHelper.createAllocation(program.getId(), business.getId(), "", null);
 
     CreateUserRecord userRecord =
         userService.createUser(
@@ -91,7 +91,7 @@ public class UserControllerTest extends BaseCapitalTest {
     Program program = testHelper.createProgram(bin);
     Business business = testHelper.createBusiness(program).business();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+        testHelper.createAllocation(program.getId(), business.getId(), "", null);
 
     CreateUserRecord userRecord =
         userService.createUser(

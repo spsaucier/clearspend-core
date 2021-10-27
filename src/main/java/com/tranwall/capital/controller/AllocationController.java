@@ -45,7 +45,7 @@ public class AllocationController {
             businessId,
             request.getParentAllocationId(),
             request.getName(),
-            request.getCurrency());
+            request.getAmount().toAmount());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
   }

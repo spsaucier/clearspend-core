@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.controller.type.Amount;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NonNull;
@@ -27,8 +27,8 @@ public class CreateAllocationRequest {
   @JsonProperty("parentAllocationId")
   private TypedId<AllocationId> parentAllocationId;
 
-  @JsonProperty("currency")
+  @JsonProperty("amount")
   @NonNull
-  @NotNull(message = "currency required")
-  private Currency currency;
+  @NotNull(message = "amount required")
+  private Amount amount;
 }

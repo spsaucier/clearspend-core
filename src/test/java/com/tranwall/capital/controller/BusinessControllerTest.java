@@ -14,6 +14,7 @@ import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.allocation.Allocation;
+import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.tranwall.capital.data.model.Account;
@@ -95,14 +96,14 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     AllocationRecord allocationRecord = businessAndAllocationsRecord.allocationRecords().get(0);
 
-    BusinessFundAllocationRequest businessFundAllocationRequest =
+    BusinessFundAllocationRequest request =
         new BusinessFundAllocationRequest(
             allocationRecord.allocation().getId(),
             allocationRecord.account().getId(),
             FundsTransactType.WITHDRAW,
             new Amount(Currency.USD, valueOf(100)));
 
-    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
+    String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse mockHttpServletResponse =
         mvc.perform(
@@ -141,7 +142,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     Account account =
         accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+        testHelper.createAllocation(program.getId(), business.getId(), "", null);
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),
@@ -184,7 +185,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), null);
+        testHelper.createAllocation(program.getId(), business.getId(), "", null);
     BusinessFundAllocationRequest businessFundAllocationRequest =
         new BusinessFundAllocationRequest(
             parentAllocationRecord.allocation().getId(),
@@ -210,7 +211,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     Program program = testHelper.retrieveIndividualProgram();
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     testHelper.createAllocation(
-        program.getId(), businessAndAllocationsRecord.business().getId(), null);
+        program.getId(), businessAndAllocationsRecord.business().getId(), "", null);
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -236,5 +237,38 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .andExpect(status().is5xxServerError())
         .andReturn()
         .getResponse();
+  }
+
+  @SneakyThrows
+  @Test
+  public void searchBusinessAllocation_success() {
+    Program program = testHelper.retrieveIndividualProgram();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    AllocationRecord allocationRecord =
+        testHelper.createAllocation(
+            program.getId(),
+            businessAndAllocationsRecord.business().getId(),
+            "12345HelloWorld09876",
+            null);
+
+    SearchBusinessAllocationRequest request = new SearchBusinessAllocationRequest("45Hell");
+
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/businesses/allocations")
+                    .header("businessId", businessAndAllocationsRecord.business().getId())
+                    .content(body)
+                    .contentType(APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    List<Allocation> responseAllocationList =
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    assertEquals(1, responseAllocationList.size(), "The expected result is not ok");
+    assertThat(responseAllocationList.get(0).getAllocationId())
+        .isEqualTo(allocationRecord.allocation().getId());
   }
 }

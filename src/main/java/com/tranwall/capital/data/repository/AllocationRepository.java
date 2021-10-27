@@ -22,4 +22,7 @@ public interface AllocationRepository
 
   List<Allocation> findByBusinessIdAndParentAllocationId(
       TypedId<BusinessId> businessId, TypedId<AllocationId> parentBusinessAllocationId);
+
+  List<Allocation> findByBusinessIdAndNameIgnoreCaseContaining(
+      TypedId<BusinessId> businessId, String name);
 }
