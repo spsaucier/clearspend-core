@@ -3,7 +3,6 @@ package com.tranwall.capital.controller.nonprod.type.testdata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
-import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
@@ -25,10 +24,10 @@ public class CreateTestDataResponse {
   List<Program> programs;
 
   @JsonProperty("businesses")
-  List<Business> business;
+  List<TestBusiness> business;
 
   @AllArgsConstructor
-  public static class Business {
+  public static class TestBusiness {
     @JsonProperty("business")
     com.tranwall.capital.data.model.Business business;
 

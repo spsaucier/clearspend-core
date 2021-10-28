@@ -206,11 +206,11 @@ public class TestDataController {
   }
 
   private CreateTestDataResponse getGeneratedData() {
-    List<CreateTestDataResponse.Business> businesses =
+    List<CreateTestDataResponse.TestBusiness> businesses =
         businessRepository.findAll().stream()
             .map(
                 business ->
-                    new CreateTestDataResponse.Business(
+                    new CreateTestDataResponse.TestBusiness(
                         business,
                         userService.retrieveUsersForBusiness(business.getId()),
                         allocationRepository.findAll().stream()
