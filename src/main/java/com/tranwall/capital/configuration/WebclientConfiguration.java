@@ -83,6 +83,24 @@ public class WebclientConfiguration {
         .build();
   }
 
+  @Bean
+  WebClient fusionAuthWebClient(
+      @Value("${client.fusionauth.base-url}") String url,
+      @Value("${spring.security.oauth2.client.clientId}") String clientId,
+      @Value("${spring.security.oauth2.client.secret}") String secret) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl(url)
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(clientId, secret);
+              headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            })
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+  }
+
   // Somehow weblcient doesn't pick the correct mapper and uses the one that sends dates as
   // timestamps. Using this bean in order to make sure that correct mapper is used
   @Bean

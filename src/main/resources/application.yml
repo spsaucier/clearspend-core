@@ -18,6 +18,14 @@ spring:
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
+  security:
+    oauth2:
+      client:
+        clientId: 58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6
+        secret: d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0
+      resourceserver:
+        jwt:
+          issuer-uri: ${client.fusionauth.base-url}
 
 tranwall:
   encryption:
@@ -62,18 +70,8 @@ client:
   fusionauth:
     api-key: ${FUSIONAUTH_API_KEY:TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx}
     base-url: ${FUSIONAUTH_BASE_URL:https://fa.capital.dev.tranwall.net}
----
 
-#Docker profile
-spring:
-  config:
-    activate:
-      on-profile: docker
-  datasource:
-    url: jdbc:postgresql://db:5432/postgres
-    username: postgres
-    password: docker
-  jpa:
-    hibernate:
-      ddl-auto: none
-logging.level.com.tranwall.capital: DEBUG
+logging:
+  level:
+    root: INFO
+    com.tranwall.capital: DEBUG

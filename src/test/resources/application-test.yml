@@ -3,6 +3,14 @@ spring:
     url: ${TC_DB_URL}
     username: ${TC_DB_USERNAME}
     password: ${TC_DB_PASSWORD}
+  security:
+    oauth2:
+      client:
+        clientId:
+        secret:
+      resourceserver:
+        jwt:
+          issuer-uri:
 
 client:
   twilio:
@@ -20,5 +28,5 @@ client:
 
 logging:
   level:
-    ROOT: INFO
+    root: INFO
     com.tranwall.capital: DEBUG
