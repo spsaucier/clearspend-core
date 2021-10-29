@@ -15,6 +15,7 @@ import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
+import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -35,9 +36,12 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final Faker faker = new Faker();
 
+  private Cookie authCookie;
+
   @BeforeEach
   void init() {
     testHelper.init();
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -67,7 +71,8 @@ public class CardControllerTest extends BaseCapitalTest {
                 post("/cards")
                     .header("businessId", business.getId().toString())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

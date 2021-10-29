@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FusionAuthService {
 
-  private static final String BUSINESS_ID_KEY = "businessId";
+  public static final String BUSINESS_ID_KEY = "businessId";
 
   private final io.fusionauth.client.FusionAuthClient client;
 

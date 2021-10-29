@@ -6,11 +6,8 @@ spring:
   security:
     oauth2:
       client:
-        clientId:
-        secret:
-      resourceserver:
-        jwt:
-          issuer-uri:
+        clientId: f9d859e3-994a-42d4-9b23-4ba3f1667f49
+        secret: WtNt5JB0pdbnPhhtcpgPNQY_V4cl1-FPoGM4CPpPHg4
 
 client:
   twilio:

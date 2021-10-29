@@ -14,6 +14,7 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import java.util.List;
+import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -36,9 +37,12 @@ public class UserControllerTest extends BaseCapitalTest {
 
   private final Faker faker = new Faker();
 
+  private Cookie authCookie;
+
   @BeforeEach
   void init() {
     testHelper.init();
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -74,7 +78,8 @@ public class UserControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get("/users/list")
                     .header("businessId", business.getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -120,7 +125,8 @@ public class UserControllerTest extends BaseCapitalTest {
                     .queryParam(
                         UserController.USER_NAME,
                         userRecord.user().getFirstName().toString().substring(0, 3))
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

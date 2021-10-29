@@ -8,6 +8,7 @@ import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.OnboardBusinessRecord;
 import com.tranwall.capital.controller.type.business.owner.UpdateBusinessOwnerRequest;
 import com.tranwall.capital.data.model.BusinessProspect;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
 
+  private Cookie authCookie;
+
   OnboardBusinessRecord onboardBusinessRecord;
 
   @BeforeEach
@@ -34,6 +37,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
       onboardBusinessRecord = testHelper.onboardBusiness();
     }
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -57,7 +61,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                         String.format(
                             "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

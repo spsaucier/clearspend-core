@@ -21,6 +21,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.configuration.SecurityConfig;
 import com.tranwall.capital.controller.BusinessBankAccountController.LinkTokenResponse;
 import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
@@ -30,6 +31,7 @@ import com.tranwall.capital.controller.type.business.prospect.CreateBusinessPros
 import com.tranwall.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.tranwall.capital.controller.type.user.LoginRequest;
 import com.tranwall.capital.crypto.PasswordUtil;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.Account;
@@ -75,7 +77,9 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -120,6 +124,8 @@ public class TestHelper {
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
   private final MockMvc mvc;
+
+  private volatile Cookie authCookie;
 
   public record OnboardBusinessRecord(
       Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {}
@@ -210,6 +216,22 @@ public class TestHelper {
     assertThat(record.businessProspectStatus()).isEqualTo(status);
   }
 
+  @SneakyThrows
+  public Cookie login(String email, String password) {
+    LoginRequest request = new LoginRequest(email, password);
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse response =
+        mvc.perform(post("/authentication/login").contentType("application/json").content(body))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response);
+    authCookie = response.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
+    return authCookie;
+  }
+
   public BusinessProspect createBusinessProspect() throws Exception {
     CreateBusinessProspectRequest request =
         new CreateBusinessProspectRequest(generateEmail(), generateFirstName(), generateLastName());
@@ -283,7 +305,8 @@ public class TestHelper {
         mvc.perform(
                 post(String.format("/business-prospects/%s/convert", businessProspectId))
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

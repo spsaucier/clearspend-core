@@ -1,7 +1,95 @@
 {
+  "variables": {
+    "defaultTenantId": "f9fdf77f-ac15-4de3-8bc8-91f87d312256",
+    "accessTokenPopulateLambdaId": "#{UUID()}"
+  },
   "apiKeys": [
     {
       "key": "TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx"
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "url": "/api/user/registration",
+      "body": {
+        "user": {
+          "email": "admin@tranwall.com",
+          "password": "Password1!"
+        },
+        "registration": {
+          "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",
+          "roles": [
+            "admin"
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/9fe9a7ca-8df2-4bb6-b29d-a1dcec5421b3",
+      "body": {
+        "user": {
+          "email": "tester@tranwall.com",
+          "password": "Password1!",
+          "data": {
+            "businessId": "1e515ac8-ac64-42ae-b9c2-26a0823007ba"
+          }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/key/generate/c97515cc-9d1e-4df7-9eb7-8fa95284e6ba",
+      "body": {
+        "key": {
+          "algorithm": "RS256",
+          "name": "capital-test-key",
+          "length": 2048
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "url": "/api/tenant/#{defaultTenantId}",
+      "body": {
+        "tenant": {
+          "issuer": "http://localhost:#{ENV.FUSIONAUTH_PORT}"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/lambda/#{accessTokenPopulateLambdaId}",
+      "body": {
+        "lambda": {
+          "name": "business id to jwt token",
+          "type": "JWTPopulate",
+          "body": "function populate(jwt, user, registration) {\n  if (user.data && user.data.businessId) {\n    jwt.businessId = user.data.businessId;\n  } else {\n    jwt.businessId = \"nope\";\n  }\n  if (user.id) {\n    jwt.userId = user.id;\n  }\n}"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/application/f9d859e3-994a-42d4-9b23-4ba3f1667f49",
+      "body": {
+        "application": {
+          "name": "Capital Test Env",
+          "jwtConfiguration": {
+            "enabled": true,
+            "accessTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba",
+            "idTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba"
+          },
+          "oauthConfiguration": {
+            "clientId": "f9d859e3-994a-42d4-9b23-4ba3f1667f49",
+            "clientSecret": "WtNt5JB0pdbnPhhtcpgPNQY_V4cl1-FPoGM4CPpPHg4",
+            "enabledGrants": ["authorization_code", "password", "refresh_token"]
+          },
+          "lambdaConfiguration": {
+            "accessTokenPopulateId": "#{accessTokenPopulateLambdaId}"
+          }
+        }
+      }
     }
   ]
 }

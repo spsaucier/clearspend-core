@@ -24,6 +24,7 @@ import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
   private Bin bin;
   private Program program;
+  private Cookie authCookie;
 
   @BeforeEach
   public void setup() {
@@ -52,6 +54,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
     }
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -100,7 +103,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
                 post("/account-activity")
                     .header("businessId", business.getId())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

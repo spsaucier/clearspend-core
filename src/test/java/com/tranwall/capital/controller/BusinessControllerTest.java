@@ -27,6 +27,7 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import java.util.List;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +45,12 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
 
+  private Cookie authCookie;
+
   @BeforeEach
   void init() {
     testHelper.init();
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -58,7 +62,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get("/businesses/" + business.getId())
                     .header("businessId", business.getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -110,7 +115,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
                 post("/businesses/transactions")
                     .header("businessId", business.getId())
                     .content(body)
-                    .contentType(APPLICATION_JSON_VALUE))
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -162,7 +168,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
                 post("/businesses/transactions")
                     .header("businessId", business.getId())
                     .content(body)
-                    .contentType(APPLICATION_JSON_VALUE))
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -199,7 +206,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
             post("/businesses/transactions")
                 .header("businessId", business.getId())
                 .content(body)
-                .contentType(APPLICATION_JSON_VALUE))
+                .contentType(APPLICATION_JSON_VALUE)
+                .cookie(authCookie))
         .andExpect(status().is4xxClientError())
         .andReturn()
         .getResponse();
@@ -217,7 +225,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get("/businesses/allocations")
                     .header("businessId", businessAndAllocationsRecord.business().getId())
-                    .contentType(APPLICATION_JSON_VALUE))
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -233,7 +242,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
     mvc.perform(
             get("/businesses/allocations")
                 .header("businessId", "businessId")
-                .contentType(APPLICATION_JSON_VALUE))
+                .contentType(APPLICATION_JSON_VALUE)
+                .cookie(authCookie))
         .andExpect(status().is5xxServerError())
         .andReturn()
         .getResponse();
@@ -260,7 +270,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
                 post("/businesses/allocations")
                     .header("businessId", businessAndAllocationsRecord.business().getId())
                     .content(body)
-                    .contentType(APPLICATION_JSON_VALUE))
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

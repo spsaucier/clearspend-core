@@ -22,6 +22,7 @@ import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +40,12 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
 
+  private Cookie authCookie;
+
   @BeforeEach
   void init() {
     testHelper.init();
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -62,7 +66,8 @@ class AllocationControllerTest extends BaseCapitalTest {
                 post("/allocations")
                     .header("businessId", business.getId().toString())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -81,7 +86,8 @@ class AllocationControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get(String.format("/allocations/%s", allocationRecord.allocation().getId()))
                     .header("businessId", business.getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -104,7 +110,8 @@ class AllocationControllerTest extends BaseCapitalTest {
                 get(String.format(
                         "/allocations/%s/children", parentAllocationRecord.allocation().getId()))
                     .header("businessId", business.getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -152,7 +159,8 @@ class AllocationControllerTest extends BaseCapitalTest {
                         "/allocations/%s/transactions", allocationRecord.allocation().getId()))
                     .header("businessId", business.getId().toString())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -178,7 +186,8 @@ class AllocationControllerTest extends BaseCapitalTest {
                 post("/allocations")
                     .header("businessId", business.getId().toString())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

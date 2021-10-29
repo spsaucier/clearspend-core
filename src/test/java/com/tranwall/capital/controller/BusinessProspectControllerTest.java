@@ -135,10 +135,10 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.MOBILE_VERIFIED);
   }
 
-  void setBusinessProspectPassword(TypedId<BusinessProspectId> businessProspectId)
+  String setBusinessProspectPassword(TypedId<BusinessProspectId> businessProspectId)
       throws Exception {
-    SetBusinessProspectPasswordRequest request =
-        new SetBusinessProspectPasswordRequest(PasswordUtil.generatePassword());
+    String password = PasswordUtil.generatePassword();
+    SetBusinessProspectPasswordRequest request = new SetBusinessProspectPasswordRequest(password);
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
@@ -149,6 +149,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
+    return password;
   }
 
   @Test
@@ -230,7 +231,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     mockServerHelper.verifyPhoneVerificationCalled(1);
 
     // when
-    setBusinessProspectPassword(businessProspect.getId());
+    String password = setBusinessProspectPassword(businessProspect.getId());
 
     // then
     User user =
@@ -240,6 +241,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     log.info("dbRecord: {}", dbRecord);
     assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());
+
+    // login
+    testHelper.login(businessProspect.getEmail().getEncrypted(), password);
 
     // when
     ConvertBusinessProspectResponse convertBusinessProspectResponse =

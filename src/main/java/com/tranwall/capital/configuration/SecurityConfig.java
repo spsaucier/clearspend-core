@@ -1,6 +1,5 @@
 package com.tranwall.capital.configuration;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -8,7 +7,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
-@Profile("!test")
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
   public static final String ACCESS_TOKEN_COOKIE_NAME = "X-Auth-Token";
@@ -22,11 +20,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/**",
-            "/actuator/**",
             "/business-prospects",
             "/business-prospects/*/validate-identifier",
             "/business-prospects/*/phone",
             "/business-prospects/*/password",
+            "/actuator/**",
             "/non-production/**");
   }
 

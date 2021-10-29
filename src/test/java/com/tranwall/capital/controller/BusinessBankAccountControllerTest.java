@@ -13,6 +13,7 @@ import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import java.math.BigDecimal;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +32,12 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final PlaidProperties plaidProperties;
 
+  private Cookie authCookie;
+
   @BeforeEach
   void init() {
     testHelper.init();
+    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
   }
 
   @SneakyThrows
@@ -57,7 +61,8 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get(String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken))
                     .header("businessId", testHelper.retrieveBusiness().getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -74,7 +79,8 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         mvc.perform(
                 get("/business-bank-accounts")
                     .header("businessId", testHelper.retrieveBusiness().getId().toString())
-                    .contentType("application/json"))
+                    .contentType("application/json")
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -98,7 +104,8 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
                         "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
                     .header("businessId", testHelper.retrieveBusiness().getId().toString())
                     .contentType("application/json")
-                    .content(body))
+                    .content(body)
+                    .cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
