@@ -5,6 +5,7 @@ import com.tranwall.capital.service.type.PageToken;
 import com.tranwall.capital.service.type.PageToken.OrderBy;
 import java.util.Collections;
 import java.util.List;
+import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -15,10 +16,12 @@ public class PageRequest {
 
   @JsonProperty("pageNumber")
   @NonNull
+  @NotNull(message = "pageNumber should not be null")
   private Integer pageNumber;
 
   @JsonProperty("pageSize")
   @NonNull
+  @NotNull(message = "pageSize should not be null")
   private Integer pageSize;
 
   @JsonProperty("orderBy")

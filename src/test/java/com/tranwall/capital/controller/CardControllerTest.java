@@ -16,6 +16,8 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import javax.servlet.http.Cookie;
+import java.util.List;
+import java.util.Set;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -60,9 +62,8 @@ public class CardControllerTest extends BaseCapitalTest {
             allocationRecord.allocation().getId(),
             user.user().getId(),
             Currency.USD,
-            CardType.VIRTUAL,
-            "",
-            null);
+            Set.of(CardType.VIRTUAL, CardType.PLASTIC),
+            true);
 
     String body = objectMapper.writeValueAsString(issueCardRequest);
 
@@ -77,8 +78,8 @@ public class CardControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    IssueCardResponse issueCardResponse =
-        objectMapper.readValue(response.getContentAsString(), IssueCardResponse.class);
+    List<IssueCardResponse> issueCardResponse =
+        objectMapper.readValue(response.getContentAsString(), List.class);
 
     log.info(response.getContentAsString());
   }

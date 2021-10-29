@@ -14,7 +14,7 @@ import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -54,10 +54,10 @@ public class AllocationController {
   private Allocation getAllocation(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "allocationId",
-              value = "ID of the allocation record.",
+              description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     AllocationRecord allocationRecord =
@@ -74,10 +74,10 @@ public class AllocationController {
   private List<Allocation> getAllocationChildren(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "allocationId",
-              value = "ID of the allocation record.",
+              description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     return allocationService
@@ -97,10 +97,10 @@ public class AllocationController {
   private AllocationFundCardResponse reallocateAllocationFunds(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "allocationId",
-              value = "ID of the allocation record.",
+              description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId,
       @RequestBody @Validated AllocationFundCardRequest request) {

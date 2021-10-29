@@ -7,7 +7,7 @@ import com.tranwall.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
@@ -37,10 +37,10 @@ public class BusinessBankAccountDemoController {
   private CreateAdjustmentResponse transact(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable(value = "businessBankAccountId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessBankAccountId",
-              value = "ID of the businessBankAccount record.",
+              description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {

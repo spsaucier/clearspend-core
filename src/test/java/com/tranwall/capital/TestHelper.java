@@ -442,8 +442,8 @@ public class TestHelper {
         user.getId(),
         currency,
         CardType.VIRTUAL,
-        "",
-        "");
+        true,
+        business.getLegalName());
   }
 
   public Address generateEntityAddress() {

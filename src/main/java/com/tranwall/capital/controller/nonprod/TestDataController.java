@@ -114,16 +114,24 @@ public class TestDataController {
         user.user(),
         bin,
         program,
-        Currency.USD);
+        Currency.USD,
+        business.business().getId());
     issueCard(
-        business.business(), allocation1.allocation(), user2.user(), bin, program, Currency.USD);
+        business.business(),
+        allocation1.allocation(),
+        user2.user(),
+        bin,
+        program,
+        Currency.USD,
+        business.business().getId());
     issueCard(
         business.business(),
         parentAllocation2.allocation(),
         user3.user(),
         bin,
         program,
-        Currency.USD);
+        Currency.USD,
+        business.business().getId());
 
     return getGeneratedData();
   }
@@ -193,7 +201,8 @@ public class TestDataController {
       User user,
       Bin bin,
       Program program,
-      Currency currency) {
+      Currency currency,
+      TypedId<BusinessId> businessId) {
     return cardService.issueCard(
         program,
         business.getId(),
@@ -201,8 +210,8 @@ public class TestDataController {
         user.getId(),
         currency,
         CardType.VIRTUAL,
-        user.getFirstName().toString(),
-        user.getLastName().toString());
+        true,
+        businessService.getBusiness(businessId).business().getLegalName());
   }
 
   private CreateTestDataResponse getGeneratedData() {

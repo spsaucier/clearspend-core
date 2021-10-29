@@ -6,7 +6,7 @@ import com.tranwall.capital.controller.type.program.CreateProgramRequest;
 import com.tranwall.capital.controller.type.program.CreateProgramResponse;
 import com.tranwall.capital.controller.type.program.Program;
 import com.tranwall.capital.service.ProgramService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -46,10 +46,10 @@ public class ProgramController {
   @GetMapping("/{programId}")
   private Program getProgram(
       @PathVariable(value = "programId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "programId",
-              value = "ID of the program record.",
+              description = "ID of the program record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<ProgramId> programId) {
     return new Program(programService.retrieveProgram(programId));

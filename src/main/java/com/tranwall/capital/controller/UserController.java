@@ -24,7 +24,7 @@ import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ReceiptService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -109,10 +109,10 @@ public class UserController {
   @GetMapping("/{userId}")
   private User getUser(
       @PathVariable(value = "userId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "userId",
-              value = "ID of the user record.",
+              description = "ID of the user record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
     return new User(userService.retrieveUser(userId));
@@ -122,11 +122,7 @@ public class UserController {
   private List<UserData> getUsersByUserName(
       @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestParam(required = false, name = USER_NAME)
-          @ApiParam(
-              required = false,
-              name = USER_NAME,
-              value = "Name of the user.",
-              example = "Ada")
+          @Parameter(name = USER_NAME, description = "Name of the user.", example = "Ada")
           String userName) {
     List<UserData> userDataList;
     if (userName == null) {
@@ -174,10 +170,10 @@ public class UserController {
       @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = "userId") TypedId<UserId> userId,
       @PathVariable(value = "cardId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "cardId",
-              value = "ID of the card record.",
+              description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody CardAccountActivityRequest request) {
@@ -198,20 +194,21 @@ public class UserController {
       @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = "userId") TypedId<UserId> userId,
       @PathVariable(value = "cardId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "cardId",
-              value = "ID of the card record.",
+              description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @PathVariable(value = "adjustmentId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "adjustmentId",
-              value = "ID of the adjustment record.",
+              description = "ID of the adjustment record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AdjustmentId> adjustmentId,
-      @RequestParam("receipt") @ApiParam("receipt") MultipartFile receiptFile,
+      @RequestParam("receipt") @Parameter(name = "receipt", description = "The receipt File")
+          MultipartFile receiptFile,
       @Validated @RequestBody CreateReceiptRequest request) {
     return new CreateReceiptResponse(
         receiptService

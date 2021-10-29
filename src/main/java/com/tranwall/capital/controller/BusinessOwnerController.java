@@ -4,7 +4,7 @@ import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.owner.UpdateBusinessOwnerRequest;
 import com.tranwall.capital.service.BusinessOwnerService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,10 +23,10 @@ public class BusinessOwnerController {
   @PatchMapping("/{businessOwnerId}")
   private void updateBusinessOwner(
       @PathVariable(value = "businessOwnerId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessOwnerId",
-              value = "ID of the businessOwner record.",
+              description = "ID of the businessOwner record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessOwnerId> businessOwnerId,
       @Validated @RequestBody UpdateBusinessOwnerRequest request) {

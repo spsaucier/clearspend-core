@@ -13,7 +13,7 @@ import com.tranwall.capital.data.model.BusinessProspect;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.tranwall.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,10 +43,10 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/validate-identifier")
   private void validateBusinessProspectEmail(
       @PathVariable(value = "businessProspectId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessProspectId",
-              value = "ID of the businessProspect record.",
+              description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ValidateBusinessProspectIdentifierRequest request) {
@@ -57,10 +57,10 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/phone")
   private void setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessProspectId",
-              value = "ID of the businessProspect record.",
+              description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
@@ -70,10 +70,10 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/password")
   private void setBusinessProspectPassword(
       @PathVariable(value = "businessProspectId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessProspectId",
-              value = "ID of the businessProspect record.",
+              description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPasswordRequest request) {
@@ -85,10 +85,10 @@ public class BusinessProspectController {
   @PostMapping("/{businessProspectId}/convert")
   private ConvertBusinessProspectResponse convertBusinessProspect(
       @PathVariable(value = "businessProspectId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessProspectId",
-              value = "ID of the businessProspect record.",
+              description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ConvertBusinessProspectRequest request) {

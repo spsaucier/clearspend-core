@@ -9,7 +9,7 @@ import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAcc
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.List;
 import lombok.Data;
@@ -81,10 +81,10 @@ public class BusinessBankAccountController {
   private CreateAdjustmentResponse transact(
       @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
       @PathVariable(value = "businessBankAccountId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "businessBankAccountId",
-              value = "ID of the businessBankAccount record.",
+              description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {

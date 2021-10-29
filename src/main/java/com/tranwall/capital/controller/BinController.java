@@ -5,7 +5,7 @@ import com.tranwall.capital.controller.type.bin.Bin;
 import com.tranwall.capital.controller.type.bin.CreateBinRequest;
 import com.tranwall.capital.controller.type.bin.CreateBinResponse;
 import com.tranwall.capital.service.BinService;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -39,10 +39,10 @@ public class BinController {
   @GetMapping("{binOrBinId}")
   private Bin getBin(
       @PathVariable(value = "binOrBinId")
-          @ApiParam(
+          @Parameter(
               required = true,
               name = "binOrBinId",
-              value = "A BIN or the ID of the bin record.",
+              description = "A BIN or the ID of the bin record.",
               example = "456123")
           String binOrBinId) {
     if (binOrBinId.length() == 6) {

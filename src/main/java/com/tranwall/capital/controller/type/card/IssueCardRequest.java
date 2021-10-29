@@ -8,7 +8,7 @@ import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.Optional;
+import java.util.Set;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -45,17 +45,11 @@ public class IssueCardRequest {
   @JsonProperty("cardType")
   @NonNull
   @NotNull(message = "Card Type required")
-  private CardType cardType;
+  @Size(max = 2)
+  private Set<CardType> cardType;
 
-  @JsonProperty("cardLine3")
+  @JsonProperty("isPersonal")
   @NonNull
-  @NotNull(message = "Name on card required")
-  @Size(max = 26)
-  @Schema(title = "Name on card. First line", required = true, example = "Stone")
-  private String cardLine3;
-
-  @JsonProperty("cardLine4")
-  @Size(max = 26)
-  @Schema(title = "Name on card. Second line", required = false, example = "Jessica")
-  private Optional<String> cardLine4;
+  @NotNull(message = "isPersonal required")
+  private Boolean isPersonal;
 }

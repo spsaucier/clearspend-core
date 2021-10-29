@@ -18,6 +18,7 @@ import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
@@ -68,8 +69,29 @@ public class CardService {
       TypedId<UserId> userId,
       Currency currency,
       CardType cardType,
-      String cardLine3,
-      String cardLine4) {
+      Boolean isPersonal,
+      String businessLegalName) {
+
+    // build cardLine3 and cardLine4 until it will be delivered from UI
+    StringBuilder cardLine3 = new StringBuilder();
+    StringBuilder cardLine4 = new StringBuilder();
+    if (isPersonal) {
+      User user = userService.retrieveUser(userId);
+      cardLine3.append(user.getFirstName()).append(" ").append(user.getLastName());
+    } else {
+      cardLine3.append(businessLegalName);
+    }
+    if (cardLine3.length() > 25) {
+      StringBuilder name = new StringBuilder();
+      for (String s : cardLine3.toString().split(" ")) {
+        if (name.length() + s.length() < 26) {
+          name.append(s);
+        } else {
+          cardLine4.append(s);
+        }
+      }
+      cardLine3 = name;
+    }
 
     // hack until we actually call i2c
     String l = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
@@ -92,7 +114,7 @@ public class CardService {
             program.getFundingType(),
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
-            cardLine3,
+            cardLine3.toString(),
             cardType,
             new RequiredEncryptedStringWithHash(response.getResponse().getCardNumber()),
             response
@@ -100,7 +122,7 @@ public class CardService {
                 .getCardNumber()
                 .substring(response.getResponse().getCardNumber().length() - 4),
             new Address());
-    card.setCardLine4(cardLine4);
+    card.setCardLine4(cardLine4.toString());
     card.setI2cCardRef(response.getResponse().getReferenceId());
 
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
