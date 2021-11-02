@@ -431,6 +431,7 @@ insert into bin (id, created, updated, version, bin, name)
 values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',
         'Manually created test BIN');
 
+-- The id for this program id is the default program, and it should be always here
 insert into program (id, created, updated, version, name, bin, funding_type, i2c_card_program_ref)
 values ('6faf3838-b2d7-422c-8d6f-c2294ebc73b4', now(), now(), 1, 'Test Tranwall Program - pooled',
         '401288', 'POOLED', 'i2c reference 1');

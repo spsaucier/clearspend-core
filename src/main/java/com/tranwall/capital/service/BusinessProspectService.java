@@ -5,6 +5,7 @@ import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
+import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
@@ -22,7 +23,7 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
-import java.util.Collections;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +37,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessProspectService {
 
+  public static final TypedId<ProgramId> DEFAULT_PROGRAM_ID =
+      new TypedId<>("6faf3838-b2d7-422c-8d6f-c2294ebc73b4");
   private final BusinessProspectRepository businessProspectRepository;
 
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
+  private final ProgramService programService;
+  private final UserService userService;
 
   public record BusinessProspectRecord(
       BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}
@@ -197,7 +202,8 @@ public class BusinessProspectService {
       BusinessType businessType,
       String businessPhone,
       String employerIdentificationNumber,
-      Address toAddress) {
+      Address toAddress)
+      throws IOException {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
@@ -217,7 +223,7 @@ public class BusinessProspectService {
             employerIdentificationNumber,
             businessProspect.getEmail().getEncrypted(),
             businessPhone,
-            Collections.emptyList(),
+            List.of(DEFAULT_PROGRAM_ID),
             Currency.USD);
 
     BusinessOwner businessOwner =
@@ -229,6 +235,7 @@ public class BusinessProspectService {
             toAddress,
             businessProspect.getEmail().getEncrypted(),
             businessProspect.getPhone().getEncrypted(),
+            false,
             businessProspect.getSubjectRef());
 
     // delete the business prospect so that the owner of the email could register a new business

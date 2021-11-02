@@ -14,6 +14,7 @@ import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.tranwall.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -91,7 +92,8 @@ public class BusinessProspectController {
               description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
-      @Validated @RequestBody ConvertBusinessProspectRequest request) {
+      @Validated @RequestBody ConvertBusinessProspectRequest request)
+      throws IOException {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
             businessProspectId,

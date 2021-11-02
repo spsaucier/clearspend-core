@@ -63,7 +63,8 @@ class UserServiceTest extends BaseCapitalTest {
             null,
             faker.internet().emailAddress(),
             faker.phoneNumber().phoneNumber(),
-            true);
+            true,
+            null);
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
   }
@@ -80,7 +81,8 @@ class UserServiceTest extends BaseCapitalTest {
             null,
             faker.internet().emailAddress(),
             null,
-            true);
+            true,
+            null);
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
   }

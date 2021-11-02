@@ -71,7 +71,8 @@ public class UserControllerTest extends BaseCapitalTest {
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        true);
+        true,
+        null);
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -80,7 +81,8 @@ public class UserControllerTest extends BaseCapitalTest {
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        true);
+        true,
+        null);
 
     MockHttpServletResponse response =
         mvc.perform(get("/users/list").contentType("application/json").cookie(authCookie))
@@ -89,7 +91,7 @@ public class UserControllerTest extends BaseCapitalTest {
             .getResponse();
 
     Assertions.assertEquals(
-        2, objectMapper.readValue(response.getContentAsString(), List.class).size());
+        3, objectMapper.readValue(response.getContentAsString(), List.class).size());
     log.info(response.getContentAsString());
   }
 
@@ -117,7 +119,8 @@ public class UserControllerTest extends BaseCapitalTest {
             testHelper.generateEntityAddress(),
             faker.internet().emailAddress(),
             faker.phoneNumber().phoneNumber(),
-            true);
+            true,
+            null);
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -126,7 +129,8 @@ public class UserControllerTest extends BaseCapitalTest {
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        true);
+        true,
+        null);
 
     MockHttpServletResponse responseFilteredByUserName =
         mvc.perform(

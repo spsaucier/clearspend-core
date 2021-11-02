@@ -16,7 +16,9 @@ import com.tranwall.capital.data.model.enums.BusinessOwnerType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.KnowYourCustomerStatus;
 import com.tranwall.capital.data.model.enums.RelationshipToBusiness;
+import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
+import java.io.IOException;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,8 @@ public class BusinessOwnerService {
 
   private final BusinessOwnerRepository businessOwnerRepository;
 
+  private final UserService userService;
+
   private final AlloyClient alloyClient;
 
   @Transactional
@@ -42,7 +46,9 @@ public class BusinessOwnerService {
       Address address,
       String email,
       String phone,
-      String subjectRef) {
+      boolean generatePassword,
+      String subjectRef)
+      throws IOException {
     BusinessOwner businessOwner =
         new BusinessOwner(
             businessId,
@@ -60,6 +66,17 @@ public class BusinessOwnerService {
       businessOwner.setId(businessOwnerId);
     }
     businessOwner.setSubjectRef(subjectRef);
+
+    userService.createUser(
+        businessId,
+        UserType.EMPLOYEE,
+        firstName,
+        lastName,
+        address,
+        email,
+        phone,
+        generatePassword,
+        subjectRef);
 
     return businessOwnerRepository.save(businessOwner);
   }

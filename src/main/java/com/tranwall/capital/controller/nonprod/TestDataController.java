@@ -192,7 +192,8 @@ public class TestDataController {
         generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        true);
+        true,
+        null);
   }
 
   public Card issueCard(

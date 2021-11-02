@@ -29,9 +29,11 @@ import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,10 +42,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
+@Transactional
 public class BusinessControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+
   private final AccountService accountService;
 
   private Cookie authCookie;
@@ -315,5 +319,30 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertEquals(1, responseAllocationList.size(), "The expected result is not ok");
     assertThat(responseAllocationList.get(0).getAllocationId())
         .isEqualTo(allocationRecord.allocation().getId());
+  }
+
+  @SneakyThrows
+  @Test
+  void getBusinessAccountWithFetchHoldTrueWhenAmountIsAddedOnHold() {
+    Business business = testHelper.retrieveBusiness();
+    accountService.depositFunds(
+        business.getId(),
+        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal(200)),
+        true);
+    MockHttpServletResponse response =
+        mvc.perform(get("/businesses/accounts").contentType("application/json").cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(response.getContentAsString());
+    com.tranwall.capital.controller.type.account.Account account =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            com.tranwall.capital.controller.type.account.Account.class);
+    Assertions.assertEquals(
+        com.tranwall.capital.controller.type.Amount.of(
+            com.tranwall.capital.common.data.model.Amount.of(
+                Currency.USD, BigDecimal.valueOf(200))),
+        account.getLedgerBalance());
   }
 }

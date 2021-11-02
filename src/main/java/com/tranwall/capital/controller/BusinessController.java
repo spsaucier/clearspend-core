@@ -8,6 +8,8 @@ import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationR
 import com.tranwall.capital.controller.type.business.Business;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.BusinessService;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BusinessController {
 
+  private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessService businessService;
 
@@ -46,6 +49,13 @@ public class BusinessController {
         Amount.of(reallocateFundsRecord.fromAccount().getLedgerBalance()),
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment().getId(),
         Amount.of(reallocateFundsRecord.toAccount().getLedgerBalance()));
+  }
+
+  @GetMapping("/accounts")
+  private Account getBusinessAccount() {
+    return Account.of(
+        accountService.retrieveBusinessAccount(
+            CurrentUser.get().businessId(), Currency.USD, false));
   }
 
   @GetMapping("/allocations")

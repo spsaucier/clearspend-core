@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type.business.owner;
 
 import static com.tranwall.capital.controller.type.Constants.EMAIL_PATTERN;
+import static com.tranwall.capital.controller.type.Constants.PHONE_PATTERN;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
@@ -16,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class UpdateBusinessOwnerRequest {
+public class CreateOrUpdateBusinessOwnerRequest {
 
   @Sensitive
   @JsonProperty("firstName")
@@ -60,6 +61,13 @@ public class UpdateBusinessOwnerRequest {
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
   @Size(max = 100, message = "The email should not be more than 100 characters.")
   private String email;
+
+  @Sensitive
+  @JsonProperty("phone")
+  @Schema(title = "Phone address of the person", required = false, example = "+12345679")
+  @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
+  @Size(max = 20, message = "The phone should not be more than 20 characters.")
+  private String phone;
 
   @NonNull private Address address;
 }

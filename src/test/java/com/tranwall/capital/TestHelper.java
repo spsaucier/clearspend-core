@@ -376,7 +376,7 @@ public class TestHelper {
   }
 
   public BusinessOwner createBusinessOwner(
-      TypedId<BusinessId> businessId, String email, String password) {
+      TypedId<BusinessId> businessId, String email, String password) throws IOException {
     String firstName = generateFirstName();
     String lastName = generateLastName();
     Address address = generateEntityAddress();
@@ -391,6 +391,7 @@ public class TestHelper {
         address,
         email,
         phone,
+        false,
         businessOwnerId.toString());
   }
 
@@ -476,7 +477,8 @@ public class TestHelper {
         generateEntityAddress(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        true);
+        true,
+        null);
   }
 
   public Card issueCard(

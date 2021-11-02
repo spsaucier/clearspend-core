@@ -24,6 +24,7 @@ Sequence of APIs:
     - POST `/business-prospects/{businessProspectId}/validate-identifier` (phone)
     - POST `/business-prospects/{businessProspectId}/password`
     - POST `/business-prospects/{businessProspectId}/convert`
+    - POST `/business-owners`
     - PUT `/business-owners/{businessOwnerId}`
 2. Link Bank Account. All business-bank-accounts calls require businessId to be passed in a header
    until we have JWTs
@@ -32,13 +33,15 @@ Sequence of APIs:
 3. Deposit to or withdraw from a Business account to a bank account
     - GET `/business-bank-accounts`
     - POST `/business-bank-accounts/{businessBankAccountId}/transactions`
-4. Create Allocation
+4. Retrieve Business Account information
+   - POST `/businesses/accounts` (get business account)
+5. Create Allocation
     - GET `/programs`
     - POST `/allocations`
-5. Traverse allocations
+6. Traverse allocations
     - GET `/allocations/{allocationId}` (get one)
     - GET `/businesses/allocations` (get root Allocations)
     - GET `/allocations/{allocationId}/children` (get children of an allocation)
-5. Reallocate funds
+7. Reallocate funds
     - POST `/businesses/transactions` (Business <-> Allocation)
     - POST `/allocations/{allocationId}/transactions` (Allocation <-> Card)

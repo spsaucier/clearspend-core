@@ -65,7 +65,8 @@ public class UserController {
             request.getAddress() != null ? request.getAddress().toAddress() : null,
             request.getEmail(),
             request.getPhone(),
-            request.isGeneratePassword());
+            request.isGeneratePassword(),
+            null);
 
     return new CreateUserResponse(userServiceUser.user().getId(), userServiceUser.password(), null);
   }
@@ -87,7 +88,8 @@ public class UserController {
                     : null,
                 createUserRequest.getEmail(),
                 createUserRequest.getPhone(),
-                createUserRequest.isGeneratePassword());
+                createUserRequest.isGeneratePassword(),
+                null);
         response.add(
             new CreateUserResponse(
                 userServiceUser.user().getId(), userServiceUser.password(), null));
