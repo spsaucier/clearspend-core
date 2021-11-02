@@ -19,7 +19,10 @@ public class ReceiptImageService {
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
   public String storeReceiptImage(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId, byte[] receiptFile)
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<ReceiptId> receiptId,
+      byte[] receiptFile)
       throws IOException {
 
     String receiptPath = getReceiptPath(businessId, userId, receiptId);
