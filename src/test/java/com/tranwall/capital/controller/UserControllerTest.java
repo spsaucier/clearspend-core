@@ -11,7 +11,8 @@ import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.UserType;
-import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.data.repository.UserRepository;
+import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
 import java.util.List;
@@ -35,6 +36,7 @@ public class UserControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final UserService userService;
+  private final UserRepository userRepository;
 
   private final Faker faker = new Faker();
 
@@ -49,22 +51,27 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsers() {
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
     Bin bin = testHelper.createBin();
     Program program = testHelper.createProgram(bin);
-    Business business = testHelper.createBusiness(program).business();
-    AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
+    testHelper.createBusinessOwner(business.getId(), email, password);
 
-    CreateUserRecord userRecord =
-        userService.createUser(
-            business.getId(),
-            UserType.EMPLOYEE,
-            "First",
-            "Last",
-            testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            true);
+    Cookie authCookie = testHelper.login(email, password);
+
+    testHelper.createAllocation(program.getId(), business.getId(), "", null);
+
+    userService.createUser(
+        business.getId(),
+        UserType.EMPLOYEE,
+        "First",
+        "Last",
+        testHelper.generateEntityAddress(),
+        faker.internet().emailAddress(),
+        faker.phoneNumber().phoneNumber(),
+        true);
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -76,11 +83,7 @@ public class UserControllerTest extends BaseCapitalTest {
         true);
 
     MockHttpServletResponse response =
-        mvc.perform(
-                get("/users/list")
-                    .header("businessId", business.getId().toString())
-                    .contentType("application/json")
-                    .cookie(authCookie))
+        mvc.perform(get("/users/list").contentType("application/json").cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -93,11 +96,17 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsersForBusinessIdByUserName() {
-    Bin bin = testHelper.createBin();
-    Program program = testHelper.createProgram(bin);
-    Business business = testHelper.createBusiness(program).business();
-    AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    testHelper.createBin();
+    Program program = testHelper.retrievePooledProgram();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    testHelper.createBusinessOwner(
+        businessAndAllocationsRecord.business().getId(), email, password);
+    Business business = businessAndAllocationsRecord.business();
+    testHelper.createAllocation(program.getId(), business.getId(), "", null);
+
+    Cookie authCookie = testHelper.login(email, password);
 
     CreateUserRecord userRecord =
         userService.createUser(

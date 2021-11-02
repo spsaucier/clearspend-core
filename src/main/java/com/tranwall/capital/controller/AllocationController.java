@@ -1,11 +1,9 @@
 package com.tranwall.capital.controller;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-
 import com.tranwall.capital.common.typedid.data.AllocationId;
-import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
@@ -25,7 +23,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,12 +36,11 @@ public class AllocationController {
 
   @PostMapping("")
   private CreateAllocationResponse createAllocation(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
             request.getProgramId(),
-            businessId,
+            CurrentUser.get().businessId(),
             request.getParentAllocationId(),
             request.getName(),
             request.getAmount().toAmount());
@@ -54,7 +50,6 @@ public class AllocationController {
 
   @GetMapping("/{allocationId}")
   private Allocation getAllocation(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -63,7 +58,8 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     AllocationRecord allocationRecord =
-        allocationService.getAllocation(businessService.retrieveBusiness(businessId), allocationId);
+        allocationService.getAllocation(
+            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
 
     return new Allocation(
         allocationRecord.allocation().getId(),
@@ -74,7 +70,6 @@ public class AllocationController {
 
   @GetMapping("/{allocationId}/children")
   private List<Allocation> getAllocationChildren(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -83,7 +78,8 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     return allocationService
-        .getAllocationChildren(businessService.retrieveBusiness(businessId), allocationId)
+        .getAllocationChildren(
+            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId)
         .stream()
         .map(
             e ->
@@ -97,7 +93,6 @@ public class AllocationController {
 
   @PostMapping("/{allocationId}/transactions")
   private AllocationFundCardResponse reallocateAllocationFunds(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -109,7 +104,7 @@ public class AllocationController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         allocationService.reallocateAllocationFunds(
-            businessService.retrieveBusiness(businessId),
+            businessService.retrieveBusiness(CurrentUser.get().businessId()),
             allocationId,
             request.getAllocationAccountId(),
             request.getCardId(),

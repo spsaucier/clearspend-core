@@ -1,10 +1,7 @@
 package com.tranwall.capital.controller;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-
-import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
 import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationRequest;
@@ -14,16 +11,13 @@ import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAl
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.BusinessService;
-import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,12 +31,11 @@ public class BusinessController {
 
   @PostMapping("/transactions")
   private BusinessFundAllocationResponse reallocateBusinessFunds(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody @Validated BusinessFundAllocationRequest request) {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         businessService.reallocateBusinessFunds(
-            businessId,
+            CurrentUser.get().businessId(),
             request.getAllocationId(),
             request.getAccountId(),
             request.getFundsTransactType(),
@@ -56,10 +49,10 @@ public class BusinessController {
   }
 
   @GetMapping("/allocations")
-  private List<Allocation> getRootAllocations(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId) {
+  private List<Allocation> getRootAllocations() {
     return allocationService
-        .getAllocationChildren(businessService.retrieveBusiness(businessId), null)
+        .getAllocationChildren(
+            businessService.retrieveBusiness(CurrentUser.get().businessId()), null)
         .stream()
         .map(
             e ->
@@ -73,10 +66,10 @@ public class BusinessController {
 
   @PostMapping("/allocations")
   private List<Allocation> searchBusinessAllocations(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
-        .searchBusinessAllocations(businessService.retrieveBusiness(businessId), request.getName())
+        .searchBusinessAllocations(
+            businessService.retrieveBusiness(CurrentUser.get().businessId()), request.getName())
         .stream()
         .map(
             e ->
@@ -88,15 +81,8 @@ public class BusinessController {
         .collect(Collectors.toList());
   }
 
-  @GetMapping("/{businessId}")
-  private Business getBusiness(
-      @PathVariable(value = BUSINESS_ID)
-          @Parameter(
-              required = true,
-              name = BUSINESS_ID,
-              description = "ID of the business record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<BusinessId> businessId) {
-    return new Business(businessService.retrieveBusiness(businessId));
+  @GetMapping
+  private Business getBusiness() {
+    return new Business(businessService.retrieveBusiness(CurrentUser.get().businessId()));
   }
 }

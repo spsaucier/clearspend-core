@@ -1,10 +1,9 @@
 package com.tranwall.capital.controller;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.card.Card;
 import com.tranwall.capital.controller.type.card.IssueCardRequest;
 import com.tranwall.capital.controller.type.card.IssueCardResponse;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,10 +32,9 @@ public class CardController {
   private final BusinessService businessService;
 
   @PostMapping("")
-  private List<IssueCardResponse> issueCard(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestBody @Validated IssueCardRequest request) {
+  private List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     request
         .getCardType()
         .forEach(
@@ -62,7 +59,6 @@ public class CardController {
 
   @GetMapping("/{cardId}")
   private Card getCard(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -70,6 +66,6 @@ public class CardController {
               description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
-    return new Card(cardService.getCard(businessId, cardId).card());
+    return new Card(cardService.getCard(CurrentUser.get().businessId(), cardId).card());
   }
 }

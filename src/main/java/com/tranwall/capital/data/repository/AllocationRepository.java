@@ -25,4 +25,7 @@ public interface AllocationRepository
 
   List<Allocation> findByBusinessIdAndNameIgnoreCaseContaining(
       TypedId<BusinessId> businessId, String name);
+
+  // for deleting businesses in tests only
+  void deleteByBusinessId(TypedId<BusinessId> businessId);
 }

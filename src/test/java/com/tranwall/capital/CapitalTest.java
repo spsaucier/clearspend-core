@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 @Target(ElementType.TYPE)
 @SpringBootTest
 @ActiveProfiles
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 public @interface CapitalTest {
 
   @AliasFor(annotation = ActiveProfiles.class, attribute = "profiles")

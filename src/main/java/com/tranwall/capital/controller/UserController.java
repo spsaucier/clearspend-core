@@ -1,6 +1,5 @@
 package com.tranwall.capital.controller;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
 import static com.tranwall.capital.controller.Common.USER_ID;
 import static com.tranwall.capital.controller.Common.USER_NAME;
 
@@ -9,6 +8,7 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.CardAccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.PageRequest;
@@ -54,14 +54,11 @@ public class UserController {
   private final UserService userService;
 
   @PostMapping("")
-  private CreateUserResponse createUser(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestBody CreateUserRequest request)
-      throws IOException {
+  private CreateUserResponse createUser(@RequestBody CreateUserRequest request) throws IOException {
 
     CreateUserRecord userServiceUser =
         userService.createUser(
-            businessId,
+            CurrentUser.get().businessId(),
             UserType.EMPLOYEE,
             request.getFirstName(),
             request.getLastName(),
@@ -74,16 +71,14 @@ public class UserController {
   }
 
   @PostMapping("/bulk")
-  private List<CreateUserResponse> bulkCreateUser(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestBody List<CreateUserRequest> request) {
+  private List<CreateUserResponse> bulkCreateUser(@RequestBody List<CreateUserRequest> request) {
 
     List<CreateUserResponse> response = new ArrayList<>(request.size());
     for (CreateUserRequest createUserRequest : request) {
       try {
         CreateUserRecord userServiceUser =
             userService.createUser(
-                businessId,
+                CurrentUser.get().businessId(),
                 UserType.EMPLOYEE,
                 createUserRequest.getFirstName(),
                 createUserRequest.getLastName(),
@@ -118,10 +113,10 @@ public class UserController {
 
   @GetMapping(value = "/list")
   private List<UserData> getUsersByUserName(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestParam(required = false, name = USER_NAME)
           @Parameter(name = USER_NAME, description = "Name of the user.", example = "Ada")
           String userName) {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     List<UserData> userDataList;
     if (userName == null) {
       userDataList =
@@ -150,9 +145,8 @@ public class UserController {
 
   @GetMapping("/cards")
   private List<UserCardResponse> getUserCards(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = USER_ID) TypedId<UserId> userId) {
-    return cardService.getUserCards(businessId, userId).stream()
+      @RequestHeader(name = "userId") TypedId<UserId> userId) {
+    return cardService.getUserCards(CurrentUser.get().businessId(), userId).stream()
         .map(
             userCardRecord ->
                 new UserCardResponse(
@@ -165,7 +159,6 @@ public class UserController {
 
   @PostMapping("/cards/{cardId}/account-activity")
   private Page<AccountActivityResponse> getCardAccountActivity(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestHeader(name = USER_ID) TypedId<UserId> userId,
       @PathVariable(value = "cardId")
           @Parameter(
@@ -176,7 +169,7 @@ public class UserController {
           TypedId<CardId> cardId,
       @Validated @RequestBody CardAccountActivityRequest request) {
     return accountActivityService.getCardAccountActivity(
-        businessId,
+        CurrentUser.get().businessId(),
         userId,
         cardId,
         new AccountActivityFilterCriteria(

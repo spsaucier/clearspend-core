@@ -34,7 +34,7 @@ public class BusinessOwnerService {
   private final AlloyClient alloyClient;
 
   @Transactional
-  BusinessOwner createBusinessOwner(
+  public BusinessOwner createBusinessOwner(
       TypedId<BusinessOwnerId> businessOwnerId,
       TypedId<BusinessId> businessId,
       String firstName,

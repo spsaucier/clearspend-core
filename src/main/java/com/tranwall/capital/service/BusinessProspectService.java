@@ -170,11 +170,13 @@ public class BusinessProspectService {
     }
 
     businessProspect.setSubjectRef(
-        fusionAuthService.createBusinessOwner(
-            businessProspect.getBusinessId(),
-            businessProspect.getBusinessOwnerId(),
-            businessProspect.getEmail().getEncrypted(),
-            password));
+        fusionAuthService
+            .createBusinessOwner(
+                businessProspect.getBusinessId(),
+                businessProspect.getBusinessOwnerId(),
+                businessProspect.getEmail().getEncrypted(),
+                password)
+            .toString());
 
     twilioService.sendOnboardingWelcomeEmail(
         businessProspect.getEmail().toString(), businessProspect);

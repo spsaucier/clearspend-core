@@ -25,7 +25,7 @@ public class FusionAuthService {
 
   private final io.fusionauth.client.FusionAuthClient client;
 
-  public String createBusinessOwner(
+  public UUID createBusinessOwner(
       TypedId<BusinessId> businessId,
       TypedId<BusinessOwnerId> businessOwnerId,
       String username,
@@ -33,15 +33,14 @@ public class FusionAuthService {
     return create(businessId, businessOwnerId.toUuid(), username, password);
   }
 
-  public String createUser(
+  public UUID createUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, String username, String password) {
     return create(businessId, userId.toUuid(), username, password);
   }
 
-  private String create(
+  private UUID create(
       TypedId<BusinessId> businessId, @NonNull UUID userId, String username, String password) {
     User user = new User();
-    user.id = userId;
     user.username = username;
     user.password = password;
     user.data.put(BUSINESS_ID_KEY, businessId.toUuid());
@@ -50,7 +49,7 @@ public class FusionAuthService {
         client.createUser(userId, new UserRequest(user));
 
     if (response.wasSuccessful()) {
-      return response.successResponse.user.id.toString();
+      return response.successResponse.user.id;
     }
 
     if (response.errorResponse != null) {

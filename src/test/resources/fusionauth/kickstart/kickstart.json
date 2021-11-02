@@ -1,7 +1,8 @@
 {
   "variables": {
     "defaultTenantId": "f9fdf77f-ac15-4de3-8bc8-91f87d312256",
-    "accessTokenPopulateLambdaId": "#{UUID()}"
+    "accessTokenPopulateLambdaId": "#{UUID()}",
+    "defaultBusinessId": "82a79d15-9e47-421b-ab8f-78532f4f8bc7"
   },
   "apiKeys": [
     {
@@ -33,7 +34,7 @@
           "email": "tester@tranwall.com",
           "password": "Password1!",
           "data": {
-            "businessId": "1e515ac8-ac64-42ae-b9c2-26a0823007ba"
+            "businessId": "#{defaultBusinessId}"
           }
         }
       }
@@ -65,7 +66,7 @@
         "lambda": {
           "name": "business id to jwt token",
           "type": "JWTPopulate",
-          "body": "function populate(jwt, user, registration) {\n  if (user.data && user.data.businessId) {\n    jwt.businessId = user.data.businessId;\n  } else {\n    jwt.businessId = \"nope\";\n  }\n  if (user.id) {\n    jwt.userId = user.id;\n  }\n}"
+          "body": "@{populate-token.js}"
         }
       }
     },

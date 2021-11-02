@@ -21,4 +21,7 @@ public interface AccountRepository extends JpaRepository<Account, TypedId<Accoun
       TypedId<BusinessId> businessId, AccountType type, List<UUID> ownerId, Currency currency);
 
   List<Account> findByIdIn(Set<TypedId<AccountId>> ids);
+
+  // for deleting businesses in tests only
+  void deleteByBusinessId(TypedId<BusinessId> businessId);
 }

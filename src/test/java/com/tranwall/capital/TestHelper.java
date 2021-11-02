@@ -18,6 +18,7 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BinId;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -51,8 +52,11 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.data.repository.AccountRepository;
+import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.BinRepository;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
+import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.service.AccountService;
@@ -67,6 +71,7 @@ import com.tranwall.capital.service.BusinessProspectService.BusinessProspectReco
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.FusionAuthService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
@@ -84,6 +89,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -98,9 +104,12 @@ public class TestHelper {
   public static final TypedId<BusinessId> businessId =
       new TypedId<>("82a79d15-9e47-421b-ab8f-78532f4f8bc7");
 
+  private final AccountRepository accountRepository;
+  private final AllocationRepository allocationRepository;
   private final BinRepository binRepository;
   private final BusinessRepository businessRepository;
   private final BusinessProspectRepository businessProspectRepository;
+  private final BusinessOwnerRepository businessOwnerRepository;
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
   private final AccountService accountService;
@@ -113,6 +122,7 @@ public class TestHelper {
   private final CardService cardService;
   private final ProgramService programService;
   private final UserService userService;
+  private final FusionAuthService fusionAuthService;
 
   private final Faker faker = new Faker();
 
@@ -125,7 +135,7 @@ public class TestHelper {
 
   private final MockMvc mvc;
 
-  private volatile Cookie authCookie;
+  private volatile Cookie defaultAuthCookie;
 
   public record OnboardBusinessRecord(
       Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {}
@@ -151,6 +161,10 @@ public class TestHelper {
 
   public String generateEmail() {
     return randomUUID() + "@tranwall.com";
+  }
+
+  public String generatePassword() {
+    return randomUUID().toString();
   }
 
   public String generatePhone() {
@@ -228,8 +242,8 @@ public class TestHelper {
             .getResponse();
 
     log.info("response: {}", response);
-    authCookie = response.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
-    return authCookie;
+    defaultAuthCookie = response.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
+    return defaultAuthCookie;
   }
 
   public BusinessProspect createBusinessProspect() throws Exception {
@@ -306,7 +320,7 @@ public class TestHelper {
                 post(String.format("/business-prospects/%s/convert", businessProspectId))
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(defaultAuthCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -355,6 +369,38 @@ public class TestHelper {
         faker.phoneNumber().phoneNumber(),
         Arrays.stream(programs).map(Program::getId).toList(),
         Currency.USD);
+  }
+
+  public void deleteBusiness(TypedId<BusinessId> businessId) {
+    businessRepository.deleteById(businessId);
+  }
+
+  public BusinessOwner createBusinessOwner(
+      TypedId<BusinessId> businessId, String email, String password) {
+    String firstName = generateFirstName();
+    String lastName = generateLastName();
+    Address address = generateEntityAddress();
+    String phone = generatePhone();
+    TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
+    fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
+    return businessOwnerService.createBusinessOwner(
+        new TypedId<>(),
+        businessId,
+        firstName,
+        lastName,
+        address,
+        email,
+        phone,
+        businessOwnerId.toString());
+  }
+
+  public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
+    businessOwnerRepository.deleteById(businessOwnerId);
+  }
+
+  @Transactional
+  public void deleteAccount(TypedId<BusinessId> businessId) {
+    accountRepository.deleteByBusinessId(businessId);
   }
 
   public String getLinkToken(TypedId<BusinessId> businessId) throws Exception {
@@ -414,6 +460,11 @@ public class TestHelper {
       TypedId<AllocationId> parentAllocationId) {
     return allocationService.createAllocation(
         programId, businessId, parentAllocationId, name, Amount.of(Currency.USD));
+  }
+
+  @Transactional
+  public void deleteAllocation(TypedId<BusinessId> businessId) {
+    allocationRepository.deleteByBusinessId(businessId);
   }
 
   public CreateUserRecord createUser(Business business) throws IOException {

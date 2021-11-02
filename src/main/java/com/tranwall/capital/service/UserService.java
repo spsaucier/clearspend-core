@@ -56,7 +56,8 @@ public class UserService {
     String password = null;
     if (generatePassword) {
       password = PasswordUtil.generatePassword();
-      user.setSubjectRef(fusionAuthService.createUser(businessId, user.getId(), email, password));
+      user.setSubjectRef(
+          fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
       twilioService.sendNotificationEmail(
           user.getEmail().getEncrypted(),
           String.format("Welcome to Tranwall, your password is %s", password));

@@ -18,16 +18,23 @@ public class FusionAuthDemoController {
 
   @PostMapping("/create-business-owner")
   private String createBusinessOwner(@RequestBody CreateBusinessOwnerRequest request) {
-    return fusionAuthService.createBusinessOwner(
-        request.getBusinessId(),
-        request.getBusinessOwnerId(),
-        request.getUsername(),
-        request.getPassword());
+    return fusionAuthService
+        .createBusinessOwner(
+            request.getBusinessId(),
+            request.getBusinessOwnerId(),
+            request.getUsername(),
+            request.getPassword())
+        .toString();
   }
 
   @PostMapping("/create-user")
   private String createUser(@RequestBody CreateUserRequest request) {
-    return fusionAuthService.createUser(
-        request.getBusinessId(), request.getUserId(), request.getUsername(), request.getPassword());
+    return fusionAuthService
+        .createUser(
+            request.getBusinessId(),
+            request.getUserId(),
+            request.getUsername(),
+            request.getPassword())
+        .toString();
   }
 }

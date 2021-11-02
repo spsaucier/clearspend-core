@@ -44,6 +44,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void linkToken_success() {
     if (StringUtils.isBlank(plaidProperties.getSecret())) {
+      log.warn("skipping test due to missing Plaid credentials");
       return;
     }
     testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
@@ -60,7 +61,6 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     MockHttpServletResponse response =
         mvc.perform(
                 get(String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken))
-                    .header("businessId", testHelper.retrieveBusiness().getId().toString())
                     .contentType("application/json")
                     .cookie(authCookie))
             .andExpect(status().isOk())
@@ -73,14 +73,12 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void accounts_success() {
     if (StringUtils.isBlank(plaidProperties.getSecret())) {
+      log.warn("skipping test due to missing Plaid credentials");
       return;
     }
     MockHttpServletResponse response =
         mvc.perform(
-                get("/business-bank-accounts")
-                    .header("businessId", testHelper.retrieveBusiness().getId().toString())
-                    .contentType("application/json")
-                    .cookie(authCookie))
+                get("/business-bank-accounts").contentType("application/json").cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -102,10 +100,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         mvc.perform(
                 post(String.format(
                         "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
-                    .header("businessId", testHelper.retrieveBusiness().getId().toString())
                     .contentType("application/json")
-                    .content(body)
-                    .cookie(authCookie))
+                    .cookie(authCookie)
+                    .content(body))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
