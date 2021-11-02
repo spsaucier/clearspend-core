@@ -418,11 +418,13 @@ create table if not exists receipt
     version         bigint                      not null,
 
     business_id     uuid                        not null references business (id),
+    user_id         uuid                        not null references users (id),
     allocation_id   uuid references allocation (id),
-    account_id      uuid                        not null references account (id),
-    adjustment_id   uuid                        not null references adjustment (id),
+    account_id      uuid references account (id),
+    adjustment_id   uuid references adjustment (id),
     amount_currency varchar(10)                 not null,
-    amount_amount   numeric                     not null
+    amount_amount   numeric                     not null,
+    path            varchar(200)                not null
 );
 
 insert into bin (id, created, updated, version, bin, name)

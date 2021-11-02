@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller.nonprod;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -35,7 +37,7 @@ public class BusinessBankAccountDemoController {
       value = "/business-bank-accounts/{businessBankAccountId}/transactions",
       produces = MediaType.APPLICATION_JSON_VALUE)
   private CreateAdjustmentResponse transact(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,

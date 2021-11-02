@@ -24,6 +24,7 @@ public class RecordNotFoundException extends RuntimeException {
     CARD("Card"),
     LEDGER_ACCOUNT("LedgerAccount"),
     PROGRAM("Program"),
+    RECEIPT("Receipt"),
     USER("user");
 
     private final String name;

@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -33,7 +35,7 @@ public class CardController {
 
   @PostMapping("")
   private List<IssueCardResponse> issueCard(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody @Validated IssueCardRequest request) {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
     request
@@ -60,7 +62,7 @@ public class CardController {
 
   @GetMapping("/{cardId}")
   private Card getCard(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,

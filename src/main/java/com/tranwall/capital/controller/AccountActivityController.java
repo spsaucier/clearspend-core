@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
@@ -25,7 +27,7 @@ public class AccountActivityController {
 
   @PostMapping("")
   private Page<AccountActivityResponse> getAccountActivity(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @Validated @RequestBody AccountActivityRequest request) {
     return accountActivityService.getFilteredAccountActivity(
         businessId,

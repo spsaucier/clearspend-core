@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
@@ -35,7 +37,7 @@ public class BusinessController {
 
   @PostMapping("/transactions")
   private BusinessFundAllocationResponse reallocateBusinessFunds(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody @Validated BusinessFundAllocationRequest request) {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
@@ -55,7 +57,7 @@ public class BusinessController {
 
   @GetMapping("/allocations")
   private List<Allocation> getRootAllocations(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId) {
     return allocationService
         .getAllocationChildren(businessService.retrieveBusiness(businessId), null)
         .stream()
@@ -71,7 +73,7 @@ public class BusinessController {
 
   @PostMapping("/allocations")
   private List<Allocation> searchBusinessAllocations(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
         .searchBusinessAllocations(businessService.retrieveBusiness(businessId), request.getName())
@@ -88,10 +90,10 @@ public class BusinessController {
 
   @GetMapping("/{businessId}")
   private Business getBusiness(
-      @PathVariable(value = "businessId")
+      @PathVariable(value = BUSINESS_ID)
           @Parameter(
               required = true,
-              name = "businessId",
+              name = BUSINESS_ID,
               description = "ID of the business record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessId> businessId) {

@@ -1,6 +1,9 @@
 package com.tranwall.capital.controller;
 
-import com.tranwall.capital.common.typedid.data.AdjustmentId;
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+import static com.tranwall.capital.controller.Common.USER_ID;
+import static com.tranwall.capital.controller.Common.USER_NAME;
+
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -11,8 +14,6 @@ import com.tranwall.capital.controller.type.activity.CardAccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.controller.type.card.Card;
 import com.tranwall.capital.controller.type.card.UserCardResponse;
-import com.tranwall.capital.controller.type.receipt.CreateReceiptRequest;
-import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
@@ -41,15 +42,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
-  public static final String USER_NAME = "userName";
-  public static final String BUSINESS_ID = "businessId";
   private final AccountActivityService accountActivityService;
   private final CardService cardService;
   private final ReceiptService receiptService;
@@ -108,10 +106,10 @@ public class UserController {
 
   @GetMapping("/{userId}")
   private User getUser(
-      @PathVariable(value = "userId")
+      @PathVariable(value = USER_ID)
           @Parameter(
               required = true,
-              name = "userId",
+              name = USER_ID,
               description = "ID of the user record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
@@ -153,7 +151,7 @@ public class UserController {
   @GetMapping("/cards")
   private List<UserCardResponse> getUserCards(
       @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = "userId") TypedId<UserId> userId) {
+      @RequestHeader(name = USER_ID) TypedId<UserId> userId) {
     return cardService.getUserCards(businessId, userId).stream()
         .map(
             userCardRecord ->
@@ -168,7 +166,7 @@ public class UserController {
   @PostMapping("/cards/{cardId}/account-activity")
   private Page<AccountActivityResponse> getCardAccountActivity(
       @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = "userId") TypedId<UserId> userId,
+      @RequestHeader(name = USER_ID) TypedId<UserId> userId,
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -187,38 +185,5 @@ public class UserController {
             request.getFrom(),
             request.getTo(),
             PageRequest.toPageToken(request.getPageRequest())));
-  }
-
-  @PostMapping("/cards/{cardId}/adjustments/{adjustmentId}/receipts")
-  private CreateReceiptResponse createReceipt(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = "userId") TypedId<UserId> userId,
-      @PathVariable(value = "cardId")
-          @Parameter(
-              required = true,
-              name = "cardId",
-              description = "ID of the card record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<CardId> cardId,
-      @PathVariable(value = "adjustmentId")
-          @Parameter(
-              required = true,
-              name = "adjustmentId",
-              description = "ID of the adjustment record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<AdjustmentId> adjustmentId,
-      @RequestParam("receipt") @Parameter(name = "receipt", description = "The receipt File")
-          MultipartFile receiptFile,
-      @Validated @RequestBody CreateReceiptRequest request) {
-    return new CreateReceiptResponse(
-        receiptService
-            .createReceipt(
-                businessId,
-                userId,
-                cardId,
-                adjustmentId,
-                request.getAmount().toAmount(),
-                receiptFile)
-            .getId());
   }
 }

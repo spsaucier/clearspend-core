@@ -8,6 +8,7 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -36,22 +37,28 @@ public class Receipt extends TypedMutable<ReceiptId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "users")
+  @Column(updatable = false)
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<UserId> userId;
+
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> allocationId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "adjustment")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AdjustmentId> adjustmentId;
 
   @NonNull @Embedded private Amount amount;
+
+  private String path;
 }

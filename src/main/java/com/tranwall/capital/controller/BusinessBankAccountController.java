@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -39,7 +41,7 @@ public class BusinessBankAccountController {
 
   @GetMapping("/link-token")
   private LinkTokenResponse linkToken(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) throws IOException {
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId) throws IOException {
     // TODO: Get business UUID from JWT
     return new LinkTokenResponse(businessBankAccountService.getLinkToken(businessId));
   }
@@ -48,7 +50,7 @@ public class BusinessBankAccountController {
       value = "/link-token/{linkToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)
   private List<BankAccount> linkBusinessBankAccounts(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable String linkToken)
       throws IOException {
     // TODO: Get business UUID from JWT
@@ -70,7 +72,7 @@ public class BusinessBankAccountController {
 
   @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
   private List<BankAccount> getBusinessBankAccounts(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId) {
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId) {
     // TODO: Get business UUID from JWT
     return toListBankAccount(businessBankAccountService.getBusinessBankAccounts(businessId));
   }
@@ -79,7 +81,7 @@ public class BusinessBankAccountController {
       value = "/{businessBankAccountId}/transactions",
       produces = MediaType.APPLICATION_JSON_VALUE)
   private CreateAdjustmentResponse transact(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,

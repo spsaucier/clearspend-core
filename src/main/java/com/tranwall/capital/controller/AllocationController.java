@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -37,7 +39,7 @@ public class AllocationController {
 
   @PostMapping("")
   private CreateAllocationResponse createAllocation(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
@@ -52,7 +54,7 @@ public class AllocationController {
 
   @GetMapping("/{allocationId}")
   private Allocation getAllocation(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -72,7 +74,7 @@ public class AllocationController {
 
   @GetMapping("/{allocationId}/children")
   private List<Allocation> getAllocationChildren(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -95,7 +97,7 @@ public class AllocationController {
 
   @PostMapping("/{allocationId}/transactions")
   private AllocationFundCardResponse reallocateAllocationFunds(
-      @RequestHeader(name = "businessId") TypedId<BusinessId> businessId,
+      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,

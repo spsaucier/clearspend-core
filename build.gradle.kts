@@ -49,6 +49,14 @@ tasks {
     }
 }
 
+dependencyManagement {
+    var springCloudGcpVersion = "2.0.4"
+
+    imports {
+        mavenBom("com.google.cloud:spring-cloud-gcp-dependencies:$springCloudGcpVersion")
+    }
+}
+
 dependencies {
     val testContainersVersion = "1.16.0"
 
@@ -66,6 +74,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation("com.google.cloud:spring-cloud-gcp-starter-storage")
 
     //3rd party libs managed by spring BOM
     implementation("org.apache.commons:commons-lang3")
@@ -83,6 +92,7 @@ dependencies {
     implementation("com.sendgrid:sendgrid-java:4.7.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
+    implementation("com.google.cloud:google-cloud-nio:0.123.10")
 
     //just for the non-prod data generator
     implementation("com.github.javafaker:javafaker:1.0.1")

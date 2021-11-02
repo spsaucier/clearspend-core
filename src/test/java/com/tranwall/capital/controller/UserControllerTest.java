@@ -1,5 +1,6 @@
 package com.tranwall.capital.controller;
 
+import static com.tranwall.capital.controller.Common.USER_NAME;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -123,8 +124,7 @@ public class UserControllerTest extends BaseCapitalTest {
                 get("/users/list")
                     .header("businessId", business.getId().toString())
                     .queryParam(
-                        UserController.USER_NAME,
-                        userRecord.user().getFirstName().toString().substring(0, 3))
+                        USER_NAME, userRecord.user().getFirstName().toString().substring(0, 3))
                     .contentType("application/json")
                     .cookie(authCookie))
             .andExpect(status().isOk())
