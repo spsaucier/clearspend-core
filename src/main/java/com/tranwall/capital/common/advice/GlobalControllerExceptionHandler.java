@@ -28,7 +28,6 @@ public class GlobalControllerExceptionHandler {
     IdMismatchException.class,
     InsufficientFundsException.class,
     InvalidRequestException.class,
-    RecordNotFoundException.class,
     TypeMismatchException.class
   })
   public @ResponseBody ControllerError handleTranwallException(Exception exception) {
@@ -42,6 +41,12 @@ public class GlobalControllerExceptionHandler {
       DataIntegrityViolationException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError(exception.getMostSpecificCause().getMessage());
+  }
+
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @ExceptionHandler({RecordNotFoundException.class})
+  public @ResponseBody void handleRecordNotFoundException(Exception exception) {
+    log.error(String.format("%s exception processing request", exception.getClass()), exception);
   }
 
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -15,6 +15,7 @@ import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +79,10 @@ public class UserService {
     return userRepository
         .findById(userId)
         .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+  }
+
+  public Optional<User> retrieveUserBySubjectRef(String subjectRef) {
+    return userRepository.findBySubjectRef(subjectRef);
   }
 
   public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {

@@ -70,4 +70,10 @@ public class CreateOrUpdateBusinessOwnerRequest {
   private String phone;
 
   @NonNull private Address address;
+
+  @JsonProperty("isOnboarding")
+  @Schema(
+      title = "Indication if business owner is updated during the onboarding process",
+      example = "false")
+  private boolean isOnboarding;
 }

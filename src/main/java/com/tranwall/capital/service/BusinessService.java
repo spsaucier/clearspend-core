@@ -112,6 +112,27 @@ public class BusinessService {
     return new BusinessAndAllocationsRecord(business, account, allocationRecords);
   }
 
+  @Transactional
+  public Business updateBusiness(
+      TypedId<BusinessId> businessId,
+      BusinessStatus status,
+      BusinessOnboardingStep onboardingStep) {
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
+    if (onboardingStep != null) {
+      business.setOnboardingStep(onboardingStep);
+    }
+
+    if (status != null) {
+      business.setStatus(status);
+    }
+
+    return businessRepository.save(business);
+  }
+
   public Business retrieveBusiness(TypedId<BusinessId> businessId) {
     return businessRepository
         .findById(businessId)

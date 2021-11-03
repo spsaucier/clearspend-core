@@ -5,6 +5,8 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.Address;
+import com.tranwall.capital.data.model.BusinessOwner;
+import com.tranwall.capital.data.model.BusinessProspect;
 import com.tranwall.capital.data.model.enums.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -35,7 +37,6 @@ public class User {
   private String lastName;
 
   @JsonProperty("address")
-  @NonNull
   private Address address;
 
   @JsonProperty("email")
@@ -46,14 +47,35 @@ public class User {
   @NonNull
   private String phone;
 
-  public User(com.tranwall.capital.data.model.User card) {
-    this.userId = card.getId();
-    this.businessId = card.getBusinessId();
-    this.type = card.getType();
-    this.firstName = card.getFirstName().getEncrypted();
-    this.lastName = card.getLastName().getEncrypted();
-    this.address = new Address(card.getAddress());
-    this.email = card.getEmail().getEncrypted();
-    this.phone = card.getPhone().getEncrypted();
+  public User(com.tranwall.capital.data.model.User user) {
+    this.userId = user.getId();
+    this.businessId = user.getBusinessId();
+    this.type = user.getType();
+    this.firstName = user.getFirstName().getEncrypted();
+    this.lastName = user.getLastName().getEncrypted();
+    this.address = new Address(user.getAddress());
+    this.email = user.getEmail().getEncrypted();
+    this.phone = user.getPhone().getEncrypted();
+  }
+
+  public User(BusinessOwner businessOwner) {
+    this.userId = new TypedId<>(businessOwner.getId().toUuid());
+    this.businessId = businessOwner.getBusinessId();
+    this.type = UserType.BUSINESS_OWNER;
+    this.firstName = businessOwner.getFirstName().getEncrypted();
+    this.lastName = businessOwner.getLastName().getEncrypted();
+    this.address = new Address(businessOwner.getAddress());
+    this.email = businessOwner.getEmail().getEncrypted();
+    this.phone = businessOwner.getPhone().getEncrypted();
+  }
+
+  public User(BusinessProspect businessProspect) {
+    this.userId = new TypedId<>(businessProspect.getId().toUuid());
+    this.businessId = businessProspect.getBusinessId();
+    this.type = UserType.BUSINESS_OWNER;
+    this.firstName = businessProspect.getFirstName().getEncrypted();
+    this.lastName = businessProspect.getLastName().getEncrypted();
+    this.email = businessProspect.getEmail().getEncrypted();
+    this.phone = businessProspect.getPhone().getEncrypted();
   }
 }

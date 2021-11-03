@@ -6,7 +6,10 @@ import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.tranwall.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
 import com.tranwall.capital.data.model.BusinessOwner;
+import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
+import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BusinessOwnerController {
 
+  private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("")
@@ -52,13 +56,22 @@ public class BusinessOwnerController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessOwnerId> businessOwnerId,
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
-    businessOwnerService.updateBusinessOwner(
-        businessOwnerId,
-        request.getFirstName(),
-        request.getLastName(),
-        request.getEmail(),
-        request.getTaxIdentificationNumber(),
-        request.getDateOfBirth(),
-        request.getAddress().toAddress());
+
+    BusinessOwner businessOwner =
+        businessOwnerService.updateBusinessOwner(
+            businessOwnerId,
+            request.getFirstName(),
+            request.getLastName(),
+            request.getEmail(),
+            request.getTaxIdentificationNumber(),
+            request.getDateOfBirth(),
+            request.getAddress().toAddress());
+
+    if (request.isOnboarding()) {
+      businessService.updateBusiness(
+          businessOwner.getBusinessId(),
+          BusinessStatus.ONBOARDING,
+          BusinessOnboardingStep.LINK_ACCOUNT);
+    }
   }
 }

@@ -9,5 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BusinessProspectRepository
     extends JpaRepository<BusinessProspect, TypedId<BusinessProspectId>> {
 
+  Optional<BusinessProspect> findBySubjectRef(String subjectRef);
+
   Optional<BusinessProspect> findByEmailHash(byte[] hash);
 }

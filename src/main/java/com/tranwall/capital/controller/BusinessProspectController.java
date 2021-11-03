@@ -2,6 +2,7 @@ package com.tranwall.capital.controller;
 
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.business.Business;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.tranwall.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.tranwall.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
@@ -104,8 +105,7 @@ public class BusinessProspectController {
             request.getAddress().toAddress());
 
     return new ConvertBusinessProspectResponse(
-        convertBusinessProspectRecord.business().getId(),
-        convertBusinessProspectRecord.businessOwner().getId(),
-        convertBusinessProspectRecord.business().getKnowYourBusinessStatus());
+        new Business(convertBusinessProspectRecord.business()),
+        convertBusinessProspectRecord.businessOwner().getId());
   }
 }

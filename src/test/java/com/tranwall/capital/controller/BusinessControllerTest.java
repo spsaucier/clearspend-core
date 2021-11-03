@@ -257,7 +257,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void getRootAllocation_ForUnknownBusinessId_expectStatus500InvalidUUIDString() {
+  public void getRootAllocation_ForUnknownBusinessId_expectStatus204() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     Program program = testHelper.retrievePooledProgram();
@@ -275,7 +275,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     mvc.perform(
             get("/businesses/allocations").contentType(APPLICATION_JSON_VALUE).cookie(authCookie))
-        .andExpect(status().is4xxClientError())
+        .andExpect(status().isNoContent())
         .andReturn()
         .getResponse();
   }

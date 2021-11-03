@@ -20,6 +20,7 @@ import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -125,5 +126,9 @@ public class BusinessOwnerService {
     businessOwner.setKnowYourCustomerStatus(alloyClient.onboardIndividual(businessOwner));
 
     return businessOwnerRepository.save(businessOwner);
+  }
+
+  public Optional<BusinessOwner> retrieveBusinessOwnerBySubjectRef(String subjectRef) {
+    return businessOwnerRepository.findBySubjectRef(subjectRef);
   }
 }

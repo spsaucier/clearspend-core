@@ -26,6 +26,7 @@ import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -247,5 +248,9 @@ public class BusinessProspectService {
         businessAndAllocationsRecord.businessAccount(),
         businessAndAllocationsRecord.allocationRecords(),
         businessOwner);
+  }
+
+  public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {
+    return businessProspectRepository.findBySubjectRef(subjectRef);
   }
 }

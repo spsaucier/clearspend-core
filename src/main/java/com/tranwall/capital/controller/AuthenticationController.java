@@ -1,9 +1,15 @@
 package com.tranwall.capital.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nimbusds.jwt.JWTParser;
 import com.tranwall.capital.configuration.SecurityConfig;
 import com.tranwall.capital.controller.type.user.LoginRequest;
+import com.tranwall.capital.controller.type.user.User;
+import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessProspectService;
+import java.text.ParseException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,13 +34,21 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class AuthenticationController {
 
   private final WebClient webClient;
+  private final BusinessProspectService businessProspectService;
+  private final BusinessOwnerService businessOwnerService;
 
-  public AuthenticationController(@Qualifier("fusionAuthWebClient") WebClient webClient) {
+  public AuthenticationController(
+      @Qualifier("fusionAuthWebClient") WebClient webClient,
+      BusinessProspectService businessProspectService,
+      BusinessOwnerService businessOwnerService) {
     this.webClient = webClient;
+    this.businessProspectService = businessProspectService;
+    this.businessOwnerService = businessOwnerService;
   }
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@Validated @RequestBody LoginRequest request) {
+  public ResponseEntity<User> login(@Validated @RequestBody LoginRequest request)
+      throws ParseException {
     AccessTokenResponse tokenResponse;
     try {
       tokenResponse =
@@ -59,6 +73,16 @@ public class AuthenticationController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
+    String userId =
+        JWTParser.parse(tokenResponse.accessToken).getJWTClaimsSet().getClaim("userId").toString();
+
+    // TODO: Rework to correct propagation of UserType to Fusion Auth
+    Optional<User> user =
+        businessOwnerService.retrieveBusinessOwnerBySubjectRef(userId).map(User::new);
+    if (user.isEmpty()) {
+      user = businessProspectService.retrieveBusinessProspectBySubjectRef(userId).map(User::new);
+    }
+
     return ResponseEntity.ok()
         .header(
             HttpHeaders.SET_COOKIE,
@@ -70,7 +94,7 @@ public class AuthenticationController {
                 SecurityConfig.REFRESH_TOKEN_COOKIE_NAME,
                 tokenResponse.refreshToken,
                 tokenResponse.expiresIn))
-        .build();
+        .body(user.orElse(null));
   }
 
   @PostMapping("/logout")
