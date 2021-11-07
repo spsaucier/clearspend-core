@@ -93,7 +93,8 @@ public class AccountService {
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), true);
     if (account.getAvailableBalance().isSmallerThan(amount)) {
-      throw new InsufficientFundsException("Account", account.getId(), AdjustmentType.WITHDRAW, amount);
+      throw new InsufficientFundsException(
+          "Account", account.getId(), AdjustmentType.WITHDRAW, amount);
     }
 
     businessLimitService.ensureWithinWithdrawLimit(businessId, amount);
@@ -230,7 +231,8 @@ public class AccountService {
           IdType.BUSINESS_ID, fromAccount.getBusinessId(), toAccount.getBusinessId());
     }
     if (fromAccount.getAvailableBalance().isSmallerThan(amount)) {
-      throw new InsufficientFundsException("Account", fromAccountId, AdjustmentType.REALLOCATE, amount);
+      throw new InsufficientFundsException(
+          "Account", fromAccountId, AdjustmentType.REALLOCATE, amount);
     }
 
     ReallocateFundsRecord reallocateFundsRecord =

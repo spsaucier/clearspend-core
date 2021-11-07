@@ -24,8 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class BusinessLimitServiceTest extends BaseCapitalTest {
 
-  @Autowired
-  private BusinessLimitService businessLimitService;
+  @Autowired private BusinessLimitService businessLimitService;
 
   private final TypedId<AccountId> accountId = new TypedId<>(UUID.randomUUID());
   private final TypedId<BusinessId> businessId = new TypedId<>(UUID.randomUUID());

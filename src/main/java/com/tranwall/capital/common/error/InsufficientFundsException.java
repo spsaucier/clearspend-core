@@ -11,10 +11,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class InsufficientFundsException extends RuntimeException {
   public <T> InsufficientFundsException(
-      String accountType,
-      TypedId<T> id,
-      AdjustmentType adjustmentType,
-      @NonNull Amount amount) {
+      String accountType, TypedId<T> id, AdjustmentType adjustmentType, @NonNull Amount amount) {
     super(
         String.format(
             "%s %s (%s) does not have sufficient limit for %s%s %s adjustment",
