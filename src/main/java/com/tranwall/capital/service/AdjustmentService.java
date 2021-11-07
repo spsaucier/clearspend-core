@@ -4,6 +4,7 @@ import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AdjustmentId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Adjustment;
@@ -14,6 +15,7 @@ import com.tranwall.capital.service.LedgerService.BankJournalEntry;
 import com.tranwall.capital.service.LedgerService.NetworkJournalEntry;
 import com.tranwall.capital.service.LedgerService.ReallocationJournalEntry;
 import java.time.OffsetDateTime;
+import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.NonNull;
@@ -125,5 +127,12 @@ public class AdjustmentService {
     return adjustmentRepository
         .findById(id)
         .orElseThrow(() -> new RecordNotFoundException(Table.ADJUSTMENT, id));
+  }
+
+  public List<Adjustment> retrieveBusinessAdjustments(
+      TypedId<BusinessId> businessId, List<AdjustmentType> adjustmentTypes, int daysAgo) {
+    OffsetDateTime before = OffsetDateTime.now().minusDays(daysAgo);
+    return adjustmentRepository.findByBusinessIdAndTypeInAndEffectiveDateAfter(
+        businessId, adjustmentTypes, before);
   }
 }

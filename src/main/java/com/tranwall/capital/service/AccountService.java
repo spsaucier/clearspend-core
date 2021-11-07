@@ -42,6 +42,7 @@ public class AccountService {
   private final HoldRepository holdRepository;
 
   private final AdjustmentService adjustmentService;
+  private final BusinessLimitService businessLimitService;
   private final LedgerService ledgerService;
 
   public record AdjustmentRecord(Account account, Adjustment adjustment) {}
@@ -68,6 +69,8 @@ public class AccountService {
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), false);
 
+    businessLimitService.ensureWithinDepositLimit(businessId, amount);
+
     Adjustment adjustment = adjustmentService.recordDepositFunds(account, amount);
     account.setLedgerBalance(account.getLedgerBalance().add(amount));
 
@@ -90,8 +93,10 @@ public class AccountService {
 
     Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), true);
     if (account.getAvailableBalance().isSmallerThan(amount)) {
-      throw new InsufficientFundsException(account.getId(), AdjustmentType.WITHDRAW, amount);
+      throw new InsufficientFundsException("Account", account.getId(), AdjustmentType.WITHDRAW, amount);
     }
+
+    businessLimitService.ensureWithinWithdrawLimit(businessId, amount);
 
     Adjustment adjustment = adjustmentService.recordWithdrawFunds(account, amount);
     account.setLedgerBalance(account.getLedgerBalance().sub(amount));
@@ -225,7 +230,7 @@ public class AccountService {
           IdType.BUSINESS_ID, fromAccount.getBusinessId(), toAccount.getBusinessId());
     }
     if (fromAccount.getAvailableBalance().isSmallerThan(amount)) {
-      throw new InsufficientFundsException(fromAccountId, AdjustmentType.REALLOCATE, amount);
+      throw new InsufficientFundsException("Account", fromAccountId, AdjustmentType.REALLOCATE, amount);
     }
 
     ReallocateFundsRecord reallocateFundsRecord =

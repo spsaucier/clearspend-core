@@ -51,7 +51,7 @@ public class CardControllerTest extends BaseCapitalTest {
   void createCard() {
     Bin bin = testHelper.createBin();
     Program program = testHelper.createProgram(bin);
-    Business business = testHelper.createBusiness(program).business();
+    Business business = testHelper.retrieveBusiness();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(program.getId(), business.getId(), "", null);
     CreateUserRecord user = testHelper.createUser(business);

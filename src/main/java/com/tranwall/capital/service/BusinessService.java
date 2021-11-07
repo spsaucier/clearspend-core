@@ -47,8 +47,10 @@ public class BusinessService {
   private final ProgramRepository programRepository;
 
   private final AccountActivityService accountActivityService;
-  private final AllocationService allocationService;
   private final AccountService accountService;
+  private final AllocationService allocationService;
+  private final BusinessLimitService businessLimitService;
+
   private final AlloyClient alloyClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
@@ -88,6 +90,8 @@ public class BusinessService {
     business.setKnowYourBusinessStatus(alloyClient.onboardBusiness(business));
 
     business = businessRepository.save(business);
+
+    businessLimitService.initializeBusinessSpendLimit(business.getId());
 
     Account account =
         accountService.createAccount(

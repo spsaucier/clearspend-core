@@ -172,6 +172,26 @@ create table if not exists business_bank_account
     unique (business_id, routing_number_encrypted, account_number_encrypted)
 );
 
+create table if not exists business_limit
+(
+    id                              uuid                        not null
+        primary key,
+    created                         timestamp without time zone not null,
+    updated                         timestamp without time zone not null,
+    version                         bigint                      not null,
+
+    business_id                     uuid                        not null references business (id),
+    daily_deposit_limit_currency    varchar(10)                 not null,
+    daily_deposit_limit_amount      numeric                     not null,
+    monthly_deposit_limit_currency  varchar(10)                 not null,
+    monthly_deposit_limit_amount    numeric                     not null,
+    daily_withdraw_limit_currency   varchar(10)                 not null,
+    daily_withdraw_limit_amount     numeric                     not null,
+    monthly_withdraw_limit_currency varchar(10)                 not null,
+    monthly_withdraw_limit_amount   numeric                     not null
+);
+create index if not exists business_limit_uidx1 on business_limit (business_id);
+
 create table if not exists users
 (
     id                             uuid                        not null primary key,
@@ -246,7 +266,7 @@ create table if not exists account -- could be balance
     ledger_balance_currency varchar(10)                 not null,
     ledger_balance_amount   numeric                     not null
 );
-create index if not exists account_idx1 on account (business_id, owner_id);
+create unique index if not exists account_uidx1 on account (business_id, owner_id);
 
 create table if not exists allocation
 (
@@ -426,6 +446,24 @@ create table if not exists receipt
     amount_amount   numeric                     not null,
     path            varchar(200)                not null
 );
+
+create table if not exists spend_limit
+(
+    id                              uuid                        not null
+        primary key,
+    created                         timestamp without time zone not null,
+    updated                         timestamp without time zone not null,
+    version                         bigint                      not null,
+
+    business_id                     uuid                        not null references business (id),
+    type                            varchar(20)                 not null, -- allocation, card
+    owner_id                        uuid                        not null,
+    daily_purchase_limit_currency   varchar(10)                 not null,
+    daily_purchase_limit_amount     numeric                     not null,
+    monthly_purchase_limit_currency varchar(10)                 not null,
+    monthly_purchase_limit_amount   numeric                     not null
+);
+create unique index if not exists spend_limit_uidx1 on spend_limit (business_id, owner_id);
 
 insert into bin (id, created, updated, version, bin, name)
 values ('2691dad4-82f7-47ec-9cae-0686a22572fc', now(), now(), 1, '401288',

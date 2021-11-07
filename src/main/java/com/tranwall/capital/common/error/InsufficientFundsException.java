@@ -1,7 +1,6 @@
 package com.tranwall.capital.common.error;
 
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import lombok.Getter;
@@ -11,13 +10,17 @@ import lombok.ToString;
 @Getter
 @ToString(callSuper = true)
 public class InsufficientFundsException extends RuntimeException {
-  public InsufficientFundsException(
-      TypedId<AccountId> accountId, AdjustmentType adjustmentType, @NonNull Amount amount) {
+  public <T> InsufficientFundsException(
+      String accountType,
+      TypedId<T> id,
+      AdjustmentType adjustmentType,
+      @NonNull Amount amount) {
     super(
         String.format(
-            "%s Account (%s) does not have sufficient balance for %s%s %s adjustment",
+            "%s %s (%s) does not have sufficient limit for %s%s %s adjustment",
             amount.getCurrency(),
-            accountId,
+            accountType,
+            id,
             amount.getAmount(),
             amount.getCurrency(),
             adjustmentType));

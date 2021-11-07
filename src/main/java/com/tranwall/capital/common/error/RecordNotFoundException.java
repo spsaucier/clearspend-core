@@ -19,12 +19,14 @@ public class RecordNotFoundException extends RuntimeException {
     BIN("Bin"),
     BUSINESS("Business"),
     BUSINESS_BANK_ACCOUNT("BusinessBankAccount"),
+    BUSINESS_LIMIT("BusinessLimit"),
     BUSINESS_OWNER("BusinessOwner"),
     BUSINESS_PROSPECT("BusinessProspect"),
     CARD("Card"),
     LEDGER_ACCOUNT("LedgerAccount"),
     PROGRAM("Program"),
     RECEIPT("Receipt"),
+    SPEND_LIMIT("SpendLimit"),
     USER("user");
 
     private final String name;

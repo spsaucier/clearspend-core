@@ -53,6 +53,7 @@ public class CardService {
 
   private final AccountService accountService;
   private final ProgramService programService;
+  private final SpendLimitService spendLimitService;
   private final UserService userService;
 
   private final I2Client i2Client;
@@ -132,7 +133,12 @@ public class CardService {
       card.setAccountId(account.getId());
     }
 
-    return cardRepository.save(card);
+    card = cardRepository.save(card);
+
+    spendLimitService.initializeCardSpendLimit(
+        card.getBusinessId(), card.getAllocationId(), card.getId());
+
+    return card;
   }
 
   public Card retrieveCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {

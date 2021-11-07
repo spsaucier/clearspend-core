@@ -51,6 +51,7 @@ public class AllocationService {
   private final AccountService accountService;
   private final CardService cardService;
   private final ProgramService programService;
+  private final SpendLimitService spendLimitService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -77,7 +78,7 @@ public class AllocationService {
 
       if (parentAccount.getLedgerBalance().isSmallerThan(amount)) {
         throw new InsufficientFundsException(
-            parentAccount.getId(), AdjustmentType.REALLOCATE, amount);
+            "Account", parentAccount.getId(), AdjustmentType.REALLOCATE, amount);
       }
     }
 
@@ -106,6 +107,9 @@ public class AllocationService {
     }
 
     allocation = allocationRepository.save(allocation);
+
+    spendLimitService.initializeAllocationSpendLimit(
+        allocation.getBusinessId(), allocation.getId());
 
     if (parentAccount != null) {
       accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
@@ -216,7 +220,7 @@ public class AllocationService {
       case DEPOSIT -> {
         if (allocationRecord.account.getLedgerBalance().isSmallerThan(amount)) {
           throw new InsufficientFundsException(
-              allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
+              "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
 
         reallocateFundsRecord =
@@ -226,7 +230,7 @@ public class AllocationService {
       case WITHDRAW -> {
         if (card.account().getLedgerBalance().isSmallerThan(amount)) {
           throw new InsufficientFundsException(
-              allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
+              "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
 
         reallocateFundsRecord =
