@@ -463,6 +463,29 @@ public class TestHelper {
         programId, businessId, parentAllocationId, name, Amount.of(Currency.USD));
   }
 
+  public record CreateBusinessRecord(
+      Program program,
+      Business business,
+      BusinessOwner businessOwner,
+      AllocationRecord allocationRecord,
+      Cookie authCookie) {}
+
+  @SneakyThrows
+  public CreateBusinessRecord createBusiness() {
+    String email = generateEmail();
+    String password = generatePassword();
+    Program program = retrievePooledProgram();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(program);
+    BusinessOwner businessOwner =
+        createBusinessOwner(businessAndAllocationsRecord.business().getId(), email, password);
+    return new CreateBusinessRecord(
+        program,
+        businessAndAllocationsRecord.business(),
+        businessOwner,
+        businessAndAllocationsRecord.allocationRecords().get(0),
+        login(email, password));
+  }
+
   @Transactional
   public void deleteAllocation(TypedId<BusinessId> businessId) {
     allocationRepository.deleteByBusinessId(businessId);

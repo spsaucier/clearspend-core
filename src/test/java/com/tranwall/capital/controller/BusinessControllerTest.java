@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.allocation.Allocation;
@@ -19,13 +20,11 @@ import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAl
 import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
@@ -91,27 +90,17 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void reallocateBusinessFundsByWithdrawFromBusiness_success() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-    Business business = businessAndAllocationsRecord.business();
-
-    Cookie authCookie = testHelper.login(email, password);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
 
     accountService.depositFunds(
-        business.getId(),
+        createBusinessRecord.business().getId(),
         com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
 
-    AllocationRecord allocationRecord = businessAndAllocationsRecord.allocationRecords().get(0);
-
     BusinessFundAllocationRequest request =
         new BusinessFundAllocationRequest(
-            allocationRecord.allocation().getId(),
-            allocationRecord.account().getId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.allocationRecord().account().getId(),
             FundsTransactType.WITHDRAW,
             new Amount(Currency.USD, valueOf(100)));
 
@@ -122,7 +111,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
                 post("/businesses/transactions")
                     .content(body)
                     .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -143,15 +132,9 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void reallocateBusinessFundsByDepositToBusiness_success() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-    Business business = businessAndAllocationsRecord.business();
-
-    Cookie authCookie = testHelper.login(email, password);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    Program program = createBusinessRecord.program();
 
     accountService.depositFunds(
         business.getId(),
@@ -181,7 +164,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
                     .header("businessId", business.getId())
                     .content(body)
                     .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -228,24 +211,17 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void getRootAllocation_success() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
 
     testHelper.createAllocation(
-        program.getId(), businessAndAllocationsRecord.business().getId(), "", null);
+        createBusinessRecord.program().getId(), createBusinessRecord.business().getId(), "", null);
 
     MockHttpServletResponse response =
         mvc.perform(
                 get("/businesses/allocations")
-                    .header("businessId", businessAndAllocationsRecord.business().getId())
+                    .header("businessId", createBusinessRecord.business().getId())
                     .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -258,23 +234,18 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void getRootAllocation_ForUnknownBusinessId_expectStatus204() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    BusinessOwner businessOwner =
-        testHelper.createBusinessOwner(
-            businessAndAllocationsRecord.business().getId(), email, password);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
 
-    Cookie authCookie = testHelper.login(email, password);
-    testHelper.deleteBusinessOwner(businessOwner.getId());
+    testHelper.deleteBusinessOwner(createBusinessRecord.businessOwner().getId());
     testHelper.deleteAllocation(business.getId());
     testHelper.deleteAccount(business.getId());
     testHelper.deleteBusiness(business.getId());
 
     mvc.perform(
-            get("/businesses/allocations").contentType(APPLICATION_JSON_VALUE).cookie(authCookie))
+            get("/businesses/allocations")
+                .contentType(APPLICATION_JSON_VALUE)
+                .cookie(createBusinessRecord.authCookie()))
         .andExpect(status().isNoContent())
         .andReturn()
         .getResponse();
@@ -283,19 +254,12 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void searchBusinessAllocation_success() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
 
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            program.getId(),
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.program().getId(),
+            createBusinessRecord.business().getId(),
             "12345HelloWorld09876",
             null);
 
@@ -306,10 +270,10 @@ public class BusinessControllerTest extends BaseCapitalTest {
     MockHttpServletResponse response =
         mvc.perform(
                 post("/businesses/allocations")
-                    .header("businessId", businessAndAllocationsRecord.business().getId())
+                    .header("businessId", createBusinessRecord.business().getId())
                     .content(body)
                     .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
