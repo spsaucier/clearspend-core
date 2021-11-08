@@ -87,7 +87,7 @@ public class BusinessService {
     business.setBusinessEmail(new RequiredEncryptedString(email));
     business.setBusinessPhone(new RequiredEncryptedString(phone));
 
-    business.setKnowYourBusinessStatus(alloyClient.onboardBusiness(business));
+    business.setKnowYourBusinessStatus(alloyClient.onboardBusiness(business).status());
 
     business = businessRepository.save(business);
 

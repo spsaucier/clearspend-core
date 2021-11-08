@@ -82,6 +82,8 @@ client:
     notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:Tranwall <notifications@em6632.tranwall.com>}
     notifications-email-subject: ${SENDGRID_NOTIFICATIONS_EMAIL_SUBJECT:Tranwall}
     onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-94f93354b8674d4197d850c5a1081c1c}
+    kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-f7752da98ef540c79f872a1eae3666e5}
+    kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-651a88210bb54bbc92225150a2a211ce}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC08834a8aab6f817ea96ae7149e8befff}
     auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}

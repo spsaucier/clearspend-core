@@ -3,13 +3,17 @@ package com.tranwall.capital.client.alloy;
 import com.tranwall.capital.client.alloy.request.OnboardBusinessRequest;
 import com.tranwall.capital.client.alloy.request.OnboardIndividualRequest;
 import com.tranwall.capital.client.alloy.response.OnboardResponse;
+import com.tranwall.capital.client.alloy.response.Summary;
 import com.tranwall.capital.common.data.State;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.model.enums.KnowYourCustomerStatus;
+import java.util.Collections;
+import java.util.List;
 import javax.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
@@ -33,7 +37,11 @@ public class AlloyClient {
     this.businessWebClient = businessWebClient;
   }
 
-  public KnowYourCustomerStatus onboardIndividual(BusinessOwner owner) {
+  public record KycEvaluationResponse(KnowYourCustomerStatus status, List<String> reasons) {}
+
+  public record KybEvaluationResponse(KnowYourBusinessStatus status, List<String> reasons) {}
+
+  public KycEvaluationResponse onboardIndividual(BusinessOwner owner) {
     State state = State.valueOfRegion(owner.getAddress().getRegion());
     if (state == State.UNKNOWN) {
       throw new ValidationException("Unknown region provided: " + owner.getAddress().getRegion());
@@ -52,12 +60,14 @@ public class AlloyClient {
             owner.getPhone().getEncrypted(),
             owner.getDateOfBirth());
 
-    String outcome = callEvaluationsEndpoint(individualWebClient, request);
+    Summary summary = callEvaluationsEndpoint(individualWebClient, request);
 
-    return toKnowYourCustomerStatus(outcome);
+    return new KycEvaluationResponse(
+        toKnowYourCustomerStatus(summary.getOutcome()),
+        ObjectUtils.firstNonNull(summary.getOutcomeReasons(), Collections.emptyList()));
   }
 
-  public KnowYourBusinessStatus onboardBusiness(Business business) {
+  public KybEvaluationResponse onboardBusiness(Business business) {
     State state = State.valueOfRegion(business.getClearAddress().getRegion());
     if (state == State.UNKNOWN) {
       throw new ValidationException(
@@ -76,12 +86,14 @@ public class AlloyClient {
 
     request.setBusinessAddressLine2(business.getClearAddress().getStreetLine2());
 
-    String outcome = callEvaluationsEndpoint(businessWebClient, request);
+    Summary summary = callEvaluationsEndpoint(businessWebClient, request);
 
-    return toKnowYourBusinessStatus(outcome);
+    return new KybEvaluationResponse(
+        toKnowYourBusinessStatus(summary.getOutcome()),
+        ObjectUtils.firstNonNull(summary.getOutcomeReasons(), Collections.emptyList()));
   }
 
-  private String callEvaluationsEndpoint(WebClient client, Object request) {
+  private Summary callEvaluationsEndpoint(WebClient client, Object request) {
     OnboardResponse response =
         client
             .post()
@@ -98,7 +110,7 @@ public class AlloyClient {
           String.format("Failed to call Alloy evaluation endpoint. Response: [%s]", response));
     }
 
-    return response.getSummary().getOutcome();
+    return response.getSummary();
   }
 
   private KnowYourBusinessStatus toKnowYourBusinessStatus(String outcome) {

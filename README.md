@@ -45,3 +45,7 @@ Sequence of APIs:
 7. Reallocate funds
     - POST `/businesses/transactions` (Business <-> Allocation)
     - POST `/allocations/{allocationId}/transactions` (Allocation <-> Card)
+
+# SendGrid
+
+This repo contains samples of dynamic templates: https://github.com/sendgrid/email-templates

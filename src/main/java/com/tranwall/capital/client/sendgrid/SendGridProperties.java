@@ -21,4 +21,8 @@ public class SendGridProperties {
   @NotBlank private String notificationsEmailSubject;
 
   @NotBlank private String onboardingWelcomeEmailTemplateId;
+
+  @NotBlank private String kybKycPassEmailTemplateId;
+
+  @NotBlank private String kybKycFailEmailTemplateId;
 }

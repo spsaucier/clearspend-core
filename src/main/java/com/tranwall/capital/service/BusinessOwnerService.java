@@ -1,6 +1,7 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.alloy.AlloyClient;
+import com.tranwall.capital.client.alloy.AlloyClient.KycEvaluationResponse;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
@@ -31,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessOwnerService {
+
+  private final TwilioService twilioService;
 
   private final BusinessOwnerRepository businessOwnerRepository;
 
@@ -123,7 +126,17 @@ public class BusinessOwnerService {
       businessOwner.setAddress(address);
     }
 
-    businessOwner.setKnowYourCustomerStatus(alloyClient.onboardIndividual(businessOwner));
+    KycEvaluationResponse kycEvaluationResponse = alloyClient.onboardIndividual(businessOwner);
+    businessOwner.setKnowYourCustomerStatus(kycEvaluationResponse.status());
+
+    switch (kycEvaluationResponse.status()) {
+      case FAIL -> twilioService.sendKybKycFailEmail(
+          businessOwner.getEmail().getEncrypted(),
+          businessOwner.getFirstName().getEncrypted(),
+          kycEvaluationResponse.reasons());
+      case PASS -> twilioService.sendKybKycPassEmail(
+          businessOwner.getEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
+    }
 
     return businessOwnerRepository.save(businessOwner);
   }

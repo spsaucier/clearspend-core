@@ -16,6 +16,7 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -29,7 +30,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class TwilioService {
 
-  private static final String FIRST_NAME_KEY = "first_name";
+  private final String FIRST_NAME_KEY = "first_name";
+  private final String REASONS_KEY = "reasons";
 
   private final TwilioProperties twilioProperties;
   private final SendGridProperties sendGridProperties;
@@ -78,6 +80,35 @@ public class TwilioService {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(
         FIRST_NAME_KEY, businessProspect.getFirstName().getEncrypted());
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  @SneakyThrows
+  public void sendKybKycPassEmail(String to, String firstName) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getKybKycPassEmailTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  @SneakyThrows
+  public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getKybKycFailEmailTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(REASONS_KEY, reasons);
     personalization.addTo(new Email(to));
     mail.addPersonalization(personalization);
 
