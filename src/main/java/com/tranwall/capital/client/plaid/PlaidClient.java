@@ -1,5 +1,6 @@
 package com.tranwall.capital.client.plaid;
 
+import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AuthGetRequest;
 import com.plaid.client.model.AuthGetResponse;
 import com.plaid.client.model.CountryCode;
@@ -31,7 +32,8 @@ public class PlaidClient {
   public static final String LANGUAGE = "en";
   @NonNull private PlaidApi plaidApi;
 
-  public record AccountsResponse(String accessToken, List<NumbersACH> achList) {}
+  public record AccountsResponse(
+      String accessToken, List<AccountBase> accounts, List<NumbersACH> achList) {}
 
   public String createLinkToken(TypedId<BusinessId> businessId) throws IOException {
     LinkTokenCreateRequest request =
@@ -73,7 +75,9 @@ public class PlaidClient {
 
     if (authGetResponse.isSuccessful() && authGetResponse.body() != null) {
       return new AccountsResponse(
-          response.body().getAccessToken(), authGetResponse.body().getNumbers().getAch());
+          response.body().getAccessToken(),
+          authGetResponse.body().getAccounts(),
+          authGetResponse.body().getNumbers().getAch());
     }
 
     return null;

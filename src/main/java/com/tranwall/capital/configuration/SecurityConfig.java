@@ -38,7 +38,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     // DB
                     .jwtAuthenticationConverter(new JwtAuthenticationConverter()))
         .sessionManagement()
-        .sessionCreationPolicy(SessionCreationPolicy.NEVER)
+        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         .and()
         .authorizeRequests()
         .antMatchers("/**")

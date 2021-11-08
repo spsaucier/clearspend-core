@@ -3,6 +3,7 @@ package com.tranwall.capital.service;
 import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
 import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
 
+import com.plaid.client.model.AccountBase;
 import com.tranwall.capital.client.plaid.PlaidClient;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -20,6 +21,8 @@ import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,7 @@ public class BusinessBankAccountService {
   public BusinessBankAccount createBusinessBankAccount(
       String routingNumber,
       String accountNumber,
+      String accountName,
       String accessToken,
       TypedId<BusinessId> businessId) {
     BusinessBankAccount businessBankAccount =
@@ -53,6 +57,7 @@ public class BusinessBankAccountService {
             new RequiredEncryptedStringWithHash(routingNumber),
             new RequiredEncryptedStringWithHash(accountNumber),
             new RequiredEncryptedStringWithHash(accessToken));
+    businessBankAccount.setName(accountName);
 
     return businessBankAccountRepository.save(businessBankAccount);
   }
@@ -77,11 +82,18 @@ public class BusinessBankAccountService {
     // is not in the plaid metadata
 
     PlaidClient.AccountsResponse accountsResponse = plaidClient.getAccounts(linkToken);
+    Map<String, String> accountNames =
+        accountsResponse.accounts().stream()
+            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
     return plaidClient.getAccounts(linkToken).achList().stream()
         .map(
             ach ->
                 createBusinessBankAccount(
-                    ach.getRouting(), ach.getAccount(), accountsResponse.accessToken(), businessId))
+                    ach.getRouting(),
+                    ach.getAccount(),
+                    accountNames.get(ach.getAccountId()),
+                    accountsResponse.accessToken(),
+                    businessId))
         .toList();
   }
 

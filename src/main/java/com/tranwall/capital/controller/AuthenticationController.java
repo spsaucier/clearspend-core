@@ -114,6 +114,7 @@ public class AuthenticationController {
         ResponseCookie.from(name, value)
             .path("/")
             .secure(true)
+            .httpOnly(true)
             .maxAge(Duration.ofSeconds(ttl))
             .build();
     return authTokenCookie.toString();

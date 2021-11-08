@@ -187,6 +187,10 @@ public class TestHelper {
     return faker.number().digits(11);
   }
 
+  public String generateAccountName() {
+    return faker.funnyName().name();
+  }
+
   public LocalDate generateDateOfBirth() {
     return new java.sql.Date(faker.date().birthday(18, 100).getTime()).toLocalDate();
   }
@@ -428,6 +432,7 @@ public class TestHelper {
         .createBusinessBankAccount(
             generateRoutingNumber(),
             generateAccountNumber(),
+            generateAccountName(),
             UUID.randomUUID().toString(),
             businessId)
         .getId();

@@ -28,7 +28,7 @@ public class WebclientConfiguration {
   @Bean
   HttpClient httpClient() {
     return HttpClient.create()
-        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 300)
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
         .responseTimeout(Duration.ofMillis(1000))
         .doOnConnected(
             conn ->
