@@ -36,6 +36,10 @@ services:
     # Un-comment to access the db service directly
     #   ports:
     #     - 5433:5432
+    healthcheck:
+      test: "pg_isready --username=postgres --password=docker && psql --username=postgres --password=docker --list"
+      timeout: 1s
+      retries: 20
     restart: unless-stopped
 
   fusionauth:
@@ -52,5 +56,9 @@ services:
       - FUSIONAUTH_APP_RUNTIME_MODE=development
       - FUSIONAUTH_APP_URL=http://fusionauth:9011
       - SEARCH_TYPE=database
+      - FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json
+      - FUSIONAUTH_PORT=9011
     ports:
       - '9011:9011'
+    volumes:
+      - ./fusionauth/kickstart:/usr/local/fusionauth/kickstart

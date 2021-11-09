@@ -72,7 +72,7 @@
     },
     {
       "method": "POST",
-      "url": "/api/application/f9d859e3-994a-42d4-9b23-4ba3f1667f49",
+      "url": "/api/application/58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6",
       "body": {
         "application": {
           "name": "Capital Test Env",
@@ -82,8 +82,8 @@
             "idTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba"
           },
           "oauthConfiguration": {
-            "clientId": "f9d859e3-994a-42d4-9b23-4ba3f1667f49",
-            "clientSecret": "WtNt5JB0pdbnPhhtcpgPNQY_V4cl1-FPoGM4CPpPHg4",
+            "clientId": "58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6",
+            "clientSecret": "d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0",
             "enabledGrants": ["authorization_code", "password", "refresh_token"]
           },
           "lambdaConfiguration": {
