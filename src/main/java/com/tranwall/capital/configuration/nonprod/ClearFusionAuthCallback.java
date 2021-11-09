@@ -141,7 +141,7 @@ public class ClearFusionAuthCallback implements Callback {
       log.info("no users to delete from FusionAuth");
     } else {
       ClientResponse<UserDeleteResponse, Errors> deleteResponse =
-          fusionAuthClient.deleteUsersByQuery(new UserDeleteRequest(usersToDelete));
+          fusionAuthClient.deleteUsersByQuery(new UserDeleteRequest(usersToDelete, true));
       if (deleteResponse.wasSuccessful()) {
         log.info("FusionAuth has been cleared");
       } else if (response.exception != null) {
