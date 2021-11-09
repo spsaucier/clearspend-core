@@ -478,6 +478,12 @@ insert into program (id, created, updated, version, name, bin, funding_type, i2c
 values ('033955d1-f18e-497e-9905-88ba71e90208', now(), now(), 1,
         'Test Tranwall Program - individual', '401288', 'INDIVIDUAL', 'i2c reference 2');
 
+-- triggering schema validation error to clean Postgres and FusionAuth
+create table delete_me
+(
+    id uuid
+);
+
 -- insert into business (id, created, updated, version, type, legal_name, address_street_line1,
 --                       address_street_line2, address_locality, address_region, address_postal_code,
 --                       address_country, employer_identification_number, business_email_encrypted,
