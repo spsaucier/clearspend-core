@@ -20,7 +20,7 @@ public class CookieTokenResolver implements BearerTokenResolver {
     Cookie cookie = WebUtils.getCookie(request, SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
     // Ideally it should contain && cookie.getSecure() condition
     // but in order to make local swagger work without https keep this check less strict
-    if (cookie != null && cookie.isHttpOnly()) {
+    if (cookie != null) {
       return cookie.getValue();
     } else {
       return defaultTokenResolver.resolve(request);
