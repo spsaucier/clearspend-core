@@ -2,7 +2,8 @@
   "variables": {
     "defaultTenantId": "f9fdf77f-ac15-4de3-8bc8-91f87d312256",
     "accessTokenPopulateLambdaId": "#{UUID()}",
-    "defaultBusinessId": "82a79d15-9e47-421b-ab8f-78532f4f8bc7"
+    "defaultBusinessId": "82a79d15-9e47-421b-ab8f-78532f4f8bc7",
+    "businessOwnerTesterId": "#{UUID()}"
   },
   "apiKeys": [
     {
@@ -28,13 +29,15 @@
     },
     {
       "method": "POST",
-      "url": "/api/user/9fe9a7ca-8df2-4bb6-b29d-a1dcec5421b3",
+      "url": "/api/user/#{businessOwnerTesterId}",
       "body": {
         "user": {
-          "email": "tester@tranwall.com",
+          "email": "business-owner-tester@clearspend.com",
           "password": "Password1!",
           "data": {
-            "businessId": "#{defaultBusinessId}"
+            "businessId": "#{defaultBusinessId}",
+            "capitalUserId": "#{businessOwnerTesterId}",
+            "userType": "BUSINESS_OWNER"
           }
         }
       }
@@ -64,7 +67,7 @@
       "url": "/api/lambda/#{accessTokenPopulateLambdaId}",
       "body": {
         "lambda": {
-          "name": "business id to jwt token",
+          "name": "Enrich JWT token with Capital data",
           "type": "JWTPopulate",
           "body": "@{populate-token.js}"
         }

@@ -1,5 +1,9 @@
 package com.tranwall.capital.service;
 
+import static com.tranwall.capital.controller.Common.BUSINESS_ID;
+import static com.tranwall.capital.controller.Common.CAPITAL_USER_ID;
+import static com.tranwall.capital.controller.Common.USER_TYPE;
+
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.tranwall.capital.common.error.InvalidRequestException;
@@ -7,6 +11,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.data.model.enums.UserType;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
@@ -21,8 +26,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FusionAuthService {
 
-  public static final String BUSINESS_ID_KEY = "businessId";
-
   private final io.fusionauth.client.FusionAuthClient client;
 
   public UUID createBusinessOwner(
@@ -30,26 +33,34 @@ public class FusionAuthService {
       TypedId<BusinessOwnerId> businessOwnerId,
       String username,
       String password) {
-    return create(businessId, businessOwnerId.toUuid(), username, password);
+    return create(
+        businessId, businessOwnerId.toUuid(), username, password, UserType.BUSINESS_OWNER);
   }
 
   public UUID createUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, String username, String password) {
-    return create(businessId, userId.toUuid(), username, password);
+    return create(businessId, userId.toUuid(), username, password, UserType.EMPLOYEE);
   }
 
   private UUID create(
-      TypedId<BusinessId> businessId, @NonNull UUID userId, String username, String password) {
+      TypedId<BusinessId> businessId,
+      @NonNull UUID userId,
+      String username,
+      String password,
+      UserType userType) {
     User user = new User();
     user.username = username;
     user.password = password;
-    user.data.put(BUSINESS_ID_KEY, businessId.toUuid());
+    user.data.put(BUSINESS_ID, businessId.toUuid());
+    user.data.put(CAPITAL_USER_ID, userId);
+    user.data.put(USER_TYPE, userType.name());
+    UUID fusionAuthUserId = UUID.randomUUID();
 
     ClientResponse<UserResponse, Errors> response =
-        client.createUser(userId, new UserRequest(user));
+        client.createUser(fusionAuthUserId, new UserRequest(user));
 
     if (response.wasSuccessful()) {
-      return response.successResponse.user.id;
+      return fusionAuthUserId;
     }
 
     if (response.errorResponse != null) {

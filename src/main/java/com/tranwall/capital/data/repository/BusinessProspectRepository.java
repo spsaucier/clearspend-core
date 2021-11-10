@@ -1,5 +1,6 @@
 package com.tranwall.capital.data.repository;
 
+import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.BusinessProspect;
@@ -10,6 +11,8 @@ public interface BusinessProspectRepository
     extends JpaRepository<BusinessProspect, TypedId<BusinessProspectId>> {
 
   Optional<BusinessProspect> findBySubjectRef(String subjectRef);
+
+  Optional<BusinessProspect> findByBusinessOwnerId(TypedId<BusinessOwnerId> businessOwnerId);
 
   Optional<BusinessProspect> findByEmailHash(byte[] hash);
 }

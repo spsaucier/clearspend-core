@@ -386,9 +386,10 @@ public class TestHelper {
     Address address = generateEntityAddress();
     String phone = generatePhone();
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
-    fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
+    UUID fusionAuthUserId =
+        fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
     return businessOwnerService.createBusinessOwner(
-        new TypedId<>(),
+        businessOwnerId,
         businessId,
         firstName,
         lastName,
@@ -396,7 +397,7 @@ public class TestHelper {
         email,
         phone,
         false,
-        businessOwnerId.toString());
+        fusionAuthUserId.toString());
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

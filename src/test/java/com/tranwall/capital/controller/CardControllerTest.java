@@ -43,7 +43,7 @@ public class CardControllerTest extends BaseCapitalTest {
   @BeforeEach
   void init() {
     testHelper.init();
-    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
+    this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
   }
 
   @SneakyThrows

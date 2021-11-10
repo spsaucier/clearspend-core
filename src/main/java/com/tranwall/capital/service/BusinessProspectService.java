@@ -4,6 +4,7 @@ import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
+import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -48,6 +49,12 @@ public class BusinessProspectService {
   private final TwilioService twilioService;
   private final ProgramService programService;
   private final UserService userService;
+
+  public BusinessProspect retrieveBusinessProspect(TypedId<BusinessOwnerId> businessOwnerId) {
+    return businessProspectRepository
+        .findByBusinessOwnerId(businessOwnerId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessOwnerId));
+  }
 
   public record BusinessProspectRecord(
       BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}

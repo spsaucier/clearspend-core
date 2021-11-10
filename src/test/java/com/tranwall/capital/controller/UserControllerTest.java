@@ -7,11 +7,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
+import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.UserType;
-import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUserRecord;
@@ -36,16 +37,29 @@ public class UserControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final UserService userService;
-  private final UserRepository userRepository;
 
   private final Faker faker = new Faker();
-
-  private Cookie authCookie;
 
   @BeforeEach
   void init() {
     testHelper.init();
-    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
+  }
+
+  @Test
+  @SneakyThrows
+  void getCurrentBusinessOwner() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/users")
+                    .contentType("application/json")
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    User user = objectMapper.readValue(response.getContentAsString(), User.class);
+    log.info("\n{}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(user));
   }
 
   @SneakyThrows

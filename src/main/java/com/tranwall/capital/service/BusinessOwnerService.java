@@ -91,6 +91,11 @@ public class BusinessOwnerService {
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
   }
 
+  public Optional<BusinessOwner> retrieveBusinessOwnerNotThrowingException(
+      TypedId<BusinessOwnerId> businessOwnerId) {
+    return businessOwnerRepository.findById(businessOwnerId);
+  }
+
   @Transactional
   public BusinessOwner updateBusinessOwner(
       TypedId<BusinessOwnerId> businessOwnerId,

@@ -18,9 +18,12 @@ import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.controller.type.user.UserData;
+import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
+import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ReceiptService;
 import com.tranwall.capital.service.UserService;
@@ -30,8 +33,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +48,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -52,6 +58,8 @@ public class UserController {
   private final CardService cardService;
   private final ReceiptService receiptService;
   private final UserService userService;
+  private final BusinessProspectService businessProspectService;
+  private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("")
   private CreateUserResponse createUser(@RequestBody CreateUserRequest request) throws IOException {
@@ -111,6 +119,26 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
     return new User(userService.retrieveUser(userId));
+  }
+
+  @GetMapping
+  public User currentUser() {
+    CurrentUser currentUser = CurrentUser.get();
+    return switch (currentUser.userType()) {
+      case EMPLOYEE -> new User(userService.retrieveUser(currentUser.userId()));
+      case BUSINESS_OWNER -> {
+        Optional<BusinessOwner> businessOwner =
+            businessOwnerService.retrieveBusinessOwnerNotThrowingException(
+                new TypedId<>(currentUser.userId().toUuid()));
+        if (businessOwner.isPresent()) {
+          yield new User(businessOwner.get());
+        } else {
+          yield new User(
+              businessProspectService.retrieveBusinessProspect(
+                  new TypedId<>(currentUser.userId().toUuid())));
+        }
+      }
+    };
   }
 
   @GetMapping(value = "/list")

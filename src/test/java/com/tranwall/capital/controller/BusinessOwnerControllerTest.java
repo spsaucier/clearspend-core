@@ -34,7 +34,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
   @BeforeEach
   void init() throws Exception {
-    this.authCookie = testHelper.login("tester@tranwall.com", "Password1!");
+    this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
     if (onboardBusinessRecord == null) {
       mockServerHelper.expectOtpViaEmail();
       mockServerHelper.expectOtpViaSms();
