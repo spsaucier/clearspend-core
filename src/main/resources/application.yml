@@ -14,7 +14,7 @@ spring:
         use_sql_comments: false
         format_sql: true
   flyway:
-    clean-on-validation-error: true
+    clean-on-validation-error: false
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
