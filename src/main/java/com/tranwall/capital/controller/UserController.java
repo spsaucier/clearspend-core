@@ -132,11 +132,10 @@ public class UserController {
                 new TypedId<>(currentUser.userId().toUuid()));
         if (businessOwner.isPresent()) {
           yield new User(businessOwner.get());
-        } else {
-          yield new User(
-              businessProspectService.retrieveBusinessProspect(
-                  new TypedId<>(currentUser.userId().toUuid())));
         }
+        yield new User(
+            businessProspectService.retrieveBusinessProspect(
+                new TypedId<>(currentUser.userId().toUuid())));
       }
     };
   }

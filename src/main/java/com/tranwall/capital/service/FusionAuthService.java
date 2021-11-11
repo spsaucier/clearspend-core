@@ -1,9 +1,5 @@
 package com.tranwall.capital.service;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-import static com.tranwall.capital.controller.Common.CAPITAL_USER_ID;
-import static com.tranwall.capital.controller.Common.USER_TYPE;
-
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.tranwall.capital.common.error.InvalidRequestException;
@@ -25,6 +21,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @RequiredArgsConstructor
 public class FusionAuthService {
+
+  private static final String BUSINESS_ID = "businessId";
+  private static final String CAPITAL_USER_ID = "capitalUserId";
+  private static final String USER_TYPE = "userType";
 
   private final io.fusionauth.client.FusionAuthClient client;
 
