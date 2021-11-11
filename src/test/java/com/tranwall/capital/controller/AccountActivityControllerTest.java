@@ -63,8 +63,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(
-            businessAndAllocationsRecord.businessAccount().getBusinessId());
+        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
     Business business = businessAndAllocationsRecord.business();
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
@@ -74,9 +73,16 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             Amount.of(Currency.USD, new BigDecimal("1000")),
             false);
     Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+        accountService.retrieveRootAllocationAccount(
+            business.getId(),
+            business.getCurrency(),
+            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            false);
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            businessAndAllocationsRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

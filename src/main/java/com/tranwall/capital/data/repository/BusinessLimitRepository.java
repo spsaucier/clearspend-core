@@ -11,4 +11,6 @@ public interface BusinessLimitRepository
     extends JpaRepository<BusinessLimit, TypedId<BusinessLimitId>> {
 
   Optional<BusinessLimit> findByBusinessId(TypedId<BusinessId> businessId);
+
+  void deleteByBusinessId(TypedId<BusinessId> businessId);
 }

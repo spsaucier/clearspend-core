@@ -1,7 +1,6 @@
 package com.tranwall.capital.data.model.enums;
 
 public enum AccountType {
-  BUSINESS(LedgerAccountType.BUSINESS),
   ALLOCATION(LedgerAccountType.ALLOCATION),
   CARD(LedgerAccountType.CARD);
 

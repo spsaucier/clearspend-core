@@ -7,21 +7,18 @@ import com.tranwall.capital.common.error.IdMismatchException.IdType;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
-import com.tranwall.capital.common.error.TypeMismatchException;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
-import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
-import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -50,31 +47,54 @@ public class AllocationService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
-  private final ProgramService programService;
   private final SpendLimitService spendLimitService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
   @Transactional
+  public AllocationRecord createRootAllocation(TypedId<BusinessId> businessId, String name) {
+    // create future allocationId so we can create the account first
+    TypedId<AllocationId> allocationId = new TypedId<>();
+    // creating the account because the allocation references it
+    Account account =
+        accountService.createAccount(
+            businessId, AccountType.ALLOCATION, allocationId.toUuid(), Currency.USD);
+
+    // create new allocation and set its ID to that which was used for the Account record
+    Allocation allocation = new Allocation(businessId, account.getId(), name, "I2C_STAKEHOLDER_ID");
+    allocation.setId(allocationId);
+
+    allocation = allocationRepository.save(allocation);
+
+    spendLimitService.initializeAllocationSpendLimit(
+        allocation.getBusinessId(), allocation.getId());
+
+    return new AllocationRecord(allocation, account);
+  }
+
+  @Transactional
   public AllocationRecord createAllocation(
-      TypedId<ProgramId> programId,
-      TypedId<BusinessId> businessId,
-      TypedId<AllocationId> parentAllocationId,
-      String name,
-      Amount amount) {
+      final TypedId<BusinessId> businessId,
+      @NonNull final TypedId<AllocationId> parentAllocationId,
+      final String name,
+      final Amount amount) {
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
     Account parentAccount = null;
-    if (BigDecimalUtils.isLargerThan(amount.getAmount(), BigDecimal.ZERO)) {
 
-      if (parentAllocationId == null) {
-        parentAccount =
-            accountService.retrieveBusinessAccount(businessId, amount.getCurrency(), true);
-      } else {
-        parentAccount =
-            accountService.retrieveAllocationAccount(
-                businessId, amount.getCurrency(), parentAllocationId);
-      }
+    Allocation parent =
+        allocationRepository
+            .findById(parentAllocationId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, parentAllocationId));
+
+    if (!parent.getBusinessId().equals(businessId)) {
+      throw new IdMismatchException(IdType.BUSINESS_ID, businessId, parent.getBusinessId());
+    }
+
+    if (BigDecimalUtils.isLargerThan(amount.getAmount(), BigDecimal.ZERO)) {
+      parentAccount =
+          accountService.retrieveAllocationAccount(
+              businessId, amount.getCurrency(), parentAllocationId);
 
       if (parentAccount.getLedgerBalance().isSmallerThan(amount)) {
         throw new InsufficientFundsException(
@@ -88,23 +108,11 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
-    Allocation allocation = new Allocation(businessId, programId, account.getId(), name);
+    Allocation allocation = new Allocation(businessId, account.getId(), name, "I2C_STAKEHOLDER_ID");
     allocation.setId(allocationId);
-
-    if (parentAllocationId != null) {
-      allocation.setParentAllocationId(parentAllocationId);
-      Allocation parent =
-          allocationRepository
-              .findById(parentAllocationId)
-              .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, parentAllocationId));
-
-      if (!parent.getBusinessId().equals(businessId)) {
-        throw new IdMismatchException(IdType.BUSINESS_ID, businessId, parent.getBusinessId());
-      }
-
-      allocation.setAncestorAllocationIds(
-          allocationRepository.retrieveAncestorAllocationIds(parentAllocationId));
-    }
+    allocation.setParentAllocationId(parentAllocationId);
+    allocation.setAncestorAllocationIds(
+        allocationRepository.retrieveAncestorAllocationIds(parentAllocationId));
 
     allocation = allocationRepository.save(allocation);
 
@@ -135,13 +143,28 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
+  public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {
+    Allocation rootAllocation =
+        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId);
+    if (rootAllocation == null) {
+      throw new RecordNotFoundException(Table.ALLOCATION, businessId);
+    }
+    return new AllocationRecord(
+        rootAllocation,
+        accountService.retrieveAllocationAccount(businessId, Currency.USD, rootAllocation.getId()));
+  }
+
   public List<AllocationRecord> getAllocationChildren(
       Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId
     List<Allocation> allocations;
     if (allocationId == null) {
       allocations =
-          allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(business.getId());
+          allocationRepository.findByBusinessIdAndParentAllocationId(
+              business.getId(),
+              allocationRepository
+                  .findByBusinessIdAndParentAllocationIdIsNull(business.getId())
+                  .getId());
     } else {
       allocations =
           allocationRepository.findByBusinessIdAndParentAllocationId(
@@ -189,9 +212,7 @@ public class AllocationService {
     if (allocations.size() != accounts.size()) {
       throw new IllegalStateException("allocation vs account count mismatch");
     }
-    Map<UUID, Account> accountMap =
-        accounts.stream().collect(Collectors.toMap(Account::getOwnerId, Function.identity()));
-    return accountMap;
+    return accounts.stream().collect(Collectors.toMap(Account::getOwnerId, Function.identity()));
   }
 
   @Transactional
@@ -208,10 +229,14 @@ public class AllocationService {
           IdType.ACCOUNT_ID, accountId, allocationRecord.account().getId());
     }
 
-    Program program = programService.retrieveProgram(allocationRecord.allocation.getProgramId());
-    if (program.getFundingType() != FundingType.INDIVIDUAL) {
-      throw new TypeMismatchException(FundingType.INDIVIDUAL, program.getFundingType());
-    }
+    // TODO: Allocations have a default program - the question is do we need to keep the funding
+    // type?
+    /*
+        Program program = programService.retrieveProgram(allocationRecord.allocation.getProgramId());
+        if (program.getFundingType() != FundingType.INDIVIDUAL) {
+          throw new TypeMismatchException(FundingType.INDIVIDUAL, program.getFundingType());
+        }
+    */
 
     CardRecord card = cardService.getCard(business.getId(), cardId);
 

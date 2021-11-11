@@ -62,6 +62,10 @@ public class Card {
   @NonNull
   private FundingType fundingType;
 
+  @JsonProperty("cardType")
+  @NonNull
+  private CardType cardType;
+
   @JsonProperty("issueDate")
   private OffsetDateTime issueDate;
 
@@ -113,6 +117,7 @@ public class Card {
     status = card.getStatus();
     statusReason = card.getStatusReason();
     fundingType = card.getFundingType();
+    cardType = card.getCardType();
     issueDate = card.getIssueDate();
     expirationDate = card.getExpirationDate();
     activated = card.isActivated();

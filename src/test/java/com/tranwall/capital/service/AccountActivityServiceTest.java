@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
@@ -56,8 +57,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void recordAccountActivityOnBusinessBankAccountTransaction() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(
-            businessAndAllocationsRecord.businessAccount().getBusinessId());
+        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
             businessAndAllocationsRecord.business().getId(),
@@ -74,17 +74,23 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void recordAccountActivityOnReallocationBusinessFunds() {
-    Business business = testHelper.createBusiness(program).business();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
+    final TypedId<AllocationId> rootAllocationId =
+        businessAndAllocationsRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
-        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
+        businessAndAllocationsRecord.allocationRecord().account(),
+        Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
-    Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+    Account rootAllocationAccount = businessAndAllocationsRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            businessAndAllocationsRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
-        account.getId(),
+        rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
         new com.tranwall.capital.common.data.model.Amount(Currency.USD, BigDecimal.valueOf(300)));
 
@@ -101,11 +107,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void createAccountActivity() {
-    Business business = testHelper.createBusiness(program).business();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(business.getId());
     Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+        accountService.retrieveRootAllocationAccount(
+            business.getId(),
+            business.getCurrency(),
+            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            false);
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -120,17 +131,23 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void retrieveLatestAccountActivity() {
-    Business business = testHelper.createBusiness(program).business();
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    Business business = businessAndAllocationsRecord.business();
+    final TypedId<AllocationId> rootAllocationId =
+        businessAndAllocationsRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
-        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
+        businessAndAllocationsRecord.allocationRecord().account(),
+        Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
-    Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+    Account rootAllocationAccount = businessAndAllocationsRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            businessAndAllocationsRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
-        account.getId(),
+        rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
         new com.tranwall.capital.common.data.model.Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
@@ -153,8 +170,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void retrieveAllAccountActivityFilterByAllocationType() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(
-            businessAndAllocationsRecord.businessAccount().getBusinessId());
+        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
     Business business = businessAndAllocationsRecord.business();
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
@@ -164,9 +180,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(Currency.USD, new BigDecimal("1000")),
             false);
     Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+        accountService.retrieveRootAllocationAccount(
+            business.getId(),
+            business.getCurrency(),
+            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            false);
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            businessAndAllocationsRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

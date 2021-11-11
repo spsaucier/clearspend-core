@@ -8,7 +8,7 @@ import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Receipt;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.SneakyThrows;
@@ -23,7 +23,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
   @Autowired private ReceiptService receiptService;
 
-  private CreateUserRecord userRecord;
+  private CreateUpdateUserRecord userRecord;
   private String fileContents;
   private Receipt receipt;
 

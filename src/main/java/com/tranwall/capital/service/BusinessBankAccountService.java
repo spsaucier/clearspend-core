@@ -36,6 +36,7 @@ public class BusinessBankAccountService {
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
+  private final AllocationService allocationService;
 
   private final PlaidClient plaidClient;
 
@@ -125,8 +126,13 @@ public class BusinessBankAccountService {
 
     AdjustmentRecord adjustmentRecord =
         switch (bankAccountTransactType) {
-          case DEPOSIT -> accountService.depositFunds(businessId, amount, placeHold);
-          case WITHDRAW -> accountService.withdrawFunds(businessId, amount);
+          case DEPOSIT -> accountService.depositFunds(
+              businessId,
+              allocationService.getRootAllocation(businessId).account(),
+              amount,
+              placeHold);
+          case WITHDRAW -> accountService.withdrawFunds(
+              businessId, allocationService.getRootAllocation(businessId).account(), amount);
         };
 
     // TODO(kuchlein): need to write one account activity record

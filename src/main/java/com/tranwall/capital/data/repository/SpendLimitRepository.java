@@ -13,4 +13,6 @@ public interface SpendLimitRepository extends JpaRepository<SpendLimit, TypedId<
 
   Optional<SpendLimit> findByBusinessIdAndTypeAndOwnerId(
       TypedId<BusinessId> businessId, SpendLimitType type, UUID ownerId);
+
+  void deleteByBusinessId(TypedId<BusinessId> businessId);
 }

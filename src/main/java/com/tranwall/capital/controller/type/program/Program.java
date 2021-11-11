@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.FundingType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,10 +29,14 @@ public class Program {
   @JsonProperty("fundingType")
   private FundingType fundingType;
 
+  @JsonProperty("cardType")
+  private CardType cardType;
+
   public Program(com.tranwall.capital.data.model.Program program) {
     this.programId = program.getId();
     this.name = program.getName();
     this.bin = program.getBin();
     this.fundingType = program.getFundingType();
+    this.cardType = program.getCardType();
   }
 }

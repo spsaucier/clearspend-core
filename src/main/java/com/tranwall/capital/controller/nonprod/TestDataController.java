@@ -5,7 +5,6 @@ import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
@@ -32,7 +31,7 @@ import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,7 +66,7 @@ public class TestDataController {
   private final AllocationRepository allocationRepository;
   private final CardRepository cardRepository;
   private final Faker faker = new Faker();
-  private List<CreateUserRecord> createUserRecordList = new ArrayList<>();
+  private List<CreateUpdateUserRecord> createUpdateUserRecordList = new ArrayList<>();
 
   @GetMapping("/db-content")
   private CreateTestDataResponse getDbContent() {
@@ -81,32 +80,28 @@ public class TestDataController {
     Bin bin = allBins.size() > 0 ? allBins.get(0) : createBin();
     List<Program> allPrograms = programService.findAllPrograms();
     Program program =
-        allPrograms.size() > 0 ? allPrograms.get(0) : createProgram(bin, FundingType.INDIVIDUAL);
+        allPrograms.size() > 0
+            ? allPrograms.get(0)
+            : createProgram(bin, FundingType.INDIVIDUAL, CardType.VIRTUAL);
     BusinessAndAllocationsRecord business = createBusiness(null, program);
     AllocationRecord parentAllocation =
-        createAllocation(
-            program.getId(), business.business().getId(), faker.company().name(), null);
+        createAllocation(business.business().getId(), faker.company().name(), null);
     AllocationRecord allocation1 =
         createAllocation(
-            program.getId(),
             business.business().getId(),
             faker.company().name(),
             parentAllocation.allocation().getId());
     createAllocation(
-        program.getId(),
-        business.business().getId(),
-        faker.company().name(),
-        allocation1.allocation().getId());
+        business.business().getId(), faker.company().name(), allocation1.allocation().getId());
     AllocationRecord parentAllocation2 =
-        createAllocation(
-            program.getId(), business.business().getId(), faker.company().name(), null);
+        createAllocation(business.business().getId(), faker.company().name(), null);
 
-    CreateUserRecord user = createUser(business.business());
-    CreateUserRecord user2 = createUser(business.business());
-    CreateUserRecord user3 = createUser(business.business());
-    createUserRecordList.add(user);
-    createUserRecordList.add(user2);
-    createUserRecordList.add(user3);
+    CreateUpdateUserRecord user = createUser(business.business());
+    CreateUpdateUserRecord user2 = createUser(business.business());
+    CreateUpdateUserRecord user3 = createUser(business.business());
+    createUpdateUserRecordList.add(user);
+    createUpdateUserRecordList.add(user2);
+    createUpdateUserRecordList.add(user3);
 
     issueCard(
         business.business(),
@@ -140,9 +135,13 @@ public class TestDataController {
     return binService.createBin(faker.random().nextInt(500000, 599999) + "", "Test Data BIN");
   }
 
-  private Program createProgram(Bin bin, FundingType fundingType) {
+  private Program createProgram(Bin bin, FundingType fundingType, CardType cardType) {
     return programService.createProgram(
-        UUID.randomUUID().toString(), bin.getBin(), fundingType, faker.number().digits(8));
+        UUID.randomUUID().toString(),
+        bin.getBin(),
+        fundingType,
+        cardType,
+        faker.number().digits(8));
   }
 
   private BusinessAndAllocationsRecord createBusiness(
@@ -174,15 +173,12 @@ public class TestDataController {
   }
 
   public AllocationRecord createAllocation(
-      TypedId<ProgramId> programId,
-      TypedId<BusinessId> businessId,
-      String name,
-      TypedId<AllocationId> parentAllocationId) {
+      TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
     return allocationService.createAllocation(
-        programId, businessId, parentAllocationId, name, Amount.of(Currency.USD));
+        businessId, parentAllocationId, name, Amount.of(Currency.USD));
   }
 
-  public CreateUserRecord createUser(com.tranwall.capital.data.model.Business business)
+  public CreateUpdateUserRecord createUser(com.tranwall.capital.data.model.Business business)
       throws IOException {
     return userService.createUser(
         business.getId(),
@@ -230,7 +226,7 @@ public class TestDataController {
                         cardRepository.findAll().stream()
                             .filter(card -> card.getBusinessId().equals(business.getId()))
                             .collect(Collectors.toList()),
-                        createUserRecordList.stream()
+                        createUpdateUserRecordList.stream()
                             .filter(
                                 createUserRecord ->
                                     createUserRecord

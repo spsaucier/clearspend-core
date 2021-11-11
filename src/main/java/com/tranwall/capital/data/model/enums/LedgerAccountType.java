@@ -6,10 +6,9 @@ import java.util.Set;
 public enum LedgerAccountType {
   ALLOCATION,
   BANK,
-  BUSINESS,
   CARD,
   NETWORK;
 
   public static final Set<LedgerAccountType> createOnlySet =
-      Sets.immutableEnumSet(ALLOCATION, BUSINESS, CARD, NETWORK);
+      Sets.immutableEnumSet(ALLOCATION, CARD, NETWORK);
 }

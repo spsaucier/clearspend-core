@@ -34,6 +34,7 @@ public class ProgramController {
                 request.getName(),
                 request.getBin(),
                 request.getFundingType(),
+                request.getCardType(),
                 request.getI2cProgramRef())
             .getId());
   }

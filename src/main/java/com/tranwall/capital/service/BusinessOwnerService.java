@@ -50,7 +50,6 @@ public class BusinessOwnerService {
       Address address,
       String email,
       String phone,
-      boolean generatePassword,
       String subjectRef)
       throws IOException {
     BusinessOwner businessOwner =
@@ -73,13 +72,13 @@ public class BusinessOwnerService {
 
     userService.createUser(
         businessId,
-        UserType.EMPLOYEE,
+        UserType.BUSINESS_OWNER,
         firstName,
         lastName,
         address,
         email,
         phone,
-        generatePassword,
+        false,
         subjectRef);
 
     return businessOwnerRepository.save(businessOwner);

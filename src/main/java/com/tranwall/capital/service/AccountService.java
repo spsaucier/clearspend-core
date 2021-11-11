@@ -64,46 +64,47 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public AdjustmentRecord depositFunds(
-      TypedId<BusinessId> businessId, Amount amount, boolean placeHold) {
+      TypedId<BusinessId> businessId,
+      Account rootAllocationAccount,
+      Amount amount,
+      boolean placeHold) {
     amount.ensurePositive();
-
-    Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), false);
 
     businessLimitService.ensureWithinDepositLimit(businessId, amount);
 
-    Adjustment adjustment = adjustmentService.recordDepositFunds(account, amount);
-    account.setLedgerBalance(account.getLedgerBalance().add(amount));
+    Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
+    rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
     if (placeHold) {
       holdRepository.save(
           new Hold(
               businessId,
-              account.getId(),
+              rootAllocationAccount.getId(),
               HoldStatus.PLACED,
               amount.negate(),
               OffsetDateTime.now().plusDays(5)));
     }
 
-    return new AdjustmentRecord(account, adjustment);
+    return new AdjustmentRecord(rootAllocationAccount, adjustment);
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord withdrawFunds(TypedId<BusinessId> businessId, Amount amount) {
+  public AdjustmentRecord withdrawFunds(
+      TypedId<BusinessId> businessId, Account rootAllocationAccount, Amount amount) {
     amount.ensurePositive();
 
-    Account account = retrieveBusinessAccount(businessId, amount.getCurrency(), true);
-    if (account.getAvailableBalance().isSmallerThan(amount)) {
+    if (rootAllocationAccount.getAvailableBalance().isSmallerThan(amount)) {
       throw new InsufficientFundsException(
-          "Account", account.getId(), AdjustmentType.WITHDRAW, amount);
+          "Account", rootAllocationAccount.getId(), AdjustmentType.WITHDRAW, amount);
     }
 
     businessLimitService.ensureWithinWithdrawLimit(businessId, amount);
 
-    Adjustment adjustment = adjustmentService.recordWithdrawFunds(account, amount);
-    account.setLedgerBalance(account.getLedgerBalance().sub(amount));
-    account = accountRepository.save(account);
+    Adjustment adjustment = adjustmentService.recordWithdrawFunds(rootAllocationAccount, amount);
+    rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().sub(amount));
+    rootAllocationAccount = accountRepository.save(rootAllocationAccount);
 
-    return new AdjustmentRecord(account, adjustment);
+    return new AdjustmentRecord(rootAllocationAccount, adjustment);
   }
 
   @Transactional(TxType.REQUIRED)
@@ -153,16 +154,19 @@ public class AccountService {
     return account;
   }
 
-  public Account retrieveBusinessAccount(
-      TypedId<BusinessId> businessId, Currency currency, boolean fetchHolds) {
+  public Account retrieveRootAllocationAccount(
+      TypedId<BusinessId> businessId,
+      Currency currency,
+      TypedId<AllocationId> owner,
+      boolean fetchHolds) {
     Account account =
         accountRepository
             .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
-                businessId, AccountType.BUSINESS, businessId.toUuid(), currency)
+                businessId, AccountType.ALLOCATION, owner.toUuid(), currency)
             .orElseThrow(
                 () ->
                     new RecordNotFoundException(
-                        Table.ACCOUNT, businessId, AccountType.BUSINESS, businessId, currency));
+                        Table.ACCOUNT, businessId, AccountType.ALLOCATION, businessId, currency));
 
     fetchHolds(account, fetchHolds);
 

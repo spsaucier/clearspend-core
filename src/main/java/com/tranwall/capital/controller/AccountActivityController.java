@@ -3,7 +3,7 @@ package com.tranwall.capital.controller;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.PageRequest;
+import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import lombok.RequiredArgsConstructor;

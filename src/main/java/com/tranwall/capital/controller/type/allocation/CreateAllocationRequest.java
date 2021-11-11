@@ -2,7 +2,6 @@ package com.tranwall.capital.controller.type.allocation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.typedid.data.AllocationId;
-import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,18 +14,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CreateAllocationRequest {
 
-  @JsonProperty("programId")
-  @NonNull
-  @NotNull(message = "programId required")
-  @Schema(example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-  private TypedId<ProgramId> programId;
-
   @JsonProperty("name")
   @NonNull
   @NotNull(message = "name required")
   @Schema(example = "advertisement", description = "name of the department/ allocation")
   private String name;
 
+  @NonNull
+  @NotNull(message = "parent allocation id required")
   @JsonProperty("parentAllocationId")
   @Schema(example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
   private TypedId<AllocationId> parentAllocationId;

@@ -13,7 +13,6 @@ import com.tranwall.capital.controller.type.business.prospect.ValidateBusinessPr
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
-import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.BusinessProspect;
@@ -198,10 +197,7 @@ public class BusinessProspectService {
   }
 
   public record ConvertBusinessProspectRecord(
-      Business business,
-      Account businessAccount,
-      List<AllocationRecord> allocationRecords,
-      BusinessOwner businessOwner) {}
+      Business business, AllocationRecord rootAllocationRecord, BusinessOwner businessOwner) {}
 
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
@@ -243,7 +239,6 @@ public class BusinessProspectService {
             toAddress,
             businessProspect.getEmail().getEncrypted(),
             businessProspect.getPhone().getEncrypted(),
-            false,
             businessProspect.getSubjectRef());
 
     // delete the business prospect so that the owner of the email could register a new business
@@ -252,8 +247,7 @@ public class BusinessProspectService {
 
     return new ConvertBusinessProspectRecord(
         businessAndAllocationsRecord.business(),
-        businessAndAllocationsRecord.businessAccount(),
-        businessAndAllocationsRecord.allocationRecords(),
+        businessAndAllocationsRecord.allocationRecord(),
         businessOwner);
   }
 

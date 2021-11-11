@@ -42,6 +42,17 @@ public class FusionAuthService {
     return create(businessId, userId.toUuid(), username, password, UserType.EMPLOYEE);
   }
 
+  public UUID updateUser(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      String username,
+      String password,
+      UserType userType,
+      String fusionAuth) {
+    return update(
+        businessId, userId.toUuid(), username, password, userType, UUID.fromString(fusionAuth));
+  }
+
   private UUID create(
       TypedId<BusinessId> businessId,
       @NonNull UUID userId,
@@ -73,6 +84,39 @@ public class FusionAuthService {
       throw new RuntimeException(exception);
     }
 
+    throw new RuntimeException("shouldn't have got here");
+  }
+
+  private UUID update(
+      TypedId<BusinessId> businessId,
+      @NonNull UUID userId,
+      String username,
+      String password,
+      UserType userType,
+      UUID fusionAuthUserId) {
+    User user = new User();
+    user.username = username;
+    user.password = password;
+    user.data.put(BUSINESS_ID, businessId.toUuid());
+    user.data.put(CAPITAL_USER_ID, userId);
+    user.data.put(USER_TYPE, userType.name());
+
+    ClientResponse<UserResponse, Errors> response =
+        client.updateUser(fusionAuthUserId, new UserRequest(user));
+
+    if (response.wasSuccessful()) {
+      return fusionAuthUserId;
+    }
+
+    if (response.errorResponse != null) {
+      Errors errors = response.errorResponse;
+      throw new InvalidRequestException(errors.toString());
+    }
+
+    if (response.exception != null) {
+      Exception exception = response.exception;
+      throw new RuntimeException(exception);
+    }
     throw new RuntimeException("shouldn't have got here");
   }
 

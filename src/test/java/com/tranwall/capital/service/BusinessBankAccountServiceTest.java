@@ -44,8 +44,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void depositFunds() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(
-            businessAndAllocationsRecord.businessAccount().getBusinessId());
+        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
     AdjustmentRecord adjustmentRecord =
         bankAccountService.transactBankAccount(
             businessAndAllocationsRecord.business().getId(),
@@ -58,7 +57,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Test
   void withdrawFunds_success() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    TypedId<BusinessId> businessId = businessAndAllocationsRecord.businessAccount().getBusinessId();
+    TypedId<BusinessId> businessId = businessAndAllocationsRecord.business().getId();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
@@ -79,7 +78,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Test
   void withdrawFunds_insufficientBalance() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    TypedId<BusinessId> businessId = businessAndAllocationsRecord.businessAccount().getBusinessId();
+    TypedId<BusinessId> businessId = businessAndAllocationsRecord.business().getId();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(

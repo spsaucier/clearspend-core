@@ -6,7 +6,7 @@ import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -41,6 +41,6 @@ public class CreateTestDataResponse {
     List<Card> cards;
 
     @JsonProperty("createUserRecords")
-    List<CreateUserRecord> createUserRecords;
+    List<CreateUpdateUserRecord> createUpdateUserRecords;
   }
 }

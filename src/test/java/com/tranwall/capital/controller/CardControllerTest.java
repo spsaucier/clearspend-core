@@ -13,8 +13,9 @@ import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
 import java.util.Set;
 import javax.servlet.http.Cookie;
@@ -35,6 +36,7 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final AllocationService allocationService;
 
   private final Faker faker = new Faker();
 
@@ -53,8 +55,14 @@ public class CardControllerTest extends BaseCapitalTest {
     Program program = testHelper.createProgram(bin);
     Business business = testHelper.retrieveBusiness();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
-    CreateUserRecord user = testHelper.createUser(business);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId());
+    CreateUpdateUserRecord user = testHelper.createUser(business);
 
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(

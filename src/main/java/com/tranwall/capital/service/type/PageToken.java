@@ -5,7 +5,6 @@ import javax.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NonNull;
 import org.springframework.data.domain.Sort;
 
@@ -23,20 +22,8 @@ public class PageToken {
   @Builder
   public static class OrderBy {
     @Pattern(regexp = "[a-zA-Z0-9_\\-]*")
-    private OrderItem item;
+    private String item;
 
     private Sort.Direction direction;
-  }
-
-  @Getter
-  public enum OrderItem {
-    DATE("activityTime"),
-    AMOUNT("amount");
-
-    String name;
-
-    OrderItem(String item) {
-      this.name = item;
-    }
   }
 }

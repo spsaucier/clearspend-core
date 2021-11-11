@@ -5,7 +5,6 @@ import com.tranwall.capital.common.data.type.TypedIdArrayType;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +38,6 @@ public class Allocation extends TypedMutable<AllocationId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "program")
-  @Column(updatable = false)
-  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<ProgramId> programId;
-
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
@@ -61,4 +54,6 @@ public class Allocation extends TypedMutable<AllocationId> {
   private TypedId<AccountId> accountId;
 
   @NonNull private String name;
+
+  @NonNull private String i2cStakeholderRef;
 }

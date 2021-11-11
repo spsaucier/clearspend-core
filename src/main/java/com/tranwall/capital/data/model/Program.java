@@ -2,6 +2,7 @@ package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.ProgramId;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.FundingType;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -30,6 +31,10 @@ public class Program extends TypedMutable<ProgramId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private FundingType fundingType;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private CardType cardType;
 
   // from i2c
   @NonNull private String i2cCardProgramRef;

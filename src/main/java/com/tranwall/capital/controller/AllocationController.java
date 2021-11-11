@@ -39,7 +39,6 @@ public class AllocationController {
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
-            request.getProgramId(),
             CurrentUser.get().businessId(),
             request.getParentAllocationId(),
             request.getName(),
@@ -63,7 +62,6 @@ public class AllocationController {
 
     return new Allocation(
         allocationRecord.allocation().getId(),
-        allocationRecord.allocation().getProgramId(),
         allocationRecord.allocation().getName(),
         Account.of(allocationRecord.account()));
   }
@@ -84,10 +82,7 @@ public class AllocationController {
         .map(
             e ->
                 new Allocation(
-                    e.allocation().getId(),
-                    e.allocation().getProgramId(),
-                    e.allocation().getName(),
-                    Account.of(e.account())))
+                    e.allocation().getId(), e.allocation().getName(), Account.of(e.account())))
         .collect(Collectors.toList());
   }
 

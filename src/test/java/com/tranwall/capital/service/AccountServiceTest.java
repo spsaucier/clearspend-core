@@ -10,6 +10,7 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
+import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
@@ -44,18 +45,24 @@ class AccountServiceTest extends BaseCapitalTest {
   void reallocateFunds() {
     BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(
-            businessAndAllocationsRecord.businessAccount().getBusinessId());
+        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
     businessBankAccountService.transactBankAccount(
         businessAndAllocationsRecord.business().getId(),
         businessBankAccountId,
         FundsTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);
+
+    AllocationRecord allocation =
+        testHelper.createAllocation(
+            businessAndAllocationsRecord.business().getId(),
+            "name",
+            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+
     AccountReallocateFundsRecord adjustmentRecord =
         accountService.reallocateFunds(
-            businessAndAllocationsRecord.businessAccount().getId(),
-            businessAndAllocationsRecord.allocationRecords().get(0).account().getId(),
+            businessAndAllocationsRecord.allocationRecord().account().getId(),
+            allocation.allocation().getAccountId(),
             Amount.of(Currency.USD, new BigDecimal("241.85")));
   }
 }

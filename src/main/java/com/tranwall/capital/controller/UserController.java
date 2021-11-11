@@ -7,15 +7,19 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.CardAccountActivityRequest;
-import com.tranwall.capital.controller.type.activity.PageRequest;
 import com.tranwall.capital.controller.type.card.Card;
 import com.tranwall.capital.controller.type.card.UserCardResponse;
+import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
+import com.tranwall.capital.controller.type.user.SearchUserRequest;
+import com.tranwall.capital.controller.type.user.UpdateUserRequest;
+import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.controller.type.user.UserData;
 import com.tranwall.capital.data.model.BusinessOwner;
@@ -26,8 +30,9 @@ import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ReceiptService;
+import com.tranwall.capital.service.UserFilterCriteria;
 import com.tranwall.capital.service.UserService;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,8 +43,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,7 +71,7 @@ public class UserController {
   @PostMapping("")
   private CreateUserResponse createUser(@RequestBody CreateUserRequest request) throws IOException {
 
-    CreateUserRecord userServiceUser =
+    CreateUpdateUserRecord userServiceUser =
         userService.createUser(
             CurrentUser.get().businessId(),
             UserType.EMPLOYEE,
@@ -79,13 +86,38 @@ public class UserController {
     return new CreateUserResponse(userServiceUser.user().getId(), userServiceUser.password(), null);
   }
 
+  @PatchMapping("/{userId}")
+  private UpdateUserResponse updateUser(
+      @PathVariable(value = USER_ID)
+          @Parameter(
+              required = true,
+              name = USER_ID,
+              description = "ID of the user record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<UserId> userId,
+      @RequestBody UpdateUserRequest request) {
+
+    final CreateUpdateUserRecord updateUserRecord =
+        userService.updateUser(
+            CurrentUser.get().businessId(),
+            userId,
+            request.getFirstName(),
+            request.getLastName(),
+            request.getAddress() != null ? request.getAddress().toAddress() : null,
+            request.getEmail(),
+            request.getPhone(),
+            request.isGeneratePassword());
+
+    return new UpdateUserResponse(updateUserRecord.user().getId(), null);
+  }
+
   @PostMapping("/bulk")
   private List<CreateUserResponse> bulkCreateUser(@RequestBody List<CreateUserRequest> request) {
 
     List<CreateUserResponse> response = new ArrayList<>(request.size());
     for (CreateUserRequest createUserRequest : request) {
       try {
-        CreateUserRecord userServiceUser =
+        CreateUpdateUserRecord userServiceUser =
             userService.createUser(
                 CurrentUser.get().businessId(),
                 UserType.EMPLOYEE,
@@ -170,6 +202,30 @@ public class UserController {
               .collect(Collectors.toList());
     }
     return userDataList;
+  }
+
+  @PostMapping(value = "/search")
+  private Page<User> getUsers(@Validated @RequestBody SearchUserRequest request) {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    Page<com.tranwall.capital.data.model.User> userPage =
+        userService.getUserPage(businessId, new UserFilterCriteria(request));
+
+    return new PageImpl<>(
+        userPage.stream()
+            .map(
+                user ->
+                    new User(
+                        user.getId(),
+                        user.getBusinessId(),
+                        user.getType(),
+                        user.getFirstName().toString(),
+                        user.getLastName().toString(),
+                        new Address(user.getAddress()),
+                        user.getEmail().toString(),
+                        user.getPhone().toString()))
+            .collect(Collectors.toList()),
+        userPage.getPageable(),
+        userPage.getTotalElements());
   }
 
   @GetMapping("/cards")

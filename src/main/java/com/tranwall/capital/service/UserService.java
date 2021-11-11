@@ -13,14 +13,21 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWi
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
+import com.tranwall.capital.service.type.PageToken;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.persistence.criteria.Predicate;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,10 +40,10 @@ public class UserService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
-  public record CreateUserRecord(User user, String password) {}
+  public record CreateUpdateUserRecord(User user, String password) {}
 
   @Transactional
-  public CreateUserRecord createUser(
+  public CreateUpdateUserRecord createUser(
       TypedId<BusinessId> businessId,
       UserType type,
       String firstName,
@@ -72,7 +79,51 @@ public class UserService {
           String.format("Welcome to ClearSpend, your password is %s", password));
     }
 
-    return new CreateUserRecord(userRepository.save(user), password);
+    return new CreateUpdateUserRecord(userRepository.save(user), password);
+  }
+
+  @Transactional
+  public CreateUpdateUserRecord updateUser(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      String firstName,
+      String lastName,
+      @Nullable Address address,
+      String email,
+      String phone,
+      boolean generatePassword) {
+
+    User user = retrieveUser(userId);
+    if (StringUtils.isNotEmpty(firstName)) {
+      user.setFirstName(new RequiredEncryptedStringWithHash(firstName));
+    }
+    if (StringUtils.isNotEmpty(lastName)) {
+      user.setLastName(new RequiredEncryptedStringWithHash(lastName));
+    }
+    if (StringUtils.isNotEmpty(email)) {
+      user.setEmail(new RequiredEncryptedStringWithHash(email));
+    }
+    if (StringUtils.isNotEmpty(phone)) {
+      user.setPhone(new NullableEncryptedStringWithHash(phone));
+    }
+    if (address != null) {
+      user.setAddress(address);
+    }
+
+    String password = null;
+    if (generatePassword) {
+      password = PasswordUtil.generatePassword();
+      user.setSubjectRef(
+          fusionAuthService
+              .updateUser(
+                  businessId, user.getId(), email, password, user.getType(), user.getSubjectRef())
+              .toString());
+      twilioService.sendNotificationEmail(
+          user.getEmail().getEncrypted(),
+          String.format("Hello from ClearSpend, your new password is %s", password));
+    }
+
+    return new CreateUpdateUserRecord(userRepository.save(user), password);
   }
 
   public User retrieveUser(TypedId<UserId> userId) {
@@ -93,5 +144,55 @@ public class UserService {
       TypedId<BusinessId> businessId, RequiredEncryptedStringWithHash userName) {
     return userRepository.findByBusinessIdAndFirstNameLikeOrLastNameLike(
         businessId, userName, userName);
+  }
+
+  public Page<User> getUserPage(
+      TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
+
+    PageToken pageToken = userFilterCriteria.getPageToken();
+
+    return userRepository.findAll(
+        getUserSpecifications(businessId, userFilterCriteria),
+        org.springframework.data.domain.PageRequest.of(
+            pageToken.getPageNumber(), pageToken.getPageSize()));
+  }
+
+  private Specification<User> getUserSpecifications(
+      TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
+    return (root, query, criteriaBuilder) -> {
+      List<Predicate> predicates = new ArrayList<>();
+      if (businessId != null) {
+        predicates.add(criteriaBuilder.equal(root.get("businessId"), businessId));
+      }
+      // TODO - What will be the search allowed fields .
+      //      if (criteria.getFirstName() != null) {
+      //        predicates.add(
+      //            criteriaBuilder.equal(
+      //                root.get("firstName"),
+      //                new RequiredEncryptedStringWithHash(criteria.getFirstName())));
+      //      }
+      //      if (criteria.getLastName() != null) {
+      //        predicates.add(
+      //            criteriaBuilder.equal(
+      //                root.get("lastName"), new
+
+      if (criteria.getPageToken() != null
+          && criteria.getPageToken().getOrderBy() != null
+          && !criteria.getPageToken().getOrderBy().isEmpty()) {
+
+        query.orderBy(
+            criteria.getPageToken().getOrderBy().stream()
+                .map(
+                    ord ->
+                        ord.getDirection() == Sort.Direction.ASC
+                            ? criteriaBuilder.asc(root.get(ord.getItem()))
+                            : criteriaBuilder.desc(root.get(ord.getItem())))
+                .collect(Collectors.toList()));
+      } else {
+        query.orderBy(criteriaBuilder.desc(root.get("id")));
+      }
+
+      return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+    };
   }
 }

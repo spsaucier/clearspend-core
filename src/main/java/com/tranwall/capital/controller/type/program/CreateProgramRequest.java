@@ -2,9 +2,8 @@ package com.tranwall.capital.controller.type.program;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.FundingType;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +22,11 @@ public class CreateProgramRequest {
 
   @JsonProperty("fundingType")
   @NonNull
-  @Enumerated(EnumType.STRING)
   private FundingType fundingType;
+
+  @JsonProperty("cardType")
+  @NonNull
+  private CardType cardType;
 
   @Sensitive
   @NonNull

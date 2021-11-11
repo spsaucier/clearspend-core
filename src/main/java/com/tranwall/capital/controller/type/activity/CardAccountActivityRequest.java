@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type.activity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import lombok.Data;

@@ -41,7 +41,6 @@ public class BusinessOwnerController {
             request.getAddress().toAddress(),
             request.getEmail(),
             request.getPhone(),
-            true,
             null);
     return new CreateBusinessOwnerResponse(businessOwner.getId(), null);
   }

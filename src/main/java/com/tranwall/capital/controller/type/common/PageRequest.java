@@ -1,4 +1,4 @@
-package com.tranwall.capital.controller.type.activity;
+package com.tranwall.capital.controller.type.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.service.type.PageToken;

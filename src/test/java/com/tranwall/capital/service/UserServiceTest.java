@@ -11,7 +11,7 @@ import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import javax.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +46,8 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser() {
-    CreateUserRecord userRecord = testHelper.createUser(businessAndAllocationsRecord.business());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUser(businessAndAllocationsRecord.business());
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
   }
@@ -54,7 +55,7 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser_withoutAddress() {
-    CreateUserRecord userRecord =
+    CreateUpdateUserRecord userRecord =
         userService.createUser(
             businessAndAllocationsRecord.business().getId(),
             UserType.EMPLOYEE,
@@ -72,7 +73,7 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser_withoutPhone() {
-    CreateUserRecord userRecord =
+    CreateUpdateUserRecord userRecord =
         userService.createUser(
             businessAndAllocationsRecord.business().getId(),
             UserType.EMPLOYEE,

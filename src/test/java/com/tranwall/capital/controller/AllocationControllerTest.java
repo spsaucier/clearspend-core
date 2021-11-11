@@ -20,6 +20,7 @@ import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
 import javax.servlet.http.Cookie;
@@ -41,6 +42,7 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final AccountService accountService;
+  private final AllocationService allocationService;
 
   private Cookie authCookie;
 
@@ -53,12 +55,13 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createAllocation_success() {
-    Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
     CreateAllocationRequest request =
         new CreateAllocationRequest(
-            program.getId(),
             testHelper.generateFullName(),
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId(),
             new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO));
 
     String body = objectMapper.writeValueAsString(request);
@@ -66,7 +69,6 @@ class AllocationControllerTest extends BaseCapitalTest {
     MockHttpServletResponse response =
         mvc.perform(
                 post("/allocations")
-                    .header("businessId", business.getId().toString())
                     .contentType("application/json")
                     .content(body)
                     .cookie(authCookie))
@@ -82,7 +84,13 @@ class AllocationControllerTest extends BaseCapitalTest {
     Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -102,10 +110,16 @@ class AllocationControllerTest extends BaseCapitalTest {
     Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId());
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            program.getId(), business.getId(), "", parentAllocationRecord.allocation().getId());
+            business.getId(), "", parentAllocationRecord.allocation().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -131,7 +145,13 @@ class AllocationControllerTest extends BaseCapitalTest {
     AdjustmentRecord deposit =
         testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount(), false);
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
+        testHelper.createAllocation(
+            business.getId(),
+            "",
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId());
     Card card =
         testHelper.issueCard(
             business,
@@ -140,8 +160,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             bin,
             program,
             amount.getCurrency());
-    Account businessAccount =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
+    Account businessAccount = allocationService.getRootAllocation(business.getId()).account();
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(
             businessAccount.getId(), allocationRecord.account().getId(), amount);
@@ -171,14 +190,13 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createAllocationWithAStartAmount_success() {
-    Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
     testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount(), false);
     CreateAllocationRequest request =
         new CreateAllocationRequest(
-            program.getId(),
             testHelper.generateFullName(),
+            allocationService.getRootAllocation(business.getId()).allocation().getId(),
             new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.valueOf(10)));
 
     String body = objectMapper.writeValueAsString(request);

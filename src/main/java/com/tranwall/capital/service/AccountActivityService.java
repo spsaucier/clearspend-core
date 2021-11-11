@@ -196,8 +196,8 @@ public class AccountActivityService {
                 .map(
                     ord ->
                         ord.getDirection() == Direction.ASC
-                            ? criteriaBuilder.asc(root.get(ord.getItem().getName()))
-                            : criteriaBuilder.desc(root.get(ord.getItem().getName())))
+                            ? criteriaBuilder.asc(root.get(ord.getItem()))
+                            : criteriaBuilder.desc(root.get(ord.getItem())))
                 .collect(Collectors.toList()));
       } else {
         query.orderBy(criteriaBuilder.desc(root.get("activityTime")));

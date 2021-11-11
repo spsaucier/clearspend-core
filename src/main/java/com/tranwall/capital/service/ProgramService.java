@@ -5,6 +5,7 @@ import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import java.util.List;
@@ -21,8 +22,8 @@ public class ProgramService {
   private final ProgramRepository programRepository;
 
   public Program createProgram(
-      String name, String bin, FundingType fundingType, String i2cProgramRef) {
-    return programRepository.save(new Program(name, bin, fundingType, i2cProgramRef));
+      String name, String bin, FundingType fundingType, CardType cardType, String i2cProgramRef) {
+    return programRepository.save(new Program(name, bin, fundingType, cardType, i2cProgramRef));
   }
 
   public List<Program> findAllPrograms() {

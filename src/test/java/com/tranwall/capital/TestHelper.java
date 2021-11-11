@@ -22,6 +22,7 @@ import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.BusinessProspectId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.configuration.SecurityConfig;
 import com.tranwall.capital.controller.BusinessBankAccountController.LinkTokenResponse;
 import com.tranwall.capital.controller.type.business.prospect.BusinessProspectStatus;
@@ -56,9 +57,12 @@ import com.tranwall.capital.data.repository.AccountRepository;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.BinRepository;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
+import com.tranwall.capital.data.repository.BusinessLimitRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
+import com.tranwall.capital.data.repository.SpendLimitRepository;
+import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService;
@@ -74,7 +78,7 @@ import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.FusionAuthService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import com.tranwall.capital.util.PhoneUtil;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -111,6 +115,7 @@ public class TestHelper {
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessOwnerRepository businessOwnerRepository;
   private final BusinessBankAccountRepository businessBankAccountRepository;
+  private final UserRepository userRepository;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -123,6 +128,8 @@ public class TestHelper {
   private final ProgramService programService;
   private final UserService userService;
   private final FusionAuthService fusionAuthService;
+  private final BusinessLimitRepository businessLimitRepository;
+  private final SpendLimitRepository spendLimitRepository;
 
   private final Faker faker = new Faker();
 
@@ -350,7 +357,11 @@ public class TestHelper {
 
   public Program createProgram(Bin bin) {
     return programService.createProgram(
-        UUID.randomUUID().toString(), bin.getBin(), FundingType.POOLED, faker.number().digits(8));
+        UUID.randomUUID().toString(),
+        bin.getBin(),
+        FundingType.POOLED,
+        CardType.VIRTUAL,
+        faker.number().digits(8));
   }
 
   public Business retrieveBusiness() {
@@ -379,6 +390,14 @@ public class TestHelper {
     businessRepository.deleteById(businessId);
   }
 
+  public void deleteBusinessLimit(TypedId<BusinessId> businessId) {
+    businessLimitRepository.deleteByBusinessId(businessId);
+  }
+
+  public void deleteSpendLimit(TypedId<BusinessId> businessId) {
+    spendLimitRepository.deleteByBusinessId(businessId);
+  }
+
   public BusinessOwner createBusinessOwner(
       TypedId<BusinessId> businessId, String email, String password) throws IOException {
     String firstName = generateFirstName();
@@ -396,12 +415,15 @@ public class TestHelper {
         address,
         email,
         phone,
-        false,
         fusionAuthUserId.toString());
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
     businessOwnerRepository.deleteById(businessOwnerId);
+  }
+
+  public void deleteUser(TypedId<UserId> userId) {
+    userRepository.deleteById(userId);
   }
 
   @Transactional
@@ -450,8 +472,7 @@ public class TestHelper {
   public AdjustmentRecord transactBankAccount(
       FundsTransactType fundsTransactType, BigDecimal amount, boolean placeHold) {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
-    Account businessAccount =
-        accountService.retrieveBusinessAccount(businessId, Currency.USD, false);
+    Account businessAccount = allocationService.getRootAllocation(businessId).account();
     return businessBankAccountService.transactBankAccount(
         businessId,
         businessBankAccount.getId(),
@@ -461,12 +482,9 @@ public class TestHelper {
   }
 
   public AllocationRecord createAllocation(
-      TypedId<ProgramId> programId,
-      TypedId<BusinessId> businessId,
-      String name,
-      TypedId<AllocationId> parentAllocationId) {
+      TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
     return allocationService.createAllocation(
-        programId, businessId, parentAllocationId, name, Amount.of(Currency.USD));
+        businessId, parentAllocationId, name, Amount.of(Currency.USD));
   }
 
   public record CreateBusinessRecord(
@@ -488,7 +506,7 @@ public class TestHelper {
         program,
         businessAndAllocationsRecord.business(),
         businessOwner,
-        businessAndAllocationsRecord.allocationRecords().get(0),
+        businessAndAllocationsRecord.allocationRecord(),
         login(email, password));
   }
 
@@ -497,7 +515,7 @@ public class TestHelper {
     allocationRepository.deleteByBusinessId(businessId);
   }
 
-  public CreateUserRecord createUser(Business business) throws IOException {
+  public CreateUpdateUserRecord createUser(Business business) throws IOException {
     return userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,

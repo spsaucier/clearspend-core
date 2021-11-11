@@ -113,6 +113,7 @@ public class CardService {
             CardStatus.OPEN,
             CardStatusReason.NONE,
             program.getFundingType(),
+            program.getCardType(),
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
             cardLine3.toString(),

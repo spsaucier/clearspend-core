@@ -1,6 +1,5 @@
 package com.tranwall.capital.controller;
 
-import static java.math.BigDecimal.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -13,18 +12,13 @@ import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.controller.type.Address;
-import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.allocation.Allocation;
 import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationRequest;
-import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationRequest;
-import com.tranwall.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
-import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService;
-import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.service.AllocationService;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
@@ -47,7 +41,10 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
 
+  private final UserRepository userRepository;
+
   private final AccountService accountService;
+  private final AllocationService allocationService;
 
   private Cookie authCookie;
 
@@ -89,132 +86,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void reallocateBusinessFundsByWithdrawFromBusiness_success() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-
-    accountService.depositFunds(
-        createBusinessRecord.business().getId(),
-        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
-
-    BusinessFundAllocationRequest request =
-        new BusinessFundAllocationRequest(
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.allocationRecord().account().getId(),
-            FundsTransactType.WITHDRAW,
-            new Amount(Currency.USD, valueOf(100)));
-
-    String body = objectMapper.writeValueAsString(request);
-
-    MockHttpServletResponse mockHttpServletResponse =
-        mvc.perform(
-                post("/businesses/transactions")
-                    .content(body)
-                    .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(createBusinessRecord.authCookie()))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
-
-    BusinessFundAllocationResponse responseDto =
-        objectMapper.readValue(
-            mockHttpServletResponse.getContentAsString(), BusinessFundAllocationResponse.class);
-    assertEquals(
-        900.00,
-        responseDto.getBusinessLedgerBalance().getAmount().doubleValue(),
-        "The businessLedgerBalance result is not as expected");
-    assertEquals(
-        100.00,
-        responseDto.getAllocationLedgerBalance().getAmount().doubleValue(),
-        "The allocationLedgerBalance result is not as expected");
-  }
-
-  @SneakyThrows
-  @Test
-  public void reallocateBusinessFundsByDepositToBusiness_success() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    Business business = createBusinessRecord.business();
-    Program program = createBusinessRecord.program();
-
-    accountService.depositFunds(
-        business.getId(),
-        com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
-    Account account =
-        accountService.retrieveBusinessAccount(business.getId(), business.getCurrency(), false);
-    AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
-    accountService.reallocateFunds(
-        account.getId(),
-        parentAllocationRecord.account().getId(),
-        new com.tranwall.capital.common.data.model.Amount(Currency.USD, valueOf(300)));
-
-    BusinessFundAllocationRequest businessFundAllocationRequest =
-        new BusinessFundAllocationRequest(
-            parentAllocationRecord.allocation().getId(),
-            parentAllocationRecord.account().getId(),
-            FundsTransactType.DEPOSIT,
-            new Amount(Currency.USD, valueOf(100)));
-
-    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
-
-    MockHttpServletResponse response =
-        mvc.perform(
-                post("/businesses/transactions")
-                    .header("businessId", business.getId())
-                    .content(body)
-                    .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(createBusinessRecord.authCookie()))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
-
-    BusinessFundAllocationResponse responseDto =
-        objectMapper.readValue(response.getContentAsString(), BusinessFundAllocationResponse.class);
-    assertEquals(
-        200.00,
-        responseDto.getBusinessLedgerBalance().getAmount().doubleValue(),
-        "Wrong expected result");
-    assertEquals(
-        800.00,
-        responseDto.getAllocationLedgerBalance().getAmount().doubleValue(),
-        "Wrong expected result");
-  }
-
-  @SneakyThrows
-  @Test
-  public void reallocateBusinessFunds_FailWhenNotSufficientBalance() {
-    Program program = testHelper.retrievePooledProgram();
-    Business business = testHelper.retrieveBusiness();
-    AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(program.getId(), business.getId(), "", null);
-    BusinessFundAllocationRequest businessFundAllocationRequest =
-        new BusinessFundAllocationRequest(
-            parentAllocationRecord.allocation().getId(),
-            parentAllocationRecord.account().getId(),
-            FundsTransactType.DEPOSIT,
-            new Amount(Currency.USD, valueOf(100)));
-
-    String body = objectMapper.writeValueAsString(businessFundAllocationRequest);
-
-    mvc.perform(
-            post("/businesses/transactions")
-                .header("businessId", business.getId())
-                .content(body)
-                .contentType(APPLICATION_JSON_VALUE)
-                .cookie(authCookie))
-        .andExpect(status().is4xxClientError())
-        .andReturn()
-        .getResponse();
-  }
-
-  @SneakyThrows
-  @Test
   public void getRootAllocation_success() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-
-    testHelper.createAllocation(
-        createBusinessRecord.program().getId(), createBusinessRecord.business().getId(), "", null);
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -226,9 +99,9 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<Allocation> responseAllocationList =
-        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
-    assertEquals(2, responseAllocationList.size(), "The expected result is not ok");
+    Allocation responseAllocation =
+        objectMapper.readValue(response.getContentAsString(), Allocation.class);
+    log.info(String.valueOf(responseAllocation));
   }
 
   @SneakyThrows
@@ -240,6 +113,9 @@ public class BusinessControllerTest extends BaseCapitalTest {
     testHelper.deleteBusinessOwner(createBusinessRecord.businessOwner().getId());
     testHelper.deleteAllocation(business.getId());
     testHelper.deleteAccount(business.getId());
+    testHelper.deleteUser(userRepository.findByBusinessId(business.getId()).get(0).getId());
+    testHelper.deleteBusinessLimit(business.getId());
+    testHelper.deleteSpendLimit(business.getId());
     testHelper.deleteBusiness(business.getId());
 
     mvc.perform(
@@ -255,15 +131,9 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   public void searchBusinessAllocation_success() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-
-    AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            createBusinessRecord.program().getId(),
-            createBusinessRecord.business().getId(),
-            "12345HelloWorld09876",
-            null);
-
-    SearchBusinessAllocationRequest request = new SearchBusinessAllocationRequest("45Hell");
+    SearchBusinessAllocationRequest request =
+        new SearchBusinessAllocationRequest(
+            createBusinessRecord.allocationRecord().allocation().getName());
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -281,8 +151,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
     List<Allocation> responseAllocationList =
         objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
     assertEquals(1, responseAllocationList.size(), "The expected result is not ok");
-    assertThat(responseAllocationList.get(0).getAllocationId())
-        .isEqualTo(allocationRecord.allocation().getId());
   }
 
   @SneakyThrows
@@ -291,6 +159,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     Business business = testHelper.retrieveBusiness();
     accountService.depositFunds(
         business.getId(),
+        allocationService.getRootAllocation(business.getId()).account(),
         com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal(200)),
         true);
     MockHttpServletResponse response =

@@ -13,7 +13,7 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.CardRepository;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService.UserCardRecord;
-import com.tranwall.capital.service.UserService.CreateUserRecord;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,7 @@ class CardServiceTest extends BaseCapitalTest {
   private Bin bin;
   private Business business;
   private Program program;
-  private CreateUserRecord userRecord;
+  private CreateUpdateUserRecord userRecord;
 
   @SneakyThrows
   @BeforeEach
@@ -45,7 +45,7 @@ class CardServiceTest extends BaseCapitalTest {
       program = testHelper.createProgram(bin);
       businessAndAllocationsRecord = testHelper.createBusiness(program);
       business = businessAndAllocationsRecord.business();
-      allocation = businessAndAllocationsRecord.allocationRecords().get(0).allocation();
+      allocation = businessAndAllocationsRecord.allocationRecord().allocation();
       userRecord = testHelper.createUser(businessAndAllocationsRecord.business());
     }
   }

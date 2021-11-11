@@ -16,8 +16,6 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.Program;
-import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.BusinessStatusReason;
@@ -29,7 +27,6 @@ import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessService {
 
+  public static final String DEFAULT_PROGRAM_ID = "6faf3838-b2d7-422c-8d6f-c2294ebc73b4";
   private final BusinessRepository businessRepository;
   private final ProgramRepository programRepository;
 
@@ -56,7 +54,7 @@ public class BusinessService {
   public record BusinessRecord(Business business, Account businessAccount) {}
 
   public record BusinessAndAllocationsRecord(
-      Business business, Account businessAccount, List<AllocationRecord> allocationRecords) {}
+      Business business, AllocationRecord allocationRecord) {}
 
   @SneakyThrows
   @Transactional
@@ -93,27 +91,11 @@ public class BusinessService {
 
     businessLimitService.initializeBusinessSpendLimit(business.getId());
 
-    Account account =
-        accountService.createAccount(
-            business.getId(), AccountType.BUSINESS, business.getId().toUuid(), currency);
+    AllocationRecord allocationRecord =
+        allocationService.createRootAllocation(
+            business.getId(), business.getLegalName() + " - root");
 
-    List<AllocationRecord> allocationRecords = new ArrayList<>(programIds.size());
-    for (TypedId<ProgramId> programId : programIds) {
-      Program program =
-          programRepository
-              .findById(programId)
-              .orElseThrow(() -> new RecordNotFoundException(Table.PROGRAM, programId));
-
-      allocationRecords.add(
-          allocationService.createAllocation(
-              programId,
-              business.getId(),
-              null,
-              business.getLegalName() + " - " + program.getName(),
-              Amount.of(currency)));
-    }
-
-    return new BusinessAndAllocationsRecord(business, account, allocationRecords);
+    return new BusinessAndAllocationsRecord(business, allocationRecord);
   }
 
   @Transactional
@@ -145,8 +127,7 @@ public class BusinessService {
 
   public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
     Business business = retrieveBusiness(businessId);
-    Account account =
-        accountService.retrieveBusinessAccount(businessId, business.getCurrency(), false);
+    Account account = allocationService.getRootAllocation(businessId).account();
     return new BusinessRecord(business, account);
   }
 

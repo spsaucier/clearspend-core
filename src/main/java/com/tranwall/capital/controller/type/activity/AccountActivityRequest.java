@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import lombok.Data;
