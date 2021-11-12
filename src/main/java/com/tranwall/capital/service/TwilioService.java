@@ -15,7 +15,6 @@ import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.PostConstruct;
@@ -32,6 +31,7 @@ public class TwilioService {
 
   private final String FIRST_NAME_KEY = "first_name";
   private final String REASONS_KEY = "reasons";
+  private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "changePasswordId";
 
   private final TwilioProperties twilioProperties;
   private final SendGridProperties sendGridProperties;
@@ -61,7 +61,6 @@ public class TwilioService {
         .create();
   }
 
-  @SneakyThrows
   public void sendNotificationEmail(String to, String messageText) {
     send(
         new Mail(
@@ -71,7 +70,6 @@ public class TwilioService {
             new Content("text/plain", messageText)));
   }
 
-  @SneakyThrows
   public void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -86,7 +84,6 @@ public class TwilioService {
     send(mail);
   }
 
-  @SneakyThrows
   public void sendKybKycPassEmail(String to, String firstName) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -100,7 +97,6 @@ public class TwilioService {
     send(mail);
   }
 
-  @SneakyThrows
   public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -115,7 +111,22 @@ public class TwilioService {
     send(mail);
   }
 
-  private void send(Mail mail) throws IOException {
+  public void sendResetPasswordEmail(String to, String changePasswordId) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getForgotPasswordEmailTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(
+        FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY, changePasswordId);
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  @SneakyThrows
+  private void send(Mail mail) {
     Request request = new Request();
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");

@@ -3,7 +3,8 @@
     "defaultTenantId": "f9fdf77f-ac15-4de3-8bc8-91f87d312256",
     "accessTokenPopulateLambdaId": "#{UUID()}",
     "defaultBusinessId": "82a79d15-9e47-421b-ab8f-78532f4f8bc7",
-    "businessOwnerTesterId": "#{UUID()}"
+    "businessOwnerTesterId": "#{UUID()}",
+    "forgotPasswordEmailTemplateId": "#{UUID()}"
   },
   "apiKeys": [
     {
@@ -94,6 +95,16 @@
           }
         }
       }
+    },
+    {
+      "method": "POST",
+      "url": "/api/email/template/#{forgotPasswordEmailTemplateId}",
+      "body": "&{json/reset-password-create-email-template.json}"
+    },
+    {
+      "method": "PATCH",
+      "url": "/api/tenant/#{defaultTenantId}",
+      "body": "&{json/reset-password-enable-feature.json}"
     }
   ]
 }

@@ -25,4 +25,6 @@ public class SendGridProperties {
   @NotBlank private String kybKycPassEmailTemplateId;
 
   @NotBlank private String kybKycFailEmailTemplateId;
+
+  @NotBlank private String forgotPasswordEmailTemplateId;
 }

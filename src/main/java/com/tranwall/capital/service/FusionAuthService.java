@@ -2,15 +2,22 @@ package com.tranwall.capital.service;
 
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
+import com.tranwall.capital.client.fusionauth.FusionAuthProperties;
+import com.tranwall.capital.common.error.ForbiddenException;
 import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessOwnerId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.controller.type.user.ForgotPasswordRequest;
+import com.tranwall.capital.controller.type.user.ResetPasswordRequest;
 import com.tranwall.capital.data.model.enums.UserType;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
+import io.fusionauth.domain.api.user.ChangePasswordRequest;
+import io.fusionauth.domain.api.user.ChangePasswordResponse;
+import io.fusionauth.domain.api.user.ForgotPasswordResponse;
 import java.util.UUID;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +34,9 @@ public class FusionAuthService {
   private static final String USER_TYPE = "userType";
 
   private final io.fusionauth.client.FusionAuthClient client;
+  private final FusionAuthProperties fusionAuthProperties;
+
+  private final TwilioService twilioService;
 
   public UUID createBusinessOwner(
       TypedId<BusinessId> businessId,
@@ -56,11 +66,11 @@ public class FusionAuthService {
   private UUID create(
       TypedId<BusinessId> businessId,
       @NonNull UUID userId,
-      String username,
+      String email,
       String password,
       UserType userType) {
     User user = new User();
-    user.username = username;
+    user.email = email;
     user.password = password;
     user.data.put(BUSINESS_ID, businessId.toUuid());
     user.data.put(CAPITAL_USER_ID, userId);
@@ -120,9 +130,52 @@ public class FusionAuthService {
     throw new RuntimeException("shouldn't have got here");
   }
 
-  public UserResponse retrieveUserByUsername(String email) {
+  public UserResponse retrieveUserByEmail(String email) {
     ClientResponse<UserResponse, Errors> userResponseErrorsClientResponse =
-        client.retrieveUserByUsername(email);
+        client.retrieveUserByEmail(email);
     return userResponseErrorsClientResponse.successResponse;
+  }
+
+  public void forgotPassword(ForgotPasswordRequest request) {
+    io.fusionauth.domain.api.user.ForgotPasswordRequest fusionAuthRequest =
+        new io.fusionauth.domain.api.user.ForgotPasswordRequest();
+    fusionAuthRequest.loginId = request.getEmail();
+    fusionAuthRequest.sendForgotPasswordEmail = false;
+    fusionAuthRequest.applicationId = UUID.fromString(fusionAuthProperties.getApplicationId());
+    ClientResponse<ForgotPasswordResponse, Errors> forgotPasswordResponse =
+        client.forgotPassword(fusionAuthRequest);
+
+    // here are the response statuses:
+    // https://fusionauth.io/docs/v1/tech/apis/users/#start-forgot-password-workflow
+    switch (forgotPasswordResponse.status) {
+      case 200 -> twilioService.sendResetPasswordEmail(
+          request.getEmail(), forgotPasswordResponse.successResponse.changePasswordId);
+      case 403 -> throw new RuntimeException(
+          "FusionAuth password reset feature is disabled. "
+              + "See Tenant > Email section to set Forgot Password template "
+              + "and Customizations -> Email Templates section to create a dummy template");
+      case 404 -> {
+        // user cannot be found
+      }
+      case 500 -> throw new RuntimeException(
+          "FusionAuth internal error", forgotPasswordResponse.exception);
+      default -> throw new RuntimeException(
+          "unknown reset password status: " + forgotPasswordResponse.status);
+    }
+  }
+
+  public void resetPassword(ResetPasswordRequest request) {
+    ClientResponse<ChangePasswordResponse, Errors> changePasswordResponse =
+        client.changePassword(
+            request.getChangePasswordId(), new ChangePasswordRequest(request.getNewPassword()));
+
+    switch (changePasswordResponse.status) {
+      case 200 -> {}
+      case 404 -> throw new ForbiddenException();
+      case 500 -> throw new RuntimeException(
+          "FusionAuth internal error", changePasswordResponse.exception);
+      default -> throw new RuntimeException(
+          "unknown reset password status: " + changePasswordResponse.status);
+    }
   }
 }

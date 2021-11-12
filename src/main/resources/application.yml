@@ -62,6 +62,7 @@ client:
   fusionauth:
     api-key: ${FUSIONAUTH_API_KEY:TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx}
     base-url: ${FUSIONAUTH_BASE_URL:http://localhost:9011}
+    application-id: ${spring.security.oauth2.client.clientId}
   google:
     storage:
       credentials: ${GCS_IMAGES_RECEIPTS_SA:<not set>}
@@ -84,6 +85,7 @@ client:
     onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-94f93354b8674d4197d850c5a1081c1c}
     kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-f7752da98ef540c79f872a1eae3666e5}
     kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-651a88210bb54bbc92225150a2a211ce}
+    forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-22ff7bff6c9c4c9d8692d826ca007eeb}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC08834a8aab6f817ea96ae7149e8befff}
     auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}

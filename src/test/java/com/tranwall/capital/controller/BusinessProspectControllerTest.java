@@ -188,9 +188,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
     // then
     User user =
-        fusionAuthService.retrieveUserByUsername(businessProspect.getEmail().getEncrypted()).user;
+        fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted()).user;
     log.info("user: {}", user);
-    assertThat(user.username).isEqualTo(businessProspect.getEmail().getEncrypted());
+    assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     log.info("dbRecord: {}", dbRecord);
     assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());
@@ -235,9 +235,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
     // then
     User user =
-        fusionAuthService.retrieveUserByUsername(businessProspect.getEmail().getEncrypted()).user;
+        fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted()).user;
     log.info("user: {}", user);
-    assertThat(user.username).isEqualTo(businessProspect.getEmail().getEncrypted());
+    assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     log.info("dbRecord: {}", dbRecord);
     assertThat(dbRecord.getSubjectRef()).isEqualTo(user.id.toString());

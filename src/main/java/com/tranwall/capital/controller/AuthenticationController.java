@@ -3,10 +3,13 @@ package com.tranwall.capital.controller;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nimbusds.jwt.JWTParser;
 import com.tranwall.capital.configuration.SecurityConfig;
+import com.tranwall.capital.controller.type.user.ForgotPasswordRequest;
 import com.tranwall.capital.controller.type.user.LoginRequest;
+import com.tranwall.capital.controller.type.user.ResetPasswordRequest;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
+import com.tranwall.capital.service.FusionAuthService;
 import java.text.ParseException;
 import java.time.Duration;
 import java.util.Optional;
@@ -36,14 +39,17 @@ public class AuthenticationController {
   private final WebClient webClient;
   private final BusinessProspectService businessProspectService;
   private final BusinessOwnerService businessOwnerService;
+  private final FusionAuthService fusionAuthService;
 
   public AuthenticationController(
       @Qualifier("fusionAuthWebClient") WebClient webClient,
       BusinessProspectService businessProspectService,
-      BusinessOwnerService businessOwnerService) {
+      BusinessOwnerService businessOwnerService,
+      FusionAuthService fusionAuthService) {
     this.webClient = webClient;
     this.businessProspectService = businessProspectService;
     this.businessOwnerService = businessOwnerService;
+    this.fusionAuthService = fusionAuthService;
   }
 
   @PostMapping("/login")
@@ -107,6 +113,16 @@ public class AuthenticationController {
             createCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME, StringUtils.EMPTY, 0),
             createCookie(SecurityConfig.REFRESH_TOKEN_COOKIE_NAME, StringUtils.EMPTY, 0))
         .build();
+  }
+
+  @PostMapping("/forgot-password")
+  public void forgotPassword(@Validated @RequestBody ForgotPasswordRequest request) {
+    fusionAuthService.forgotPassword(request);
+  }
+
+  @PostMapping("/reset-password")
+  public void resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
+    fusionAuthService.resetPassword(request);
   }
 
   private String createCookie(String name, String value, long ttl) {

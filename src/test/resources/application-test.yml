@@ -17,6 +17,7 @@ client:
   fusionauth:
     api-key: TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx
     base-url: ${FUSIONAUTH_BASE_URL:http://localhost:9011}
+    application-id: ${spring.security.oauth2.client.clientId}
   sendgrid:
     api-key: ${SENDGRID_API_KEY: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}
     notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:Tranwall <notifications@em6632.tranwall.com>}

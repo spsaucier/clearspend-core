@@ -2,6 +2,7 @@ package com.tranwall.capital.common.advice;
 
 import com.tranwall.capital.common.error.AmountException;
 import com.tranwall.capital.common.error.CurrencyMismatchException;
+import com.tranwall.capital.common.error.ForbiddenException;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.error.InvalidRequestException;
@@ -41,6 +42,13 @@ public class GlobalControllerExceptionHandler {
       DataIntegrityViolationException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError(exception.getMostSpecificCause().getMessage());
+  }
+
+  @ResponseStatus(HttpStatus.UNAUTHORIZED)
+  @ExceptionHandler(ForbiddenException.class)
+  public @ResponseBody ControllerError handleForbiddenException(ForbiddenException exception) {
+    log.error(String.format("%s exception processing request", exception.getClass()), exception);
+    return new ControllerError("");
   }
 
   @ResponseStatus(HttpStatus.NO_CONTENT)

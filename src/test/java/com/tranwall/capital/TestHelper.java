@@ -491,6 +491,7 @@ public class TestHelper {
       Program program,
       Business business,
       BusinessOwner businessOwner,
+      String email,
       AllocationRecord allocationRecord,
       Cookie authCookie) {}
 
@@ -506,6 +507,7 @@ public class TestHelper {
         program,
         businessAndAllocationsRecord.business(),
         businessOwner,
+        email,
         businessAndAllocationsRecord.allocationRecord(),
         login(email, password));
   }
