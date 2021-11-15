@@ -79,26 +79,28 @@ public class AdjustmentService {
             fromAccount.getLedgerAccountId(), toAccount.getLedgerAccountId(), amount);
 
     Adjustment fromAdjustment =
-        new Adjustment(
-            fromAccount.getBusinessId(),
-            fromAccount.getId(),
-            fromAccount.getLedgerAccountId(),
-            bankJournalEntry.journalEntry().getId(),
-            bankJournalEntry.fromPosting().getId(),
-            AdjustmentType.REALLOCATE,
-            OffsetDateTime.now(),
-            amount.negate());
+        adjustmentRepository.save(
+            new Adjustment(
+                fromAccount.getBusinessId(),
+                fromAccount.getId(),
+                fromAccount.getLedgerAccountId(),
+                bankJournalEntry.journalEntry().getId(),
+                bankJournalEntry.fromPosting().getId(),
+                AdjustmentType.REALLOCATE,
+                OffsetDateTime.now(),
+                amount.negate()));
 
     Adjustment toAdjustment =
-        new Adjustment(
-            fromAccount.getBusinessId(),
-            fromAccount.getId(),
-            fromAccount.getLedgerAccountId(),
-            bankJournalEntry.journalEntry().getId(),
-            bankJournalEntry.fromPosting().getId(),
-            AdjustmentType.REALLOCATE,
-            OffsetDateTime.now(),
-            amount);
+        adjustmentRepository.save(
+            new Adjustment(
+                fromAccount.getBusinessId(),
+                fromAccount.getId(),
+                fromAccount.getLedgerAccountId(),
+                bankJournalEntry.journalEntry().getId(),
+                bankJournalEntry.fromPosting().getId(),
+                AdjustmentType.REALLOCATE,
+                OffsetDateTime.now(),
+                amount));
 
     return new ReallocateFundsRecord(bankJournalEntry, fromAdjustment, toAdjustment);
   }
