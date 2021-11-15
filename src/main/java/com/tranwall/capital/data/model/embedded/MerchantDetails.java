@@ -20,4 +20,8 @@ public class MerchantDetails {
 
   @Enumerated(EnumType.STRING)
   private MerchantType type;
+
+  private String merchantNumber;
+
+  private Integer merchantCategoryCode;
 }

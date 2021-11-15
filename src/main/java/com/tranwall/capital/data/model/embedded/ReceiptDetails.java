@@ -1,6 +1,6 @@
 package com.tranwall.capital.data.model.embedded;
 
-import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
@@ -16,10 +16,10 @@ import org.hibernate.annotations.Type;
 @NoArgsConstructor
 @AllArgsConstructor
 @MappedSuperclass
-public class CardDetails {
+public class ReceiptDetails {
 
-  @JoinColumn(referencedColumnName = "id", table = "card")
+  @JoinColumn(referencedColumnName = "id", table = "receipt")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<CardId> cardId;
+  private TypedId<ReceiptId> receiptId;
 }

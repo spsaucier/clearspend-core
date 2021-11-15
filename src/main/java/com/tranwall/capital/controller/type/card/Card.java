@@ -9,7 +9,6 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
-import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
 import com.tranwall.capital.data.model.enums.CardType;
@@ -98,7 +97,7 @@ public class Card {
 
   // the card number or PAN (we may never have this but we will have lastFour)
   @JsonProperty("cardNumber")
-  private RequiredEncryptedStringWithHash cardNumber;
+  private String cardNumber;
 
   @JsonProperty("lastFour")
   private String lastFour;
@@ -126,7 +125,7 @@ public class Card {
     cardLine4 = card.getCardLine4();
     type = card.getType();
     superseded = card.isSuperseded();
-    cardNumber = card.getCardNumber();
+    cardNumber = card.getCardNumber().toString();
     lastFour = card.getLastFour();
     address = card.getAddress();
   }

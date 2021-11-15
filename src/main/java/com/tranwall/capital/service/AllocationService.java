@@ -273,11 +273,10 @@ public class AllocationService {
     }
 
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation.getName(),
+        allocationRecord.allocation,
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation.getName(),
-        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+        allocationRecord.allocation, reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
   }

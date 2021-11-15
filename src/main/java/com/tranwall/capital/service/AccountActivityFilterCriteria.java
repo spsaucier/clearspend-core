@@ -4,6 +4,7 @@ import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.service.type.PageToken;
 import java.time.OffsetDateTime;
@@ -25,13 +26,13 @@ public class AccountActivityFilterCriteria {
   public AccountActivityFilterCriteria(
       TypedId<CardId> cardId,
       AccountActivityType type,
-      OffsetDateTime from,
-      OffsetDateTime to,
-      PageToken pageToken) {
+      OffsetDateTime dateFrom,
+      OffsetDateTime dateTo,
+      PageRequest pageRequest) {
     this.cardId = cardId;
     this.type = type;
-    this.from = from;
-    this.to = to;
-    this.pageToken = pageToken;
+    this.from = dateFrom;
+    this.to = dateTo;
+    this.pageToken = PageRequest.toPageToken(pageRequest);
   }
 }

@@ -2,8 +2,8 @@ package com.tranwall.capital.data.model.enums;
 
 public enum CardStatusReason {
   NONE,
+  CARDHOLDER_REQUESTED,
   // possible future values
-  //  CARDHOLDER_REQUESTED,
   //  RISK_REVIEW,
   //  SYSTEM_GENERATED,
   //  LOST,

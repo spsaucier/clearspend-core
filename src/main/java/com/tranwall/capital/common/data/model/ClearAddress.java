@@ -1,5 +1,6 @@
 package com.tranwall.capital.common.data.model;
 
+import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.enums.Country;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
@@ -40,5 +41,15 @@ public class ClearAddress {
         address.getRegion(),
         address.getPostalCode().getEncrypted(),
         address.getCountry());
+  }
+
+  public Address toAddress() {
+    return new Address(
+        new EncryptedString(streetLine1),
+        new EncryptedString(streetLine2),
+        locality,
+        region,
+        new EncryptedString(postalCode),
+        country);
   }
 }

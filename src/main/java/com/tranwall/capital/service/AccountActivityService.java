@@ -5,22 +5,22 @@ import static com.tranwall.capital.data.model.enums.AccountActivityType.REALLOCA
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
-import com.tranwall.capital.common.typedid.data.AccountId;
-import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.CardDetails;
-import com.tranwall.capital.controller.type.activity.Merchant;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Hold;
+import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
+import com.tranwall.capital.data.model.enums.MerchantType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.CardService.CardRecord;
+import com.tranwall.capital.service.type.NetworkCommon;
 import com.tranwall.capital.service.type.PageToken;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -31,6 +31,7 @@ import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort.Direction;
@@ -49,69 +50,92 @@ public class AccountActivityService {
 
   @Transactional(TxType.REQUIRED)
   public AccountActivity recordBankAccountAccountActivity(
-      AccountActivityType type, Adjustment adjustment) {
-    return recordAccountActivity(
-        adjustment.getBusinessId(),
-        null,
-        null,
-        adjustment.getAccountId(),
-        type,
-        adjustment.getEffectiveDate(),
-        adjustment.getAmount());
+      Allocation allocation, AccountActivityType type, Adjustment adjustment) {
+    final AccountActivity accountActivity =
+        new AccountActivity(
+            adjustment.getBusinessId(),
+            allocation.getId(),
+            allocation.getName(),
+            adjustment.getAccountId(),
+            type,
+            adjustment.getEffectiveDate(),
+            adjustment.getAmount());
+    accountActivity.setAdjustmentId(adjustment.getId());
+
+    return accountActivityRepository.save(accountActivity);
   }
 
   @Transactional(TxType.REQUIRED)
   public AccountActivity recordReallocationAccountActivity(
-      String allocationName, Adjustment adjustment) {
-    return recordAccountActivity(
-        adjustment.getBusinessId(),
-        adjustment.getAllocationId(),
-        allocationName,
-        adjustment.getAccountId(),
-        REALLOCATE,
-        adjustment.getEffectiveDate(),
-        adjustment.getAmount());
+      Allocation allocation, Adjustment adjustment) {
+    final AccountActivity accountActivity =
+        new AccountActivity(
+            adjustment.getBusinessId(),
+            allocation.getId(),
+            allocation.getName(),
+            adjustment.getAccountId(),
+            REALLOCATE,
+            adjustment.getEffectiveDate(),
+            adjustment.getAmount());
+    accountActivity.setAdjustmentId(adjustment.getId());
+
+    return accountActivityRepository.save(accountActivity);
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordNetworkHoldAccountAccountActivity(
-      AccountActivityType type, Allocation allocation, Hold hold) {
-    return recordAccountActivity(
-        hold.getBusinessId(),
-        allocation.getId(),
-        allocation.getName(),
-        hold.getAccountId(),
-        type,
-        hold.getCreated(),
-        hold.getAmount());
+  public AccountActivity recordNetworkHoldAccountAccountActivity(NetworkCommon common, Hold hold) {
+    return recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
   }
 
   @Transactional(TxType.REQUIRED)
   public AccountActivity recordNetworkAdjustmentAccountAccountActivity(
-      AccountActivityType type, Allocation allocation, Adjustment adjustment) {
-    return recordAccountActivity(
-        adjustment.getBusinessId(),
-        allocation.getId(),
-        allocation.getName(),
-        adjustment.getAccountId(),
-        type,
-        adjustment.getCreated(),
-        adjustment.getAmount());
+      NetworkCommon common, Adjustment adjustment) {
+    return recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
 
-  private AccountActivity recordAccountActivity(
-      TypedId<BusinessId> businessId,
-      TypedId<AllocationId> allocationId,
-      String allocationName,
-      TypedId<AccountId> accountId,
-      AccountActivityType type,
-      OffsetDateTime activityTime,
-      Amount amount) {
+  private AccountActivity recordNetworkAccountActivity(
+      NetworkCommon common, Amount amount, Hold hold, Adjustment adjustment) {
 
+    Allocation allocation = common.getAllocation();
+    OffsetDateTime activityTime = hold != null ? hold.getCreated() : adjustment.getCreated();
     AccountActivity accountActivity =
-        new AccountActivity(businessId, accountId, type, activityTime, amount);
-    accountActivity.setAllocationId(allocationId);
-    accountActivity.setAllocationName(allocationName);
+        new AccountActivity(
+            common.getBusinessId(),
+            allocation.getId(),
+            allocation.getName(),
+            common.getAccount().getId(),
+            common.getNetworkMessageType().getAccountActivityType(),
+            activityTime,
+            amount);
+    accountActivity.setMerchant(
+        new MerchantDetails(
+            common.getMerchantName(),
+            MerchantType.OTHERS,
+            common.getMerchantNumber(),
+            common.getMerchantCategoryCode()));
+    accountActivity.setCard(
+        new com.tranwall.capital.data.model.embedded.CardDetails(common.getCard().getId()));
+    if (adjustment != null) {
+      accountActivity.setAdjustmentId(adjustment.getId());
+    }
+    if (hold != null) {
+      accountActivity.setHoldId(hold.getId());
+    }
+
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  public AccountActivity updateAccountActivity(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<AccountActivityId> accountActivityId,
+      String notes) {
+    AccountActivity accountActivity =
+        accountActivityRepository.findByBusinessIdAndUserIdAndId(
+            businessId, userId, accountActivityId);
+    if (StringUtils.isNotBlank(notes)) {
+      accountActivity.setNotes(notes);
+    }
 
     return accountActivityRepository.save(accountActivity);
   }
@@ -133,6 +157,15 @@ public class AccountActivityService {
     return getFilteredAccountActivity(businessId, accountActivityFilterCriteria);
   }
 
+  public AccountActivity getUserAccountActivity(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<AccountActivityId> accountActivityId) {
+
+    return accountActivityRepository.findByBusinessIdAndUserIdAndId(
+        businessId, userId, accountActivityId);
+  }
+
   public Page<AccountActivityResponse> getFilteredAccountActivity(
       TypedId<BusinessId> businessId, AccountActivityFilterCriteria accountActivityFilterCriteria) {
 
@@ -145,17 +178,7 @@ public class AccountActivityService {
 
     // TODO(kuchlein): we may want to see if we can avoid passing back what is in effect an API type
     return new PageImpl<>(
-        all.stream()
-            .map(
-                accountActivity ->
-                    new AccountActivityResponse(
-                        accountActivity.getActivityTime(),
-                        accountActivity.getAllocationName(),
-                        new CardDetails(accountActivity.getCard()),
-                        new Merchant(accountActivity.getMerchant()),
-                        accountActivity.getType(),
-                        accountActivity.getAmount()))
-            .collect(Collectors.toList()),
+        all.stream().map(AccountActivityResponse::new).collect(Collectors.toList()),
         all.getPageable(),
         all.getTotalElements());
   }

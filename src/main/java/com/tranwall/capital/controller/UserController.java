@@ -3,16 +3,19 @@ package com.tranwall.capital.controller;
 import static com.tranwall.capital.controller.Common.USER_ID;
 import static com.tranwall.capital.controller.Common.USER_NAME;
 
+import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.CardAccountActivityRequest;
+import com.tranwall.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.tranwall.capital.controller.type.card.Card;
+import com.tranwall.capital.controller.type.card.UpdateCardStatusRequest;
 import com.tranwall.capital.controller.type.card.UserCardResponse;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
@@ -23,18 +26,21 @@ import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.controller.type.user.UserData;
 import com.tranwall.capital.data.model.BusinessOwner;
+import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.CardService.UserCardRecord;
 import com.tranwall.capital.service.ReceiptService;
 import com.tranwall.capital.service.UserFilterCriteria;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -229,9 +235,9 @@ public class UserController {
   }
 
   @GetMapping("/cards")
-  private List<UserCardResponse> getUserCards(
-      @RequestHeader(name = "userId") TypedId<UserId> userId) {
-    return cardService.getUserCards(CurrentUser.get().businessId(), userId).stream()
+  private List<UserCardResponse> getUserCards() {
+    CurrentUser currentUser = CurrentUser.get();
+    return cardService.getUserCards(currentUser.businessId(), currentUser.userId()).stream()
         .map(
             userCardRecord ->
                 new UserCardResponse(
@@ -242,7 +248,78 @@ public class UserController {
         .toList();
   }
 
-  @PostMapping("/cards/{cardId}/account-activity")
+  @GetMapping("/cards/{cardId}")
+  private UserCardResponse getUserCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId) {
+    CurrentUser currentUser = CurrentUser.get();
+    UserCardRecord userCardRecord =
+        cardService.getUserCard(currentUser.businessId(), currentUser.userId(), cardId);
+
+    return new UserCardResponse(
+        new Card(userCardRecord.card()),
+        Amount.of(userCardRecord.account().getLedgerBalance()),
+        Amount.of(userCardRecord.account().getAvailableBalance()),
+        userCardRecord.allocation().getName());
+  }
+
+  @PatchMapping("/cards/{cardId}/block")
+  private Card blockCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody UpdateCardStatusRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.blockCard(
+            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+  }
+
+  @PatchMapping("/cards/{cardId}/unblock")
+  private Card unblockCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody UpdateCardStatusRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.unblockCard(
+            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+  }
+
+  @PatchMapping("/cards/{cardId}/retire")
+  private Card retireCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody UpdateCardStatusRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.retireCard(
+            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+  }
+
+  @GetMapping("/cards/{cardId}/account-activity")
   private Page<AccountActivityResponse> getCardAccountActivity(
       @RequestHeader(name = USER_ID) TypedId<UserId> userId,
       @PathVariable(value = "cardId")
@@ -252,16 +329,91 @@ public class UserController {
               description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
-      @Validated @RequestBody CardAccountActivityRequest request) {
+      @RequestParam AccountActivityType type,
+      @RequestParam OffsetDateTime dateFrom,
+      @RequestParam OffsetDateTime dateTo,
+      @RequestParam PageRequest pageRequest) {
     return accountActivityService.getCardAccountActivity(
         CurrentUser.get().businessId(),
         userId,
         cardId,
-        new AccountActivityFilterCriteria(
-            cardId,
-            request.getType(),
-            request.getFrom(),
-            request.getTo(),
-            PageRequest.toPageToken(request.getPageRequest())));
+        new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
+  }
+
+  @GetMapping("/account-activity/{accountActivityId}")
+  private AccountActivityResponse getAccountActivity(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new AccountActivityResponse(
+        accountActivityService.getUserAccountActivity(
+            currentUser.businessId(), currentUser.userId(), accountActivityId));
+  }
+
+  @PatchMapping("/account-activity/{accountActivityId}")
+  private AccountActivityResponse updateAccountActivity(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId,
+      @Validated @RequestBody UpdateAccountActivityRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new AccountActivityResponse(
+        accountActivityService.updateAccountActivity(
+            currentUser.businessId(), currentUser.userId(), accountActivityId, request.getNotes()));
+  }
+
+  @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")
+  private void linkReceipt(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId,
+      @PathVariable(value = "receiptId")
+          @Parameter(
+              required = true,
+              name = "receiptId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<ReceiptId> receiptId) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    receiptService.linkReceipt(
+        currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
+  }
+
+  @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/unlink")
+  private void unlinkReceipt(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId,
+      @PathVariable(value = "receiptId")
+          @Parameter(
+              required = true,
+              name = "receiptId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<ReceiptId> receiptId) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    receiptService.unlinkReceipt(
+        currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
   }
 }

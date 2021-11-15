@@ -19,6 +19,7 @@ import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -124,21 +125,20 @@ public class BusinessBankAccountService {
 
     // TODO(kuchlein): Need to call someone to actually move the money
 
+    final AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
     AdjustmentRecord adjustmentRecord =
         switch (bankAccountTransactType) {
           case DEPOSIT -> accountService.depositFunds(
-              businessId,
-              allocationService.getRootAllocation(businessId).account(),
-              amount,
-              placeHold);
+              businessId, allocationRecord.account(), amount, placeHold);
           case WITHDRAW -> accountService.withdrawFunds(
-              businessId, allocationService.getRootAllocation(businessId).account(), amount);
+              businessId, allocationRecord.account(), amount);
         };
 
     // TODO(kuchlein): need to write one account activity record
     AccountActivityType type =
         bankAccountTransactType == DEPOSIT ? BANK_DEPOSIT : AccountActivityType.BANK_WITHDRAWAL;
-    accountActivityService.recordBankAccountAccountActivity(type, adjustmentRecord.adjustment());
+    accountActivityService.recordBankAccountAccountActivity(
+        allocationRecord.allocation(), type, adjustmentRecord.adjustment());
 
     return adjustmentRecord;
   }

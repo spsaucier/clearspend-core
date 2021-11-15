@@ -19,4 +19,7 @@ public class NetworkMessageRequest {
 
   @JsonProperty("amount")
   Amount amount;
+
+  @JsonProperty("merchantCategoryCode")
+  Integer merchantCategoryCode;
 }

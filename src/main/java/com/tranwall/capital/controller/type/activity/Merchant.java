@@ -19,6 +19,14 @@ public class Merchant {
   @NonNull
   private MerchantType type;
 
+  @JsonProperty("merchantNumber")
+  @NonNull
+  private String merchantNumber;
+
+  @JsonProperty("merchantCategoryCode")
+  @NonNull
+  private Integer merchantCategoryCode;
+
   public Merchant(MerchantDetails merchant) {
     if (merchant == null) {
       return;
@@ -26,5 +34,7 @@ public class Merchant {
 
     name = merchant.getName();
     type = merchant.getType();
+    merchantCategoryCode = merchant.getMerchantCategoryCode();
+    merchantNumber = merchant.getMerchantNumber();
   }
 }

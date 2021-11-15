@@ -211,4 +211,80 @@ public class CardService {
             })
         .toList();
   }
+
+  public UserCardRecord getUserCard(
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> cardId) {
+    Card card =
+        cardRepository
+            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+
+    Allocation allocation =
+        allocationRepository
+            .findById(card.getAllocationId())
+            .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId, cardId));
+
+    Account account =
+        accountService.retrieveCardAccount(
+            card.getAccountId() != null ? card.getAccountId() : allocation.getAccountId(), true);
+
+    return new UserCardRecord(card, allocation, account);
+  }
+
+  @Transactional
+  public Card blockCard(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<CardId> cardId,
+      CardStatusReason statusReason) {
+    Card card =
+        cardRepository
+            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+
+    card.setStatus(card.getStatus().validTransition(CardStatus.BLOCKED));
+    card.setStatusReason(statusReason);
+
+    // TODO(kuchlein): call i2c to block the card
+
+    return cardRepository.save(card);
+  }
+
+  @Transactional
+  public Card unblockCard(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<CardId> cardId,
+      CardStatusReason statusReason) {
+    Card card =
+        cardRepository
+            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+
+    card.setStatus(card.getStatus().validTransition(CardStatus.OPEN));
+    card.setStatusReason(statusReason);
+
+    // TODO(kuchlein): call i2c to unblock the card
+
+    return cardRepository.save(card);
+  }
+
+  @Transactional
+  public Card retireCard(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      TypedId<CardId> cardId,
+      CardStatusReason statusReason) {
+    Card card =
+        cardRepository
+            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+
+    card.setStatus(card.getStatus().validTransition(CardStatus.RETIRED));
+    card.setStatusReason(statusReason);
+
+    // TODO(kuchlein): call i2c to retire/close the card
+
+    return cardRepository.save(card);
+  }
 }

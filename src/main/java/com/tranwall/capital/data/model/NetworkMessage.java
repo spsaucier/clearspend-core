@@ -1,6 +1,7 @@
 package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.AdjustmentId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
@@ -74,6 +75,14 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   private NetworkMessageType type;
 
   @Embedded @NonNull private Amount amount;
+
+  @NonNull private String merchantName;
+
+  @NonNull @Embedded private ClearAddress merchantAddress;
+
+  @NonNull private String merchantNumber;
+
+  @NonNull private Integer merchantCategoryCode;
 
   private String i2cTransactionRef;
 }

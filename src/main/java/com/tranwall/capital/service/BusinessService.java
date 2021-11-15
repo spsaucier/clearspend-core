@@ -155,10 +155,10 @@ public class BusinessService {
         };
 
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation().getName(),
+        allocationRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation().getName(),
+        allocationRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;

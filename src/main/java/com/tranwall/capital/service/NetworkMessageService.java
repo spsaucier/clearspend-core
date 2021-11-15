@@ -50,7 +50,11 @@ public class NetworkMessageService {
             cardRecord.card().getBusinessId(),
             cardRecord.card().getAllocationId(),
             UUID.randomUUID(),
-            common.getAmount());
+            common.getAmount(),
+            common.getMerchantName(),
+            common.getMerchantAddress(),
+            common.getMerchantNumber(),
+            common.getMerchantCategoryCode());
 
     if (common.getCard() != null) {
       networkMessage.setCardId(common.getCard().getId());
@@ -64,10 +68,7 @@ public class NetworkMessageService {
               common.getAmount(),
               OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
-      accountActivityService.recordNetworkHoldAccountAccountActivity(
-          common.getNetworkMessageType().getAccountActivityType(),
-          common.getAllocation(),
-          holdRecord.hold());
+      accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
     }
 
     if (common.isPostAdjustment()) {
@@ -76,9 +77,7 @@ public class NetworkMessageService {
               common.getAccount(), common.getCreditOrDebit(), common.getAmount());
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
-          common.getNetworkMessageType().getAccountActivityType(),
-          common.getAllocation(),
-          adjustmentRecord.adjustment());
+          common, adjustmentRecord.adjustment());
     }
 
     return networkMessageRepository.save(networkMessage);

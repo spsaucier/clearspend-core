@@ -1,6 +1,7 @@
 package com.tranwall.capital.service.type;
 
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
@@ -25,6 +26,14 @@ public class NetworkCommon {
 
   // will always be positive
   @NonNull private Amount amount;
+
+  @NonNull private String merchantNumber;
+
+  @NonNull private String merchantName;
+
+  @NonNull private ClearAddress merchantAddress;
+
+  @NonNull private Integer merchantCategoryCode;
 
   private TypedId<BusinessId> businessId;
 

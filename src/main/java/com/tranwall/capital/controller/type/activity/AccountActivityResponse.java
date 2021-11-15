@@ -3,6 +3,7 @@ package com.tranwall.capital.controller.type.activity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
+import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
@@ -34,4 +35,13 @@ public class AccountActivityResponse {
   @JsonProperty("amount")
   @NonNull
   private Amount amount;
+
+  public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
+    this.activityTime = accountActivity.getActivityTime();
+    this.accountName = accountActivity.getAllocationName();
+    this.card = new CardDetails(accountActivity.getCard());
+    this.merchant = new Merchant(accountActivity.getMerchant());
+    this.type = accountActivity.getType();
+    this.amount = accountActivity.getAmount();
+  }
 }

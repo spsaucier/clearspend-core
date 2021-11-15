@@ -1,9 +1,11 @@
 package com.tranwall.capital.controller.nonprod;
 
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.tranwall.capital.data.model.NetworkMessage;
+import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.CreditOrDebit;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.service.NetworkMessageService;
@@ -40,7 +42,11 @@ public class NetworkMessageDemoController {
                 request.getExpirationDate(),
                 NetworkMessageType.fromMti(request.getMTI()),
                 CreditOrDebit.fromAmount(amount),
-                amount.abs()));
+                amount.abs(),
+                "M1234",
+                "Merchant Name",
+                new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
+                request.getMerchantCategoryCode()));
 
     return new NetworkMessageResponse(networkMessage.getId());
   }
