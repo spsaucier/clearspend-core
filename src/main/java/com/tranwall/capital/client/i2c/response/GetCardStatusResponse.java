@@ -5,13 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.tranwall.capital.client.i2c.CardStatus;
 import com.tranwall.capital.client.i2c.util.I2CBooleanDeserializer;
-import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Value
-@Builder
+@Data
+@EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class GetCardStatusResponse {
+public class GetCardStatusResponse extends BaseI2CResponse {
 
   @JsonProperty("isBadPinTriesExceeded")
   @JsonDeserialize(using = I2CBooleanDeserializer.class)

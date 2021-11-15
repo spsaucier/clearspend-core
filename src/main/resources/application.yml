@@ -51,6 +51,10 @@ tranwall:
         tweak: 9F1E1761
 
 client:
+  connect-timeout: 2000
+  response-timeout: 5000
+  read-timeout: 10000
+  write-timeout: 10000
   alloy:
     url: https://sandbox.alloy.co/v1/
     individual:
@@ -71,9 +75,12 @@ client:
       enabled: true
   i2c:
     url: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
-    acquirerId: TranTest
-    userId: TranTest
-    password: 754NM@l1LT9
+    acquirerId: TW0001
+    userId: TWTest
+    password: "{TWTest_Temp@/110}"
+    stakeholder-program:
+      id: tranwall_virtual
+      bin: 601999
   plaid:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX

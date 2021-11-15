@@ -24,16 +24,20 @@ import reactor.netty.http.client.HttpClient;
 public class WebclientConfiguration {
 
   private final ObjectMapper mapper;
+  private final WeblcientProperties properties;
 
   @Bean
   HttpClient httpClient() {
     return HttpClient.create()
-        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-        .responseTimeout(Duration.ofMillis(1000))
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, properties.getConnectTimeout())
+        .responseTimeout(Duration.ofMillis(properties.getResponseTimeout()))
         .doOnConnected(
             conn ->
-                conn.addHandlerLast(new ReadTimeoutHandler(1000, TimeUnit.MILLISECONDS))
-                    .addHandlerLast(new WriteTimeoutHandler(1000, TimeUnit.MILLISECONDS)));
+                conn.addHandlerLast(
+                        new ReadTimeoutHandler(properties.getReadTimeout(), TimeUnit.MILLISECONDS))
+                    .addHandlerLast(
+                        new WriteTimeoutHandler(
+                            properties.getWriteTimeout(), TimeUnit.MILLISECONDS)));
   }
 
   @Bean
@@ -71,10 +75,7 @@ public class WebclientConfiguration {
   }
 
   @Bean
-  WebClient i2CWebClient(
-      @Value("${client.i2c.url}") String url,
-      @Value("${client.alloy.business.token}") String token,
-      @Value("${client.alloy.business.secret}") String secret) {
+  WebClient i2CWebClient(@Value("${client.i2c.url}") String url) {
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())
         .clientConnector(new ReactorClientHttpConnector(httpClient()))

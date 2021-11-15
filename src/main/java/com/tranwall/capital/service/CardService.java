@@ -2,7 +2,6 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
-import com.tranwall.capital.client.i2c.response.AddCardResponseRoot;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
@@ -97,10 +96,7 @@ public class CardService {
     // hack until we actually call i2c
     String l = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
     String pan = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
-    AddCardResponseRoot response =
-        AddCardResponseRoot.builder()
-            .response(AddCardResponse.builder().cardNumber(pan).referenceId(l).build())
-            .build();
+    AddCardResponse response = new AddCardResponse(pan, l);
     // i2Client.addCard(new AddCardRequestRoot(AddCardRequest.builder().build()));
 
     Card card =
@@ -118,14 +114,11 @@ public class CardService {
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
             cardType,
-            new RequiredEncryptedStringWithHash(response.getResponse().getCardNumber()),
-            response
-                .getResponse()
-                .getCardNumber()
-                .substring(response.getResponse().getCardNumber().length() - 4),
+            new RequiredEncryptedStringWithHash(response.getCardNumber()),
+            response.getCardNumber().substring(response.getCardNumber().length() - 4),
             new Address());
     card.setCardLine4(cardLine4.toString());
-    card.setI2cCardRef(response.getResponse().getReferenceId());
+    card.setI2cCardRef(response.getReferenceId());
 
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
       Account account =

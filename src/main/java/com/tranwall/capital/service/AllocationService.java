@@ -1,5 +1,6 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -48,6 +49,7 @@ public class AllocationService {
   private final AccountService accountService;
   private final CardService cardService;
   private final SpendLimitService spendLimitService;
+  private final I2Client i2Client;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -61,7 +63,8 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), Currency.USD);
 
     // create new allocation and set its ID to that which was used for the Account record
-    Allocation allocation = new Allocation(businessId, account.getId(), name, "I2C_STAKEHOLDER_ID");
+    String i2cStakeholderId = i2Client.addStakeholder(name).getStakeholderId();
+    Allocation allocation = new Allocation(businessId, account.getId(), name, i2cStakeholderId);
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -108,7 +111,10 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
-    Allocation allocation = new Allocation(businessId, account.getId(), name, "I2C_STAKEHOLDER_ID");
+    String i2cStakeholderId =
+        i2Client.addStakeholder(name, parent.getI2cStakeholderRef()).getStakeholderId();
+
+    Allocation allocation = new Allocation(businessId, account.getId(), name, i2cStakeholderId);
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(

@@ -2,38 +2,51 @@ package com.tranwall.capital.client.i2c;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
-import com.tranwall.capital.client.i2c.request.GetCardStatusRequestRoot;
+import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 @Disabled
-public class I2ClientTest {
+public class I2ClientTest extends BaseCapitalTest {
+
+  private static final String programId = "tranwall_virtual";
+  private static final String cardBin = "601999";
 
   @Autowired private I2Client i2Client;
 
   @Test
   public void getCardStatusRequest() {
     // given
-    GetCardStatusRequest request =
-        GetCardStatusRequest.builder()
-            .acquirer(getAcquirer())
-            .card(Card.builder().number("9100100013092570").build())
-            .build();
+    Card card = Card.builder().number("9100100013092570").build();
 
     // when
-    GetCardStatusResponse response =
-        i2Client.getCardStatus(new GetCardStatusRequestRoot(request)).getResponse();
+    GetCardStatusResponse response = i2Client.getCardStatus(card);
 
     // then
     assertThat(response).isNotNull();
   }
 
   private Acquirer getAcquirer() {
-    return Acquirer.builder().id("TranTest").userId("TranTest").password("754NM@l1LT9").build();
+    return Acquirer.builder().id("TW0001").userId("TWTest").password("{TWTest_Temp@/110}").build();
+  }
+
+  @Test
+  public void testAddAccounholder() {
+    // given
+    StakeholderInfo request =
+        StakeholderInfo.builder()
+            .programId(programId)
+            .cardBin(cardBin)
+            .stakeholderName("Test Me")
+            .build();
+
+    // when
+    AddStakeholderResponse response = i2Client.addStakeholder("Test me");
+
+    // then
+    assertThat(response).isNotNull();
   }
 }
