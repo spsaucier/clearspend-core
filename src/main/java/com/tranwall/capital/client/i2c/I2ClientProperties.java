@@ -19,6 +19,8 @@ public class I2ClientProperties {
   private String password;
 
   private Program stakeholderProgram = new Program();
+  private Program virtualProgram = new Program();
+  private Program plasticProgram = new Program();
 
   @Getter
   @Setter
@@ -26,5 +28,6 @@ public class I2ClientProperties {
   public static class Program {
     private String id;
     private String bin;
+    private String startingNumbers;
   }
 }

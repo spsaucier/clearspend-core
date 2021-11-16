@@ -1,5 +1,6 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.client.i2c.CardNumber;
 import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.common.data.model.Address;
@@ -93,11 +94,8 @@ public class CardService {
       cardLine3 = name;
     }
 
-    // hack until we actually call i2c
-    String l = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
-    String pan = Long.toString((long) (5000000000000000L + Math.random() * 999999999999999L));
-    AddCardResponse response = new AddCardResponse(pan, l);
-    // i2Client.addCard(new AddCardRequestRoot(AddCardRequest.builder().build()));
+    AddCardResponse i2cResponse = i2Client.addCard(cardType, cardLine3.toString());
+    CardNumber i2CardNumber = i2cResponse.getCardNumber();
 
     Card card =
         new Card(
@@ -114,11 +112,11 @@ public class CardService {
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
             cardType,
-            new RequiredEncryptedStringWithHash(response.getCardNumber()),
-            response.getCardNumber().substring(response.getCardNumber().length() - 4),
+            new RequiredEncryptedStringWithHash(i2cResponse.getCardNumber().getNumber()),
+            i2CardNumber.getNumber().substring(i2CardNumber.getNumber().length() - 4),
             new Address());
     card.setCardLine4(cardLine4.toString());
-    card.setI2cCardRef(response.getReferenceId());
+    card.setI2cCardRef(i2cResponse.getI2cCardRef());
 
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
       Account account =

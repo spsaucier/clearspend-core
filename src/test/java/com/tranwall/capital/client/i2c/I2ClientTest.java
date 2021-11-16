@@ -3,8 +3,10 @@ package com.tranwall.capital.client.i2c;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
-import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
+import com.tranwall.capital.data.model.enums.CardStatus;
+import com.tranwall.capital.data.model.enums.CardType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,22 +21,15 @@ public class I2ClientTest extends BaseCapitalTest {
 
   @Test
   public void getCardStatusRequest() {
-    // given
-    Card card = Card.builder().number("9100100013092570").build();
-
     // when
-    GetCardStatusResponse response = i2Client.getCardStatus(card);
+    CardStatus response = i2Client.getCardStatus("110651106363");
 
     // then
     assertThat(response).isNotNull();
   }
 
-  private Acquirer getAcquirer() {
-    return Acquirer.builder().id("TW0001").userId("TWTest").password("{TWTest_Temp@/110}").build();
-  }
-
   @Test
-  public void testAddAccounholder() {
+  public void testAddStakeholder() {
     // given
     StakeholderInfo request =
         StakeholderInfo.builder()
@@ -47,6 +42,17 @@ public class I2ClientTest extends BaseCapitalTest {
     AddStakeholderResponse response = i2Client.addStakeholder("Test me");
 
     // then
-    assertThat(response).isNotNull();
+    assertThat(response.getI2cStakeholderRef()).isNotNull();
+    assertThat(response.getI2cAccountRef()).isNotNull();
+  }
+
+  @Test
+  public void testAddCard() {
+    // when
+    AddCardResponse response = i2Client.addCard(CardType.VIRTUAL, "Virtual CardOwner");
+
+    // then
+    assertThat(response.getI2cCardRef()).isNotNull();
+    assertThat(response.getCardNumber()).isNotNull();
   }
 }

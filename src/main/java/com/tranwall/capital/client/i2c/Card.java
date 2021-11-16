@@ -10,11 +10,6 @@ import lombok.Value;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Card {
 
-  /**
-   * Card account number. Only Digit values are allowed in this tag.
-   *
-   * <p>If reference number is given, card number is optional. Otherwise, it is mandatory.
-   */
-  @JsonProperty("number")
-  private String number;
+  @JsonProperty("referenceId")
+  private String i2cCardRef;
 }

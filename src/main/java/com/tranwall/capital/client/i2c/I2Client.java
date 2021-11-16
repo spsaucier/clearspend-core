@@ -3,13 +3,18 @@ package com.tranwall.capital.client.i2c;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tranwall.capital.client.i2c.I2ClientProperties.Program;
 import com.tranwall.capital.client.i2c.request.AddCardRequest;
 import com.tranwall.capital.client.i2c.request.AddStakeholderRequest;
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
+import com.tranwall.capital.client.i2c.request.SetCardStatusRequest;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.client.i2c.response.BaseI2CResponse;
 import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
+import com.tranwall.capital.client.i2c.response.SetCardStatusResponse;
+import com.tranwall.capital.data.model.enums.CardStatus;
+import com.tranwall.capital.data.model.enums.CardType;
 import java.util.EnumSet;
 import java.util.Objects;
 import lombok.NonNull;
@@ -19,7 +24,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -63,7 +67,7 @@ public class I2Client {
     return addStakeholder(name, null);
   }
 
-  public AddStakeholderResponse addStakeholder(@NonNull String name, String parentStakeholderRef) {
+  public AddStakeholderResponse addStakeholder(@NonNull String name, String parentI2cAccountRef) {
     return callI2C(
         "addStakeholder",
         AddStakeholderRequest.builder()
@@ -73,22 +77,75 @@ public class I2Client {
                     .programId(properties.getStakeholderProgram().getId())
                     .cardBin(properties.getStakeholderProgram().getBin())
                     .stakeholderName(name)
-                    .parentStakeholderId(parentStakeholderRef)
+                    .parentStakeholderId(parentI2cAccountRef)
                     .build())
             .build(),
         AddStakeholderResponse.class);
   }
 
-  public AddCardResponse addCard(Card card) {
+  public AddCardResponse addCard(CardType cardType, String nameOnCard) {
+    Program program =
+        cardType == CardType.VIRTUAL
+            ? properties.getVirtualProgram()
+            : properties.getPlasticProgram();
     return callI2C(
-        "addCard", AddCardRequest.builder().acquirer(acquirer).card(card), AddCardResponse.class);
+        "addCard",
+        AddCardRequest.builder()
+            .acquirer(acquirer)
+            .card(
+                AddCardRequest.Card.builder().startingNumbers(program.getStartingNumbers()).build())
+            .profile(AddCardRequest.Profile.builder().nameOnCard(nameOnCard).build())
+            .build(),
+        AddCardResponse.class);
   }
 
-  public GetCardStatusResponse getCardStatus(@RequestBody Card card) {
-    return callI2C(
-        "getCardStatus",
-        GetCardStatusRequest.builder().acquirer(acquirer).card(card),
-        GetCardStatusResponse.class);
+  public CardStatus getCardStatus(String i2cCardRef) {
+    CardStatusCode statusCode =
+        callI2C(
+                "getCardStatus",
+                GetCardStatusRequest.builder()
+                    .acquirer(acquirer)
+                    .card(Card.builder().i2cCardRef(i2cCardRef).build()),
+                GetCardStatusResponse.class)
+            .getStatus()
+            .getCode();
+
+    return switch (statusCode) {
+      case CLOSED -> CardStatus.RETIRED;
+      case INACTIVE -> CardStatus.BLOCKED;
+      case OPEN -> CardStatus.OPEN;
+      default -> throw new RuntimeException(
+          String.format("I2C card status [%s] is not matched to our card statuses", statusCode));
+    };
+  }
+
+  public void setCardStatus(String i2cCardRef, CardStatus cardStatus) {
+    CardStatusCode i2cCardStatusCode =
+        switch (cardStatus) {
+          case RETIRED -> CardStatusCode.CLOSED;
+          case BLOCKED -> CardStatusCode.INACTIVE;
+          case OPEN -> CardStatusCode.OPEN;
+        };
+
+    SetCardStatusResponse response =
+        callI2C(
+            "setCardStatus",
+            SetCardStatusRequest.builder()
+                .acquirer(acquirer)
+                .card(
+                    SetCardStatusRequest.Card.builder()
+                        .referenceId(i2cCardRef)
+                        .statusCode(i2cCardStatusCode.getCode())
+                        .build())
+                .build(),
+            SetCardStatusResponse.class);
+
+    if (i2cCardStatusCode != response.getStatus().getCode()) {
+      throw new RuntimeException(
+          String.format(
+              "Failed to set i2c card status to [%s] for card reference [%s]. Actual code is [%s]",
+              i2cCardStatusCode, i2cCardRef, response.getStatus().getCode()));
+    }
   }
 
   private <T extends BaseI2CResponse> T callI2C(

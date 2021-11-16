@@ -7,7 +7,7 @@ import lombok.Value;
 
 @Value
 @Builder
-public class AddCardRequest {
+public class SetCardStatusRequest {
 
   @JsonProperty("acquirer")
   private Acquirer acquirer;
@@ -15,22 +15,13 @@ public class AddCardRequest {
   @JsonProperty("card")
   private Card card;
 
-  @JsonProperty("profile")
-  private Profile profile;
-
   @Value
   @Builder
   public static class Card {
+    @JsonProperty("referenceId")
+    private String referenceId;
 
-    @JsonProperty("startingNumbers")
-    private String startingNumbers;
-  }
-
-  @Value
-  @Builder
-  public static class Profile {
-
-    @JsonProperty("nameOnCard")
-    private String nameOnCard;
+    @JsonProperty("statusCode")
+    private String statusCode;
   }
 }

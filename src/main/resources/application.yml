@@ -81,6 +81,14 @@ client:
     stakeholder-program:
       id: tranwall_virtual
       bin: 601999
+    virtual-program:
+      id: tranwall_virtual
+      bin: 601999
+      starting-numbers: 6019990022
+    plastic-program:
+      id: tranwall_virtual
+      bin: 601999
+      starting-numbers: 6019990022
   plaid:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX

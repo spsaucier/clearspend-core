@@ -1,6 +1,7 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.i2c.I2Client;
+import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.error.IdMismatchException;
@@ -63,8 +64,14 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), Currency.USD);
 
     // create new allocation and set its ID to that which was used for the Account record
-    String i2cStakeholderId = i2Client.addStakeholder(name).getStakeholderId();
-    Allocation allocation = new Allocation(businessId, account.getId(), name, i2cStakeholderId);
+    AddStakeholderResponse i2cStakeholder = i2Client.addStakeholder(name);
+    Allocation allocation =
+        new Allocation(
+            businessId,
+            account.getId(),
+            name,
+            i2cStakeholder.getI2cStakeholderRef(),
+            i2cStakeholder.getI2cAccountRef());
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -111,10 +118,16 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
-    String i2cStakeholderId =
-        i2Client.addStakeholder(name, parent.getI2cStakeholderRef()).getStakeholderId();
+    AddStakeholderResponse i2cStakeholder =
+        i2Client.addStakeholder(name, parent.getI2cAccountRef());
 
-    Allocation allocation = new Allocation(businessId, account.getId(), name, i2cStakeholderId);
+    Allocation allocation =
+        new Allocation(
+            businessId,
+            account.getId(),
+            name,
+            i2cStakeholder.getI2cStakeholderRef(),
+            i2cStakeholder.getI2cAccountRef());
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(
