@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
@@ -11,7 +12,6 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.CardRepository;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService.UserCardRecord;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
@@ -31,7 +31,7 @@ class CardServiceTest extends BaseCapitalTest {
   @Autowired private CardService cardService;
 
   private Allocation allocation;
-  private BusinessAndAllocationsRecord businessAndAllocationsRecord;
+  private CreateBusinessRecord createBusinessRecord;
   private Bin bin;
   private Business business;
   private Program program;
@@ -43,10 +43,10 @@ class CardServiceTest extends BaseCapitalTest {
     if (bin == null) {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
-      businessAndAllocationsRecord = testHelper.createBusiness(program);
-      business = businessAndAllocationsRecord.business();
-      allocation = businessAndAllocationsRecord.allocationRecord().allocation();
-      userRecord = testHelper.createUser(businessAndAllocationsRecord.business());
+      createBusinessRecord = testHelper.createBusiness();
+      business = createBusinessRecord.business();
+      allocation = createBusinessRecord.allocationRecord().allocation();
+      userRecord = testHelper.createUser(createBusinessRecord.business());
     }
   }
 

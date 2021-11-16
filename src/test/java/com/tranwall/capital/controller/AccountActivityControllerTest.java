@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -21,7 +22,6 @@ import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessService;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import javax.servlet.http.Cookie;
@@ -61,10 +61,10 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getLatestAccountActivityPageData() {
 
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
-    Business business = businessAndAllocationsRecord.business();
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
             business.getId(),
@@ -76,13 +76,11 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         accountService.retrieveRootAllocationAccount(
             business.getId(),
             business.getCurrency(),
-            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
             false);
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

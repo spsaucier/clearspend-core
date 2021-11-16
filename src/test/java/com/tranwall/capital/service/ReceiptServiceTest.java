@@ -31,7 +31,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     if (userRecord == null) {
-      Business business = testHelper.createBusiness(testHelper.retrievePooledProgram()).business();
+      Business business = testHelper.createBusiness().business();
       userRecord = testHelper.createUser(business);
       fileContents = "Hello world " + UUID.randomUUID();
       receipt =

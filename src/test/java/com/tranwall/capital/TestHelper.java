@@ -55,7 +55,6 @@ import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AccountRepository;
 import com.tranwall.capital.data.repository.AllocationRepository;
-import com.tranwall.capital.data.repository.BinRepository;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.data.repository.BusinessLimitRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
@@ -83,7 +82,6 @@ import com.tranwall.capital.util.PhoneUtil;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.Cookie;
@@ -110,11 +108,12 @@ public class TestHelper {
 
   private final AccountRepository accountRepository;
   private final AllocationRepository allocationRepository;
-  private final BinRepository binRepository;
-  private final BusinessRepository businessRepository;
-  private final BusinessProspectRepository businessProspectRepository;
-  private final BusinessOwnerRepository businessOwnerRepository;
   private final BusinessBankAccountRepository businessBankAccountRepository;
+  private final BusinessLimitRepository businessLimitRepository;
+  private final BusinessOwnerRepository businessOwnerRepository;
+  private final BusinessProspectRepository businessProspectRepository;
+  private final BusinessRepository businessRepository;
+  private final SpendLimitRepository spendLimitRepository;
   private final UserRepository userRepository;
 
   private final AccountService accountService;
@@ -125,11 +124,9 @@ public class TestHelper {
   private final BusinessProspectService businessProspectService;
   private final BusinessService businessService;
   private final CardService cardService;
+  private final FusionAuthService fusionAuthService;
   private final ProgramService programService;
   private final UserService userService;
-  private final FusionAuthService fusionAuthService;
-  private final BusinessLimitRepository businessLimitRepository;
-  private final SpendLimitRepository spendLimitRepository;
 
   private final Faker faker = new Faker();
 
@@ -149,7 +146,7 @@ public class TestHelper {
 
   public void init() {
     if (businessRepository.findById(businessId).isEmpty()) {
-      createBusiness(businessId, retrievePooledProgram(), retrieveIndividualProgram());
+      createBusiness(businessId);
       createBusinessBankAccount();
     }
   }
@@ -368,12 +365,7 @@ public class TestHelper {
     return businessService.retrieveBusiness(businessId);
   }
 
-  public BusinessAndAllocationsRecord createBusiness(Program program) {
-    return createBusiness(null, program);
-  }
-
-  private BusinessAndAllocationsRecord createBusiness(
-      TypedId<BusinessId> businessId, Program... programs) {
+  private BusinessAndAllocationsRecord createBusiness(TypedId<BusinessId> businessId) {
     return businessService.createBusiness(
         businessId,
         faker.company().name(),
@@ -382,7 +374,6 @@ public class TestHelper {
         generateEmployerIdentificationNumber(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        Arrays.stream(programs).map(Program::getId).toList(),
         Currency.USD);
   }
 
@@ -500,7 +491,7 @@ public class TestHelper {
     String email = generateEmail();
     String password = generatePassword();
     Program program = retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(program);
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(null);
     BusinessOwner businessOwner =
         createBusinessOwner(businessAndAllocationsRecord.business().getId(), email, password);
     return new CreateBusinessRecord(

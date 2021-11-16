@@ -7,6 +7,7 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
+import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
@@ -34,11 +35,12 @@ import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,6 +55,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/non-production/test-data")
 @RequiredArgsConstructor
+@Slf4j
 public class TestDataController {
 
   private final BusinessBankAccountService businessBankAccountService;
@@ -78,57 +81,77 @@ public class TestDataController {
 
     List<Bin> allBins = binService.findAllBins();
     Bin bin = allBins.size() > 0 ? allBins.get(0) : createBin();
+    BusinessAndAllocationsRecord business = createBusiness(null);
+    AllocationRecord parentAllocation = business.allocationRecord();
+    AllocationRecord childAllocation =
+        allocationService.createAllocation(
+            business.business().getId(),
+            parentAllocation.allocation().getId(),
+            faker.company().name(),
+            Amount.of(Currency.USD));
+    AllocationRecord grandchildAllocation =
+        allocationService.createAllocation(
+            business.business().getId(),
+            childAllocation.allocation().getId(),
+            faker.company().name(),
+            Amount.of(Currency.USD));
+
+    CreateUpdateUserRecord user = createUser(business.business());
+    log.info("user: {}", user);
+    CreateUpdateUserRecord user2 = createUser(business.business());
+    log.info("user2: {}", user2);
+    CreateUpdateUserRecord user3 = createUser(business.business());
+    log.info("user3: {}", user3);
+    createUpdateUserRecordList.add(user);
+    createUpdateUserRecordList.add(user2);
+    createUpdateUserRecordList.add(user3);
+
     List<Program> allPrograms = programService.findAllPrograms();
     Program program =
         allPrograms.size() > 0
             ? allPrograms.get(0)
             : createProgram(bin, FundingType.INDIVIDUAL, CardType.VIRTUAL);
-    BusinessAndAllocationsRecord business = createBusiness(null, program);
-    AllocationRecord parentAllocation =
-        createAllocation(business.business().getId(), faker.company().name(), null);
-    AllocationRecord allocation1 =
-        createAllocation(
-            business.business().getId(),
-            faker.company().name(),
-            parentAllocation.allocation().getId());
-    createAllocation(
-        business.business().getId(), faker.company().name(), allocation1.allocation().getId());
-    AllocationRecord parentAllocation2 =
-        createAllocation(business.business().getId(), faker.company().name(), null);
+    Card userCard =
+        issueCard(
+            business.business(),
+            parentAllocation.allocation(),
+            user.user(),
+            bin,
+            program,
+            Currency.USD,
+            business.business().getId());
+    Card user2Card =
+        issueCard(
+            business.business(),
+            childAllocation.allocation(),
+            user2.user(),
+            bin,
+            program,
+            Currency.USD,
+            business.business().getId());
+    Card user3Card =
+        issueCard(
+            business.business(),
+            grandchildAllocation.allocation(),
+            user3.user(),
+            bin,
+            program,
+            Currency.USD,
+            business.business().getId());
 
-    CreateUpdateUserRecord user = createUser(business.business());
-    CreateUpdateUserRecord user2 = createUser(business.business());
-    CreateUpdateUserRecord user3 = createUser(business.business());
-    createUpdateUserRecordList.add(user);
-    createUpdateUserRecordList.add(user2);
-    createUpdateUserRecordList.add(user3);
-
-    issueCard(
-        business.business(),
-        parentAllocation.allocation(),
-        user.user(),
-        bin,
-        program,
-        Currency.USD,
-        business.business().getId());
-    issueCard(
-        business.business(),
-        allocation1.allocation(),
-        user2.user(),
-        bin,
-        program,
-        Currency.USD,
-        business.business().getId());
-    issueCard(
-        business.business(),
-        parentAllocation2.allocation(),
-        user3.user(),
-        bin,
-        program,
-        Currency.USD,
-        business.business().getId());
-
-    return getGeneratedData();
+    return new CreateTestDataResponse(
+        allBins,
+        allPrograms,
+        List.of(
+            new TestBusiness(
+                business.business(),
+                Collections.emptyList(),
+                List.of(
+                    business.allocationRecord().allocation(),
+                    childAllocation.allocation(),
+                    grandchildAllocation.allocation()),
+                List.of(userCard, user2Card, user3Card),
+                List.of(user, user2, user3))));
   }
 
   private Bin createBin() {
@@ -144,8 +167,7 @@ public class TestDataController {
         faker.number().digits(8));
   }
 
-  private BusinessAndAllocationsRecord createBusiness(
-      TypedId<BusinessId> businessId, Program... programs) {
+  private BusinessAndAllocationsRecord createBusiness(TypedId<BusinessId> businessId) {
     return businessService.createBusiness(
         businessId,
         faker.company().name(),
@@ -154,7 +176,6 @@ public class TestDataController {
         generateEmployerIdentificationNumber(),
         faker.internet().emailAddress(),
         faker.phoneNumber().phoneNumber(),
-        Arrays.stream(programs).map(Program::getId).toList(),
         Currency.USD);
   }
 

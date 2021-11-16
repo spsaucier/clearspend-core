@@ -22,7 +22,6 @@ import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.UserType;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
@@ -78,8 +77,8 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     Bin bin = testHelper.createBin();
     Program program = testHelper.createProgram(bin);
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
 
     Cookie authCookie = testHelper.login(email, password);
@@ -87,7 +86,7 @@ public class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        businessAndAllocationsRecord.allocationRecord().allocation().getId());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUserRequest userRecord =
         new CreateUserRequest(
@@ -126,8 +125,8 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     Bin bin = testHelper.createBin();
     Program program = testHelper.createProgram(bin);
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
 
     Cookie authCookie = testHelper.login(email, password);
@@ -135,7 +134,7 @@ public class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        businessAndAllocationsRecord.allocationRecord().allocation().getId());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUpdateUserRecord createdUser = testHelper.createUser(business);
 
@@ -177,14 +176,14 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     Bin bin = testHelper.createBin();
     Program program = testHelper.createProgram(bin);
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
 
     Cookie authCookie = testHelper.login(email, password);
 
     testHelper.createAllocation(
-        business.getId(), "", businessAndAllocationsRecord.allocationRecord().allocation().getId());
+        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     userService.createUser(
         business.getId(),
@@ -225,12 +224,11 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     testHelper.createBin();
     Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    Business business = createBusinessRecord.business();
     testHelper.createAllocation(
-        business.getId(), "", businessAndAllocationsRecord.allocationRecord().allocation().getId());
+        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = testHelper.login(email, password);
 
@@ -280,12 +278,11 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     testHelper.createBin();
     Program program = testHelper.retrievePooledProgram();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    testHelper.createBusinessOwner(
-        businessAndAllocationsRecord.business().getId(), email, password);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    Business business = createBusinessRecord.business();
     testHelper.createAllocation(
-        business.getId(), "", businessAndAllocationsRecord.allocationRecord().allocation().getId());
+        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = testHelper.login(email, password);
 

@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.repository.BusinessRepository;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,9 +32,9 @@ class BusinessServiceTest extends BaseCapitalTest {
 
   @Test
   void createBusiness() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business foundBusiness =
-        businessRepository.findById(businessAndAllocationsRecord.business().getId()).orElseThrow();
+        businessRepository.findById(createBusinessRecord.business().getId()).orElseThrow();
     assertThat(foundBusiness).isNotNull();
   }
 }

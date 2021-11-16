@@ -11,7 +11,6 @@ import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
@@ -27,7 +26,6 @@ import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -66,7 +64,6 @@ public class BusinessService {
       String employerIdentificationNumber,
       String email,
       String phone,
-      List<TypedId<ProgramId>> programIds,
       Currency currency) {
     Business business =
         new Business(

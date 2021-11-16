@@ -24,7 +24,6 @@ import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -227,7 +226,6 @@ public class BusinessProspectService {
             employerIdentificationNumber,
             businessProspect.getEmail().getEncrypted(),
             businessPhone,
-            List.of(DEFAULT_PROGRAM_ID),
             Currency.USD);
 
     BusinessOwner businessOwner =

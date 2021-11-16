@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import javax.transaction.Transactional;
 import lombok.SneakyThrows;
@@ -30,7 +30,7 @@ class UserServiceTest extends BaseCapitalTest {
 
   @Autowired private UserService userService;
 
-  private BusinessAndAllocationsRecord businessAndAllocationsRecord;
+  private CreateBusinessRecord createBusinessRecord;
   private Bin bin;
   private Program program;
 
@@ -39,15 +39,14 @@ class UserServiceTest extends BaseCapitalTest {
     if (bin == null) {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
-      businessAndAllocationsRecord = testHelper.createBusiness(program);
+      createBusinessRecord = testHelper.createBusiness();
     }
   }
 
   @SneakyThrows
   @Test
   void createUser() {
-    CreateUpdateUserRecord userRecord =
-        testHelper.createUser(businessAndAllocationsRecord.business());
+    CreateUpdateUserRecord userRecord = testHelper.createUser(createBusinessRecord.business());
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
   }
@@ -57,7 +56,7 @@ class UserServiceTest extends BaseCapitalTest {
   void createUser_withoutAddress() {
     CreateUpdateUserRecord userRecord =
         userService.createUser(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             UserType.EMPLOYEE,
             faker.name().firstName(),
             faker.name().lastName(),
@@ -75,7 +74,7 @@ class UserServiceTest extends BaseCapitalTest {
   void createUser_withoutPhone() {
     CreateUpdateUserRecord userRecord =
         userService.createUser(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             UserType.EMPLOYEE,
             faker.name().firstName(),
             faker.name().lastName(),

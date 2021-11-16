@@ -2,6 +2,7 @@ package com.tranwall.capital.service;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -11,7 +12,6 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -43,11 +43,11 @@ class AccountServiceTest extends BaseCapitalTest {
 
   @Test
   void reallocateFunds() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     businessBankAccountService.transactBankAccount(
-        businessAndAllocationsRecord.business().getId(),
+        createBusinessRecord.business().getId(),
         businessBankAccountId,
         FundsTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
@@ -55,13 +55,13 @@ class AccountServiceTest extends BaseCapitalTest {
 
     AllocationRecord allocation =
         testHelper.createAllocation(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             "name",
-            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AccountReallocateFundsRecord adjustmentRecord =
         accountService.reallocateFunds(
-            businessAndAllocationsRecord.allocationRecord().account().getId(),
+            createBusinessRecord.allocationRecord().account().getId(),
             allocation.allocation().getAccountId(),
             Amount.of(Currency.USD, new BigDecimal("241.85")));
   }

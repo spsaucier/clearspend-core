@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
@@ -19,7 +20,6 @@ import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.type.PageToken;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
@@ -55,40 +55,37 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             businessBankAccountId,
             FundsTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
 
     int count =
-        accountActivityRepository.countByBusinessId(
-            businessAndAllocationsRecord.business().getId());
+        accountActivityRepository.countByBusinessId(createBusinessRecord.business().getId());
     Assertions.assertEquals(1, count);
   }
 
   @Test
   void recordAccountActivityOnReallocationBusinessFunds() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     final TypedId<AllocationId> rootAllocationId =
-        businessAndAllocationsRecord.allocationRecord().allocation().getId();
+        createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
-        businessAndAllocationsRecord.allocationRecord().account(),
+        createBusinessRecord.allocationRecord().account(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
-    Account rootAllocationAccount = businessAndAllocationsRecord.allocationRecord().account();
+    Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -107,15 +104,15 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void createAccountActivity() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(business.getId());
     Account account =
         accountService.retrieveRootAllocationAccount(
             business.getId(),
             business.getCurrency(),
-            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
             false);
 
     businessBankAccountService.transactBankAccount(
@@ -131,21 +128,19 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void retrieveLatestAccountActivity() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    Business business = businessAndAllocationsRecord.business();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
     final TypedId<AllocationId> rootAllocationId =
-        businessAndAllocationsRecord.allocationRecord().allocation().getId();
+        createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
-        businessAndAllocationsRecord.allocationRecord().account(),
+        createBusinessRecord.allocationRecord().account(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
-    Account rootAllocationAccount = businessAndAllocationsRecord.allocationRecord().account();
+    Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -168,10 +163,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Test
   void retrieveAllAccountActivityFilterByAllocationType() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
-    Business business = businessAndAllocationsRecord.business();
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
             business.getId(),
@@ -183,13 +178,11 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountService.retrieveRootAllocationAccount(
             business.getId(),
             business.getCurrency(),
-            businessAndAllocationsRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
             false);
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            businessAndAllocationsRecord.allocationRecord().allocation().getId());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

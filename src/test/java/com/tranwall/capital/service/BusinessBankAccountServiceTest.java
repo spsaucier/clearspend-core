@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
@@ -14,7 +15,6 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -42,12 +42,12 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void depositFunds() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessAndAllocationsRecord.business().getId());
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     AdjustmentRecord adjustmentRecord =
         bankAccountService.transactBankAccount(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             businessBankAccountId,
             FundsTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
@@ -56,19 +56,19 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void withdrawFunds_success() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    TypedId<BusinessId> businessId = businessAndAllocationsRecord.business().getId();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
-        businessAndAllocationsRecord.business().getId(),
+        createBusinessRecord.business().getId(),
         businessBankAccountId,
         FundsTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("700.51")),
         false);
     AdjustmentRecord adjustmentRecord =
         bankAccountService.transactBankAccount(
-            businessAndAllocationsRecord.business().getId(),
+            createBusinessRecord.business().getId(),
             businessBankAccountId,
             FundsTransactType.WITHDRAW,
             Amount.of(Currency.USD, new BigDecimal("241.85")),
@@ -77,12 +77,12 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void withdrawFunds_insufficientBalance() {
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = testHelper.createBusiness(program);
-    TypedId<BusinessId> businessId = businessAndAllocationsRecord.business().getId();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
-        businessAndAllocationsRecord.business().getId(),
+        createBusinessRecord.business().getId(),
         businessBankAccountId,
         FundsTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("710.51")),
@@ -93,7 +93,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             InsufficientFundsException.class,
             () ->
                 bankAccountService.transactBankAccount(
-                    businessAndAllocationsRecord.business().getId(),
+                    createBusinessRecord.business().getId(),
                     businessBankAccountId,
                     FundsTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
