@@ -48,7 +48,6 @@ public class CardController {
                                 request.getAllocationId(),
                                 request.getUserId(),
                                 request.getCurrency(),
-                                cardType,
                                 request.getIsPersonal(),
                                 businessService.getBusiness(businessId).business().getLegalName())
                             .getId(),

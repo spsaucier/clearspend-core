@@ -87,10 +87,6 @@ public class Card extends TypedMutable<CardId> {
   @Enumerated(EnumType.STRING)
   private FundingType fundingType;
 
-  @NonNull
-  @Enumerated(EnumType.STRING)
-  private CardType cardType;
-
   // date the card was issued
   @NonNull private OffsetDateTime issueDate;
 

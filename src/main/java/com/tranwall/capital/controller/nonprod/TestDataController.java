@@ -227,7 +227,6 @@ public class TestDataController {
         allocation.getId(),
         user.getId(),
         currency,
-        CardType.VIRTUAL,
         true,
         businessService.getBusiness(businessId).business().getLegalName());
   }

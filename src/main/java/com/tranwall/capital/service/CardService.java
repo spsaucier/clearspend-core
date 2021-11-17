@@ -22,7 +22,6 @@ import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
-import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.AllocationRepository;
@@ -69,7 +68,6 @@ public class CardService {
       TypedId<AllocationId> allocationId,
       TypedId<UserId> userId,
       Currency currency,
-      CardType cardType,
       Boolean isPersonal,
       String businessLegalName) {
 
@@ -94,7 +92,7 @@ public class CardService {
       cardLine3 = name;
     }
 
-    AddCardResponse i2cResponse = i2Client.addCard(cardType, cardLine3.toString());
+    AddCardResponse i2cResponse = i2Client.addCard(program.getCardType(), cardLine3.toString());
     CardNumber i2CardNumber = i2cResponse.getCardNumber();
 
     Card card =
@@ -107,11 +105,10 @@ public class CardService {
             CardStatus.OPEN,
             CardStatusReason.NONE,
             program.getFundingType(),
-            program.getCardType(),
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
-            cardType,
+            program.getCardType(),
             new RequiredEncryptedStringWithHash(i2cResponse.getCardNumber().getNumber()),
             i2CardNumber.getNumber().substring(i2CardNumber.getNumber().length() - 4),
             new Address());

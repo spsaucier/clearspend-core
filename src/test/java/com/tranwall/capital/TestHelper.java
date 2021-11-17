@@ -534,7 +534,6 @@ public class TestHelper {
         allocation.getId(),
         user.getId(),
         currency,
-        CardType.VIRTUAL,
         true,
         business.getLegalName());
   }
