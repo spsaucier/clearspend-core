@@ -160,6 +160,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         allocationService.getRootAllocation(business.getId()).account(),
+        allocationService.getRootAllocation(business.getId()).allocation(),
         com.tranwall.capital.common.data.model.Amount.of(Currency.USD, new BigDecimal(200)),
         true);
     MockHttpServletResponse response =

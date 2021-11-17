@@ -1,5 +1,6 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
@@ -12,6 +13,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Adjustment;
+import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Hold;
 import com.tranwall.capital.data.model.LedgerAccount;
 import com.tranwall.capital.data.model.enums.AccountType;
@@ -44,6 +46,7 @@ public class AccountService {
   private final AdjustmentService adjustmentService;
   private final BusinessLimitService businessLimitService;
   private final LedgerService ledgerService;
+  private final I2Client i2Client;
 
   public record AdjustmentRecord(Account account, Adjustment adjustment) {}
 
@@ -66,6 +69,7 @@ public class AccountService {
   public AdjustmentRecord depositFunds(
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
+      Allocation rootAllocation,
       Amount amount,
       boolean placeHold) {
     amount.ensurePositive();
@@ -84,6 +88,11 @@ public class AccountService {
               amount.negate(),
               OffsetDateTime.now().plusDays(5)));
     }
+
+    // flush everything to the db before trying to call i2c
+    holdRepository.flush();
+
+    i2Client.creditFunds(rootAllocation.getI2cAccountRef(), amount.getAmount());
 
     return new AdjustmentRecord(rootAllocationAccount, adjustment);
   }

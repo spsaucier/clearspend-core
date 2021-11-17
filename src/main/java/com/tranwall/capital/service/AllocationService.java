@@ -118,8 +118,9 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
+    // FIXME(akimov) Restore stakeholder ref as soon as i2c fixes the program configuration
     AddStakeholderResponse i2cStakeholder =
-        i2Client.addStakeholder(name, parent.getI2cAccountRef());
+        i2Client.addStakeholder(name); // , parent.getI2cStakeholderRef());
 
     Allocation allocation =
         new Allocation(

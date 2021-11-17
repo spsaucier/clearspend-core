@@ -6,15 +6,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tranwall.capital.client.i2c.I2ClientProperties.Program;
 import com.tranwall.capital.client.i2c.request.AddCardRequest;
 import com.tranwall.capital.client.i2c.request.AddStakeholderRequest;
+import com.tranwall.capital.client.i2c.request.CreditFundsRequest;
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
 import com.tranwall.capital.client.i2c.request.SetCardStatusRequest;
+import com.tranwall.capital.client.i2c.request.ShareFundsRequest;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.client.i2c.response.BaseI2CResponse;
+import com.tranwall.capital.client.i2c.response.CreditFundsResponse;
 import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
 import com.tranwall.capital.client.i2c.response.SetCardStatusResponse;
+import com.tranwall.capital.client.i2c.response.ShareFundsResponse;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardType;
+import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.Objects;
 import lombok.NonNull;
@@ -148,14 +153,41 @@ public class I2Client {
     }
   }
 
+  public CreditFundsResponse creditFunds(String i2cAccountRef, BigDecimal amount) {
+    return callI2C(
+        "creditFunds",
+        CreditFundsRequest.builder()
+            .acquirer(acquirer)
+            .card(CreditFundsRequest.Card.builder().i2cAccountRef(i2cAccountRef).build())
+            .amount(amount)
+            .build(),
+        CreditFundsResponse.class);
+  }
+
+  public ShareFundsResponse shareFunds(
+      String fromI2cAccountRef, String toI2cAccountRef, BigDecimal amount) {
+    return callI2C(
+        "shareFunds",
+        ShareFundsRequest.builder()
+            .acquirer(acquirer)
+            .cardFrom(ShareFundsRequest.Card.builder().i2cAccountRef(fromI2cAccountRef).build())
+            .cardTo(ShareFundsRequest.Card.builder().i2cAccountRef(toI2cAccountRef).build())
+            .amount(amount)
+            .build(),
+        ShareFundsResponse.class);
+  }
+
   private <T extends BaseI2CResponse> T callI2C(
       String methodName, Object request, Class<T> responseClass) {
     T result;
+    String requestBody = createRootRequest(methodName, request);
+    log.info("Calling i2c method: [{}] with request: {}", methodName, requestBody);
+
     String responseBody =
         webClient
             .post()
             .uri(methodName)
-            .body(BodyInserters.fromValue(createRootRequest(methodName, request)))
+            .body(BodyInserters.fromValue(requestBody))
             .exchangeToMono(
                 response -> {
                   if (ACCEPTED_HTTP_STATUSES.contains(response.statusCode())) {
@@ -174,6 +206,8 @@ public class I2Client {
               "Failed to call I2C %s method. Error code: [%s], description: [%s]",
               methodName, result.getResponseCode(), result.getResponseDesc()));
     }
+
+    log.info("Calling i2c method: [{}] result: [{}]", methodName, result);
 
     return result;
   }

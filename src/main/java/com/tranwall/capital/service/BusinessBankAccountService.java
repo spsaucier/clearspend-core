@@ -129,7 +129,11 @@ public class BusinessBankAccountService {
     AdjustmentRecord adjustmentRecord =
         switch (bankAccountTransactType) {
           case DEPOSIT -> accountService.depositFunds(
-              businessId, allocationRecord.account(), amount, placeHold);
+              businessId,
+              allocationRecord.account(),
+              allocationRecord.allocation(),
+              amount,
+              placeHold);
           case WITHDRAW -> accountService.withdrawFunds(
               businessId, allocationRecord.account(), amount);
         };

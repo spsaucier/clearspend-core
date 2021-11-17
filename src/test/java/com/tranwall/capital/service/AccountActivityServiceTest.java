@@ -80,6 +80,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
+        createBusinessRecord.allocationRecord().allocation(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
@@ -135,6 +136,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
+        createBusinessRecord.allocationRecord().allocation(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();

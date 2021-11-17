@@ -3,7 +3,10 @@ package com.tranwall.capital.client.i2c;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
+import com.tranwall.capital.client.i2c.response.CreditFundsResponse;
+import com.tranwall.capital.client.i2c.response.ShareFundsResponse;
 import com.tranwall.capital.data.model.enums.CardType;
+import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.NonNull;
 import org.springframework.context.annotation.Profile;
@@ -37,6 +40,26 @@ public class I2CMockClient extends I2Client {
             .number(faker.numerify("####"))
             .expiryDate(faker.numerify("1#202#"))
             .build());
+
+    return response;
+  }
+
+  @Override
+  public CreditFundsResponse creditFunds(String i2cAccountRef, BigDecimal amount) {
+    CreditFundsResponse response = new CreditFundsResponse();
+    response.setBalance(amount);
+    response.setLedgerBalance(amount);
+
+    return response;
+  }
+
+  @Override
+  public ShareFundsResponse shareFunds(
+      String fromI2cAccountRef, String toI2cAccountRef, BigDecimal amount) {
+
+    ShareFundsResponse response = new ShareFundsResponse();
+    response.setFromCardBalance(new BigDecimal(faker.numerify("1##.##")));
+    response.setToCardBalance(new BigDecimal(faker.numerify("1##.##")));
 
     return response;
   }

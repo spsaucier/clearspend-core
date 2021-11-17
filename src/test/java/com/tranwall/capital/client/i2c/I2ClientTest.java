@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
+import com.tranwall.capital.client.i2c.response.CreditFundsResponse;
+import com.tranwall.capital.client.i2c.response.ShareFundsResponse;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardType;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,5 +57,28 @@ public class I2ClientTest extends BaseCapitalTest {
     // then
     assertThat(response.getI2cCardRef()).isNotNull();
     assertThat(response.getCardNumber()).isNotNull();
+  }
+
+  @Test
+  public void testCreditFunds() {
+    // when
+    BigDecimal amount = new BigDecimal("1231.33");
+    CreditFundsResponse response = i2Client.creditFunds("110650933818", amount);
+
+    // then
+    assertThat(response.getBalance()).isGreaterThanOrEqualTo(amount);
+  }
+
+  @Test
+  public void testShareFunds() {
+    // given
+    BigDecimal shareAmount = new BigDecimal("5.12");
+
+    // when
+    ShareFundsResponse response = i2Client.shareFunds("110650933818", "110650933949", shareAmount);
+
+    // then
+    assertThat(response.getFromCardBalance()).isNotNull();
+    assertThat(response.getToCardBalance()).isNotNull();
   }
 }
