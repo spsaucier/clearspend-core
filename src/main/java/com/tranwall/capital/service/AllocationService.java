@@ -49,7 +49,7 @@ public class AllocationService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
-  private final SpendLimitService spendLimitService;
+  private final TransactionLimitService transactionLimitService;
   private final I2Client i2Client;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
@@ -76,7 +76,7 @@ public class AllocationService {
 
     allocation = allocationRepository.save(allocation);
 
-    spendLimitService.initializeAllocationSpendLimit(
+    transactionLimitService.initializeAllocationSpendLimit(
         allocation.getBusinessId(), allocation.getId());
 
     return new AllocationRecord(allocation, account);
@@ -136,7 +136,7 @@ public class AllocationService {
 
     allocation = allocationRepository.save(allocation);
 
-    spendLimitService.initializeAllocationSpendLimit(
+    transactionLimitService.initializeAllocationSpendLimit(
         allocation.getBusinessId(), allocation.getId());
 
     if (parentAccount != null) {

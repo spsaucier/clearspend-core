@@ -60,7 +60,7 @@ import com.tranwall.capital.data.repository.BusinessLimitRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
-import com.tranwall.capital.data.repository.SpendLimitRepository;
+import com.tranwall.capital.data.repository.TransactionLimitRepository;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
@@ -113,7 +113,7 @@ public class TestHelper {
   private final BusinessOwnerRepository businessOwnerRepository;
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessRepository businessRepository;
-  private final SpendLimitRepository spendLimitRepository;
+  private final TransactionLimitRepository transactionLimitRepository;
   private final UserRepository userRepository;
 
   private final AccountService accountService;
@@ -386,7 +386,7 @@ public class TestHelper {
   }
 
   public void deleteSpendLimit(TypedId<BusinessId> businessId) {
-    spendLimitRepository.deleteByBusinessId(businessId);
+    transactionLimitRepository.deleteByBusinessId(businessId);
   }
 
   public BusinessOwner createBusinessOwner(

@@ -1,6 +1,6 @@
 package com.tranwall.capital.data.model.enums;
 
-public enum SpendLimitType {
+public enum TransactionLimitType {
   ALLOCATION,
   CARD,
 }

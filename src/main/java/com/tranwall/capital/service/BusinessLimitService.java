@@ -12,10 +12,15 @@ import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.BusinessLimit;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.repository.BusinessLimitRepository;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,13 +35,19 @@ public class BusinessLimitService {
   private final AdjustmentService adjustmentService;
 
   public BusinessLimit initializeBusinessSpendLimit(TypedId<BusinessId> businessId) {
-    return businessLimitRepository.save(
-        new BusinessLimit(
-            businessId,
-            Amount.of(Currency.USD, BigDecimal.valueOf(10_000)),
-            Amount.of(Currency.USD, BigDecimal.valueOf(300_000)),
-            Amount.of(Currency.USD, BigDecimal.valueOf(10_000)),
-            Amount.of(Currency.USD, BigDecimal.valueOf(300_000))));
+    Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits = new HashMap<>();
+
+    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(Duration.ofDays(1), BigDecimal.valueOf(10_000));
+    allocationDurationMap.put(Duration.ofDays(3), BigDecimal.valueOf(30_0000));
+
+    Map<LimitType, Map<Duration, BigDecimal>> limitTypeMap = new HashMap<>();
+    limitTypeMap.put(LimitType.DEPOSIT, allocationDurationMap);
+    limitTypeMap.put(LimitType.WITHDRAW, allocationDurationMap);
+
+    limits.put(Currency.USD, limitTypeMap);
+
+    return businessLimitRepository.save(new BusinessLimit(businessId, limits));
   }
 
   public void ensureWithinDepositLimit(TypedId<BusinessId> businessId, Amount amount) {
@@ -51,14 +62,11 @@ public class BusinessLimitService {
 
     // evaluate limits
     withinLimit(
-        businessId, AdjustmentType.DEPOSIT, amount, adjustments, limit.getDailyDepositLimit(), 1);
-    withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         amount,
         adjustments,
-        limit.getMonthlyDepositLimit(),
-        30);
+        limit.getLimits().get(amount.getCurrency()).get(LimitType.DEPOSIT));
   }
 
   public void ensureWithinWithdrawLimit(TypedId<BusinessId> businessId, Amount amount) {
@@ -73,14 +81,11 @@ public class BusinessLimitService {
 
     // evaluate limits
     withinLimit(
-        businessId, AdjustmentType.WITHDRAW, amount, adjustments, limit.getDailyWithdrawLimit(), 1);
-    withinLimit(
         businessId,
         AdjustmentType.WITHDRAW,
         amount,
         adjustments,
-        limit.getMonthlyWithdrawLimit(),
-        30);
+        limit.getLimits().get(amount.getCurrency()).get(LimitType.WITHDRAW));
   }
 
   @VisibleForTesting
@@ -89,22 +94,23 @@ public class BusinessLimitService {
       AdjustmentType type,
       Amount amount,
       List<Adjustment> adjustments,
-      Amount limitAmount,
-      int days) {
-    OffsetDateTime startDate = OffsetDateTime.now().minusDays(days);
+      Map<Duration, BigDecimal> limits) {
+    for (Entry<Duration, BigDecimal> limit : limits.entrySet()) {
+      OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey());
 
-    BigDecimal usage =
-        adjustments.stream()
-            .filter(adjustment -> adjustment.getEffectiveDate().isAfter(startDate))
-            .map(
-                adjustment ->
-                    amount.isPositive()
-                        ? adjustment.getAmount().getAmount()
-                        : adjustment.getAmount().getAmount().negate())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+      BigDecimal usage =
+          adjustments.stream()
+              .filter(adjustment -> adjustment.getEffectiveDate().isAfter(startDate))
+              .map(
+                  adjustment ->
+                      amount.isPositive()
+                          ? adjustment.getAmount().getAmount()
+                          : adjustment.getAmount().getAmount().negate())
+              .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    if (BigDecimalUtils.isLargerThan(usage.add(amount.getAmount()), limitAmount.getAmount())) {
-      throw new InsufficientFundsException("Business", businessId, type, amount);
+      if (BigDecimalUtils.isLargerThan(usage.add(amount.getAmount()), limit.getValue())) {
+        throw new InsufficientFundsException("Business", businessId, type, amount);
+      }
     }
   }
 }

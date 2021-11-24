@@ -52,7 +52,7 @@ public class CardService {
 
   private final AccountService accountService;
   private final ProgramService programService;
-  private final SpendLimitService spendLimitService;
+  private final TransactionLimitService transactionLimitService;
   private final UserService userService;
 
   private final I2Client i2Client;
@@ -124,7 +124,7 @@ public class CardService {
 
     card = cardRepository.save(card);
 
-    spendLimitService.initializeCardSpendLimit(
+    transactionLimitService.initializeCardSpendLimit(
         card.getBusinessId(), card.getAllocationId(), card.getId());
 
     return card;

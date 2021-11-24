@@ -1,15 +1,19 @@
 package com.tranwall.capital.data.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.SpendLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.data.model.enums.SpendLimitType;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionLimitType;
+import com.vladmihalcea.hibernate.type.json.JsonType;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -23,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+import org.hibernate.annotations.TypeDefs;
 
 @Entity
 @Data
@@ -31,7 +37,8 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class SpendLimit extends TypedMutable<SpendLimitId> {
+@TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
+public class TransactionLimit extends TypedMutable<SpendLimitId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -42,14 +49,15 @@ public class SpendLimit extends TypedMutable<SpendLimitId> {
   @NonNull
   @NotNull(message = "type required")
   @Enumerated(EnumType.STRING)
-  private SpendLimitType type;
+  private TransactionLimitType type;
 
   @JsonProperty("ownerId")
   @NonNull
   @NotNull(message = "ownerId required")
   private UUID ownerId;
 
-  @NonNull @Embedded private Amount dailyPurchaseLimit;
-
-  @NonNull @Embedded private Amount monthlyPurchaseLimit;
+  @NonNull
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits;
 }

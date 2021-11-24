@@ -1,12 +1,16 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.vladmihalcea.hibernate.type.json.JsonType;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Map;
 import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import lombok.Data;
@@ -17,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+import org.hibernate.annotations.TypeDefs;
 
 @Entity
 @Data
@@ -25,6 +31,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
+@TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
 public class BusinessLimit extends TypedMutable<BusinessLimitId> {
 
   @NonNull
@@ -33,11 +40,8 @@ public class BusinessLimit extends TypedMutable<BusinessLimitId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @NonNull @Embedded private Amount dailyDepositLimit;
-
-  @NonNull @Embedded private Amount monthlyDepositLimit;
-
-  @NonNull @Embedded private Amount dailyWithdrawLimit;
-
-  @NonNull @Embedded private Amount monthlyWithdrawLimit;
+  @NonNull
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits;
 }

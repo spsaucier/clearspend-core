@@ -15,14 +15,16 @@ import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class BusinessLimitServiceTest extends BaseCapitalTest {
+class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
   @Autowired private BusinessLimitService businessLimitService;
 
@@ -34,14 +36,16 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
 
   @Test
   void withinLimit_noAdjustments() {
+    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(Duration.ofDays(30), BigDecimal.TEN);
+
     // under limit
     businessLimitService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.valueOf(9.99)),
         Collections.emptyList(),
-        Amount.of(Currency.USD, BigDecimal.TEN),
-        30);
+        allocationDurationMap);
 
     // exact limit
     businessLimitService.withinLimit(
@@ -49,8 +53,7 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.TEN),
         Collections.emptyList(),
-        Amount.of(Currency.USD, BigDecimal.TEN),
-        30);
+        allocationDurationMap);
 
     // over limit
     assertThrows(
@@ -61,12 +64,14 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
                 AdjustmentType.DEPOSIT,
                 Amount.of(Currency.USD, BigDecimal.valueOf(10.01)),
                 Collections.emptyList(),
-                Amount.of(Currency.USD, BigDecimal.TEN),
-                30));
+                allocationDurationMap));
   }
 
   @Test
   void withinLimit_existingAdjustments() {
+    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(Duration.ofDays(30), BigDecimal.TEN);
+
     // under limit
     businessLimitService.withinLimit(
         businessId,
@@ -75,8 +80,7 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
         List.of(
             newAdjustment(AdjustmentType.DEPOSIT, BigDecimal.ONE),
             newAdjustment(AdjustmentType.DEPOSIT, BigDecimal.ONE)),
-        Amount.of(Currency.USD, BigDecimal.TEN),
-        30);
+        allocationDurationMap);
 
     // exact limit
     businessLimitService.withinLimit(
@@ -86,8 +90,7 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
         List.of(
             newAdjustment(AdjustmentType.DEPOSIT, BigDecimal.ONE),
             newAdjustment(AdjustmentType.DEPOSIT, BigDecimal.ONE)),
-        Amount.of(Currency.USD, BigDecimal.TEN),
-        30);
+        allocationDurationMap);
 
     // over monthly limit
     assertThrows(
@@ -102,9 +105,10 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
                         AdjustmentType.DEPOSIT, OffsetDateTime.now().minusDays(20), BigDecimal.ONE),
                     newAdjustment(
                         AdjustmentType.DEPOSIT, OffsetDateTime.now().minusDays(6), BigDecimal.ONE)),
-                Amount.of(Currency.USD, BigDecimal.TEN),
-                30));
+                allocationDurationMap));
 
+    allocationDurationMap.clear();
+    allocationDurationMap.put(Duration.ofDays(1), BigDecimal.TEN);
     // under daily limit
     businessLimitService.withinLimit(
         businessId,
@@ -115,8 +119,7 @@ class BusinessLimitServiceTest extends BaseCapitalTest {
                 AdjustmentType.DEPOSIT, OffsetDateTime.now().minusDays(20), BigDecimal.ONE),
             newAdjustment(
                 AdjustmentType.DEPOSIT, OffsetDateTime.now().minusHours(6), BigDecimal.ONE)),
-        Amount.of(Currency.USD, BigDecimal.TEN),
-        1);
+        allocationDurationMap);
   }
 
   private Adjustment newAdjustment(AdjustmentType deposit, BigDecimal amount) {

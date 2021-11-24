@@ -93,6 +93,7 @@ dependencies {
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
     implementation("com.google.cloud:google-cloud-nio:0.123.10")
+    implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
 
     //just for the non-prod data generator
     implementation("com.github.javafaker:javafaker:1.0.1")
