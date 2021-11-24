@@ -28,10 +28,10 @@ public class UserData {
   @NonNull
   private String lastName;
 
-  public UserData(com.tranwall.capital.data.model.User card) {
-    this.userId = card.getId();
-    this.type = card.getType();
-    this.firstName = card.getFirstName().getEncrypted();
-    this.lastName = card.getLastName().getEncrypted();
+  public UserData(com.tranwall.capital.data.model.User user) {
+    this.userId = user.getId();
+    this.type = user.getType();
+    this.firstName = user.getFirstName().getEncrypted();
+    this.lastName = user.getLastName().getEncrypted();
   }
 }
