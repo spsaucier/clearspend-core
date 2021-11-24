@@ -11,6 +11,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.allocation.Allocation;
 import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationRequest;
@@ -19,8 +21,12 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AllocationService;
+import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -86,8 +92,23 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void getRootAllocation_success() {
+  public void getBusinessAllocations_success() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    com.tranwall.capital.data.model.Allocation rootAllocation =
+        createBusinessRecord.allocationRecord().allocation();
+    AllocationRecord allocationChild1 =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(), "child_1", rootAllocation.getId());
+    AllocationRecord allocationGrandchild1 =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "grandchild_1",
+            allocationChild1.allocation().getId());
+    AllocationRecord allocationGrandchild2 =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "grandchild_2",
+            allocationChild1.allocation().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -99,9 +120,55 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    Allocation responseAllocation =
-        objectMapper.readValue(response.getContentAsString(), Allocation.class);
-    log.info(String.valueOf(responseAllocation));
+    List<Allocation> allocations =
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+
+    assertThat(allocations)
+        .extracting("name")
+        .containsExactlyInAnyOrder(
+            rootAllocation.getName(),
+            allocationChild1.allocation().getName(),
+            allocationGrandchild1.allocation().getName(),
+            allocationGrandchild2.allocation().getName());
+
+    Map<TypedId<AllocationId>, Allocation> allocationMap =
+        allocations.stream()
+            .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
+
+    // checking tree structure
+    // root node
+    assertThat(allocationMap.get(rootAllocation.getId()).getParentAllocationId()).isNull();
+    assertThat(allocationMap.get(rootAllocation.getId()).getChildrenAllocationIds())
+        .containsExactly(allocationChild1.allocation().getId());
+
+    // child 1
+    assertThat(allocationMap.get(allocationChild1.allocation().getId()).getParentAllocationId())
+        .isEqualTo(rootAllocation.getId());
+    assertThat(allocationMap.get(allocationChild1.allocation().getId()).getChildrenAllocationIds())
+        .containsExactlyInAnyOrder(
+            allocationGrandchild1.allocation().getId(), allocationGrandchild2.allocation().getId());
+
+    // grandchild 1
+    assertThat(
+            allocationMap.get(allocationGrandchild1.allocation().getId()).getParentAllocationId())
+        .isEqualTo(allocationChild1.allocation().getId());
+    assertThat(
+            allocationMap
+                .get(allocationGrandchild1.allocation().getId())
+                .getChildrenAllocationIds())
+        .isEmpty();
+
+    // grandchild 2
+    assertThat(
+            allocationMap.get(allocationGrandchild2.allocation().getId()).getParentAllocationId())
+        .isEqualTo(allocationChild1.allocation().getId());
+    assertThat(
+            allocationMap
+                .get(allocationGrandchild2.allocation().getId())
+                .getChildrenAllocationIds())
+        .isEmpty();
+
+    log.info(String.valueOf(allocations));
   }
 
   @SneakyThrows

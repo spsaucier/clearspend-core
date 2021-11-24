@@ -1,5 +1,7 @@
 package com.tranwall.capital.controller;
 
+import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
@@ -7,9 +9,11 @@ import com.tranwall.capital.controller.type.allocation.SearchBusinessAllocationR
 import com.tranwall.capital.controller.type.business.Business;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AllocationService;
-import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +40,30 @@ public class BusinessController {
   }
 
   @GetMapping("/allocations")
-  private Allocation getRootAllocation() {
-    AllocationRecord rootAllocation =
-        allocationService.getRootAllocation(CurrentUser.get().businessId());
-    return new Allocation(
-        rootAllocation.allocation().getId(),
-        rootAllocation.allocation().getName(),
-        Account.of(rootAllocation.account()));
+  private List<Allocation> getBusinessAllocations() {
+    Map<TypedId<AllocationId>, Allocation> result =
+        allocationService
+            .searchBusinessAllocations(
+                businessService.retrieveBusiness(CurrentUser.get().businessId()))
+            .stream()
+            .map(Allocation::of)
+            .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
+
+    // calculate children
+    result
+        .values()
+        .forEach(
+            allocation -> {
+              TypedId<AllocationId> parentAllocationId = allocation.getParentAllocationId();
+              if (parentAllocationId != null) {
+                result
+                    .get(parentAllocationId)
+                    .getChildrenAllocationIds()
+                    .add(allocation.getAllocationId());
+              }
+            });
+
+    return new ArrayList<>(result.values());
   }
 
   @PostMapping("/allocations")
@@ -52,10 +73,7 @@ public class BusinessController {
         .searchBusinessAllocations(
             businessService.retrieveBusiness(CurrentUser.get().businessId()), request.getName())
         .stream()
-        .map(
-            e ->
-                new Allocation(
-                    e.allocation().getId(), e.allocation().getName(), Account.of(e.account())))
+        .map(Allocation::of)
         .collect(Collectors.toList());
   }
 

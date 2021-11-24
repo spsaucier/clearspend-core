@@ -32,10 +32,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -202,11 +202,18 @@ public class AllocationService {
         .collect(Collectors.toList());
   }
 
-  public List<AllocationRecord> searchBusinessAllocations(
-      Business business, @NonNull @NotNull(message = "name required") String name) {
+  public List<AllocationRecord> searchBusinessAllocations(Business business) {
+    return searchBusinessAllocations(business, null);
+  }
+
+  public List<AllocationRecord> searchBusinessAllocations(Business business, String name) {
     log.info("all allocations: {}", allocationRepository.findAll());
     List<Allocation> allocations =
-        allocationRepository.findByBusinessIdAndNameIgnoreCaseContaining(business.getId(), name);
+        StringUtils.isEmpty(name)
+            ? allocationRepository.findByBusinessId(business.getId())
+            : allocationRepository.findByBusinessIdAndNameIgnoreCaseContaining(
+                business.getId(), name);
+
     log.info("allocations {} {}: {}", business.getId(), name, allocations);
     // if none, return empty list
     if (allocations.size() == 0) {

@@ -15,6 +15,8 @@ public interface AllocationRepository
   Optional<Allocation> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId);
 
+  List<Allocation> findByBusinessId(TypedId<BusinessId> businessId);
+
   List<Allocation> findByBusinessIdAndIdIn(
       TypedId<BusinessId> businessId, Set<TypedId<AllocationId>> allocationId);
 
