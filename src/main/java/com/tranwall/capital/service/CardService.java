@@ -26,6 +26,7 @@ import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -281,5 +283,9 @@ public class CardService {
     // TODO(kuchlein): call i2c to retire/close the card
 
     return cardRepository.save(card);
+  }
+
+  public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {
+    return cardRepository.find(filterCriteria);
   }
 }

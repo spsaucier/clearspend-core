@@ -4,10 +4,14 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
+import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.card.Card;
 import com.tranwall.capital.controller.type.card.IssueCardRequest;
 import com.tranwall.capital.controller.type.card.IssueCardResponse;
+import com.tranwall.capital.controller.type.card.SearchCardData;
+import com.tranwall.capital.controller.type.card.SearchCardRequest;
 import com.tranwall.capital.service.BusinessService;
+import com.tranwall.capital.service.CardFilterCriteria;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ProgramService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,5 +70,13 @@ public class CardController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
     return new Card(cardService.getCard(CurrentUser.get().businessId(), cardId).card());
+  }
+
+  @PostMapping("/search")
+  private PagedData<SearchCardData> search(@Validated @RequestBody SearchCardRequest request) {
+    // TODO: Implement proper security restrictions based on the outcome of CAP-202
+    return PagedData.of(
+        cardService.filterCards(new CardFilterCriteria(CurrentUser.get().businessId(), request)),
+        SearchCardData::of);
   }
 }

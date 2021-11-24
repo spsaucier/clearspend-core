@@ -522,12 +522,7 @@ public class TestHelper {
   }
 
   public Card issueCard(
-      Business business,
-      Allocation allocation,
-      User user,
-      Bin bin,
-      Program program,
-      Currency currency) {
+      Business business, Allocation allocation, User user, Program program, Currency currency) {
     return cardService.issueCard(
         program,
         business.getId(),

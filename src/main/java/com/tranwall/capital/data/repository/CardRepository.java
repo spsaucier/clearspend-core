@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CardRepository extends JpaRepository<Card, TypedId<CardId>> {
+public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, CardRepositoryCustom {
 
   Optional<Card> findByBusinessIdAndId(TypedId<BusinessId> businessId, TypedId<CardId> id);
 

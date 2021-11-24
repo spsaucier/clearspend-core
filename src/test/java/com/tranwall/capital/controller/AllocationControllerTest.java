@@ -10,7 +10,6 @@ import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationRequest;
 import com.tranwall.capital.data.model.Account;
-import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.Card;
@@ -137,7 +136,6 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void reallocateAllocationFunds_success() {
-    Bin bin = testHelper.retrieveBin();
     Program program = testHelper.retrieveIndividualProgram();
     Business business = testHelper.retrieveBusiness();
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
@@ -157,7 +155,6 @@ class AllocationControllerTest extends BaseCapitalTest {
             business,
             allocationRecord.allocation(),
             testHelper.createUser(business).user(),
-            bin,
             program,
             amount.getCurrency());
     Account businessAccount = allocationService.getRootAllocation(business.getId()).account();

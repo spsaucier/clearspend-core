@@ -53,7 +53,7 @@ class CardServiceTest extends BaseCapitalTest {
   @Test
   void issueCard() {
     Card card =
-        testHelper.issueCard(business, allocation, userRecord.user(), bin, program, Currency.USD);
+        testHelper.issueCard(business, allocation, userRecord.user(), program, Currency.USD);
     Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
@@ -62,7 +62,7 @@ class CardServiceTest extends BaseCapitalTest {
   @Test
   void getUserCards() {
     log.info("allCards: {}", cardRepository.findAll());
-    testHelper.issueCard(business, allocation, userRecord.user(), bin, program, Currency.USD);
+    testHelper.issueCard(business, allocation, userRecord.user(), program, Currency.USD);
     log.info("allCards: {}", cardRepository.findAll());
     log.info("businessId: {}, userId: {}", business.getId(), userRecord.user().getId());
     List<UserCardRecord> userCardRecords =
