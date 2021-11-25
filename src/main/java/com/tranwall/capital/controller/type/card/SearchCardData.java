@@ -8,6 +8,7 @@ import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.Item;
 import com.tranwall.capital.controller.type.user.UserData;
 import com.tranwall.capital.data.model.enums.CardStatus;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -41,6 +42,10 @@ public class SearchCardData {
   @JsonProperty("cardStatus")
   private CardStatus cardStatus;
 
+  @NonNull
+  @JsonProperty("cardType")
+  private CardType cardType;
+
   public static SearchCardData of(FilteredCardRecord record) {
     return new SearchCardData(
         record.card().getId(),
@@ -48,6 +53,7 @@ public class SearchCardData {
         new UserData(record.user()),
         new Item<>(record.allocation().getId(), record.allocation().getName()),
         Amount.of(record.account().getLedgerBalance()),
-        record.card().getStatus());
+        record.card().getStatus(),
+        record.card().getType());
   }
 }
