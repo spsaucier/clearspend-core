@@ -16,11 +16,11 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
+import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.BusinessStatusReason;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
@@ -133,7 +133,7 @@ public class BusinessService {
       TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> allocationId,
       @NonNull TypedId<AccountId> accountId,
-      @NonNull FundsTransactType fundsTransactType,
+      @NonNull BusinessReallocationType businessReallocationType,
       Amount amount) {
     BusinessRecord businessRecord = getBusiness(businessId);
     AllocationRecord allocationRecord =
@@ -142,12 +142,16 @@ public class BusinessService {
       throw new IdMismatchException(
           IdType.ACCOUNT_ID, accountId, allocationRecord.account().getId());
     }
+    if (allocationRecord.allocation().getParentAllocationId() == null) {
+      throw new IllegalArgumentException(
+          String.format("Allocation must be a child allocation: %s", allocationId));
+    }
 
     AccountReallocateFundsRecord reallocateFundsRecord =
-        switch (fundsTransactType) {
-          case DEPOSIT -> accountService.reallocateFunds(
+        switch (businessReallocationType) {
+          case ALLOCATION_TO_BUSINESS -> accountService.reallocateFunds(
               allocationRecord.account().getId(), businessRecord.businessAccount.getId(), amount);
-          case WITHDRAW -> accountService.reallocateFunds(
+          case BUSINESS_TO_ALLOCATION -> accountService.reallocateFunds(
               businessRecord.businessAccount.getId(), allocationRecord.account().getId(), amount);
         };
 

@@ -102,7 +102,7 @@ public class AccountService {
       TypedId<BusinessId> businessId, Account rootAllocationAccount, Amount amount) {
     amount.ensurePositive();
 
-    if (rootAllocationAccount.getAvailableBalance().isSmallerThan(amount)) {
+    if (rootAllocationAccount.getAvailableBalance().isLessThan(amount)) {
       throw new InsufficientFundsException(
           "Account", rootAllocationAccount.getId(), AdjustmentType.WITHDRAW, amount);
     }
@@ -236,6 +236,10 @@ public class AccountService {
   public AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
     amount.ensurePositive();
+    if (fromAccountId.equals(toAccountId)) {
+      throw new IllegalArgumentException(
+          String.format("fromAccountId equals toAccountId: %s", fromAccountId));
+    }
 
     Account fromAccount = retrieveAccount(fromAccountId, true);
     Account toAccount = retrieveAccount(toAccountId, true);
@@ -243,7 +247,7 @@ public class AccountService {
       throw new IdMismatchException(
           IdType.BUSINESS_ID, fromAccount.getBusinessId(), toAccount.getBusinessId());
     }
-    if (fromAccount.getAvailableBalance().isSmallerThan(amount)) {
+    if (fromAccount.getAvailableBalance().isLessThan(amount)) {
       throw new InsufficientFundsException(
           "Account", fromAccountId, AdjustmentType.REALLOCATE, amount);
     }

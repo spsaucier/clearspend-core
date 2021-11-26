@@ -10,8 +10,8 @@ import com.tranwall.capital.client.plaid.PlaidProperties;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.tranwall.capital.data.model.BusinessBankAccount;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import java.math.BigDecimal;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
@@ -94,7 +94,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
     TransactBankAccountRequest request =
         new TransactBankAccountRequest(
-            FundsTransactType.DEPOSIT, new Amount(Currency.USD, BigDecimal.TEN));
+            BankAccountTransactType.DEPOSIT, new Amount(Currency.USD, BigDecimal.TEN));
 
     String body = objectMapper.writeValueAsString(request);
 

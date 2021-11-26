@@ -5,7 +5,7 @@ import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class BusinessFundAllocationRequest {
 
   @JsonProperty("fundsTransactType")
   @NonNull
-  private FundsTransactType fundsTransactType;
+  private BusinessReallocationType businessReallocationType;
 
   @JsonProperty("amount")
   @NonNull

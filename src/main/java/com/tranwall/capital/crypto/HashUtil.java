@@ -25,7 +25,7 @@ public class HashUtil {
 
   private final SecureRandom random;
   private final String randomAlgorithm = "SHA1PRNG";
-  private static final Pattern furtherNormalizationPattern =
+  private static final Pattern normalizationPattern =
       Pattern.compile("(?:\\p{IsPunctuation}|\\p{IsWhiteSpace})+");
 
   static {
@@ -107,7 +107,7 @@ public class HashUtil {
   public static ByteString normalizedHash(@NonNull String name) {
     return ByteString.of(
         sha256(
-            furtherNormalizationPattern
+            normalizationPattern
                 .matcher(stripAccents(name))
                 .replaceAll("")
                 .toLowerCase(Locale.ROOT)));

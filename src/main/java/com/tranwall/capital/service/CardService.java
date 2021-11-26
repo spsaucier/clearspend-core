@@ -53,7 +53,6 @@ public class CardService {
   private final CardRepository cardRepository;
 
   private final AccountService accountService;
-  private final ProgramService programService;
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
 
@@ -122,6 +121,11 @@ public class CardService {
           accountService.createAccount(
               businessId, AccountType.CARD, card.getId().toUuid(), currency);
       card.setAccountId(account.getId());
+    } else {
+      // TODO(kuchlein): Not sure if we want to be doing this or not...
+      Account account =
+          accountService.retrieveAllocationAccount(businessId, currency, allocationId);
+      card.setAccountId(account.getId());
     }
 
     card = cardRepository.save(card);
@@ -155,9 +159,10 @@ public class CardService {
             .findByCardNumberHash(HashUtil.calculateHash(cardNumber))
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardNumber));
 
-    if (card.getFundingType() == FundingType.POOLED) {
-      return new CardRecord(card, null);
-    }
+    // TODO(kuchlein): Not sure if we want to be doing this or not...
+    //    if (card.getFundingType() == FundingType.POOLED) {
+    //      return new CardRecord(card, null);
+    //    }
 
     return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId(), true));
   }

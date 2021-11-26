@@ -3,6 +3,7 @@ package com.tranwall.capital.controller.nonprod;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
@@ -11,18 +12,26 @@ import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataRespo
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
+import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
+import com.tranwall.capital.data.model.enums.AllocationReallocationType;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
+import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
+import com.tranwall.capital.data.model.enums.CreditOrDebit;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.CardRepository;
+import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BinService;
@@ -30,20 +39,26 @@ import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
+import com.tranwall.capital.service.type.NetworkCommon;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,100 +73,224 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class TestDataController {
 
-  private final BusinessBankAccountService businessBankAccountService;
-  private final BinService binService;
-  private final ProgramService programService;
-  private final BusinessService businessService;
   private final AllocationService allocationService;
-  private final UserService userService;
+  private final BinService binService;
+  private final BusinessService businessService;
+  private final BusinessBankAccountService businessBankAccountService;
   private final CardService cardService;
-  private final BusinessRepository businessRepository;
+  private final NetworkMessageService networkMessageService;
+  private final ProgramService programService;
+  private final UserService userService;
+
   private final AllocationRepository allocationRepository;
+  private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
+  private final UserRepository userRepository;
+
   private final Faker faker = new Faker();
-  private List<CreateUpdateUserRecord> createUpdateUserRecordList = new ArrayList<>();
+
+  private Program individualVirtualProgram;
+  private Program pooledVirtualProgram;
+  private Program individualPlasticProgram;
+  private Program pooledPlasticProgram;
+  private List<Bin> allBins;
+  private List<Program> allPrograms;
+
+  @PostConstruct
+  void init() {
+    allBins = binService.findAllBins();
+    Bin bin = allBins.size() > 0 ? allBins.get(0) : createBin();
+
+    allPrograms = programService.findAllPrograms();
+    individualVirtualProgram =
+        allPrograms.stream()
+            .filter(
+                p ->
+                    p.getFundingType() == FundingType.INDIVIDUAL
+                        && p.getCardType() == CardType.VIRTUAL)
+            .findFirst()
+            .orElseGet(() -> createProgram(bin, FundingType.INDIVIDUAL, CardType.VIRTUAL));
+
+    pooledVirtualProgram =
+        allPrograms.stream()
+            .filter(
+                p ->
+                    p.getFundingType() == FundingType.POOLED && p.getCardType() == CardType.VIRTUAL)
+            .findFirst()
+            .orElseGet(() -> createProgram(bin, FundingType.POOLED, CardType.VIRTUAL));
+
+    individualPlasticProgram =
+        allPrograms.stream()
+            .filter(
+                p ->
+                    p.getFundingType() == FundingType.INDIVIDUAL
+                        && p.getCardType() == CardType.PLASTIC)
+            .findFirst()
+            .orElseGet(() -> createProgram(bin, FundingType.INDIVIDUAL, CardType.PLASTIC));
+
+    pooledPlasticProgram =
+        allPrograms.stream()
+            .filter(
+                p ->
+                    p.getFundingType() == FundingType.POOLED && p.getCardType() == CardType.PLASTIC)
+            .findFirst()
+            .orElseGet(() -> createProgram(bin, FundingType.POOLED, CardType.PLASTIC));
+  }
 
   @GetMapping("/db-content")
   private CreateTestDataResponse getDbContent() {
-    return getGeneratedData();
+    return getAllData(null);
+  }
+
+  @GetMapping("/business/{businessId}")
+  private CreateTestDataResponse getBusiness(
+      @PathVariable(value = "businessId")
+          @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessId> businessId) {
+    return getAllData(businessId);
   }
 
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
   private CreateTestDataResponse createTestData() throws IOException {
 
-    List<Bin> allBins = binService.findAllBins();
-    Bin bin = allBins.size() > 0 ? allBins.get(0) : createBin();
-    BusinessAndAllocationsRecord business = createBusiness(null);
-    AllocationRecord parentAllocation = business.allocationRecord();
+    // create a new business
+    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(null);
+    Business business = businessAndAllocationsRecord.business();
+
+    // create bankAccount, deposit $10,000 and withdraw $267.34
+    BusinessBankAccount businessBankAccount =
+        businessBankAccountService.createBusinessBankAccount(
+            faker.number().digits(9),
+            faker.number().digits(11),
+            faker.funnyName().name(),
+            UUID.randomUUID().toString(),
+            business.getId());
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccount.getId(),
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(10000)),
+        false);
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccount.getId(),
+        BankAccountTransactType.WITHDRAW,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(267.34)),
+        false);
+
+    AllocationRecord parentAllocation = businessAndAllocationsRecord.allocationRecord();
+
+    // create child allocation and load $1326.86
     AllocationRecord childAllocation =
         allocationService.createAllocation(
-            business.business().getId(),
+            business.getId(),
             parentAllocation.allocation().getId(),
             faker.company().name(),
             Amount.of(Currency.USD));
+    businessService.reallocateBusinessFunds(
+        business.getId(),
+        childAllocation.allocation().getId(),
+        childAllocation.allocation().getAccountId(),
+        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(1326.86)));
+
+    // create grandchild allocation and load $1926.27
     AllocationRecord grandchildAllocation =
         allocationService.createAllocation(
-            business.business().getId(),
+            business.getId(),
             childAllocation.allocation().getId(),
             faker.company().name(),
             Amount.of(Currency.USD));
+    businessService.reallocateBusinessFunds(
+        business.getId(),
+        grandchildAllocation.allocation().getId(),
+        grandchildAllocation.allocation().getAccountId(),
+        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(1926.27)));
 
-    CreateUpdateUserRecord user = createUser(business.business());
-    log.info("user: {}", user);
-    CreateUpdateUserRecord user2 = createUser(business.business());
-    log.info("user2: {}", user2);
-    CreateUpdateUserRecord user3 = createUser(business.business());
-    log.info("user3: {}", user3);
-    createUpdateUserRecordList.add(user);
-    createUpdateUserRecordList.add(user2);
-    createUpdateUserRecordList.add(user3);
+    List<CreateUpdateUserRecord> users = new ArrayList<>();
+    List<Card> cards = new ArrayList<>();
 
-    List<Program> allPrograms = programService.findAllPrograms();
-    Program program =
-        allPrograms.size() > 0
-            ? allPrograms.get(0)
-            : createProgram(bin, FundingType.INDIVIDUAL, CardType.VIRTUAL);
-    Card userCard =
+    CreateUpdateUserRecord user = createUser(business);
+    users.add(user);
+    Card card =
+        issueCard(business, parentAllocation.allocation(), user.user(), individualVirtualProgram);
+    cards.add(card);
+    allocationService.reallocateAllocationFunds(
+        business,
+        parentAllocation.allocation().getId(),
+        parentAllocation.allocation().getAccountId(),
+        card.getId(),
+        AllocationReallocationType.ALLOCATION_TO_CARD,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(173.45)));
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.TEN);
+    networkMessageService.processNetworkMessage(
+        new NetworkCommon(
+            card.getCardNumber().getEncrypted(),
+            card.getExpirationDate(),
+            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            CreditOrDebit.fromAmount(amount),
+            amount.abs(),
+            "M1234",
+            "Merchant Name",
+            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
+            6060));
+
+    card =
+        issueCard(business, parentAllocation.allocation(), user.user(), individualPlasticProgram);
+    cards.add(card);
+    allocationService.reallocateAllocationFunds(
+        business,
+        parentAllocation.allocation().getId(),
+        parentAllocation.allocation().getAccountId(),
+        card.getId(),
+        AllocationReallocationType.ALLOCATION_TO_CARD,
+        Amount.of(business.getCurrency(), BigDecimal.valueOf(91.17)));
+
+    amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
+    networkMessageService.processNetworkMessage(
+        new NetworkCommon(
+            card.getCardNumber().getEncrypted(),
+            card.getExpirationDate(),
+            NetworkMessageType.FINANCIAL_TRANSACTION,
+            CreditOrDebit.fromAmount(amount),
+            amount.abs(),
+            "M1234",
+            "Merchant Name",
+            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
+            6060));
+
+    CreateUpdateUserRecord user2 = createUser(business);
+    users.add(user2);
+    cards.add(
+        issueCard(business, childAllocation.allocation(), user2.user(), pooledVirtualProgram));
+    cards.add(
+        issueCard(business, childAllocation.allocation(), user2.user(), pooledPlasticProgram));
+
+    CreateUpdateUserRecord user3 = createUser(business);
+    users.add(user3);
+    cards.add(
         issueCard(
-            business.business(),
-            parentAllocation.allocation(),
-            user.user(),
-            bin,
-            program,
-            Currency.USD,
-            business.business().getId());
-    Card user2Card =
-        issueCard(
-            business.business(),
-            childAllocation.allocation(),
-            user2.user(),
-            bin,
-            program,
-            Currency.USD,
-            business.business().getId());
-    Card user3Card =
-        issueCard(
-            business.business(),
-            grandchildAllocation.allocation(),
-            user3.user(),
-            bin,
-            program,
-            Currency.USD,
-            business.business().getId());
+            business, grandchildAllocation.allocation(), user3.user(), individualVirtualProgram));
 
     return new CreateTestDataResponse(
         allBins,
         allPrograms,
         List.of(
             new TestBusiness(
-                business.business(),
+                business,
                 Collections.emptyList(),
                 List.of(
-                    business.allocationRecord().allocation(),
+                    businessAndAllocationsRecord.allocationRecord().allocation(),
                     childAllocation.allocation(),
                     grandchildAllocation.allocation()),
-                List.of(userCard, user2Card, user3Card),
-                List.of(user, user2, user3))));
+                cards,
+                users)));
   }
 
   private Bin createBin() {
@@ -217,45 +356,46 @@ public class TestDataController {
       com.tranwall.capital.data.model.Business business,
       Allocation allocation,
       User user,
-      Bin bin,
-      Program program,
-      Currency currency,
-      TypedId<BusinessId> businessId) {
+      Program program) {
     return cardService.issueCard(
         program,
         business.getId(),
         allocation.getId(),
         user.getId(),
-        currency,
+        Currency.USD,
         true,
-        businessService.getBusiness(businessId).business().getLegalName());
+        business.getLegalName());
   }
 
-  private CreateTestDataResponse getGeneratedData() {
-    List<CreateTestDataResponse.TestBusiness> businesses =
-        businessRepository.findAll().stream()
+  private CreateTestDataResponse getAllData(TypedId<BusinessId> businessId) {
+    List<Business> businesses =
+        businessId != null
+            ? businessRepository.findById(businessId).stream().toList()
+            : businessRepository.findAll();
+    List<Allocation> allocations = allocationRepository.findAll();
+    List<Card> cards = cardRepository.findAll();
+    List<User> users = userRepository.findAll();
+
+    return new CreateTestDataResponse(
+        binService.findAllBins(),
+        programService.findAllPrograms(),
+        businesses.stream()
             .map(
                 business ->
                     new CreateTestDataResponse.TestBusiness(
                         business,
                         userService.retrieveUsersForBusiness(business.getId()),
-                        allocationRepository.findAll().stream()
+                        allocations.stream()
                             .filter(
                                 allocation -> allocation.getBusinessId().equals(business.getId()))
                             .collect(Collectors.toList()),
-                        cardRepository.findAll().stream()
+                        cards.stream()
                             .filter(card -> card.getBusinessId().equals(business.getId()))
                             .collect(Collectors.toList()),
-                        createUpdateUserRecordList.stream()
-                            .filter(
-                                createUserRecord ->
-                                    createUserRecord
-                                        .user()
-                                        .getBusinessId()
-                                        .equals(business.getId()))
+                        users.stream()
+                            .filter(user -> user.getBusinessId().equals(business.getId()))
+                            .map(u -> new CreateUpdateUserRecord(u, null))
                             .collect(Collectors.toList())))
-            .collect(Collectors.toList());
-    return new CreateTestDataResponse(
-        binService.findAllBins(), programService.findAllPrograms(), businesses);
+            .collect(Collectors.toList()));
   }
 }

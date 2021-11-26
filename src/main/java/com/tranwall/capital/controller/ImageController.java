@@ -1,12 +1,8 @@
 package com.tranwall.capital.controller;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-import static com.tranwall.capital.controller.Common.USER_ID;
-
-import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.receipt.CreateReceiptRequest;
 import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.service.ReceiptService;
@@ -24,7 +20,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,22 +38,22 @@ public class ImageController {
 
   @PostMapping("/receipts")
   private CreateReceiptResponse storeReceiptImage(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = USER_ID) TypedId<UserId> userId,
       @RequestParam("receipt") @ApiParam("receipt") MultipartFile receiptFile,
       @Validated @RequestBody CreateReceiptRequest request)
       throws IOException {
+    CurrentUser currentUser = CurrentUser.get();
     return new CreateReceiptResponse(
         receiptService
             .storeReceiptImage(
-                businessId, userId, request.getAmount().toAmount(), receiptFile.getBytes())
+                currentUser.businessId(),
+                currentUser.userId(),
+                request.getAmount().toAmount(),
+                receiptFile.getBytes())
             .getId());
   }
 
   @GetMapping("/receipts/{receiptId}")
   private ResponseEntity<Resource> getReceiptImage(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
-      @RequestHeader(name = USER_ID) TypedId<UserId> userId,
       @PathVariable(value = "receiptId")
           @ApiParam(
               required = true,
@@ -73,7 +68,9 @@ public class ImageController {
     headers.add("Pragma", "no-cache");
     headers.add("Expires", "0");
 
-    byte[] receiptImage = receiptService.getReceiptImage(businessId, userId, receiptId);
+    CurrentUser currentUser = CurrentUser.get();
+    byte[] receiptImage =
+        receiptService.getReceiptImage(currentUser.businessId(), currentUser.userId(), receiptId);
     return ResponseEntity.ok()
         .headers(headers)
         .contentLength(receiptImage.length)

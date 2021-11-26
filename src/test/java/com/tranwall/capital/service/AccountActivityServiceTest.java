@@ -15,8 +15,9 @@ import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
+import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
@@ -62,7 +63,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         businessBankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccountId,
-            FundsTransactType.DEPOSIT,
+            BankAccountTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
 
@@ -96,7 +97,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         business.getId(),
         parentAllocationRecord.allocation().getId(),
         parentAllocationRecord.account().getId(),
-        FundsTransactType.DEPOSIT,
+        BusinessReallocationType.ALLOCATION_TO_BUSINESS,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     int count = accountActivityRepository.countByBusinessId(business.getId());
@@ -119,7 +120,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccountId,
-        FundsTransactType.DEPOSIT,
+        BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.TEN),
         true);
 
@@ -151,7 +152,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         business.getId(),
         parentAllocationRecord.allocation().getId(),
         parentAllocationRecord.account().getId(),
-        FundsTransactType.DEPOSIT,
+        BusinessReallocationType.ALLOCATION_TO_BUSINESS,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     Page<AccountActivityResponse> accountActivity =
@@ -173,7 +174,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         businessBankAccountService.transactBankAccount(
             business.getId(),
             businessBankAccountId,
-            FundsTransactType.DEPOSIT,
+            BankAccountTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             false);
     Account account =
@@ -193,7 +194,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         business.getId(),
         parentAllocationRecord.allocation().getId(),
         parentAllocationRecord.account().getId(),
-        FundsTransactType.WITHDRAW,
+        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     Page<AccountActivityResponse> withdrawalFilteredAccountActivity =

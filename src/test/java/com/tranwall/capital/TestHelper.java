@@ -46,12 +46,12 @@ import com.tranwall.capital.data.model.BusinessProspect;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AccountRepository;
 import com.tranwall.capital.data.repository.AllocationRepository;
@@ -461,13 +461,13 @@ public class TestHelper {
   }
 
   public AdjustmentRecord transactBankAccount(
-      FundsTransactType fundsTransactType, BigDecimal amount, boolean placeHold) {
+      BankAccountTransactType bankAccountTransactType, BigDecimal amount, boolean placeHold) {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
     Account businessAccount = allocationService.getRootAllocation(businessId).account();
     return businessBankAccountService.transactBankAccount(
         businessId,
         businessBankAccount.getId(),
-        fundsTransactType,
+        bankAccountTransactType,
         new Amount(businessAccount.getLedgerBalance().getCurrency(), amount),
         placeHold);
   }

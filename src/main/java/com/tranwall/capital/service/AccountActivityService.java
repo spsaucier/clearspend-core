@@ -93,11 +93,19 @@ public class AccountActivityService {
     return recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
 
+  @Transactional(TxType.REQUIRED)
+  public AccountActivity recordNetworkDeclineAccountAccountActivity(NetworkCommon common) {
+    return recordNetworkAccountActivity(common, common.getAmount(), null, null);
+  }
+
   private AccountActivity recordNetworkAccountActivity(
       NetworkCommon common, Amount amount, Hold hold, Adjustment adjustment) {
 
     Allocation allocation = common.getAllocation();
-    OffsetDateTime activityTime = hold != null ? hold.getCreated() : adjustment.getCreated();
+    OffsetDateTime activityTime =
+        hold != null
+            ? hold.getCreated()
+            : adjustment != null ? adjustment.getCreated() : OffsetDateTime.now();
     AccountActivity accountActivity =
         new AccountActivity(
             common.getBusinessId(),
@@ -197,7 +205,7 @@ public class AccountActivityService {
         predicates.add(criteriaBuilder.equal(root.get("allocationId"), criteria.getAllocationId()));
       }
       if (criteria.getCardId() != null) {
-        predicates.add(criteriaBuilder.equal(root.get("cardId"), criteria.getCardId()));
+        predicates.add(criteriaBuilder.equal(root.get("card").get("cardId"), criteria.getCardId()));
       }
       if (criteria.getType() != null) {
         predicates.add(criteriaBuilder.equal(root.get("type"), criteria.getType()));

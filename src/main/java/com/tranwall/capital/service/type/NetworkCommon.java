@@ -46,4 +46,6 @@ public class NetworkCommon {
   private boolean postHold = false;
 
   private boolean postAdjustment = false;
+
+  private boolean postDecline = false;
 }

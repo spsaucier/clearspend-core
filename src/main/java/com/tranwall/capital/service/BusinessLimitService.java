@@ -7,7 +7,6 @@ import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.BusinessLimit;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
@@ -108,7 +107,7 @@ public class BusinessLimitService {
                           : adjustment.getAmount().getAmount().negate())
               .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-      if (BigDecimalUtils.isLargerThan(usage.add(amount.getAmount()), limit.getValue())) {
+      if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
         throw new InsufficientFundsException("Business", businessId, type, amount);
       }
     }

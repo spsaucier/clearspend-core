@@ -13,13 +13,12 @@ import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.Value;
 
-/** Another evil encryption + hash for the purpose of search until we have something proper. */
 @Value
 @Embeddable
 @AllArgsConstructor(access = PRIVATE)
 public class EncryptedName implements WithEncryptedString {
 
-  private static final Pattern furtherNormalizationPattern =
+  private static final Pattern normalizationPattern =
       Pattern.compile("(?:\\p{IsPunctuation}|\\p{IsWhiteSpace})+");
 
   @NonNull

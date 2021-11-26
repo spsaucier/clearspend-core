@@ -14,18 +14,16 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
+import com.tranwall.capital.data.model.enums.AllocationReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.CardService.CardRecord;
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -101,12 +99,12 @@ public class AllocationService {
       throw new IdMismatchException(IdType.BUSINESS_ID, businessId, parent.getBusinessId());
     }
 
-    if (BigDecimalUtils.isLargerThan(amount.getAmount(), BigDecimal.ZERO)) {
+    if (amount.isGreaterThanZero()) {
       parentAccount =
           accountService.retrieveAllocationAccount(
               businessId, amount.getCurrency(), parentAllocationId);
 
-      if (parentAccount.getLedgerBalance().isSmallerThan(amount)) {
+      if (parentAccount.getLedgerBalance().isLessThan(amount)) {
         throw new InsufficientFundsException(
             "Account", parentAccount.getId(), AdjustmentType.REALLOCATE, amount);
       }
@@ -248,7 +246,7 @@ public class AllocationService {
       @NonNull TypedId<AllocationId> allocationId,
       @NonNull TypedId<AccountId> accountId,
       @NonNull TypedId<CardId> cardId,
-      @NonNull FundsTransactType fundsTransactType,
+      @NonNull AllocationReallocationType allocationReallocationType,
       @NonNull Amount amount) {
     AllocationRecord allocationRecord = getAllocation(business, allocationId);
     if (!allocationRecord.account().getId().equals(accountId)) {
@@ -268,9 +266,9 @@ public class AllocationService {
     CardRecord card = cardService.getCard(business.getId(), cardId);
 
     AccountReallocateFundsRecord reallocateFundsRecord;
-    switch (fundsTransactType) {
-      case DEPOSIT -> {
-        if (allocationRecord.account.getLedgerBalance().isSmallerThan(amount)) {
+    switch (allocationReallocationType) {
+      case ALLOCATION_TO_CARD -> {
+        if (allocationRecord.account.getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
               "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
@@ -279,8 +277,8 @@ public class AllocationService {
             accountService.reallocateFunds(
                 allocationRecord.account.getId(), card.account().getId(), amount);
       }
-      case WITHDRAW -> {
-        if (card.account().getLedgerBalance().isSmallerThan(amount)) {
+      case CARD_TO_ALLOCATION -> {
+        if (card.account().getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
               "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
         }
@@ -290,7 +288,7 @@ public class AllocationService {
                 card.account().getId(), allocationRecord.account.getId(), amount);
       }
       default -> throw new IllegalArgumentException(
-          "invalid fundsTransactType " + fundsTransactType);
+          "invalid fundsTransactType " + allocationReallocationType);
     }
 
     accountActivityService.recordReallocationAccountActivity(

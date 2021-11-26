@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.error.AmountException;
 import com.tranwall.capital.common.error.AmountException.AmountType;
 import com.tranwall.capital.common.error.CurrencyMismatchException;
-import com.tranwall.capital.common.utils.BigDecimalUtils;
 import com.tranwall.capital.data.model.enums.Currency;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -65,20 +64,24 @@ public class Amount {
     return of(currency, amount.negate());
   }
 
-  public boolean isSmallerThan(@NonNull Amount that) {
-    return BigDecimalUtils.isSmallerThan(amount, that.amount);
+  public boolean isLessThan(@NonNull Amount that) {
+    return amount.compareTo(that.amount) < 0;
   }
 
-  public boolean isLargerThan(@NonNull Amount that) {
-    return BigDecimalUtils.isLargerThan(amount, that.amount);
+  public boolean isGreaterThan(@NonNull Amount that) {
+    return amount.compareTo(that.amount) > 0;
+  }
+
+  public boolean isGreaterThanZero() {
+    return amount.compareTo(BigDecimal.ZERO) > 0;
   }
 
   public boolean isNegative() {
-    return BigDecimalUtils.isNegative(amount);
+    return amount.compareTo(BigDecimal.ZERO) < 0;
   }
 
   public boolean isPositive() {
-    return BigDecimalUtils.isPositive(amount);
+    return amount.compareTo(BigDecimal.ZERO) > 0;
   }
 
   public void ensurePositive() {

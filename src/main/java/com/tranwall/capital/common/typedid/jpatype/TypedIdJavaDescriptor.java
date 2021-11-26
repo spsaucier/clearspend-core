@@ -20,17 +20,7 @@ public class TypedIdJavaDescriptor extends AbstractTypeDescriptor<TypedId> {
 
   @Override
   public <X> X unwrap(TypedId value, Class<X> type, WrapperOptions options) {
-
     return UUIDTypeDescriptor.INSTANCE.unwrap(value.toUuid(), type, options);
-    //    if (value == null) {
-    //      return null;
-    //    }
-    //
-    //    if (byte[].class.isAssignableFrom(type)) {
-    //      return (X) UUIDTypeDescriptor.ToBytesTransformer.INSTANCE.transform(value.toUuid());
-    //    }
-    //
-    //    throw unknownUnwrap(type);
   }
 
   @Override

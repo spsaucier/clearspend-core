@@ -14,8 +14,9 @@ import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.AllocationReallocationType;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
@@ -141,7 +142,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
     AdjustmentRecord deposit =
-        testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount(), false);
+        testHelper.transactBankAccount(BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(),
@@ -166,7 +167,7 @@ class AllocationControllerTest extends BaseCapitalTest {
         new AllocationFundCardRequest(
             allocationRecord.account().getId(),
             card.getId(),
-            FundsTransactType.DEPOSIT,
+            AllocationReallocationType.ALLOCATION_TO_CARD,
             com.tranwall.capital.controller.type.Amount.of(amount));
 
     String body = objectMapper.writeValueAsString(request);
@@ -189,7 +190,7 @@ class AllocationControllerTest extends BaseCapitalTest {
   void createAllocationWithAStartAmount_success() {
     Business business = testHelper.retrieveBusiness();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
-    testHelper.transactBankAccount(FundsTransactType.DEPOSIT, amount.getAmount(), false);
+    testHelper.transactBankAccount(BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             testHelper.generateFullName(),

@@ -1,10 +1,8 @@
 package com.tranwall.capital.controller.nonprod;
 
-import static com.tranwall.capital.controller.Common.BUSINESS_ID;
-
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
-import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
@@ -17,7 +15,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,7 +34,6 @@ public class BusinessBankAccountDemoController {
       value = "/business-bank-accounts/{businessBankAccountId}/transactions",
       produces = MediaType.APPLICATION_JSON_VALUE)
   private CreateAdjustmentResponse transact(
-      @RequestHeader(name = BUSINESS_ID) TypedId<BusinessId> businessId,
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,
@@ -49,7 +45,7 @@ public class BusinessBankAccountDemoController {
     // TODO: Get business UUID from JWT
     AdjustmentRecord adjustmentRecord =
         businessBankAccountService.transactBankAccount(
-            businessId,
+            CurrentUser.get().businessId(),
             businessBankAccountId,
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),

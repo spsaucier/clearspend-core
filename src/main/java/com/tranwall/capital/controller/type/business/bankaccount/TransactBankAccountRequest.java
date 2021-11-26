@@ -2,7 +2,7 @@ package com.tranwall.capital.controller.type.business.bankaccount;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.controller.type.Amount;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NonNull;
@@ -14,7 +14,7 @@ public class TransactBankAccountRequest {
 
   @JsonProperty("bankAccountTransactType")
   @NonNull
-  private FundsTransactType bankAccountTransactType;
+  private BankAccountTransactType bankAccountTransactType;
 
   @JsonProperty("amount")
   @NonNull

@@ -103,7 +103,7 @@ public class AllocationController {
             allocationId,
             request.getAllocationAccountId(),
             request.getCardId(),
-            request.getFundsTransactType(),
+            request.getReallocationType(),
             request.getAmount().toAmount());
 
     return new AllocationFundCardResponse(

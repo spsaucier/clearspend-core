@@ -14,7 +14,7 @@ public class InsufficientFundsException extends RuntimeException {
       String accountType, TypedId<T> id, AdjustmentType adjustmentType, @NonNull Amount amount) {
     super(
         String.format(
-            "%s %s (%s) does not have sufficient limit for %s%s %s adjustment",
+            "%s %s (%s) does not have sufficient funds for %s%s %s adjustment",
             amount.getCurrency(),
             accountType,
             id,

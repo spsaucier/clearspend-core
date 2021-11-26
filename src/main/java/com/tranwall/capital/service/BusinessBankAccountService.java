@@ -1,7 +1,6 @@
 package com.tranwall.capital.service;
 
 import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
-import static com.tranwall.capital.data.model.enums.FundsTransactType.DEPOSIT;
 
 import com.plaid.client.model.AccountBase;
 import com.tranwall.capital.client.plaid.PlaidClient;
@@ -16,7 +15,7 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
@@ -107,7 +106,7 @@ public class BusinessBankAccountService {
   public AdjustmentRecord transactBankAccount(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
-      @NonNull FundsTransactType bankAccountTransactType,
+      @NonNull BankAccountTransactType bankAccountTransactType,
       Amount amount,
       boolean placeHold) {
 
@@ -138,9 +137,10 @@ public class BusinessBankAccountService {
               businessId, allocationRecord.account(), amount);
         };
 
-    // TODO(kuchlein): need to write one account activity record
     AccountActivityType type =
-        bankAccountTransactType == DEPOSIT ? BANK_DEPOSIT : AccountActivityType.BANK_WITHDRAWAL;
+        bankAccountTransactType == BankAccountTransactType.DEPOSIT
+            ? BANK_DEPOSIT
+            : AccountActivityType.BANK_WITHDRAWAL;
     accountActivityService.recordBankAccountAccountActivity(
         allocationRecord.allocation(), type, adjustmentRecord.adjustment());
 

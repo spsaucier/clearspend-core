@@ -5,7 +5,7 @@ import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
+import com.tranwall.capital.data.model.enums.AllocationReallocationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
@@ -28,11 +28,11 @@ public class AllocationFundCardRequest {
   @Schema(example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
   private TypedId<CardId> cardId;
 
-  @JsonProperty("bankAccountTransactType")
+  @JsonProperty("reallocationType")
   @NonNull
-  @NotNull(message = "fundsTransactType is null")
+  @NotNull(message = "reallocationType is null")
   @Schema(example = "DEPOSIT")
-  private FundsTransactType fundsTransactType;
+  private AllocationReallocationType reallocationType;
 
   @JsonProperty("amount")
   @NonNull

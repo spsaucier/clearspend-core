@@ -23,7 +23,8 @@ public class ProgramService {
 
   public Program createProgram(
       String name, String bin, FundingType fundingType, CardType cardType, String i2cProgramRef) {
-    return programRepository.save(new Program(name, bin, fundingType, cardType, i2cProgramRef));
+    final Program program = new Program(name, bin, fundingType, cardType, i2cProgramRef);
+    return programRepository.save(program);
   }
 
   public List<Program> findAllPrograms() {

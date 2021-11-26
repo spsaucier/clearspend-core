@@ -71,6 +71,7 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @Column(updatable = false)
   private UUID networkMessageGroupId;
 
+  @NonNull
   @Enumerated(EnumType.STRING)
   private NetworkMessageType type;
 

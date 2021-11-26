@@ -10,6 +10,8 @@ import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
+import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
@@ -18,12 +20,19 @@ import com.tranwall.capital.controller.type.user.SearchUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
-import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.Card;
+import com.tranwall.capital.data.model.enums.Country;
+import com.tranwall.capital.data.model.enums.CreditOrDebit;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
+import com.tranwall.capital.service.type.NetworkCommon;
+import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
@@ -44,6 +53,8 @@ public class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final CardService cardService;
+  private final NetworkMessageService networkMessageService;
   private final UserService userService;
 
   private final Faker faker = new Faker();
@@ -75,8 +86,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void createUser() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    Bin bin = testHelper.createBin();
-    Program program = testHelper.createProgram(bin);
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
@@ -123,8 +132,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void updateUser() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    Bin bin = testHelper.createBin();
-    Program program = testHelper.createProgram(bin);
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
@@ -169,13 +176,19 @@ public class UserControllerTest extends BaseCapitalTest {
     log.info(response.getContentAsString());
   }
 
+  void bulkCreateUser() {}
+
+  void getUser() {}
+
+  void currentUser() {}
+
+  void getUsersByUserName() {}
+
   @SneakyThrows
   @Test
   void getUsers() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    Bin bin = testHelper.createBin();
-    Program program = testHelper.createProgram(bin);
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     testHelper.createBusinessOwner(business.getId(), email, password);
@@ -217,13 +230,88 @@ public class UserControllerTest extends BaseCapitalTest {
     log.info(response.getContentAsString());
   }
 
+  void getUserCards() {}
+
+  void getUserCard() {}
+
+  void blockCard() {}
+
+  void unblockCard() {}
+
+  void retireCard() {}
+
+  @SneakyThrows
+  @Test
+  void getCardAccountActivity() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+
+    CreateUpdateUserRecord userRecord =
+        userService.createUser(
+            createBusinessRecord.business().getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+
+    Cookie authCookie =
+        testHelper.login(userRecord.user().getEmail().getEncrypted(), userRecord.password());
+
+    Card card =
+        cardService.issueCard(
+            testHelper.retrievePooledProgram(),
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userRecord.user().getId(),
+            Currency.USD,
+            true,
+            createBusinessRecord.business().getLegalName());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
+    networkMessageService.processNetworkMessage(
+        new NetworkCommon(
+            card.getCardNumber().getEncrypted(),
+            card.getExpirationDate(),
+            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            CreditOrDebit.fromAmount(amount),
+            amount.abs(),
+            "M1234",
+            "Merchant Name",
+            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
+            6060));
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/users/cards/{cardId}/account-activity", card.getId())
+                    .param("dateFrom", "2020-01-01T00:00:00.000Z")
+                    .param("dateTo", "2030-01-01T00:00:00.000Z")
+                    .param("pageNumber", "0")
+                    .param("pageSize", "20")
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(response.getContentAsString());
+  }
+
+  void getAccountActivity() {}
+
+  void updateAccountActivity() {}
+
+  void linkReceipt() {}
+
+  void unlinkReceipt() {}
+
   @SneakyThrows
   @Test
   void getUsersForBusinessIdByUserName() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     testHelper.createBin();
-    Program program = testHelper.retrievePooledProgram();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -257,7 +345,6 @@ public class UserControllerTest extends BaseCapitalTest {
     MockHttpServletResponse responseFilteredByUserName =
         mvc.perform(
                 get("/users/list")
-                    .header("businessId", business.getId().toString())
                     .queryParam(
                         USER_NAME, userRecord.user().getFirstName().toString().substring(0, 3))
                     .contentType("application/json")
@@ -277,7 +364,6 @@ public class UserControllerTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     testHelper.createBin();
-    Program program = testHelper.retrievePooledProgram();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -308,7 +394,7 @@ public class UserControllerTest extends BaseCapitalTest {
         null);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
-    searchUserRequest.setPageRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
 
     String body = objectMapper.writeValueAsString(searchUserRequest);
 

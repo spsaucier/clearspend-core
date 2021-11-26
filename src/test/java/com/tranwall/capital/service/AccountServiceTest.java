@@ -8,8 +8,8 @@ import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
@@ -49,7 +49,7 @@ class AccountServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccountId,
-        FundsTransactType.DEPOSIT,
+        BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);
 

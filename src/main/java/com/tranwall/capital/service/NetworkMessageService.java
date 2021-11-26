@@ -50,6 +50,7 @@ public class NetworkMessageService {
             cardRecord.card().getBusinessId(),
             cardRecord.card().getAllocationId(),
             UUID.randomUUID(),
+            common.getNetworkMessageType(),
             common.getAmount(),
             common.getMerchantName(),
             common.getMerchantAddress(),
@@ -80,19 +81,29 @@ public class NetworkMessageService {
           common, adjustmentRecord.adjustment());
     }
 
+    if (common.isPostDecline()) {
+      accountActivityService.recordNetworkDeclineAccountAccountActivity(common);
+    }
+
     return networkMessageRepository.save(networkMessage);
   }
 
   private void processPreAuth(NetworkCommon common) {
-    if (common.getAmount().isSmallerThan(common.getAccount().getAvailableBalance())) {
-      common.setPostHold(true);
+    if (common.getAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+      common.setPostDecline(true);
+      return;
     }
+
+    common.setPostHold(true);
   }
 
   private void processFinancialAuth(NetworkCommon common) {
-    if (common.getAmount().isSmallerThan(common.getAccount().getAvailableBalance())) {
-      common.setPostAdjustment(true);
+    if (common.getAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+      common.setPostDecline(true);
+      return;
     }
+
+    common.setPostAdjustment(true);
   }
 
   private void processReversal(NetworkCommon common) {

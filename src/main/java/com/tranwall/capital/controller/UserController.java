@@ -50,13 +50,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -320,8 +320,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}/account-activity")
-  private Page<AccountActivityResponse> getCardAccountActivity(
-      @RequestHeader(name = USER_ID) TypedId<UserId> userId,
+  private Page<AccountActivityResponse> getCarAccountActivity(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -329,13 +328,17 @@ public class UserController {
               description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
-      @RequestParam AccountActivityType type,
-      @RequestParam OffsetDateTime dateFrom,
-      @RequestParam OffsetDateTime dateTo,
-      @RequestParam PageRequest pageRequest) {
+      @RequestParam(required = false) AccountActivityType type,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          OffsetDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          OffsetDateTime dateTo,
+      PageRequest pageRequest) {
+    CurrentUser currentUser = CurrentUser.get();
+
     return accountActivityService.getCardAccountActivity(
-        CurrentUser.get().businessId(),
-        userId,
+        currentUser.businessId(),
+        currentUser.userId(),
         cardId,
         new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
   }

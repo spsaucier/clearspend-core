@@ -12,8 +12,8 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.FundsTransactType;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
@@ -49,7 +49,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccountId,
-            FundsTransactType.DEPOSIT,
+            BankAccountTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
   }
@@ -63,14 +63,14 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccountId,
-        FundsTransactType.DEPOSIT,
+        BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("700.51")),
         false);
     AdjustmentRecord adjustmentRecord =
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccountId,
-            FundsTransactType.WITHDRAW,
+            BankAccountTransactType.WITHDRAW,
             Amount.of(Currency.USD, new BigDecimal("241.85")),
             true);
   }
@@ -84,7 +84,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccountId,
-        FundsTransactType.DEPOSIT,
+        BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("710.51")),
         true);
 
@@ -95,7 +95,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 bankAccountService.transactBankAccount(
                     createBusinessRecord.business().getId(),
                     businessBankAccountId,
-                    FundsTransactType.WITHDRAW,
+                    BankAccountTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
                     true));
   }

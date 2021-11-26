@@ -87,8 +87,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchAllCards() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
 
     PagedData<SearchCardData> result = callSearcCards(request, 3);
 
@@ -117,8 +116,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByAllocationId() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setAllocationId(childAllocation.allocation().getId());
 
     PagedData<SearchCardData> result = callSearcCards(request, 1);
@@ -136,8 +134,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByUserId() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(20).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 20));
     request.setUserId(userA.user().getId());
 
     PagedData<SearchCardData> result = callSearcCards(request, 2);
@@ -161,8 +158,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByCardNumber() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(childCardA.getCardNumber().getEncrypted());
 
     PagedData<SearchCardData> result = callSearcCards(request, 1);
@@ -180,8 +176,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByAllocationName() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText("ROOT");
 
     PagedData<SearchCardData> result = callSearcCards(request, 2);
@@ -205,8 +200,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByUserLastName() {
-    SearchCardRequest request =
-        new SearchCardRequest(PageRequest.builder().pageNumber(0).pageSize(10).build());
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(userB.user().getLastName().getEncrypted());
 
     PagedData<SearchCardData> result = callSearcCards(request, 1);

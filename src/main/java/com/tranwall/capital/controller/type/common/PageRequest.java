@@ -6,12 +6,14 @@ import com.tranwall.capital.service.type.PageToken.OrderBy;
 import java.util.Collections;
 import java.util.List;
 import javax.validation.constraints.NotNull;
-import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@Builder
+@NoArgsConstructor
+@RequiredArgsConstructor
 public class PageRequest {
 
   @JsonProperty("pageNumber")
