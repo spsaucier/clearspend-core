@@ -91,7 +91,7 @@ client:
       starting-numbers: 6019990022
     push:
       userId: "replace-me"
-    password: "replace-me-too"
+      password: "replace-me-too"
   plaid:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX
