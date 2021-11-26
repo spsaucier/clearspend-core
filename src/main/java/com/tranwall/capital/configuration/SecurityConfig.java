@@ -16,16 +16,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   public void configure(WebSecurity web) {
     web.ignoring()
         .antMatchers(
+            "/actuator/**",
             "/authentication/*",
+            "/business-prospects",
+            "/business-prospects/*/password",
+            "/business-prospects/*/phone",
+            "/business-prospects/*/validate-identifier",
+            "/i2c/push/**",
+            "/non-production/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/v3/**",
-            "/business-prospects",
-            "/business-prospects/*/validate-identifier",
-            "/business-prospects/*/phone",
-            "/business-prospects/*/password",
-            "/actuator/**",
-            "/non-production/**");
+            "/v3/**");
   }
 
   @Override
