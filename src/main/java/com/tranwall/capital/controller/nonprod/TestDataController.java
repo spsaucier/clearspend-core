@@ -542,7 +542,10 @@ public class TestDataController {
     // TODO(kuchlein): @Slava, do we have this somewhere? Ditto for memberRef
     String customerRef = RandomStringUtils.randomAlphanumeric(20);
     String memberRef = RandomStringUtils.randomAlphanumeric(25);
-    String availableBalance = account.getAvailableBalance() != null ? account.getAvailableBalance().getAmount().toString() : "";
+    String availableBalance =
+        account.getAvailableBalance() != null
+            ? account.getAvailableBalance().getAmount().toString()
+            : "";
     String ledgerBalance = account.getLedgerBalance().getAmount().toString();
     String cardStatus = CardStatus.OPEN.getI2cCardStatus();
     String firstName = user.getFirstName().getEncrypted();
