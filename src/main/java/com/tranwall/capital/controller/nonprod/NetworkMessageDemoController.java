@@ -1,13 +1,8 @@
 package com.tranwall.capital.controller.nonprod;
 
-import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.tranwall.capital.data.model.NetworkMessage;
-import com.tranwall.capital.data.model.enums.Country;
-import com.tranwall.capital.data.model.enums.CreditOrDebit;
-import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.type.NetworkCommon;
 import lombok.RequiredArgsConstructor;
@@ -34,19 +29,10 @@ public class NetworkMessageDemoController {
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
   private NetworkMessageResponse processNetworkMessage(
       @RequestBody @Validated NetworkMessageRequest request) {
-    Amount amount = request.getAmount().toAmount();
     NetworkMessage networkMessage =
         networkMessageService.processNetworkMessage(
             new NetworkCommon(
-                request.getCardNumber(),
-                request.getExpirationDate(),
-                NetworkMessageType.fromMti(request.getMTI()),
-                CreditOrDebit.fromAmount(amount),
-                amount.abs(),
-                "M1234",
-                "Merchant Name",
-                new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
-                request.getMerchantCategoryCode()));
+                request.getRequest().getI2cTransaction(), request.getRequest().getI2cCard()));
 
     return new NetworkMessageResponse(networkMessage.getId());
   }

@@ -1,15 +1,20 @@
 package com.tranwall.capital.controller.nonprod;
 
 import com.github.javafaker.Faker;
+import com.tranwall.capital.client.i2c.push.controller.type.CardAcceptor;
+import com.tranwall.capital.client.i2c.push.controller.type.CardStatus;
+import com.tranwall.capital.client.i2c.push.controller.type.I2cCard;
+import com.tranwall.capital.client.i2c.push.controller.type.I2cTransaction;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.tranwall.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
+import com.tranwall.capital.controller.nonprod.type.testdata.GetBusinessesResponse;
 import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
+import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
@@ -23,9 +28,10 @@ import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
-import com.tranwall.capital.data.model.enums.CreditOrDebit;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.NetworkMessageDeviceType;
+import com.tranwall.capital.data.model.enums.NetworkMessageTransactionType;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AllocationRepository;
@@ -39,6 +45,7 @@ import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
@@ -47,6 +54,9 @@ import com.tranwall.capital.service.type.NetworkCommon;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +65,7 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -75,8 +86,8 @@ public class TestDataController {
 
   private final AllocationService allocationService;
   private final BinService binService;
-  private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
+  private final BusinessService businessService;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final ProgramService programService;
@@ -99,7 +110,10 @@ public class TestDataController {
   @PostConstruct
   void init() {
     allBins = binService.findAllBins();
-    Bin bin = allBins.size() > 0 ? allBins.get(0) : createBin();
+    Bin bin =
+        allBins.size() > 0
+            ? allBins.get(0)
+            : binService.createBin(faker.random().nextInt(500000, 599999) + "", "Test Data BIN");
 
     allPrograms = programService.findAllPrograms();
     individualVirtualProgram =
@@ -152,6 +166,14 @@ public class TestDataController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessId> businessId) {
     return getAllData(businessId);
+  }
+
+  @GetMapping("/business")
+  private GetBusinessesResponse getBusinesses() {
+    return new GetBusinessesResponse(
+        businessRepository.findAll().stream()
+            .map(com.tranwall.capital.controller.type.business.Business::new)
+            .collect(Collectors.toList()));
   }
 
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -217,66 +239,100 @@ public class TestDataController {
 
     CreateUpdateUserRecord user = createUser(business);
     users.add(user);
-    Card card =
-        issueCard(business, parentAllocation.allocation(), user.user(), individualVirtualProgram);
-    cards.add(card);
+    CardRecord cardRecord =
+        cardService.issueCard(
+            individualVirtualProgram,
+            business.getId(),
+            parentAllocation.allocation().getId(),
+            user.user().getId(),
+            business.getCurrency(),
+            true,
+            business.getLegalName());
+    cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
         parentAllocation.allocation().getId(),
         parentAllocation.allocation().getAccountId(),
-        card.getId(),
+        cardRecord.card().getId(),
         AllocationReallocationType.ALLOCATION_TO_CARD,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(173.45)));
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.TEN);
     networkMessageService.processNetworkMessage(
-        new NetworkCommon(
-            card.getCardNumber().getEncrypted(),
-            card.getExpirationDate(),
+        generateNetworkCommon(
             NetworkMessageType.PRE_AUTH_TRANSACTION,
-            CreditOrDebit.fromAmount(amount),
-            amount.abs(),
-            "M1234",
-            "Merchant Name",
-            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
-            6060));
+            user.user(),
+            cardRecord.card(),
+            cardRecord.account(),
+            individualVirtualProgram,
+            amount));
 
-    card =
-        issueCard(business, parentAllocation.allocation(), user.user(), individualPlasticProgram);
-    cards.add(card);
+    cardRecord =
+        cardService.issueCard(
+            individualPlasticProgram,
+            business.getId(),
+            parentAllocation.allocation().getId(),
+            user.user().getId(),
+            business.getCurrency(),
+            true,
+            business.getLegalName());
+    cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
         parentAllocation.allocation().getId(),
         parentAllocation.allocation().getAccountId(),
-        card.getId(),
+        cardRecord.card().getId(),
         AllocationReallocationType.ALLOCATION_TO_CARD,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(91.17)));
 
     amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
     networkMessageService.processNetworkMessage(
-        new NetworkCommon(
-            card.getCardNumber().getEncrypted(),
-            card.getExpirationDate(),
+        generateNetworkCommon(
             NetworkMessageType.FINANCIAL_TRANSACTION,
-            CreditOrDebit.fromAmount(amount),
-            amount.abs(),
-            "M1234",
-            "Merchant Name",
-            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
-            6060));
+            user.user(),
+            cardRecord.card(),
+            cardRecord.account(),
+            individualPlasticProgram,
+            amount));
 
     CreateUpdateUserRecord user2 = createUser(business);
     users.add(user2);
     cards.add(
-        issueCard(business, childAllocation.allocation(), user2.user(), pooledVirtualProgram));
+        cardService
+            .issueCard(
+                pooledVirtualProgram,
+                business.getId(),
+                childAllocation.allocation().getId(),
+                user.user().getId(),
+                business.getCurrency(),
+                true,
+                business.getLegalName())
+            .card());
     cards.add(
-        issueCard(business, childAllocation.allocation(), user2.user(), pooledPlasticProgram));
+        cardService
+            .issueCard(
+                pooledPlasticProgram,
+                business.getId(),
+                childAllocation.allocation().getId(),
+                user.user().getId(),
+                business.getCurrency(),
+                true,
+                business.getLegalName())
+            .card());
 
     CreateUpdateUserRecord user3 = createUser(business);
     users.add(user3);
     cards.add(
-        issueCard(
-            business, grandchildAllocation.allocation(), user3.user(), individualVirtualProgram));
+        cardService
+            .issueCard(
+                individualVirtualProgram,
+                business.getId(),
+                grandchildAllocation.allocation().getId(),
+                user.user().getId(),
+                business.getCurrency(),
+                true,
+                business.getLegalName())
+            .card());
 
     return new CreateTestDataResponse(
         allBins,
@@ -291,10 +347,6 @@ public class TestDataController {
                     grandchildAllocation.allocation()),
                 cards,
                 users)));
-  }
-
-  private Bin createBin() {
-    return binService.createBin(faker.random().nextInt(500000, 599999) + "", "Test Data BIN");
   }
 
   private Program createProgram(Bin bin, FundingType fundingType, CardType cardType) {
@@ -352,21 +404,6 @@ public class TestDataController {
         null);
   }
 
-  public Card issueCard(
-      com.tranwall.capital.data.model.Business business,
-      Allocation allocation,
-      User user,
-      Program program) {
-    return cardService.issueCard(
-        program,
-        business.getId(),
-        allocation.getId(),
-        user.getId(),
-        Currency.USD,
-        true,
-        business.getLegalName());
-  }
-
   private CreateTestDataResponse getAllData(TypedId<BusinessId> businessId) {
     List<Business> businesses =
         businessId != null
@@ -397,5 +434,156 @@ public class TestDataController {
                             .map(u -> new CreateUpdateUserRecord(u, null))
                             .collect(Collectors.toList())))
             .collect(Collectors.toList()));
+  }
+
+  public static NetworkCommon generateNetworkCommon(
+      NetworkMessageType networkMessageType,
+      User user,
+      Card card,
+      Account account,
+      Program program,
+      Amount amount) {
+    Faker faker = Faker.instance();
+
+    // individual fields below so it's easier to understand what's being set in Transaction and Card
+    String notificationEventRef = faker.number().digits(40);
+    String transactionRef = faker.number().digits(11);
+    String messageType = networkMessageType.getMti();
+    LocalDate date = LocalDate.now();
+    OffsetTime time = OffsetTime.now();
+    String transactionType = NetworkMessageTransactionType.PURCHASE_TRANS.getI2cTransactionType();
+    String service = RandomStringUtils.randomAlphanumeric(120);
+    String requestedAmount = amount.getAmount().toString();
+    String requestedAmountCurrency = amount.getCurrency().name();
+    String transactionAmount = amount.getAmount().toString();
+    String transactionCurrency = amount.getCurrency().name();
+    String transactionResponseCode = "Type: AN 2";
+    String interchangeFee = amount.getAmount().abs().multiply(BigDecimal.valueOf(0.02)).toString();
+    String panEntryMode = "021"; // 02 (Magnetic stripe) + 1 (Terminal can accept PINs)
+    String authorizationCode = RandomStringUtils.randomAlphanumeric(16);
+    String acquirerReferenceNumber = RandomStringUtils.randomAlphanumeric(20);
+    String retrievalReferenceNumber = RandomStringUtils.randomAlphanumeric(80);
+    String systemTraceAuditNumber = RandomStringUtils.randomAlphanumeric(24);
+    String networkRef = "Type: AN 25";
+    String originalTransactionRef = ""; // ""Type: N 11";
+    String transferRef = ""; // ""Type: N 30";
+    String bankAccountNumber = RandomStringUtils.randomAlphanumeric(31);
+    String transactionDescription = RandomStringUtils.randomAlphanumeric(255);
+    String externalTransReference = RandomStringUtils.randomAlphanumeric(40);
+    String externalUserReference = RandomStringUtils.randomAlphanumeric(40);
+    String externalLinkedCardRefRef = "Type: AN 11";
+    String externalLinkedCardProfileSet1 = RandomStringUtils.randomAlphanumeric(255);
+    String externalLinkedCardProfileSet2 = RandomStringUtils.randomAlphanumeric(255);
+    String panSequenceNumber = "001"; // ""Type: AN 3";
+    String fraudParameter = RandomStringUtils.randomAlphanumeric(20);
+
+    String acquirerRef = RandomStringUtils.randomAlphanumeric(44);
+    String merchantCode = RandomStringUtils.randomAlphanumeric(15);
+    String merchantNameAndLocation = "Merchant Name            Tucson       AZUSA";
+    String merchantLocality = "Tucson";
+    String merchantRegion = "AZ";
+    String merchantPostalCode = "USA";
+    Integer mcc = 6060;
+    String deviceRef = RandomStringUtils.randomAlphanumeric(8);
+    String deviceType = NetworkMessageDeviceType.POS.getI2cDeviceType();
+    OffsetDateTime localDateTime = OffsetDateTime.now();
+    CardAcceptor cardAcceptor =
+        new CardAcceptor(
+            acquirerRef,
+            merchantCode,
+            merchantNameAndLocation,
+            merchantLocality,
+            merchantRegion,
+            merchantPostalCode,
+            mcc,
+            deviceRef,
+            deviceType,
+            localDateTime);
+
+    I2cTransaction i2cTransaction =
+        new I2cTransaction(
+            notificationEventRef,
+            transactionRef,
+            messageType,
+            date,
+            time,
+            cardAcceptor,
+            transactionType,
+            service,
+            requestedAmount,
+            requestedAmountCurrency,
+            transactionAmount,
+            transactionCurrency,
+            transactionResponseCode,
+            interchangeFee,
+            panEntryMode,
+            authorizationCode,
+            acquirerReferenceNumber,
+            retrievalReferenceNumber,
+            systemTraceAuditNumber,
+            networkRef,
+            originalTransactionRef,
+            transferRef,
+            bankAccountNumber,
+            transactionDescription,
+            externalTransReference,
+            externalUserReference,
+            externalLinkedCardRefRef,
+            externalLinkedCardProfileSet1,
+            externalLinkedCardProfileSet2,
+            panSequenceNumber,
+            fraudParameter);
+
+    String cardNumber = card.getCardNumber().getEncrypted();
+    String cardProgramRef = program.getI2cCardProgramRef();
+    String cardReferenceRef = card.getI2cCardRef();
+    String primaryCardNumber = card.getCardNumber().getEncrypted();
+    String primaryCardReferenceRef = card.getI2cCardRef();
+    // TODO(kuchlein): @Slava, do we have this somewhere? Ditto for memberRef
+    String customerRef = RandomStringUtils.randomAlphanumeric(20);
+    String memberRef = RandomStringUtils.randomAlphanumeric(25);
+    String availableBalance = account.getAvailableBalance() != null ? account.getAvailableBalance().getAmount().toString() : "";
+    String ledgerBalance = account.getLedgerBalance().getAmount().toString();
+    String cardStatus = CardStatus.OPEN.getI2cCardStatus();
+    String firstName = user.getFirstName().getEncrypted();
+    String lastName = user.getLastName().getEncrypted();
+    String addressLine1 = user.getAddress().getStreetLine1().getEncrypted();
+    String addressLine2 = user.getAddress().getStreetLine2().getEncrypted();
+    String locality = user.getAddress().getLocality();
+    String region = user.getAddress().getRegion();
+    String postalCode = user.getAddress().getPostalCode().getEncrypted();
+    String country = user.getAddress().getCountry().name();
+    String phone = user.getPhone().getEncrypted();
+    String email = user.getEmail().getEncrypted();
+    String sourceCardReferenceNumber = ""; // ""Type: AN 40";
+    String sourceCardNumber = ""; // ""Type: N 19";
+
+    I2cCard i2cCard =
+        new I2cCard(
+            cardNumber,
+            null,
+            cardProgramRef,
+            cardReferenceRef,
+            primaryCardNumber,
+            primaryCardReferenceRef,
+            customerRef,
+            memberRef,
+            availableBalance,
+            ledgerBalance,
+            cardStatus,
+            firstName,
+            lastName,
+            addressLine1,
+            addressLine2,
+            locality,
+            region,
+            postalCode,
+            country,
+            phone,
+            email,
+            sourceCardReferenceNumber,
+            sourceCardNumber);
+
+    return new NetworkCommon(i2cTransaction, i2cCard);
   }
 }

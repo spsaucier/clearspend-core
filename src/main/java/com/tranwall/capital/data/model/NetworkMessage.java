@@ -1,5 +1,6 @@
 package com.tranwall.capital.data.model;
 
+import com.tranwall.capital.client.i2c.push.controller.type.EventNotificationAdvanceRequest;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.data.model.TypedMutable;
@@ -86,4 +87,8 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @NonNull private Integer merchantCategoryCode;
 
   private String i2cTransactionRef;
+
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private EventNotificationAdvanceRequest request;
 }

@@ -63,7 +63,7 @@ public class CardService {
   public record UserCardRecord(Card card, Allocation allocation, Account account) {}
 
   @Transactional
-  public Card issueCard(
+  public CardRecord issueCard(
       Program program,
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
@@ -116,24 +116,23 @@ public class CardService {
     card.setCardLine4(cardLine4.toString());
     card.setI2cCardRef(i2cResponse.getI2cCardRef());
 
+    Account account;
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
-      Account account =
+      account =
           accountService.createAccount(
               businessId, AccountType.CARD, card.getId().toUuid(), currency);
-      card.setAccountId(account.getId());
     } else {
       // TODO(kuchlein): Not sure if we want to be doing this or not...
-      Account account =
-          accountService.retrieveAllocationAccount(businessId, currency, allocationId);
-      card.setAccountId(account.getId());
+      account = accountService.retrieveAllocationAccount(businessId, currency, allocationId);
     }
+    card.setAccountId(account.getId());
 
     card = cardRepository.save(card);
 
     transactionLimitService.initializeCardSpendLimit(
         card.getBusinessId(), card.getAllocationId(), card.getId());
 
-    return card;
+    return new CardRecord(card, account);
   }
 
   public Card retrieveCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {

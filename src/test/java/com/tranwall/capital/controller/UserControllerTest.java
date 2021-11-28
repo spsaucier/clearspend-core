@@ -11,7 +11,7 @@ import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.data.model.ClearAddress;
+import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
@@ -21,17 +21,15 @@ import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.data.model.Business;
-import com.tranwall.capital.data.model.Card;
-import com.tranwall.capital.data.model.enums.Country;
-import com.tranwall.capital.data.model.enums.CreditOrDebit;
+import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.CardService;
+import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
-import com.tranwall.capital.service.type.NetworkCommon;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
@@ -260,9 +258,10 @@ public class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie =
         testHelper.login(userRecord.user().getEmail().getEncrypted(), userRecord.password());
 
-    Card card =
+    final Program program = testHelper.retrievePooledProgram();
+    CardRecord cardRecord =
         cardService.issueCard(
-            testHelper.retrievePooledProgram(),
+            program,
             userRecord.user().getBusinessId(),
             createBusinessRecord.allocationRecord().allocation().getId(),
             userRecord.user().getId(),
@@ -272,20 +271,17 @@ public class UserControllerTest extends BaseCapitalTest {
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     networkMessageService.processNetworkMessage(
-        new NetworkCommon(
-            card.getCardNumber().getEncrypted(),
-            card.getExpirationDate(),
+        TestDataController.generateNetworkCommon(
             NetworkMessageType.PRE_AUTH_TRANSACTION,
-            CreditOrDebit.fromAmount(amount),
-            amount.abs(),
-            "M1234",
-            "Merchant Name",
-            new ClearAddress("123 Main Street", "", "Tucson", "AZ", "23416", Country.USA),
-            6060));
+            userRecord.user(),
+            cardRecord.card(),
+            cardRecord.account(),
+            program,
+            amount));
 
     MockHttpServletResponse response =
         mvc.perform(
-                get("/users/cards/{cardId}/account-activity", card.getId())
+                get("/users/cards/{cardId}/account-activity", cardRecord.card().getId())
                     .param("dateFrom", "2020-01-01T00:00:00.000Z")
                     .param("dateTo", "2030-01-01T00:00:00.000Z")
                     .param("pageNumber", "0")

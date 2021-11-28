@@ -2,6 +2,7 @@ package com.tranwall.capital.data.model;
 
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AdjustmentId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
@@ -38,7 +39,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class AccountActivity extends TypedMutable<AccountId> {
+public class AccountActivity extends TypedMutable<AccountActivityId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")

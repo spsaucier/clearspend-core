@@ -523,14 +523,16 @@ public class TestHelper {
 
   public Card issueCard(
       Business business, Allocation allocation, User user, Program program, Currency currency) {
-    return cardService.issueCard(
-        program,
-        business.getId(),
-        allocation.getId(),
-        user.getId(),
-        currency,
-        true,
-        business.getLegalName());
+    return cardService
+        .issueCard(
+            program,
+            business.getId(),
+            allocation.getId(),
+            user.getId(),
+            currency,
+            true,
+            business.getLegalName())
+        .card();
   }
 
   public Address generateEntityAddress() {

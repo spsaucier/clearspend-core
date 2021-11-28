@@ -54,6 +54,7 @@ public class CardController {
                                 request.getCurrency(),
                                 request.getIsPersonal(),
                                 businessService.getBusiness(businessId).business().getLegalName())
+                            .card()
                             .getId(),
                         null)));
 

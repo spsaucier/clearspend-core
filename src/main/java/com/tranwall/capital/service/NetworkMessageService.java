@@ -27,7 +27,7 @@ public class NetworkMessageService {
 
   @Transactional
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
-    common.getAmount().ensurePositive();
+    common.getRequestedAmount().ensurePositive();
     CardRecord cardRecord = cardService.getCardByCardNumber(common.getCardNumber());
     common.setBusinessId(cardRecord.card().getBusinessId());
     common.setCard(cardRecord.card());
@@ -51,7 +51,7 @@ public class NetworkMessageService {
             cardRecord.card().getAllocationId(),
             UUID.randomUUID(),
             common.getNetworkMessageType(),
-            common.getAmount(),
+            common.getRequestedAmount(),
             common.getMerchantName(),
             common.getMerchantAddress(),
             common.getMerchantNumber(),
@@ -66,7 +66,7 @@ public class NetworkMessageService {
           accountService.recordNetworkHold(
               common.getAccount(),
               common.getCreditOrDebit(),
-              common.getAmount(),
+              common.getRequestedAmount(),
               OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
       accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
@@ -75,7 +75,7 @@ public class NetworkMessageService {
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
           accountService.recordNetworkAdjustment(
-              common.getAccount(), common.getCreditOrDebit(), common.getAmount());
+              common.getAccount(), common.getCreditOrDebit(), common.getRequestedAmount());
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
           common, adjustmentRecord.adjustment());
@@ -89,7 +89,7 @@ public class NetworkMessageService {
   }
 
   private void processPreAuth(NetworkCommon common) {
-    if (common.getAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+    if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
       common.setPostDecline(true);
       return;
     }
@@ -98,7 +98,7 @@ public class NetworkMessageService {
   }
 
   private void processFinancialAuth(NetworkCommon common) {
-    if (common.getAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+    if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
       common.setPostDecline(true);
       return;
     }

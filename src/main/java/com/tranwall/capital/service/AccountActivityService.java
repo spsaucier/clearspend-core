@@ -95,7 +95,7 @@ public class AccountActivityService {
 
   @Transactional(TxType.REQUIRED)
   public AccountActivity recordNetworkDeclineAccountAccountActivity(NetworkCommon common) {
-    return recordNetworkAccountActivity(common, common.getAmount(), null, null);
+    return recordNetworkAccountActivity(common, common.getRequestedAmount(), null, null);
   }
 
   private AccountActivity recordNetworkAccountActivity(

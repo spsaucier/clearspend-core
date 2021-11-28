@@ -6,11 +6,14 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class HealthCheckRequest {
+public class EventNotificationAdvanceRequest {
 
   @JsonProperty("Header")
   private I2cHeader i2cHeader;
 
-  @JsonProperty("HealthCheckId")
-  private String healthCheckId;
+  @JsonProperty("Transaction")
+  private I2cTransaction i2cTransaction;
+
+  @JsonProperty("Card")
+  private I2cCard i2cCard;
 }

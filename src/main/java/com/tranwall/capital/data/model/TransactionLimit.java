@@ -3,7 +3,7 @@ package com.tranwall.capital.data.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.SpendLimitId;
+import com.tranwall.capital.common.typedid.data.TransactionLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LimitType;
@@ -38,7 +38,7 @@ import org.hibernate.annotations.TypeDefs;
 @DynamicUpdate
 @Slf4j
 @TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
-public class TransactionLimit extends TypedMutable<SpendLimitId> {
+public class TransactionLimit extends TypedMutable<TransactionLimitId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")

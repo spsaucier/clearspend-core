@@ -6,11 +6,11 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class HealthCheckRequest {
+public class EventNotificationAdvanceResponse {
 
-  @JsonProperty("Header")
-  private I2cHeader i2cHeader;
+  @JsonProperty("ResponseCode")
+  private String responseCode;
 
-  @JsonProperty("HealthCheckId")
-  private String healthCheckId;
+  @JsonProperty("NotificationEventId")
+  private String notificationEventRef;
 }

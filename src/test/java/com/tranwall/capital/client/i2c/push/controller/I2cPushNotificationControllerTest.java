@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.client.i2c.push.I2cPushProperties;
-import com.tranwall.capital.client.i2c.push.controller.type.Header;
 import com.tranwall.capital.client.i2c.push.controller.type.HealthCheckRequest;
 import com.tranwall.capital.client.i2c.push.controller.type.HealthCheckResponse;
-import java.time.OffsetDateTime;
+import com.tranwall.capital.client.i2c.push.controller.type.I2cHeader;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -48,11 +48,11 @@ class I2cPushNotificationControllerTest extends BaseCapitalTest {
         "response\n{}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
   }
 
-  private Header getHeader() {
-    return new Header(
+  private I2cHeader getHeader() {
+    return new I2cHeader(
         UUID.randomUUID().toString(),
         i2cPushProperties.getUserId(),
         i2cPushProperties.getPassword(),
-        OffsetDateTime.now());
+        LocalDateTime.now());
   }
 }
