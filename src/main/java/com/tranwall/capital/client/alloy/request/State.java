@@ -1,4 +1,4 @@
-package com.tranwall.capital.common.data;
+package com.tranwall.capital.client.alloy.request;
 
 import java.util.HashMap;
 import java.util.Map;

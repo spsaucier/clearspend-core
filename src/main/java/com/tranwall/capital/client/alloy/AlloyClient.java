@@ -2,9 +2,9 @@ package com.tranwall.capital.client.alloy;
 
 import com.tranwall.capital.client.alloy.request.OnboardBusinessRequest;
 import com.tranwall.capital.client.alloy.request.OnboardIndividualRequest;
+import com.tranwall.capital.client.alloy.request.State;
 import com.tranwall.capital.client.alloy.response.OnboardResponse;
 import com.tranwall.capital.client.alloy.response.Summary;
-import com.tranwall.capital.common.data.State;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;

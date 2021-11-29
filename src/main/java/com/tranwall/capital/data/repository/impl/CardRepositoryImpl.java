@@ -1,5 +1,9 @@
 package com.tranwall.capital.data.repository.impl;
 
+import com.blazebit.persistence.CriteriaBuilder;
+import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.blazebit.persistence.JoinType;
+import com.blazebit.persistence.PagedList;
 import com.tranwall.capital.crypto.HashUtil;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
@@ -7,16 +11,9 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.repository.CardRepositoryCustom;
 import com.tranwall.capital.service.CardFilterCriteria;
-import com.tranwall.capital.service.type.PageToken;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,72 +24,71 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class CardRepositoryImpl implements CardRepositoryCustom {
 
-  private final EntityManager em;
+  private final EntityManager entityManager;
+  private final CriteriaBuilderFactory criteriaBuilderFactory;
 
   @Override
   public Page<FilteredCardRecord> find(CardFilterCriteria criteria) {
-    // query
-    CriteriaBuilder cb = em.getCriteriaBuilder();
-    CriteriaQuery<Tuple> query = cb.createTupleQuery();
-
-    // roots
-    Root<Card> cardRoot = query.from(Card.class);
-    Root<Allocation> allocationRoot = query.from(Allocation.class);
-    Root<Account> accountRoot = query.from(Account.class);
-    Root<User> userRoot = query.from(User.class);
-
-    // predicates
-    List<Predicate> predicates = new ArrayList<>();
-    predicates.add(cb.equal(cardRoot.get("allocationId"), allocationRoot.get("id")));
-    predicates.add(cb.equal(allocationRoot.get("accountId"), accountRoot.get("id")));
-    predicates.add(cb.equal(cardRoot.get("userId"), userRoot.get("id")));
+    CriteriaBuilder<Tuple> builder =
+        criteriaBuilderFactory
+            .create(entityManager, Tuple.class)
+            .from(Card.class, "card")
+            // allocation join
+            .joinOn(Allocation.class, "allocation", JoinType.INNER)
+            .on("card.allocationId")
+            .eqExpression("allocation.id")
+            .end()
+            // account join
+            .joinOn(Account.class, "account", JoinType.INNER)
+            .on("allocation.accountId")
+            .eqExpression("account.id")
+            .end()
+            // user join
+            .joinOn(User.class, "user", JoinType.INNER)
+            .on("card.userId")
+            .eqExpression("user.id")
+            .end();
 
     if (criteria.getBusinessId() != null) {
-      predicates.add(cb.equal(cardRoot.get("businessId"), criteria.getBusinessId()));
+      builder.where("card.businessId").eq(criteria.getBusinessId());
     }
 
     if (criteria.getUserId() != null) {
-      predicates.add(cb.equal(cardRoot.get("userId"), criteria.getUserId()));
+      builder.where("card.userId").eq(criteria.getUserId());
     }
 
     if (criteria.getAllocationId() != null) {
-      predicates.add(cb.equal(allocationRoot.get("id"), criteria.getAllocationId()));
+      builder.where("allocation.id").eq(criteria.getAllocationId());
     }
 
     if (criteria.getSearchText() != null) {
       byte[] encryptedValue = HashUtil.calculateHash(criteria.getSearchText());
-      predicates.add(
-          cb.or(
-              cb.equal(cardRoot.get("cardNumber").get("hash"), encryptedValue),
-              cb.equal(userRoot.get("firstName").get("hash"), encryptedValue),
-              cb.equal(userRoot.get("lastName").get("hash"), encryptedValue),
-              cb.like(
-                  cb.lower(allocationRoot.get("name")),
-                  "%" + criteria.getSearchText().toLowerCase() + "%")));
+      builder
+          .whereOr()
+          .where("card.cardNumber.hash")
+          .eq(encryptedValue)
+          .where("user.firstName.hash")
+          .eq(encryptedValue)
+          .where("user.lastName.hash")
+          .eq(encryptedValue)
+          .where("allocation.name")
+          .like(false)
+          .value("%" + criteria.getSearchText() + "%")
+          .noEscape()
+          .endOr();
     }
 
-    // execute query
-    query
-        .multiselect(cardRoot, allocationRoot, accountRoot, userRoot)
-        .where(cb.and(predicates.toArray(new Predicate[0])));
-
-    PageToken pageToken = criteria.getPageToken();
-
-    List<Tuple> results =
-        em.createQuery(query)
-            .setFirstResult(pageToken.getPageNumber())
-            .setMaxResults(pageToken.getPageSize())
+    PagedList<Tuple> results =
+        builder
+            .select("card")
+            .select("allocation")
+            .select("account")
+            .select("user")
+            .orderByAsc("card.id")
+            .page(
+                criteria.getPageToken().getPageNumber().intValue(),
+                criteria.getPageToken().getPageSize().intValue())
             .getResultList();
-
-    // total number of elements
-    long totalElements;
-    if (pageToken.getPageNumber() == 0 && results.size() < pageToken.getPageSize()) {
-      totalElements = results.size();
-    } else {
-      CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-      countQuery.select(cb.count(cardRoot)).where(predicates.toArray(new Predicate[0]));
-      totalElements = em.createQuery(countQuery).getSingleResult();
-    }
 
     return new PageImpl<>(
         results.stream()
@@ -104,7 +100,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                         r.get(2, Account.class),
                         r.get(3, User.class)))
             .collect(Collectors.toList()),
-        PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()),
-        totalElements);
+        PageRequest.of(
+            criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
+        results.getTotalSize());
   }
 }

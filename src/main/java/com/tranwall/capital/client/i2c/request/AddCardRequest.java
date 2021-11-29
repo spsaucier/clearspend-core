@@ -30,6 +30,33 @@ public class AddCardRequest {
   @Builder
   public static class Profile {
 
+    @JsonProperty("firstName")
+    private String firstName;
+
+    @JsonProperty("lastName")
+    private String lastName;
+
+    @JsonProperty("address")
+    private String address;
+
+    @JsonProperty("city")
+    private String city;
+
+    @JsonProperty("stateCode")
+    private String stateCode;
+
+    @JsonProperty("postalCode")
+    private String postalCode;
+
+    @JsonProperty("country")
+    private String country;
+
+    @JsonProperty("cellNumber")
+    private String cellNumber;
+
+    @JsonProperty("email")
+    private String email;
+
     @JsonProperty("nameOnCard")
     private String nameOnCard;
   }

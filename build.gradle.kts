@@ -59,6 +59,7 @@ dependencyManagement {
 
 dependencies {
     val testContainersVersion = "1.16.0"
+    val blazePersistenceVersion = "1.6.3"
 
     //annotation processor and dependencies
     annotationProcessor("org.projectlombok:lombok")
@@ -94,6 +95,10 @@ dependencies {
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
     implementation("com.google.cloud:google-cloud-nio:0.123.10")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
+
+    implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
+    implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")
+    implementation("com.blazebit:blaze-persistence-integration-hibernate-5.4:$blazePersistenceVersion")
 
     //just for the non-prod data generator
     implementation("com.github.javafaker:javafaker:1.0.1")

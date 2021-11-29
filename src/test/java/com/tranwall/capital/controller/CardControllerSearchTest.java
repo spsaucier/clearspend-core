@@ -215,6 +215,16 @@ public class CardControllerSearchTest extends BaseCapitalTest {
                     userB.user())));
   }
 
+  @SneakyThrows
+  @Test
+  void searchTotalElementsShouldBeCalculated() {
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 1));
+
+    PagedData<SearchCardData> result = callSearcCards(request, 1);
+
+    assertThat(result.getTotalElements()).isEqualTo(3);
+  }
+
   private PagedData<SearchCardData> callSearcCards(SearchCardRequest request, long expectedSize)
       throws Exception {
     String body = objectMapper.writeValueAsString(request);
@@ -234,7 +244,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     assertThat(result.getPageNumber()).isEqualTo(request.getPageRequest().getPageNumber());
     assertThat(result.getPageSize()).isEqualTo(request.getPageRequest().getPageSize());
-    assertThat(result.getTotalElements()).isEqualTo(expectedSize);
+    assertThat(result.getContent().size()).isEqualTo(expectedSize);
 
     return result;
   }

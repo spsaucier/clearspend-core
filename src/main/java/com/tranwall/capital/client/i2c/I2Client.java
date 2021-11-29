@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tranwall.capital.client.i2c.I2ClientProperties.Program;
+import com.tranwall.capital.client.i2c.request.ActivateCardRequest;
 import com.tranwall.capital.client.i2c.request.AddCardRequest;
 import com.tranwall.capital.client.i2c.request.AddStakeholderRequest;
 import com.tranwall.capital.client.i2c.request.CreditFundsRequest;
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
 import com.tranwall.capital.client.i2c.request.SetCardStatusRequest;
 import com.tranwall.capital.client.i2c.request.ShareFundsRequest;
+import com.tranwall.capital.client.i2c.response.ActivateCardResponse;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.client.i2c.response.BaseI2CResponse;
@@ -122,6 +124,16 @@ public class I2Client {
       default -> throw new RuntimeException(
           String.format("I2C card status [%s] is not matched to our card statuses", statusCode));
     };
+  }
+
+  public void activateCard(String i2cCardRef) {
+    callI2C(
+        "activateCard",
+        ActivateCardRequest.builder()
+            .acquirer(acquirer)
+            .card(Card.builder().i2cCardRef(i2cCardRef).build())
+            .build(),
+        ActivateCardResponse.class);
   }
 
   public void setCardStatus(String i2cCardRef, CardStatus cardStatus) {
