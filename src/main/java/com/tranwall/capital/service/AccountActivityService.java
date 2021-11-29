@@ -5,6 +5,8 @@ import static com.tranwall.capital.data.model.enums.AccountActivityType.REALLOCA
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
@@ -138,9 +140,7 @@ public class AccountActivityService {
       TypedId<UserId> userId,
       TypedId<AccountActivityId> accountActivityId,
       String notes) {
-    AccountActivity accountActivity =
-        accountActivityRepository.findByBusinessIdAndUserIdAndId(
-            businessId, userId, accountActivityId);
+    AccountActivity accountActivity = getUserAccountActivity(businessId, userId, accountActivityId);
     if (StringUtils.isNotBlank(notes)) {
       accountActivity.setNotes(notes);
     }
@@ -170,8 +170,12 @@ public class AccountActivityService {
       TypedId<UserId> userId,
       TypedId<AccountActivityId> accountActivityId) {
 
-    return accountActivityRepository.findByBusinessIdAndUserIdAndId(
-        businessId, userId, accountActivityId);
+    return accountActivityRepository
+        .findByBusinessIdAndUserIdAndId(businessId, userId, accountActivityId)
+        .orElseThrow(
+            () ->
+                new RecordNotFoundException(
+                    Table.ACCOUNT_ACTIVITY, businessId, userId, accountActivityId));
   }
 
   public Page<AccountActivityResponse> getFilteredAccountActivity(

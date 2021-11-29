@@ -6,6 +6,7 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.AccountActivity;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -15,9 +16,9 @@ public interface AccountActivityRepository
 
   int countByBusinessId(TypedId<BusinessId> businessId);
 
-  AccountActivity findByBusinessIdAndUserIdAndId(
+  Optional<AccountActivity> findByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AccountActivityId> id);
 
-  AccountActivity findByBusinessIdAndUserIdAndAdjustmentId(
+  Optional<AccountActivity> findByBusinessIdAndUserIdAndAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AdjustmentId> adjustmentId);
 }

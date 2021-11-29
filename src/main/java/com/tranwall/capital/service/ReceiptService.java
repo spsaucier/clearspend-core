@@ -28,6 +28,7 @@ public class ReceiptService {
   private final ReceiptRepository receiptRepository;
   private final AccountActivityRepository accountActivityRepository;
 
+  private final AccountActivityService accountActivityService;
   private final ReceiptImageService receiptImageService;
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
@@ -73,15 +74,19 @@ public class ReceiptService {
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.getAdjustmentId() != null) {
       AccountActivity previousAccountActivity =
-          accountActivityRepository.findByBusinessIdAndUserIdAndAdjustmentId(
-              businessId, userId, receipt.getAdjustmentId());
+          accountActivityRepository
+              .findByBusinessIdAndUserIdAndAdjustmentId(
+                  businessId, userId, receipt.getAdjustmentId())
+              .orElseThrow(
+                  () ->
+                      new RecordNotFoundException(
+                          Table.ACCOUNT_ACTIVITY, businessId, userId, receipt.getAdjustmentId()));
       previousAccountActivity.setReceipt(null);
       accountActivityRepository.save(previousAccountActivity);
     }
 
     AccountActivity accountActivity =
-        accountActivityRepository.findByBusinessIdAndUserIdAndId(
-            businessId, userId, accountActivityId);
+        accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
     accountActivity.setReceipt(new ReceiptDetails(receipt.getId()));
     receipt.setAccountId(accountActivity.getAccountId());
     receipt.setAdjustmentId(accountActivity.getAdjustmentId());
@@ -103,8 +108,7 @@ public class ReceiptService {
     }
 
     AccountActivity accountActivity =
-        accountActivityRepository.findByBusinessIdAndUserIdAndId(
-            businessId, userId, accountActivityId);
+        accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
     accountActivity.setReceipt(null);
     accountActivityRepository.save(accountActivity);
 

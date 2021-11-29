@@ -14,6 +14,7 @@ public class RecordNotFoundException extends RuntimeException {
 
   public enum Table {
     ACCOUNT("Account"),
+    ACCOUNT_ACTIVITY("AccountActivity"),
     ADJUSTMENT("Adjustment"),
     ALLOCATION("Allocation"),
     BIN("Bin"),
