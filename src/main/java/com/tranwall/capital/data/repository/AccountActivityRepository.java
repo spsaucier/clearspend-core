@@ -12,7 +12,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface AccountActivityRepository
     extends JpaRepository<AccountActivity, TypedId<AccountActivityId>>,
-        JpaSpecificationExecutor<AccountActivity> {
+        JpaSpecificationExecutor<AccountActivity>,
+        AccountActivityRepositoryCustom {
 
   int countByBusinessId(TypedId<BusinessId> businessId);
 

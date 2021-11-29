@@ -1,9 +1,9 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.service.type.PageToken;
@@ -16,9 +16,10 @@ import lombok.Data;
 public class AccountActivityFilterCriteria {
 
   private TypedId<AllocationId> allocationId;
-  private TypedId<AccountId> accountId;
+  private TypedId<UserId> userId;
   private TypedId<CardId> cardId;
   private AccountActivityType type;
+  private String searchText;
   private OffsetDateTime from;
   private OffsetDateTime to;
   private PageToken pageToken;

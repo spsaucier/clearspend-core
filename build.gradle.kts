@@ -95,6 +95,9 @@ dependencies {
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
     implementation("com.google.cloud:google-cloud-nio:0.123.10")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
+    implementation("com.blazebit:blaze-persistence-core-api:1.6.3")
+    implementation("com.blazebit:blaze-persistence-core-impl:1.6.3")
+    implementation("com.blazebit:blaze-persistence-integration-hibernate-5.4:1.6.3")
 
     implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")

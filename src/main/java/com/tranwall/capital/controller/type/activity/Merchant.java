@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.enums.MerchantType;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
+@NoArgsConstructor
 public class Merchant {
 
   @JsonProperty("name")
@@ -31,7 +33,6 @@ public class Merchant {
     if (merchant == null) {
       return;
     }
-
     name = merchant.getName();
     type = merchant.getType();
     merchantCategoryCode = merchant.getMerchantCategoryCode();

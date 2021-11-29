@@ -1,7 +1,6 @@
 package com.tranwall.capital.controller;
 
 import static com.tranwall.capital.controller.Common.USER_ID;
-import static com.tranwall.capital.controller.Common.USER_NAME;
 
 import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
@@ -9,9 +8,9 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
-import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
+import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.tranwall.capital.controller.type.card.Card;
@@ -24,10 +23,11 @@ import com.tranwall.capital.controller.type.user.SearchUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
-import com.tranwall.capital.controller.type.user.UserData;
+import com.tranwall.capital.controller.type.user.UserPageData;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import com.tranwall.capital.service.BusinessOwnerService;
@@ -43,13 +43,11 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -179,59 +177,20 @@ public class UserController {
   }
 
   @GetMapping(value = "/list")
-  private List<UserData> getUsersByUserName(
-      @RequestParam(required = false, name = USER_NAME)
-          @Parameter(name = USER_NAME, description = "Name of the user.", example = "Ada")
-          String userName) {
+  private List<User> getUsersByUserName() {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    List<UserData> userDataList;
-    if (userName == null) {
-      userDataList =
-          userService.retrieveUsersForBusiness(businessId).stream()
-              .map(UserData::new)
-              .collect(Collectors.toList());
-      return userDataList;
-    } else {
-      userDataList =
-          userService.retrieveUsersForBusiness(businessId).stream()
-              .filter(
-                  user ->
-                      user.getFirstName()
-                              .toString()
-                              .toLowerCase(Locale.ROOT)
-                              .contains(userName.toLowerCase(Locale.ROOT))
-                          || user.getLastName()
-                              .toString()
-                              .toLowerCase(Locale.ROOT)
-                              .contains(userName.toLowerCase(Locale.ROOT)))
-              .map(UserData::new)
-              .collect(Collectors.toList());
-    }
-    return userDataList;
+    return userService.retrieveUsersForBusiness(businessId).stream()
+        .map(User::new)
+        .collect(Collectors.toList());
   }
 
   @PostMapping(value = "/search")
-  private Page<User> getUsers(@Validated @RequestBody SearchUserRequest request) {
+  private PagedData<UserPageData> retrieveUsersPageData(
+      @Validated @RequestBody SearchUserRequest request) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    Page<com.tranwall.capital.data.model.User> userPage =
-        userService.getUserPage(businessId, new UserFilterCriteria(request));
+    var userPage = userService.retrieveUserPage(businessId, new UserFilterCriteria(request));
 
-    return new PageImpl<>(
-        userPage.stream()
-            .map(
-                user ->
-                    new User(
-                        user.getId(),
-                        user.getBusinessId(),
-                        user.getType(),
-                        user.getFirstName().toString(),
-                        user.getLastName().toString(),
-                        new Address(user.getAddress()),
-                        user.getEmail().toString(),
-                        user.getPhone().toString()))
-            .collect(Collectors.toList()),
-        userPage.getPageable(),
-        userPage.getTotalElements());
+    return PagedData.of(userPage, user -> new UserPageData(user.user(), user.card()));
   }
 
   @GetMapping("/cards")
@@ -320,7 +279,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}/account-activity")
-  private Page<AccountActivityResponse> getCarAccountActivity(
+  private PagedData<AccountActivityResponse> getCarAccountActivity(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -336,11 +295,14 @@ public class UserController {
       PageRequest pageRequest) {
     CurrentUser currentUser = CurrentUser.get();
 
-    return accountActivityService.getCardAccountActivity(
-        currentUser.businessId(),
-        currentUser.userId(),
-        cardId,
-        new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
+    Page<FilteredAccountActivityRecord> filteredAccountActivity =
+        accountActivityService.getCardAccountActivity(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
+
+    return PagedData.of(filteredAccountActivity, AccountActivityResponse::new);
   }
 
   @GetMapping("/account-activity/{accountActivityId}")

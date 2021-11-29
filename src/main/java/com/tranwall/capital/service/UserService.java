@@ -13,21 +13,16 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWi
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
-import com.tranwall.capital.service.type.PageToken;
+import com.tranwall.capital.data.repository.UserRepositoryCustom;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import javax.persistence.criteria.Predicate;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -146,53 +141,8 @@ public class UserService {
         businessId, userName, userName);
   }
 
-  public Page<User> getUserPage(
+  public Page<UserRepositoryCustom.FilteredUserWithCardListRecord> retrieveUserPage(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
-
-    PageToken pageToken = userFilterCriteria.getPageToken();
-
-    return userRepository.findAll(
-        getUserSpecifications(businessId, userFilterCriteria),
-        org.springframework.data.domain.PageRequest.of(
-            pageToken.getPageNumber(), pageToken.getPageSize()));
-  }
-
-  private Specification<User> getUserSpecifications(
-      TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
-    return (root, query, criteriaBuilder) -> {
-      List<Predicate> predicates = new ArrayList<>();
-      if (businessId != null) {
-        predicates.add(criteriaBuilder.equal(root.get("businessId"), businessId));
-      }
-      // TODO - What will be the search allowed fields .
-      //      if (criteria.getFirstName() != null) {
-      //        predicates.add(
-      //            criteriaBuilder.equal(
-      //                root.get("firstName"),
-      //                new RequiredEncryptedStringWithHash(criteria.getFirstName())));
-      //      }
-      //      if (criteria.getLastName() != null) {
-      //        predicates.add(
-      //            criteriaBuilder.equal(
-      //                root.get("lastName"), new
-
-      if (criteria.getPageToken() != null
-          && criteria.getPageToken().getOrderBy() != null
-          && !criteria.getPageToken().getOrderBy().isEmpty()) {
-
-        query.orderBy(
-            criteria.getPageToken().getOrderBy().stream()
-                .map(
-                    ord ->
-                        ord.getDirection() == Sort.Direction.ASC
-                            ? criteriaBuilder.asc(root.get(ord.getItem()))
-                            : criteriaBuilder.desc(root.get(ord.getItem())))
-                .collect(Collectors.toList()));
-      } else {
-        query.orderBy(criteriaBuilder.desc(root.get("id")));
-      }
-
-      return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-    };
+    return userRepository.find(businessId, userFilterCriteria);
   }
 }

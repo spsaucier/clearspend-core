@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.enums.UserType;
@@ -20,10 +21,12 @@ public class UserData {
   @NonNull
   private UserType type;
 
+  @Sensitive
   @JsonProperty("firstName")
   @NonNull
   private String firstName;
 
+  @Sensitive
   @JsonProperty("lastName")
   @NonNull
   private String lastName;

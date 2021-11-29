@@ -6,22 +6,24 @@ import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
+import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.type.PageToken;
+import java.io.IOException;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -40,8 +42,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired BusinessService businessService;
   @Autowired AccountService accountService;
   @Autowired AccountActivityRepository accountActivityRepository;
-  @Autowired AccountActivityService accountActivityService;
-  @Autowired AdjustmentService adjustmentService;
+  @Autowired NetworkMessageService networkMessageService;
 
   private Bin bin;
   private Program program;
@@ -59,13 +60,12 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
-    AdjustmentRecord adjustmentRecord =
-        businessBankAccountService.transactBankAccount(
-            createBusinessRecord.business().getId(),
-            businessBankAccountId,
-            BankAccountTransactType.DEPOSIT,
-            Amount.of(Currency.USD, new BigDecimal("1000")),
-            true);
+    businessBankAccountService.transactBankAccount(
+        createBusinessRecord.business().getId(),
+        businessBankAccountId,
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("1000")),
+        true);
 
     int count =
         accountActivityRepository.countByBusinessId(createBusinessRecord.business().getId());
@@ -76,8 +76,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void recordAccountActivityOnReallocationBusinessFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    final TypedId<AllocationId> rootAllocationId =
-        createBusinessRecord.allocationRecord().allocation().getId();
+    createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -110,12 +109,11 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(business.getId());
-    Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
+    accountService.retrieveRootAllocationAccount(
+        business.getId(),
+        business.getCurrency(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        false);
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -129,11 +127,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void retrieveLatestAccountActivity() {
+  void retrieveLatestAccountActivity() throws IOException {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    final TypedId<AllocationId> rootAllocationId =
-        createBusinessRecord.allocationRecord().allocation().getId();
+    createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -155,13 +152,33 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         BusinessReallocationType.ALLOCATION_TO_BUSINESS,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    Page<AccountActivityResponse> accountActivity =
-        accountActivityService.getFilteredAccountActivity(
+    UserService.CreateUpdateUserRecord user = testHelper.createUser(business);
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            program,
+            Currency.USD);
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(100));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            amount));
+
+    Page<FilteredAccountActivityRecord> accountActivity =
+        accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
-                null, null, null, null, null, null, new PageToken(0, 10, null)));
+                null, null, null, null, null, null, null, new PageToken(0, 10, null)));
 
-    assertThat(accountActivity).hasSize(2);
+    assertThat(accountActivity).hasSize(3);
   }
 
   @Test
@@ -170,13 +187,12 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
-    AdjustmentRecord adjustmentRecord =
-        businessBankAccountService.transactBankAccount(
-            business.getId(),
-            businessBankAccountId,
-            BankAccountTransactType.DEPOSIT,
-            Amount.of(Currency.USD, new BigDecimal("1000")),
-            false);
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccountId,
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("1000")),
+        false);
     Account account =
         accountService.retrieveRootAllocationAccount(
             business.getId(),
@@ -197,8 +213,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    Page<AccountActivityResponse> withdrawalFilteredAccountActivity =
-        accountActivityService.getFilteredAccountActivity(
+    Page<FilteredAccountActivityRecord> withdrawalFilteredAccountActivity =
+        accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
                 null,
@@ -207,18 +223,20 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 AccountActivityType.REALLOCATE,
                 null,
                 null,
+                null,
                 new PageToken(0, 10, null)));
 
     assertThat(withdrawalFilteredAccountActivity).hasSize(2);
 
-    Page<AccountActivityResponse> depositFilteredAccountActivity =
-        accountActivityService.getFilteredAccountActivity(
+    Page<FilteredAccountActivityRecord> depositFilteredAccountActivity =
+        accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
                 null,
                 null,
                 null,
                 AccountActivityType.BANK_DEPOSIT,
+                null,
                 null,
                 null,
                 new PageToken(0, 10, null)));

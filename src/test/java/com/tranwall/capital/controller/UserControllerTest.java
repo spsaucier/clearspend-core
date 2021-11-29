@@ -25,6 +25,7 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.NetworkMessageService;
@@ -33,7 +34,6 @@ import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +46,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
+// @Transactional
 public class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
@@ -116,7 +116,7 @@ public class UserControllerTest extends BaseCapitalTest {
         userService.retrieveUsersForBusiness(business.getId()).stream()
             .filter(u -> u.getType() == UserType.EMPLOYEE)
             .findAny()
-            .get();
+            .orElseThrow();
     Assertions.assertEquals(
         user.getId(),
         objectMapper
@@ -174,13 +174,55 @@ public class UserControllerTest extends BaseCapitalTest {
     log.info(response.getContentAsString());
   }
 
-  void bulkCreateUser() {}
+  @Test
+  @SneakyThrows
+  void bulkCreateUser() {
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    testHelper.createBusinessOwner(business.getId(), email, password);
 
-  void getUser() {}
+    Cookie authCookie = testHelper.login(email, password);
 
-  void currentUser() {}
+    testHelper.createAllocation(
+        business.getId(),
+        "allocationName",
+        createBusinessRecord.allocationRecord().allocation().getId());
 
-  void getUsersByUserName() {}
+    CreateUserRequest userRecord1 =
+        new CreateUserRequest(
+            faker.name().firstName(),
+            faker.name().lastName(),
+            new Address(testHelper.generateEntityAddress()),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true);
+    CreateUserRequest userRecord2 =
+        new CreateUserRequest(
+            faker.name().firstName(),
+            faker.name().lastName(),
+            new Address(testHelper.generateEntityAddress()),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true);
+
+    String body = objectMapper.writeValueAsString(List.of(userRecord1, userRecord2));
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/users/bulk")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    Assertions.assertEquals(
+        2, objectMapper.readValue(response.getContentAsString(), List.class).size());
+    log.info(response.getContentAsString());
+  }
 
   @SneakyThrows
   @Test
@@ -227,6 +269,10 @@ public class UserControllerTest extends BaseCapitalTest {
         objectMapper.readValue(response.getContentAsString(), List.class).size() > 0);
     log.info(response.getContentAsString());
   }
+
+  void currentUser() {}
+
+  void getUsersByUserName() {}
 
   void getUserCards() {}
 
@@ -348,9 +394,9 @@ public class UserControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
-    Assertions.assertEquals(
-        1,
-        objectMapper.readValue(responseFilteredByUserName.getContentAsString(), List.class).size());
+    Assertions.assertTrue(
+        objectMapper.readValue(responseFilteredByUserName.getContentAsString(), List.class).size()
+            > 0);
     log.info(responseFilteredByUserName.getContentAsString());
   }
 
@@ -363,31 +409,53 @@ public class UserControllerTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
-    testHelper.createAllocation(
-        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
+    AllocationService.AllocationRecord allocation =
+        testHelper.createAllocation(
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = testHelper.login(email, password);
 
-    userService.createUser(
-        business.getId(),
-        UserType.EMPLOYEE,
-        "First",
-        "Last",
-        testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
-    userService.createUser(
-        business.getId(),
-        UserType.EMPLOYEE,
-        "Name",
-        "Last",
-        testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user1.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setPageRequest(new PageRequest(0, 10));

@@ -11,7 +11,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface UserRepository
-    extends JpaRepository<User, TypedId<UserId>>, JpaSpecificationExecutor<User> {
+    extends JpaRepository<User, TypedId<UserId>>,
+        JpaSpecificationExecutor<User>,
+        UserRepositoryCustom {
 
   List<User> findByBusinessId(TypedId<BusinessId> businessId);
 

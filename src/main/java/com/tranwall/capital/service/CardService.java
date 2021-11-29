@@ -213,6 +213,10 @@ public class CardService {
         .toList();
   }
 
+  public List<Card> getCardsForUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
+    return cardRepository.findByBusinessIdAndUserId(businessId, userId);
+  }
+
   public UserCardRecord getUserCard(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> cardId) {
     Card card =
