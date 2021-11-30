@@ -1,5 +1,11 @@
 package com.tranwall.capital.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tranwall.capital.data.model.NetworkMessage;
 import com.tranwall.capital.data.repository.NetworkMessageRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
@@ -24,6 +30,14 @@ public class NetworkMessageService {
   private final AccountActivityService accountActivityService;
   private final AllocationService allocationService;
   private final CardService cardService;
+
+  public final ObjectMapper objectMapper =
+      new ObjectMapper()
+          .registerModule(new JavaTimeModule())
+          .registerModule(new Jdk8Module())
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
   @Transactional
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
@@ -56,6 +70,12 @@ public class NetworkMessageService {
             common.getMerchantAddress(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode());
+//      networkMessage.setRequest(common.getRequest());
+    try {
+      networkMessage.setRequest(objectMapper.writeValueAsString(common.getRequest()));
+    } catch (JsonProcessingException e) {
+      log.error("failed to serialize common.request", e);
+    }
 
     if (common.getCard() != null) {
       networkMessage.setCardId(common.getCard().getId());

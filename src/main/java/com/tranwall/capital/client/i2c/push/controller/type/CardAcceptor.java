@@ -53,7 +53,7 @@ public class CardAcceptor {
   public Country getMerchantCountry() {
     return merchantNameAndLocation == null || merchantNameAndLocation.length() < 43
         ? Country.UNSPECIFIED
-        : Country.of(merchantNameAndLocation.substring(41).trim());
+        : Country.of(merchantNameAndLocation.substring(40).trim());
   }
 
   @ApiModelProperty(value = "Merchant Category Code")
@@ -77,7 +77,7 @@ public class CardAcceptor {
           "Date and Time of the Device from which Transaction was Received "
               + "Date Format: YYYY-MM-DDTHH:MM:SS")
   @JsonProperty("LocalDateTime")
-  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-ddTHH:mm:ss")
+  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
   // TODO(kuchlein): is this the same as the date/time on Transaction?
   private OffsetDateTime localDateTime;
 }

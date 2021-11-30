@@ -479,10 +479,10 @@ public class TestDataController {
 
     String acquirerRef = RandomStringUtils.randomAlphanumeric(44);
     String merchantCode = RandomStringUtils.randomAlphanumeric(15);
-    String merchantNameAndLocation = "Merchant Name            Tucson       AZUSA";
+    String merchantNameAndLocation = "Merchant Name            Tucson85641  AZUSA";
     String merchantLocality = "Tucson";
     String merchantRegion = "AZ";
-    String merchantPostalCode = "USA";
+    String merchantPostalCode = "85641";
     Integer mcc = 6060;
     String deviceRef = RandomStringUtils.randomAlphanumeric(8);
     String deviceType = NetworkMessageDeviceType.POS.getI2cDeviceType();

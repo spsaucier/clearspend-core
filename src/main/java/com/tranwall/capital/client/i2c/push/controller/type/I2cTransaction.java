@@ -7,8 +7,10 @@ import java.time.LocalDate;
 import java.time.OffsetTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class I2cTransaction {
 

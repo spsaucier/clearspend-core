@@ -13,6 +13,7 @@ import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.NetworkMessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/non-production")
 @RequiredArgsConstructor
+@Slf4j
 public class NetworkMessageDemoController {
 
   private final AccountRepository accountRepository;
@@ -56,6 +58,8 @@ public class NetworkMessageDemoController {
                 account,
                 program,
                 request.getAmount().toAmount()));
+
+    log.info("networkMessage " + networkMessage);
 
     return new NetworkMessageResponse(networkMessage.getId());
   }

@@ -1,6 +1,5 @@
 package com.tranwall.capital.data.model;
 
-import com.tranwall.capital.client.i2c.push.controller.type.EventNotificationAdvanceRequest;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.ClearAddress;
 import com.tranwall.capital.common.data.model.TypedMutable;
@@ -13,6 +12,7 @@ import com.tranwall.capital.common.typedid.data.NetworkMessageId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
+import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -28,6 +28,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+import org.hibernate.annotations.TypeDefs;
 
 @Entity
 @Data
@@ -35,6 +37,7 @@ import org.hibernate.annotations.Type;
 @NoArgsConstructor
 @RequiredArgsConstructor
 @DynamicUpdate
+@TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
 @Slf4j
 public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
@@ -90,5 +93,6 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
-  private EventNotificationAdvanceRequest request;
+  private String request;
+//  private EventNotificationAdvanceRequest request;
 }
