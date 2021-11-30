@@ -1,20 +1,27 @@
 package com.tranwall.capital.client.i2c.request;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.client.i2c.Acquirer;
 import lombok.Builder;
+import lombok.NonNull;
 import lombok.Value;
 
 @Value
 @Builder
+@JsonInclude(Include.NON_NULL)
 public class AddCardRequest {
 
+  @NonNull
   @JsonProperty("acquirer")
   private Acquirer acquirer;
 
+  @NonNull
   @JsonProperty("card")
   private Card card;
 
+  @NonNull
   @JsonProperty("profile")
   private Profile profile;
 
@@ -22,12 +29,14 @@ public class AddCardRequest {
   @Builder
   public static class Card {
 
+    @NonNull
     @JsonProperty("startingNumbers")
     private String startingNumbers;
   }
 
   @Value
   @Builder
+  @JsonInclude(Include.NON_NULL)
   public static class Profile {
 
     @JsonProperty("firstName")
@@ -57,6 +66,7 @@ public class AddCardRequest {
     @JsonProperty("email")
     private String email;
 
+    @NonNull
     @JsonProperty("nameOnCard")
     private String nameOnCard;
   }
