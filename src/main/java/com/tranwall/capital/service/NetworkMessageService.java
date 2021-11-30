@@ -70,7 +70,7 @@ public class NetworkMessageService {
             common.getMerchantAddress(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode());
-//      networkMessage.setRequest(common.getRequest());
+    //      networkMessage.setRequest(common.getRequest());
     try {
       networkMessage.setRequest(objectMapper.writeValueAsString(common.getRequest()));
     } catch (JsonProcessingException e) {

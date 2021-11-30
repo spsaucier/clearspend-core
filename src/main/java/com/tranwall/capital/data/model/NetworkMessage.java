@@ -94,5 +94,5 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private String request;
-//  private EventNotificationAdvanceRequest request;
+  //  private EventNotificationAdvanceRequest request;
 }
