@@ -2,9 +2,16 @@ package com.tranwall.capital.controller.nonprod;
 
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.tranwall.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
+import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.NetworkMessage;
+import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.User;
+import com.tranwall.capital.data.repository.AccountRepository;
+import com.tranwall.capital.data.repository.CardRepository;
+import com.tranwall.capital.data.repository.ProgramRepository;
+import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.NetworkMessageService;
-import com.tranwall.capital.service.type.NetworkCommon;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
@@ -24,15 +31,31 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class NetworkMessageDemoController {
 
+  private final AccountRepository accountRepository;
+  private final CardRepository cardRepository;
+  private final ProgramRepository programRepository;
+  private final UserRepository userRepository;
+
   private final NetworkMessageService networkMessageService;
 
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
   private NetworkMessageResponse processNetworkMessage(
       @RequestBody @Validated NetworkMessageRequest request) {
+
+    Card card = cardRepository.findById(request.getCardId()).orElseThrow();
+    Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
+    User user = userRepository.findById(card.getUserId()).orElseThrow();
+    Program program = programRepository.findById(card.getProgramId()).orElseThrow();
+
     NetworkMessage networkMessage =
         networkMessageService.processNetworkMessage(
-            new NetworkCommon(
-                request.getRequest().getI2cTransaction(), request.getRequest().getI2cCard()));
+            TestDataController.generateNetworkCommon(
+                request.getNetworkMessageType(),
+                user,
+                card,
+                account,
+                program,
+                request.getAmount().toAmount()));
 
     return new NetworkMessageResponse(networkMessage.getId());
   }

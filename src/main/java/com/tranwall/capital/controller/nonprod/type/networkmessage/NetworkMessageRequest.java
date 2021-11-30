@@ -1,25 +1,21 @@
 package com.tranwall.capital.controller.nonprod.type.networkmessage;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.tranwall.capital.client.i2c.push.controller.type.EventNotificationAdvanceRequest;
+import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import lombok.Value;
 
 @Value
 public class NetworkMessageRequest {
 
-  @JsonProperty("cardNumber")
-  String cardNumber;
+  @JsonProperty("cardId")
+  TypedId<CardId> cardId;
 
-  @JsonProperty("mti")
-  String mti;
+  @JsonProperty("networkMessageType")
+  NetworkMessageType networkMessageType;
 
   @JsonProperty("amount")
   Amount amount;
-
-  @JsonProperty("merchantCategoryCode")
-  Integer merchantCategoryCode;
-
-  @JsonProperty("request")
-  EventNotificationAdvanceRequest request;
 }

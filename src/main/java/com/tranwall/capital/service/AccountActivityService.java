@@ -108,6 +108,7 @@ public class AccountActivityService {
             common.getNetworkMessageType().getAccountActivityType(),
             activityTime,
             amount);
+    accountActivity.setUserId(common.getCard().getUserId());
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
