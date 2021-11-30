@@ -550,12 +550,23 @@ public class TestDataController {
     String cardStatus = CardStatus.OPEN.getI2cCardStatus();
     String firstName = user.getFirstName().getEncrypted();
     String lastName = user.getLastName().getEncrypted();
-    String addressLine1 = user.getAddress().getStreetLine1().getEncrypted();
-    String addressLine2 = user.getAddress().getStreetLine2().getEncrypted();
-    String locality = user.getAddress().getLocality();
-    String region = user.getAddress().getRegion();
-    String postalCode = user.getAddress().getPostalCode().getEncrypted();
-    String country = user.getAddress().getCountry().name();
+    String addressLine1 = "";
+    String addressLine2 = "";
+    String locality = "";
+    String region = "";
+    String postalCode = "";
+    String country = "";
+    final Address address = user.getAddress();
+    if (address != null) {
+      addressLine1 =
+          address.getStreetLine1() != null ? address.getStreetLine1().getEncrypted() : "";
+      addressLine2 =
+          address.getStreetLine2() != null ? address.getStreetLine2().getEncrypted() : "";
+      locality = address.getLocality() != null ? address.getLocality() : "";
+      region = address.getRegion() != null ? address.getRegion() : "";
+      postalCode = address.getPostalCode() != null ? address.getPostalCode().getEncrypted() : "";
+      country = address.getCountry() != null ? address.getCountry().name() : "";
+    }
     String phone = user.getPhone().getEncrypted();
     String email = user.getEmail().getEncrypted();
     String sourceCardReferenceNumber = ""; // ""Type: AN 40";

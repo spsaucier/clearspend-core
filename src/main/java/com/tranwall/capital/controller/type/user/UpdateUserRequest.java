@@ -12,7 +12,6 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NonNull;
 
 @Data
 @AllArgsConstructor
@@ -20,7 +19,6 @@ public class UpdateUserRequest {
 
   @Sensitive
   @JsonProperty("firstName")
-  @NonNull
   @NotNull(message = "firstName required")
   @Schema(title = "The first name of the person", required = true, example = "John")
   @Size(max = 100, message = "The first name should not be more than 100 characters.")
@@ -28,7 +26,6 @@ public class UpdateUserRequest {
 
   @Sensitive
   @JsonProperty("lastName")
-  @NonNull
   @NotNull(message = "lastName required")
   @Schema(title = "The last name of the person", required = true, example = "Wick")
   @Size(max = 100, message = "The last name should not be more than 100 characters.")
@@ -38,7 +35,6 @@ public class UpdateUserRequest {
 
   @Sensitive
   @JsonProperty("email")
-  @NonNull
   @NotNull(message = "email required")
   @Schema(title = "Email address of the person", required = true, example = "johnw@hightable.com")
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
