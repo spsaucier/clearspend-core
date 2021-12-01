@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -61,7 +62,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
       builder.where("allocation.id").eq(criteria.getAllocationId());
     }
 
-    if (criteria.getSearchText() != null) {
+    if (StringUtils.isNotEmpty(criteria.getSearchText())) {
       byte[] encryptedValue = HashUtil.calculateHash(criteria.getSearchText());
       builder
           .whereOr()
