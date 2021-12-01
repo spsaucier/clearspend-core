@@ -74,8 +74,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                     new FilteredUserWithCardListRecord(user, cardsGroupByUserId.get(user.getId())))
             .collect(Collectors.toList()),
         PageRequest.of(
-            paged.getPage(),
-            paged.getSize() == 0 ? criteria.getPageToken().getPageSize() : paged.getSize()),
+            criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
         paged.getTotalSize());
   }
 }

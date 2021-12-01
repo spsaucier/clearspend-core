@@ -26,15 +26,15 @@ public class UserPageData {
 
   @JsonProperty("cardInfoList")
   @NonNull
-  private List<String> cardNumberList;
+  private List<CardInfo> cardInfoList;
 
   public UserPageData(User user, List<Card> cards) {
     this.userData = new UserData(user);
     this.email = user.getEmail().getEncrypted();
-    this.cardNumberList =
+    this.cardInfoList =
         cards != null
             ? cards.stream()
-                .map(card -> card.getCardNumber().getEncrypted())
+                .map(card -> new CardInfo(card.getId(), card.getLastFour()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
   }

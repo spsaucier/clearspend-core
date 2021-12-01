@@ -104,8 +104,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                         tuple.get(0, AccountActivity.class), tuple.get(1, Card.class)))
             .collect(Collectors.toList()),
         PageRequest.of(
-            paged.getPage(),
-            paged.getSize() == 0 ? criteria.getPageToken().getPageSize() : paged.getSize()),
+            criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
         paged.getTotalSize());
   }
 }
