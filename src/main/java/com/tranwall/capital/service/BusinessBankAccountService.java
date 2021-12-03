@@ -101,8 +101,7 @@ public class BusinessBankAccountService {
         ownersResponse.accounts().stream()
             .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
 
-    List<BusinessOwner> owners =
-        businessOwnerService.findBusinessOwnerByBusinessId(businessId);
+    List<BusinessOwner> owners = businessOwnerService.findBusinessOwnerByBusinessId(businessId);
 
     List<BusinessBankAccount> newAccounts =
         accountsResponse.achList().stream()

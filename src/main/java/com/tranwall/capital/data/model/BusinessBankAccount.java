@@ -35,21 +35,11 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @Sensitive
-  private String name;
+  @Sensitive private String name;
 
-  @NonNull
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedStringWithHash routingNumber;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
 
-  @NonNull
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedStringWithHash accountNumber;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
 
-  @NonNull
-  @Sensitive
-  @Embedded
-  private RequiredEncryptedStringWithHash accessToken;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
 }

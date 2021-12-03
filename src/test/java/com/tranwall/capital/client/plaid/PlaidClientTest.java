@@ -30,8 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 class PlaidClientTest extends BaseCapitalTest {
 
-  @Autowired
-  private PlaidClient underTest;
+  @Autowired private PlaidClient underTest;
 
   @Test
   void getAccounts() throws IOException {
@@ -77,11 +76,11 @@ class PlaidClientTest extends BaseCapitalTest {
   }
 
   /**
-   * <p>This method was used to dump out the accounts in the sandbox for banks referenced in their
+   * This method was used to dump out the accounts in the sandbox for banks referenced in their
    * sandbox documentation, so that we would have a list of information we would be checking
-   * against.</p>
+   * against.
    *
-   * <p>By exercising every bank in their test set, it revealed some subtle issues in API coding.</p>
+   * <p>By exercising every bank in their test set, it revealed some subtle issues in API coding.
    */
   @Test
   void getAllOwners() throws PlaidClientException {
@@ -111,26 +110,28 @@ class PlaidClientTest extends BaseCapitalTest {
                         accountIdentity
                             .getOwners()
                             .forEach(
-                                owner -> owner.getAddresses().stream()
-                                    .map(Address::getData)
-                                    .forEach(
-                                        address -> rows.add(
-                                            Arrays.asList(
-                                                institution.name(),
-                                                accountIdentity.getName(),
-                                                accountIdentity.getOfficialName(),
-                                                accountIdentity.getType().toString(),
-                                                accountIdentity.getMask(),
-                                                owner.getNames().toString(),
-                                                address.getStreet(),
-                                                address.getCity(),
-                                                address.getRegion(),
-                                                address.getPostalCode(),
-                                                address.getCountry())))));
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            });
+                                owner ->
+                                    owner.getAddresses().stream()
+                                        .map(Address::getData)
+                                        .forEach(
+                                            address ->
+                                                rows.add(
+                                                    Arrays.asList(
+                                                        institution.name(),
+                                                        accountIdentity.getName(),
+                                                        accountIdentity.getOfficialName(),
+                                                        accountIdentity.getType().toString(),
+                                                        accountIdentity.getMask(),
+                                                        owner.getNames().toString(),
+                                                        address.getStreet(),
+                                                        address.getCity(),
+                                                        address.getRegion(),
+                                                        address.getPostalCode(),
+                                                        address.getCountry())))));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        });
     Set<String> uniqueCells = rows.stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
     // Just a few basic assertions to show items that are validated
