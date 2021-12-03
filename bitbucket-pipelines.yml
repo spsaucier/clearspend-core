@@ -1,11 +1,25 @@
 #  Template Java Gradle build
 
 #  This template allows you to test and build your Java project with Gradle.
-#  The workflow allows running tests, code checkstyle and security scans on the default branch.
+#  The workflow allows running tests, code checkstyle and security scans on
+#  the default branch.
 
 # Prerequisites: appropriate project structure should exist in the repository.
-
+---
 pipelines:
+  default:
+    - step:
+        name: Build and test application
+        image: openjdk:17-jdk-alpine3.13
+        artifacts:
+          - build/libs/*.jar
+        caches:
+          - gradle
+        services:
+          - docker
+          - postgres
+        script:
+          - ./gradlew build
   branches:
     master:
       - step:
@@ -56,4 +70,3 @@ definitions:
         POSTGRES_DB: 'capital'
         POSTGRES_USER: 'postgres'
         POSTGRES_PASSWORD: 'docker'
-
