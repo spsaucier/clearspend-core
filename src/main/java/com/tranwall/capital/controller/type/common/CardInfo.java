@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller.type.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,14 @@ public class CardInfo {
   @JsonProperty("allocationName")
   @NonNull
   private String allocationName;
+
+  @Sensitive
+  @JsonProperty("ownerFirstName")
+  @NonNull
+  private String ownerFirstName;
+
+  @Sensitive
+  @JsonProperty("ownerLastName")
+  @NonNull
+  private String ownerLastName;
 }

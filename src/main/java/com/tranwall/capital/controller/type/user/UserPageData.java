@@ -38,7 +38,11 @@ public class UserPageData {
                 .map(
                     card ->
                         new CardInfo(
-                            card.card().getId(), card.card().getLastFour(), card.allocationName()))
+                            card.card().getId(),
+                            card.card().getLastFour(),
+                            card.allocationName(),
+                            user.getFirstName().getEncrypted(),
+                            user.getLastName().getEncrypted()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
   }
