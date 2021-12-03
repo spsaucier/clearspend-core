@@ -10,6 +10,7 @@ import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Card;
@@ -20,7 +21,6 @@ import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.type.PageToken;
 import java.io.IOException;
@@ -76,7 +76,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void recordAccountActivityOnReallocationBusinessFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -130,7 +129,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void retrieveLatestAccountActivity() throws IOException {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    createBusinessRecord.allocationRecord().allocation().getId();
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -172,7 +170,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             program,
             amount));
 
-    Page<FilteredAccountActivityRecord> accountActivity =
+    Page<AccountActivity> accountActivity =
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
@@ -213,7 +211,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    Page<FilteredAccountActivityRecord> withdrawalFilteredAccountActivity =
+    Page<AccountActivity> withdrawalFilteredAccountActivity =
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
@@ -228,7 +226,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     assertThat(withdrawalFilteredAccountActivity).hasSize(2);
 
-    Page<FilteredAccountActivityRecord> depositFilteredAccountActivity =
+    Page<AccountActivity> depositFilteredAccountActivity =
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(

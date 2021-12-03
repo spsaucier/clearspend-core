@@ -2,8 +2,9 @@ package com.tranwall.capital.controller.type.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.masking.annotation.Sensitive;
-import com.tranwall.capital.data.model.Card;
+import com.tranwall.capital.controller.type.common.CardInfo;
 import com.tranwall.capital.data.model.User;
+import com.tranwall.capital.data.repository.impl.UserRepositoryImpl;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,13 +29,16 @@ public class UserPageData {
   @NonNull
   private List<CardInfo> cardInfoList;
 
-  public UserPageData(User user, List<Card> cards) {
+  public UserPageData(User user, List<UserRepositoryImpl.CardAndAllocationName> cards) {
     this.userData = new UserData(user);
     this.email = user.getEmail().getEncrypted();
     this.cardInfoList =
         cards != null
             ? cards.stream()
-                .map(card -> new CardInfo(card.getId(), card.getLastFour()))
+                .map(
+                    card ->
+                        new CardInfo(
+                            card.card().getId(), card.card().getLastFour(), card.allocationName()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
   }

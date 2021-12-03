@@ -24,10 +24,10 @@ import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
 import com.tranwall.capital.controller.type.user.UserPageData;
+import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.UserType;
-import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import com.tranwall.capital.service.BusinessOwnerService;
@@ -295,14 +295,14 @@ public class UserController {
       PageRequest pageRequest) {
     CurrentUser currentUser = CurrentUser.get();
 
-    Page<FilteredAccountActivityRecord> filteredAccountActivity =
+    Page<AccountActivity> accountActivity =
         accountActivityService.getCardAccountActivity(
             currentUser.businessId(),
             currentUser.userId(),
             cardId,
             new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
 
-    return PagedData.of(filteredAccountActivity, AccountActivityResponse::new);
+    return PagedData.of(accountActivity, AccountActivityResponse::new);
   }
 
   @GetMapping("/account-activity/{accountActivityId}")

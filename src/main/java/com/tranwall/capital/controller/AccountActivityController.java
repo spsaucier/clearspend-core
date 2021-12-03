@@ -10,7 +10,6 @@ import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,7 +35,7 @@ public class AccountActivityController {
   @PostMapping("")
   private PagedData<AccountActivityResponse> retrieveAccountActivityPage(
       @Validated @RequestBody AccountActivityRequest request) {
-    Page<FilteredAccountActivityRecord> filteredAccountActivity =
+    Page<AccountActivity> accountActivities =
         accountActivityRepository.find(
             CurrentUser.get().businessId(),
             new AccountActivityFilterCriteria(
@@ -49,7 +48,7 @@ public class AccountActivityController {
                 request.getTo(),
                 PageRequest.toPageToken(request.getPageRequest())));
 
-    return PagedData.of(filteredAccountActivity, AccountActivityResponse::new);
+    return PagedData.of(accountActivities, AccountActivityResponse::new);
   }
 
   @GetMapping("/{accountActivityId}")

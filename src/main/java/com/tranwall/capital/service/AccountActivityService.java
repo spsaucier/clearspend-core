@@ -16,11 +16,11 @@ import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Hold;
+import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.MerchantType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom.FilteredAccountActivityRecord;
 import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.type.NetworkCommon;
 import java.time.OffsetDateTime;
@@ -40,6 +40,8 @@ public class AccountActivityService {
   private final AccountActivityRepository accountActivityRepository;
 
   private final CardService cardService;
+
+  private final UserService userService;
 
   @Transactional(TxType.REQUIRED)
   public AccountActivity recordBankAccountAccountActivity(
@@ -115,8 +117,13 @@ public class AccountActivityService {
             MerchantType.OTHERS,
             common.getMerchantNumber(),
             common.getMerchantCategoryCode()));
+    User cardOwner = userService.retrieveUser(common.getCard().getUserId());
     accountActivity.setCard(
-        new com.tranwall.capital.data.model.embedded.CardDetails(common.getCard().getId()));
+        new com.tranwall.capital.data.model.embedded.CardDetails(
+            common.getCard().getId(),
+            common.getCard().getLastFour(),
+            cardOwner.getFirstName(),
+            cardOwner.getLastName()));
     if (adjustment != null) {
       accountActivity.setAdjustmentId(adjustment.getId());
     }
@@ -144,7 +151,7 @@ public class AccountActivityService {
     return accountActivityRepository.getById(accountActivityId);
   }
 
-  public Page<FilteredAccountActivityRecord> getCardAccountActivity(
+  public Page<AccountActivity> getCardAccountActivity(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<CardId> cardId,

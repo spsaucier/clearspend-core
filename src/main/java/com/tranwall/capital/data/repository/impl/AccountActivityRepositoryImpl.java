@@ -6,17 +6,14 @@ import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.PaginatedCriteriaBuilder;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
-import com.tranwall.capital.crypto.HashUtil;
-import com.tranwall.capital.crypto.data.ByteString;
 import com.tranwall.capital.data.model.AccountActivity;
-import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.type.PageToken;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 import javax.persistence.EntityManager;
-import javax.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -30,79 +27,70 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   private final CriteriaBuilderFactory creCriteriaBuilderFactory;
 
   @Override
-  public Page<FilteredAccountActivityRecord> find(
+  public Page<AccountActivity> find(
       TypedId<BusinessId> businessId, AccountActivityFilterCriteria criteria) {
     // query
-    CriteriaBuilder<Tuple> criteriaBuilder =
-        creCriteriaBuilderFactory.create(entityManager, Tuple.class);
-
-    CriteriaBuilder<Tuple> select =
-        criteriaBuilder
-            .from(AccountActivity.class, "a")
-            .leftJoinOn(Card.class, "c")
-            .on("a.card")
-            .eqExpression("c")
-            .end()
-            .select("a")
-            .select("c");
+    CriteriaBuilder<AccountActivity> select =
+        creCriteriaBuilderFactory
+            .create(entityManager, AccountActivity.class, "accountActivity")
+            .select("accountActivity");
 
     if (businessId != null) {
-      select.where("a.businessId").eqLiteral(businessId);
+      select.where("accountActivity.businessId").eqLiteral(businessId);
     }
     if (criteria.getUserId() != null) {
-      select.where("a.userId").eqLiteral(criteria.getUserId());
+      select.where("accountActivity.userId").eqLiteral(criteria.getUserId());
     }
     if (criteria.getAllocationId() != null) {
-      select.where("a.allocationId").eqLiteral(criteria.getAllocationId());
+      select.where("accountActivity.allocationId").eqLiteral(criteria.getAllocationId());
     }
     if (criteria.getCardId() != null) {
-      select.where("a.card.cardId").eqLiteral(criteria.getCardId());
+      select.where("accountActivity.card.cardId").eqLiteral(criteria.getCardId());
     }
     if (criteria.getType() != null) {
-      select.where("a.type").eqLiteral(criteria.getType());
+      select.where("accountActivity.type").eqLiteral(criteria.getType());
     }
     if (criteria.getFrom() != null || criteria.getTo() != null) {
-      select.where("a.activityTime").between(criteria.getFrom()).and(criteria.getTo());
+      select
+          .where("accountActivity.activityTime")
+          .between(criteria.getFrom())
+          .and(criteria.getTo());
     }
 
-    if (criteria.getSearchText() != null) {
-      ByteString byteString = HashUtil.normalizedHash(criteria.getSearchText());
+    String searchText = criteria.getSearchText();
+    if (StringUtils.isNotEmpty(searchText)) {
+      String likeSearchString = "%" + searchText + "%";
       select
           .whereOr()
-          .where("c.cardNumber")
+          .where("accountActivity.card.lastFour")
           .like()
-          .literal(byteString)
+          .value(likeSearchString)
           .noEscape()
-          .where("a.merchant.name")
-          .like(false)
-          .value(criteria.getSearchText())
-          .noEscape()
-          .where("a.amount.amount")
+          .where("accountActivity.merchant.name")
           .like()
-          .value(criteria.getSearchText())
+          .value(likeSearchString)
           .noEscape()
-          .where("a.activityTime")
+          .where("CAST_STRING(accountActivity.amount.amount)")
           .like()
-          .value(criteria.getSearchText())
+          .value(likeSearchString)
+          .noEscape()
+          .where("CAST_STRING(accountActivity.activityTime)")
+          .like()
+          .value(likeSearchString)
           .noEscape()
           .endOr();
     }
 
-    select.orderByAsc("a.id");
+    select.orderByAsc("accountActivity.id");
 
     PageToken pageToken = criteria.getPageToken();
     int maxResults = pageToken.getPageSize();
     int firstResult = pageToken.getPageNumber() * maxResults;
-    PaginatedCriteriaBuilder<Tuple> page = select.page(firstResult, maxResults);
-    PagedList<Tuple> paged = page.getResultList();
+    PaginatedCriteriaBuilder<AccountActivity> page = select.page(firstResult, maxResults);
+    PagedList<AccountActivity> paged = page.getResultList();
 
     return new PageImpl<>(
-        paged.stream()
-            .map(
-                tuple ->
-                    new FilteredAccountActivityRecord(
-                        tuple.get(0, AccountActivity.class), tuple.get(1, Card.class)))
-            .collect(Collectors.toList()),
+        new ArrayList<>(paged),
         PageRequest.of(
             criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
         paged.getTotalSize());

@@ -8,6 +8,7 @@ import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.repository.UserRepositoryCustom;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
+import javax.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -29,6 +31,8 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory creCriteriaBuilderFactory;
+
+  public record CardAndAllocationName(Card card, String allocationName) {}
 
   @Override
   public Page<FilteredUserWithCardListRecord> find(
@@ -56,16 +60,28 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
         paged.stream().map(TypedMutable::getId).collect(Collectors.toList());
 
     // query
-    Map<TypedId<UserId>, List<Card>> cardsGroupByUserId =
+    Map<TypedId<UserId>, List<CardAndAllocationName>> cardsGroupByUserId =
         creCriteriaBuilderFactory
-            .create(entityManager, Card.class)
+            .create(entityManager, Tuple.class)
             .from(Card.class, "card")
+            .leftJoinOn(Allocation.class, "allocation")
+            .on("card.allocationId")
+            .eqExpression("allocation")
+            .end()
             .select("card")
+            .select("allocation.name")
             .where("card.userId")
             .in(listOfUserId)
             .getResultList()
             .stream()
-            .collect(Collectors.groupingBy(Card::getUserId));
+            .map(
+                tuple -> {
+                  Card card = (Card) tuple.get(0);
+                  return new CardAndAllocationName(card, tuple.get(1).toString());
+                })
+            .collect(
+                Collectors.groupingBy(
+                    cardAndAllocationName -> cardAndAllocationName.card.getUserId()));
 
     return new PageImpl<>(
         paged.stream()
