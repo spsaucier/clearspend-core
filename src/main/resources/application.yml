@@ -1,4 +1,9 @@
 spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
   datasource:
     url: jdbc:postgresql://localhost:5432/capital
     username: ${PGUSER:postgres}
@@ -63,6 +68,9 @@ client:
     business:
       token: ylU99zgb9lI8EtVfHzYWmGBEWqqYHUdX
       secret: oLvy6KLi7I0kAcIYsc4RpsYfoSVBdx4s
+    document:
+      token: GGNSWsFr2Tm86QIMi37gzKpZ0sFfxUqZ
+      secret: c7ZbBLm5mHdqhrAGbaYfAdxrbhG815oE
   fusionauth:
     api-key: ${FUSIONAUTH_API_KEY:TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx}
     base-url: ${FUSIONAUTH_BASE_URL:http://localhost:9011}

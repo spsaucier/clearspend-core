@@ -7,17 +7,17 @@ import lombok.Value;
 public class Required {
 
   @JsonProperty("key")
-  private String key;
+  String key;
 
   @JsonProperty("type")
-  private String type;
+  String type;
 
   @JsonProperty("description")
-  private String description;
+  String description;
 
   @JsonProperty("regex")
-  private String regex;
+  String regex;
 
   @JsonProperty("message")
-  private String message;
+  String message;
 }

@@ -5,9 +5,12 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.tranwall.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
+import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
+import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
+import com.tranwall.capital.data.model.enums.KnowYourCustomerStatus;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -56,6 +59,11 @@ public class BusinessOwnerController {
           TypedId<BusinessOwnerId> businessOwnerId,
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
+    Business business =
+        businessService.retrieveBusiness(
+            businessOwnerService.retrieveBusinessOwner(businessOwnerId).getBusinessId());
+    String alloyGroup = business.getLegalName().replaceAll(" ", "") + business.getBusinessPhone();
+
     BusinessOwner businessOwner =
         businessOwnerService.updateBusinessOwner(
             businessOwnerId,
@@ -64,13 +72,28 @@ public class BusinessOwnerController {
             request.getEmail(),
             request.getTaxIdentificationNumber(),
             request.getDateOfBirth(),
-            request.getAddress().toAddress());
+            request.getAddress().toAddress(),
+            alloyGroup);
 
-    if (request.isOnboarding()) {
+    if (businessOwner.getKnowYourCustomerStatus() == KnowYourCustomerStatus.FAIL) {
+      businessService.updateBusiness(
+          businessOwner.getBusinessId(),
+          BusinessStatus.CLOSED,
+          BusinessOnboardingStep.COMPLETE,
+          null);
+    } else if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.REVIEW
+        || businessOwner.getKnowYourCustomerStatus() == KnowYourCustomerStatus.REVIEW) {
+      businessService.updateBusiness(
+          businessOwner.getBusinessId(),
+          business.getStatus(),
+          BusinessOnboardingStep.SOFT_FAIL,
+          null);
+    } else if (request.isOnboarding()) {
       businessService.updateBusiness(
           businessOwner.getBusinessId(),
           BusinessStatus.ONBOARDING,
-          BusinessOnboardingStep.LINK_ACCOUNT);
+          BusinessOnboardingStep.LINK_ACCOUNT,
+          null);
     }
   }
 }

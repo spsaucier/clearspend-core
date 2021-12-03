@@ -11,13 +11,16 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.tranwall.capital.data.model.Alloy;
 import com.tranwall.capital.data.model.BusinessOwner;
+import com.tranwall.capital.data.model.enums.AlloyTokenType;
 import com.tranwall.capital.data.model.enums.BusinessOwnerStatus;
 import com.tranwall.capital.data.model.enums.BusinessOwnerType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.KnowYourCustomerStatus;
 import com.tranwall.capital.data.model.enums.RelationshipToBusiness;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -36,6 +39,8 @@ public class BusinessOwnerService {
   private final TwilioService twilioService;
 
   private final BusinessOwnerRepository businessOwnerRepository;
+
+  private final AlloyRepository alloyRepository;
 
   private final UserService userService;
 
@@ -96,6 +101,22 @@ public class BusinessOwnerService {
   }
 
   @Transactional
+  public BusinessOwner updateBusinessOwnerStatus(
+      TypedId<BusinessOwnerId> businessOwnerId, KnowYourCustomerStatus KnowYourCustomerStatus) {
+
+    BusinessOwner businessOwner =
+        businessOwnerRepository
+            .findById(businessOwnerId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
+
+    if (KnowYourCustomerStatus != null) {
+      businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus);
+    }
+
+    return businessOwnerRepository.save(businessOwner);
+  }
+
+  @Transactional
   public BusinessOwner updateBusinessOwner(
       TypedId<BusinessOwnerId> businessOwnerId,
       String firstName,
@@ -103,7 +124,8 @@ public class BusinessOwnerService {
       String email,
       String taxIdentificationNumber,
       LocalDate dateOfBirth,
-      Address address) {
+      Address address,
+      String alloyGroup) {
 
     BusinessOwner businessOwner =
         businessOwnerRepository
@@ -130,14 +152,34 @@ public class BusinessOwnerService {
       businessOwner.setAddress(address);
     }
 
-    KycEvaluationResponse kycEvaluationResponse = alloyClient.onboardIndividual(businessOwner);
+    KycEvaluationResponse kycEvaluationResponse =
+        alloyClient.onboardIndividual(businessOwner, alloyGroup);
     businessOwner.setKnowYourCustomerStatus(kycEvaluationResponse.status());
+
+    if (kycEvaluationResponse.status() == KnowYourCustomerStatus.REVIEW) {
+      Alloy alloy =
+          new Alloy(
+              null,
+              businessOwnerId,
+              AlloyTokenType.BUSINESS_OWNER,
+              kycEvaluationResponse.entityToken());
+      alloyRepository.save(alloy);
+    }
 
     switch (kycEvaluationResponse.status()) {
       case FAIL -> twilioService.sendKybKycFailEmail(
           businessOwner.getEmail().getEncrypted(),
           businessOwner.getFirstName().getEncrypted(),
           kycEvaluationResponse.reasons());
+      case REVIEW -> {
+        Alloy alloy =
+            new Alloy(
+                null,
+                businessOwnerId,
+                AlloyTokenType.BUSINESS_OWNER,
+                kycEvaluationResponse.entityToken());
+        alloyRepository.save(alloy);
+      }
       case PASS -> twilioService.sendKybKycPassEmail(
           businessOwner.getEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
     }

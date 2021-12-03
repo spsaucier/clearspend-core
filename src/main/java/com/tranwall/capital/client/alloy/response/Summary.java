@@ -11,21 +11,21 @@ import lombok.Value;
 public class Summary {
 
   @JsonProperty("result")
-  private String result;
+  String result;
 
   @JsonProperty("score")
-  private Double score;
+  Double score;
 
   @JsonProperty("tags")
-  private List<String> tags;
+  List<String> tags;
 
   @JsonProperty("outcome_reasons")
-  private List<String> outcomeReasons;
+  List<String> outcomeReasons;
 
   @JsonProperty("outcome")
-  private String outcome;
+  String outcome;
 
-  private final Map<String, Object> additionalInfo = new HashMap<>();
+  Map<String, Object> additionalInfo = new HashMap<>();
 
   @JsonAnySetter
   public void addAdditionalInfo(String key, Object value) {

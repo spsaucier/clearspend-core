@@ -11,36 +11,36 @@ import lombok.Value;
 public class OnboardResponse {
 
   @JsonProperty("status_code")
-  private Integer statusCode;
+  Integer statusCode;
 
   @JsonProperty("error")
-  private String error;
+  String error;
 
   @JsonProperty("timestamp")
-  private Long timestamp;
+  Long timestamp;
 
   @JsonProperty("evaluation_token")
-  private String evaluationToken;
+  String evaluationToken;
 
   @JsonProperty("entity_token")
-  private String entityToken;
+  String entityToken;
 
   @JsonProperty("parent_entity_token")
-  private String parentEntityToken;
+  String parentEntityToken;
 
   @JsonProperty("application_token")
-  private String applicationToken;
+  String applicationToken;
 
   @JsonProperty("application_version_id")
-  private Integer applicationVersionId;
+  Integer applicationVersionId;
 
   @JsonProperty("summary")
-  private Summary summary;
+  Summary summary;
 
   @JsonProperty("required")
-  private List<Required> required;
+  List<Required> required;
 
-  private final Map<String, Object> additionalInfo = new HashMap<>();
+  Map<String, Object> additionalInfo = new HashMap<>();
 
   @JsonAnySetter
   public void addAdditionalInfo(String key, Object value) {

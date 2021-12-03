@@ -50,7 +50,7 @@ public class CreateOrUpdateBusinessOwnerRequest {
       title = "The tax identification number of the person",
       required = true,
       example = "091827364")
-  @Size(max = 10, message = "The email should not be more than 10 characters.")
+  @Size(max = 10, message = "The taxIdentificationNumber should not be more than 10 characters.")
   private String taxIdentificationNumber;
 
   @Sensitive

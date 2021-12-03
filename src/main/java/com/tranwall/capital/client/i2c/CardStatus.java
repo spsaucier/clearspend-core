@@ -12,8 +12,8 @@ public class CardStatus {
 
   @JsonProperty("code")
   @JsonDeserialize(using = CardStatusCodeDeserializer.class)
-  private CardStatusCode code;
+  CardStatusCode code;
 
   @JsonProperty("description")
-  private String description;
+  String description;
 }

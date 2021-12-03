@@ -75,6 +75,23 @@ public class WebclientConfiguration {
   }
 
   @Bean
+  WebClient alloyDocumentWebClient(
+      @Value("${client.alloy.url}") String url,
+      @Value("${client.alloy.document.token}") String token,
+      @Value("${client.alloy.document.secret}") String secret) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl(url)
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(token, secret);
+              headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            })
+        .build();
+  }
+
+  @Bean
   WebClient i2CWebClient(@Value("${client.i2c.url}") String url) {
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())

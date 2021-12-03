@@ -58,7 +58,7 @@ public class BusinessBankAccountController {
     // TODO: might need to be changed if it is possible to link a bank account outside of the
     // onboarding process
     businessService.updateBusiness(
-        businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY);
+        businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY, null);
 
     return bankAccounts;
   }
@@ -104,7 +104,7 @@ public class BusinessBankAccountController {
 
     if (request.isOnboarding()) {
       businessService.updateBusiness(
-          businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE);
+          businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
     }
 
     return new CreateAdjustmentResponse(adjustmentRecord.adjustment().getId());

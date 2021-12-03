@@ -1,6 +1,7 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.client.alloy.AlloyClient;
+import com.tranwall.capital.client.alloy.AlloyClient.KybEvaluationResponse;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.ClearAddress;
@@ -14,7 +15,9 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.Alloy;
 import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.enums.AlloyTokenType;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
@@ -22,6 +25,7 @@ import com.tranwall.capital.data.model.enums.BusinessStatusReason;
 import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
+import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -41,6 +45,7 @@ public class BusinessService {
   public static final String DEFAULT_PROGRAM_ID = "6faf3838-b2d7-422c-8d6f-c2294ebc73b4";
   private final BusinessRepository businessRepository;
   private final ProgramRepository programRepository;
+  private final AlloyRepository alloyRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
@@ -82,7 +87,18 @@ public class BusinessService {
     business.setBusinessEmail(new RequiredEncryptedString(email));
     business.setBusinessPhone(new RequiredEncryptedString(phone));
 
-    business.setKnowYourBusinessStatus(alloyClient.onboardBusiness(business).status());
+    KybEvaluationResponse kybEvaluationResponse = alloyClient.onboardBusiness(business);
+    business.setKnowYourBusinessStatus(kybEvaluationResponse.status());
+
+    if (kybEvaluationResponse.status() == KnowYourBusinessStatus.REVIEW) {
+      Alloy alloy =
+          new Alloy(businessId, null, AlloyTokenType.BUSINESS, kybEvaluationResponse.entityToken());
+      alloyRepository.save(alloy);
+    }
+
+    if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.FAIL) {
+      business.setStatus(BusinessStatus.CLOSED);
+    }
 
     business = businessRepository.save(business);
 
@@ -99,7 +115,8 @@ public class BusinessService {
   public Business updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,
-      BusinessOnboardingStep onboardingStep) {
+      BusinessOnboardingStep onboardingStep,
+      KnowYourBusinessStatus knowYourBusinessStatus) {
     Business business =
         businessRepository
             .findById(businessId)
@@ -111,6 +128,10 @@ public class BusinessService {
 
     if (status != null) {
       business.setStatus(status);
+    }
+
+    if (knowYourBusinessStatus != null) {
+      business.setKnowYourBusinessStatus(knowYourBusinessStatus);
     }
 
     return businessRepository.save(business);

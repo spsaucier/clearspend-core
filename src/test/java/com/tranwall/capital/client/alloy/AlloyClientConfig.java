@@ -13,15 +13,15 @@ public class AlloyClientConfig {
 
   @Bean
   public AlloyClient alloyClient() {
-    return new AlloyClient(null, null) {
+    return new AlloyClient(null, null, null) {
       @Override
-      public KycEvaluationResponse onboardIndividual(BusinessOwner owner) {
-        return new KycEvaluationResponse(KnowYourCustomerStatus.PASS, Collections.emptyList());
+      public KycEvaluationResponse onboardIndividual(BusinessOwner owner, String alloyGroup) {
+        return new KycEvaluationResponse("", KnowYourCustomerStatus.PASS, Collections.emptyList());
       }
 
       @Override
       public KybEvaluationResponse onboardBusiness(Business business) {
-        return new KybEvaluationResponse(KnowYourBusinessStatus.PASS, Collections.emptyList());
+        return new KybEvaluationResponse("", KnowYourBusinessStatus.PASS, Collections.emptyList());
       }
     };
   }

@@ -23,6 +23,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/business-prospects/*/phone",
             "/business-prospects/*/validate-identifier",
             "/i2c/push/**",
+            "/manual-review/alloy/web-hook",
             "/non-production/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
