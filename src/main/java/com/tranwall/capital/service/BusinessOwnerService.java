@@ -24,6 +24,7 @@ import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -189,5 +190,9 @@ public class BusinessOwnerService {
 
   public Optional<BusinessOwner> retrieveBusinessOwnerBySubjectRef(String subjectRef) {
     return businessOwnerRepository.findBySubjectRef(subjectRef);
+  }
+
+  public List<BusinessOwner> findBusinessOwnerByBusinessId(TypedId<BusinessId> businessIdTypedId) {
+    return businessOwnerRepository.findByBusinessId(businessIdTypedId);
   }
 }
