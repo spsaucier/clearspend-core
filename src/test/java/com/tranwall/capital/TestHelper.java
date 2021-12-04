@@ -81,6 +81,7 @@ import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import com.tranwall.capital.util.PhoneUtil;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -128,7 +129,7 @@ public class TestHelper {
   private final ProgramService programService;
   private final UserService userService;
 
-  private final Faker faker = new Faker();
+  private final Faker faker = new Faker(new SecureRandom());
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -341,7 +342,7 @@ public class TestHelper {
   }
 
   public Bin createBin() {
-    return binService.createBin(faker.random().nextInt(500000, 599999).toString(), "Unit test BIN");
+    return binService.createBin(faker.random().nextInt(500000, 699999).toString(), "Unit test BIN");
   }
 
   public Program retrievePooledProgram() {
@@ -391,21 +392,17 @@ public class TestHelper {
 
   public BusinessOwner createBusinessOwner(
       TypedId<BusinessId> businessId, String email, String password) throws IOException {
-    String firstName = generateFirstName();
-    String lastName = generateLastName();
-    Address address = generateEntityAddress();
-    String phone = generatePhone();
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
     return businessOwnerService.createBusinessOwner(
         businessOwnerId,
         businessId,
-        firstName,
-        lastName,
-        address,
+        generateFirstName(),
+        generateLastName(),
+        generateEntityAddress(),
         email,
-        phone,
+        generatePhone(),
         fusionAuthUserId.toString());
   }
 
@@ -490,14 +487,12 @@ public class TestHelper {
   public CreateBusinessRecord createBusiness() {
     String email = generateEmail();
     String password = generatePassword();
-    Program program = retrievePooledProgram();
     BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(null);
-    BusinessOwner businessOwner =
-        createBusinessOwner(businessAndAllocationsRecord.business().getId(), email, password);
+
     return new CreateBusinessRecord(
-        program,
+        retrievePooledProgram(),
         businessAndAllocationsRecord.business(),
-        businessOwner,
+        createBusinessOwner(businessAndAllocationsRecord.business().getId(), email, password),
         email,
         businessAndAllocationsRecord.allocationRecord(),
         login(email, password));

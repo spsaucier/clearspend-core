@@ -8,12 +8,13 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.TransactionLimit;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.tranwall.capital.data.repository.TransactionLimitRepository;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -29,13 +30,13 @@ public class TransactionLimitService {
 
   public TransactionLimit initializeAllocationSpendLimit(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
-    Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits = new HashMap<>();
+    Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
 
-    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
-    allocationDurationMap.put(Duration.ofDays(1), BigDecimal.valueOf(1000));
-    allocationDurationMap.put(Duration.ofDays(3), BigDecimal.valueOf(30000));
+    HashMap<LimitPeriod, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(LimitPeriod.DAILY, BigDecimal.valueOf(1000));
+    allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.valueOf(30000));
 
-    Map<LimitType, Map<Duration, BigDecimal>> limitTypeMap = new HashMap<>();
+    Map<LimitType, Map<LimitPeriod, BigDecimal>> limitTypeMap = new HashMap<>();
     limitTypeMap.put(LimitType.PURCHASE, allocationDurationMap);
 
     limits.put(Currency.USD, limitTypeMap);
@@ -53,12 +54,18 @@ public class TransactionLimitService {
         retrieveSpendLimit(businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid()));
   }
 
-  private TransactionLimit retrieveSpendLimit(
+  public TransactionLimit retrieveSpendLimit(
       TypedId<BusinessId> businessId, TransactionLimitType type, UUID ownerId) {
     return transactionLimitRepository
         .findByBusinessIdAndTypeAndOwnerId(businessId, type, ownerId)
         .orElseThrow(
             () -> new RecordNotFoundException(Table.SPEND_LIMIT, businessId, type, ownerId));
+  }
+
+  public List<TransactionLimit> retrieveSpendLimits(
+      TypedId<BusinessId> businessId, TransactionLimitType type, List<UUID> ownerIds) {
+    return transactionLimitRepository.findByBusinessIdAndTypeAndOwnerIdIn(
+        businessId, type, ownerIds);
   }
 
   private TransactionLimit duplicateSpendLimit(

@@ -11,10 +11,10 @@ import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.BusinessLimit;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.repository.BusinessLimitRepository;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -34,13 +34,13 @@ public class BusinessLimitService {
   private final AdjustmentService adjustmentService;
 
   public BusinessLimit initializeBusinessSpendLimit(TypedId<BusinessId> businessId) {
-    Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits = new HashMap<>();
+    Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
 
-    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
-    allocationDurationMap.put(Duration.ofDays(1), BigDecimal.valueOf(10_000));
-    allocationDurationMap.put(Duration.ofDays(3), BigDecimal.valueOf(30_0000));
+    HashMap<LimitPeriod, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(LimitPeriod.DAILY, BigDecimal.valueOf(10_000));
+    allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.valueOf(30_0000));
 
-    Map<LimitType, Map<Duration, BigDecimal>> limitTypeMap = new HashMap<>();
+    Map<LimitType, Map<LimitPeriod, BigDecimal>> limitTypeMap = new HashMap<>();
     limitTypeMap.put(LimitType.DEPOSIT, allocationDurationMap);
     limitTypeMap.put(LimitType.WITHDRAW, allocationDurationMap);
 
@@ -93,9 +93,9 @@ public class BusinessLimitService {
       AdjustmentType type,
       Amount amount,
       List<Adjustment> adjustments,
-      Map<Duration, BigDecimal> limits) {
-    for (Entry<Duration, BigDecimal> limit : limits.entrySet()) {
-      OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey());
+      Map<LimitPeriod, BigDecimal> limits) {
+    for (Entry<LimitPeriod, BigDecimal> limit : limits.entrySet()) {
+      OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey().getDuration());
 
       BigDecimal usage =
           adjustments.stream()

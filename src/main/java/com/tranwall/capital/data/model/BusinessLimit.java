@@ -5,10 +5,10 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.BusinessLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -43,5 +43,5 @@ public class BusinessLimit extends TypedMutable<BusinessLimitId> {
   @NonNull
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
-  private Map<Currency, Map<LimitType, Map<Duration, BigDecimal>>> limits;
+  private Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits;
 }

@@ -1,11 +1,13 @@
 package com.tranwall.capital.controller;
 
 import static com.tranwall.capital.controller.Common.USER_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
@@ -13,6 +15,9 @@ import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.controller.type.Address;
+import com.tranwall.capital.controller.type.card.UserCardResponse;
+import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
+import com.tranwall.capital.controller.type.card.limits.Limit;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
@@ -20,9 +25,13 @@ import com.tranwall.capital.controller.type.user.SearchUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
+import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.AllocationService;
@@ -33,6 +42,7 @@ import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -56,6 +66,42 @@ public class UserControllerTest extends BaseCapitalTest {
   private final UserService userService;
 
   private final Faker faker = new Faker();
+
+  private Bin bin;
+  private CreateBusinessRecord createBusinessRecord;
+  private Business business;
+  private Program program;
+  private CreateUpdateUserRecord user;
+  private Cookie userCookie;
+  private Card card;
+  private Card card2;
+
+  @SneakyThrows
+  @BeforeEach
+  public void setup() {
+    if (bin == null) {
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+      createBusinessRecord = testHelper.createBusiness();
+      business = createBusinessRecord.business();
+      user = testHelper.createUser(createBusinessRecord.business());
+      userCookie = testHelper.login(user.user().getEmail().getEncrypted(), user.password());
+      card =
+          testHelper.issueCard(
+              business,
+              createBusinessRecord.allocationRecord().allocation(),
+              user.user(),
+              program,
+              Currency.USD);
+      card2 =
+          testHelper.issueCard(
+              business,
+              createBusinessRecord.allocationRecord().allocation(),
+              user.user(),
+              program,
+              Currency.USD);
+    }
+  }
 
   @BeforeEach
   void init() {
@@ -274,9 +320,82 @@ public class UserControllerTest extends BaseCapitalTest {
 
   void getUsersByUserName() {}
 
-  void getUserCards() {}
+  @SneakyThrows
+  @Test
+  void getUserCards() {
+    MockHttpServletResponse response =
+        mvc.perform(get("/users/cards").contentType("application/json").cookie(userCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
 
-  void getUserCard() {}
+    List<UserCardResponse> userCardListResponse =
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    log.info(
+        "\n{}",
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userCardListResponse));
+
+    for (UserCardResponse userCardResponse : userCardListResponse) {
+      assertThat(userCardResponse.getCard()).isNotNull();
+      assertThat(userCardResponse.getCard().getCardNumber())
+          .isIn(card.getCardNumber().getEncrypted(), card2.getCardNumber().getEncrypted());
+
+      assertThat(userCardResponse.getAvailableBalance()).isNotNull();
+      assertThat(userCardResponse.getAvailableBalance().getCurrency())
+          .isEqualTo(business.getCurrency());
+
+      assertThat(userCardResponse.getLedgerBalance()).isNotNull();
+      assertThat(userCardResponse.getLedgerBalance().getCurrency())
+          .isEqualTo(business.getCurrency());
+
+      assertThat(userCardResponse.getLimits()).isNotNull();
+      assertThat(userCardResponse.getLimits()).hasSize(1);
+      CurrencyLimit currencyLimit = userCardResponse.getLimits().get(0);
+      assertThat(currencyLimit.getCurrency()).isEqualTo(Currency.USD);
+      assertThat(currencyLimit.getTypeMap()).hasSize(1);
+      assertThat(currencyLimit.getTypeMap()).hasSize(1);
+      Map<LimitPeriod, Limit> typeLimit = currencyLimit.getTypeMap().get(LimitType.PURCHASE);
+      assertThat(typeLimit).hasSize(2);
+      assertThat(typeLimit.keySet()).contains(LimitPeriod.DAILY, LimitPeriod.MONTHLY);
+    }
+  }
+
+  @SneakyThrows
+  @Test
+  void getUserCard() {
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/users/cards/{cardId}", card.getId().toString())
+                    .contentType("application/json")
+                    .cookie(userCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    UserCardResponse userCardResponse =
+        objectMapper.readValue(response.getContentAsString(), UserCardResponse.class);
+    log.info(
+        "\n{}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userCardResponse));
+
+    assertThat(userCardResponse.getCard()).isNotNull();
+    assertThat(userCardResponse.getCard().getCardNumber())
+        .isEqualTo(card.getCardNumber().getEncrypted());
+
+    assertThat(userCardResponse.getAvailableBalance()).isNotNull();
+    assertThat(userCardResponse.getAvailableBalance().getCurrency())
+        .isEqualTo(business.getCurrency());
+
+    assertThat(userCardResponse.getLedgerBalance()).isNotNull();
+    assertThat(userCardResponse.getLedgerBalance().getCurrency()).isEqualTo(business.getCurrency());
+
+    assertThat(userCardResponse.getLimits()).isNotNull();
+    CurrencyLimit currencyLimit = userCardResponse.getLimits().get(0);
+    assertThat(currencyLimit.getCurrency()).isEqualTo(Currency.USD);
+    assertThat(currencyLimit.getTypeMap()).hasSize(1);
+    Map<LimitPeriod, Limit> typeLimit = currencyLimit.getTypeMap().get(LimitType.PURCHASE);
+    assertThat(typeLimit).hasSize(2);
+    assertThat(typeLimit.keySet()).contains(LimitPeriod.DAILY, LimitPeriod.MONTHLY);
+  }
 
   void blockCard() {}
 

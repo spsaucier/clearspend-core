@@ -198,12 +198,17 @@ public class UserController {
     CurrentUser currentUser = CurrentUser.get();
     return cardService.getUserCards(currentUser.businessId(), currentUser.userId()).stream()
         .map(
-            userCardRecord ->
-                new UserCardResponse(
-                    new Card(userCardRecord.card()),
-                    Amount.of(userCardRecord.account().getLedgerBalance()),
-                    Amount.of(userCardRecord.account().getAvailableBalance()),
-                    userCardRecord.allocation().getName()))
+            userCardRecord -> {
+              UserCardResponse userCardResponse =
+                  new UserCardResponse(
+                      new Card(userCardRecord.card()),
+                      Amount.of(userCardRecord.account().getLedgerBalance()),
+                      Amount.of(userCardRecord.account().getAvailableBalance()),
+                      userCardRecord.allocation().getName());
+              userCardResponse.setLimitsFromTransactionLimits(
+                  userCardRecord.transactionLimit().getLimits());
+              return userCardResponse;
+            })
         .toList();
   }
 
@@ -220,11 +225,14 @@ public class UserController {
     UserCardRecord userCardRecord =
         cardService.getUserCard(currentUser.businessId(), currentUser.userId(), cardId);
 
-    return new UserCardResponse(
-        new Card(userCardRecord.card()),
-        Amount.of(userCardRecord.account().getLedgerBalance()),
-        Amount.of(userCardRecord.account().getAvailableBalance()),
-        userCardRecord.allocation().getName());
+    final UserCardResponse userCardResponse =
+        new UserCardResponse(
+            new Card(userCardRecord.card()),
+            Amount.of(userCardRecord.account().getLedgerBalance()),
+            Amount.of(userCardRecord.account().getAvailableBalance()),
+            userCardRecord.allocation().getName());
+    userCardResponse.setLimitsFromTransactionLimits(userCardRecord.transactionLimit().getLimits());
+    return userCardResponse;
   }
 
   @PatchMapping("/cards/{cardId}/block")

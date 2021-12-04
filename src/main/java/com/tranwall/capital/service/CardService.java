@@ -18,12 +18,14 @@ import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.TransactionLimit;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
 import com.tranwall.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
@@ -60,7 +63,8 @@ public class CardService {
 
   public record CardRecord(Card card, Account account) {}
 
-  public record UserCardRecord(Card card, Allocation allocation, Account account) {}
+  public record UserCardRecord(
+      Card card, Allocation allocation, Account account, TransactionLimit transactionLimit) {}
 
   @Transactional
   public CardRecord issueCard(
@@ -194,13 +198,15 @@ public class CardService {
         accountService.findAccountsByIds(accountIdSet).stream()
             .collect(Collectors.toMap(Account::getId, Function.identity()));
 
-    // TODO(kuchlein): I thought I might need the program but it looks like it's not needed. Keeping
-    //    code for the next week or two
-    // Map<TypedId<ProgramId>, Program> programSet =
-    //   programService
-    //      .findProgramsByIds(cards.stream().map(Card::getProgramId).collect(Collectors.toSet()))
-    //            .stream()
-    //            .collect(Collectors.toMap(Program::getId, Function.identity()));
+    // lookup all the transactionLimits
+    Map<UUID, TransactionLimit> transactionLimitMap =
+        transactionLimitService
+            .retrieveSpendLimits(
+                businessId,
+                TransactionLimitType.CARD,
+                cards.stream().map(e -> e.getId().toUuid()).collect(Collectors.toList()))
+            .stream()
+            .collect(Collectors.toMap(TransactionLimit::getOwnerId, Function.identity()));
 
     return cards.stream()
         .map(
@@ -208,7 +214,11 @@ public class CardService {
               Allocation allocation = allocationMap.get(card.getAllocationId());
               TypedId<AccountId> accountId =
                   ObjectUtils.firstNonNull(card.getAccountId(), allocation.getAccountId());
-              return new UserCardRecord(card, allocation, accountMap.get(accountId));
+              return new UserCardRecord(
+                  card,
+                  allocation,
+                  accountMap.get(accountId),
+                  transactionLimitMap.get(card.getId().toUuid()));
             })
         .toList();
   }
@@ -233,7 +243,11 @@ public class CardService {
         accountService.retrieveCardAccount(
             card.getAccountId() != null ? card.getAccountId() : allocation.getAccountId(), true);
 
-    return new UserCardRecord(card, allocation, account);
+    TransactionLimit transactionLimit =
+        transactionLimitService.retrieveSpendLimit(
+            businessId, TransactionLimitType.CARD, card.getId().toUuid());
+
+    return new UserCardRecord(card, allocation, account, transactionLimit);
   }
 
   @Transactional

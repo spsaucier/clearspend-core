@@ -14,8 +14,8 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Adjustment;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,8 +36,8 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
   @Test
   void withinLimit_noAdjustments() {
-    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
-    allocationDurationMap.put(Duration.ofDays(30), BigDecimal.TEN);
+    HashMap<LimitPeriod, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.TEN);
 
     // under limit
     businessLimitService.withinLimit(
@@ -69,8 +69,8 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
   @Test
   void withinLimit_existingAdjustments() {
-    HashMap<Duration, BigDecimal> allocationDurationMap = new HashMap<>();
-    allocationDurationMap.put(Duration.ofDays(30), BigDecimal.TEN);
+    HashMap<LimitPeriod, BigDecimal> allocationDurationMap = new HashMap<>();
+    allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.TEN);
 
     // under limit
     businessLimitService.withinLimit(
@@ -108,7 +108,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
                 allocationDurationMap));
 
     allocationDurationMap.clear();
-    allocationDurationMap.put(Duration.ofDays(1), BigDecimal.TEN);
+    allocationDurationMap.put(LimitPeriod.DAILY, BigDecimal.TEN);
     // under daily limit
     businessLimitService.withinLimit(
         businessId,
