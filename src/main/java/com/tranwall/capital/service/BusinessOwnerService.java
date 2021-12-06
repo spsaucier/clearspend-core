@@ -13,6 +13,7 @@ import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.Alloy;
 import com.tranwall.capital.data.model.BusinessOwner;
+import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AlloyTokenType;
 import com.tranwall.capital.data.model.enums.BusinessOwnerStatus;
 import com.tranwall.capital.data.model.enums.BusinessOwnerType;
@@ -22,7 +23,7 @@ import com.tranwall.capital.data.model.enums.RelationshipToBusiness;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
-import java.io.IOException;
+import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -47,8 +48,10 @@ public class BusinessOwnerService {
 
   private final AlloyClient alloyClient;
 
+  public record BusinessOwnerAndUserRecord(BusinessOwner businessOwner, User user) {}
+
   @Transactional
-  public BusinessOwner createBusinessOwner(
+  public BusinessOwnerAndUserRecord createBusinessOwner(
       TypedId<BusinessOwnerId> businessOwnerId,
       TypedId<BusinessId> businessId,
       String firstName,
@@ -56,8 +59,7 @@ public class BusinessOwnerService {
       Address address,
       String email,
       String phone,
-      String subjectRef)
-      throws IOException {
+      String subjectRef) {
     BusinessOwner businessOwner =
         new BusinessOwner(
             businessId,
@@ -76,18 +78,19 @@ public class BusinessOwnerService {
     }
     businessOwner.setSubjectRef(subjectRef);
 
-    userService.createUser(
-        businessId,
-        UserType.BUSINESS_OWNER,
-        firstName,
-        lastName,
-        address,
-        email,
-        phone,
-        false,
-        subjectRef);
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            businessId,
+            UserType.BUSINESS_OWNER,
+            firstName,
+            lastName,
+            address,
+            email,
+            phone,
+            false,
+            subjectRef);
 
-    return businessOwnerRepository.save(businessOwner);
+    return new BusinessOwnerAndUserRecord(businessOwnerRepository.save(businessOwner), user.user());
   }
 
   public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

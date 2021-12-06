@@ -3,6 +3,7 @@ package com.tranwall.capital.controller;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
@@ -61,7 +62,8 @@ public class CardControllerTest extends BaseCapitalTest {
             allocationService
                 .getRootAllocation(testHelper.retrieveBusiness().getId())
                 .allocation()
-                .getId());
+                .getId(),
+            testHelper.createUser(business).user());
     CreateUpdateUserRecord user = testHelper.createUser(business);
 
     IssueCardRequest issueCardRequest =
@@ -76,18 +78,13 @@ public class CardControllerTest extends BaseCapitalTest {
     String body = objectMapper.writeValueAsString(issueCardRequest);
 
     MockHttpServletResponse response =
-        mvc.perform(
-                post("/cards")
-                    .header("businessId", business.getId().toString())
-                    .contentType("application/json")
-                    .content(body)
-                    .cookie(authCookie))
+        mvc.perform(post("/cards").contentType("application/json").content(body).cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
 
     List<IssueCardResponse> issueCardResponse =
-        objectMapper.readValue(response.getContentAsString(), List.class);
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
 
     log.info(response.getContentAsString());
   }

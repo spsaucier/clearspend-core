@@ -63,6 +63,8 @@ public class CardService {
 
   public record CardRecord(Card card, Account account) {}
 
+  public record CardDetailsRecord(Card card, Account account, TransactionLimit limit) {}
+
   public record UserCardRecord(
       Card card, Allocation allocation, Account account, TransactionLimit transactionLimit) {}
 
@@ -145,14 +147,23 @@ public class CardService {
         .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
   }
 
-  public CardRecord getCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
+  public CardDetailsRecord getCard(
+      TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
     Card card = retrieveCard(businessId, cardId);
 
     if (card.getFundingType() == FundingType.POOLED) {
-      return new CardRecord(card, null);
+      return new CardDetailsRecord(
+          card,
+          null,
+          transactionLimitService.retrieveSpendLimit(
+              businessId, TransactionLimitType.CARD, cardId.toUuid()));
     }
 
-    return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId(), true));
+    return new CardDetailsRecord(
+        card,
+        accountService.retrieveCardAccount(card.getAccountId(), true),
+        transactionLimitService.retrieveSpendLimit(
+            businessId, TransactionLimitType.CARD, cardId.toUuid()));
   }
 
   // should only be used by NetworkService

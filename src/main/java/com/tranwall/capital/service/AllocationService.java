@@ -14,19 +14,24 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Business;
+import com.tranwall.capital.data.model.TransactionLimit;
+import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.AllocationReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
-import com.tranwall.capital.service.CardService.CardRecord;
+import com.tranwall.capital.service.CardService.CardDetailsRecord;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,13 +52,22 @@ public class AllocationService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
+  private final UserService userService;
   private final TransactionLimitService transactionLimitService;
   private final I2Client i2Client;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
+  public record AllocationDetailsRecord(
+      Allocation allocation, Account account, User owner, TransactionLimit transactionLimit) {}
+
   @Transactional
-  public AllocationRecord createRootAllocation(TypedId<BusinessId> businessId, String name) {
+  public AllocationRecord createRootAllocation(
+      TypedId<BusinessId> businessId, User user, String name) {
+    if (!Objects.equals(businessId, user.getBusinessId())) {
+      throw new IdMismatchException(IdType.BUSINESS_ID, businessId, user.getBusinessId());
+    }
+
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
     // creating the account because the allocation references it
@@ -67,6 +81,7 @@ public class AllocationService {
         new Allocation(
             businessId,
             account.getId(),
+            user.getId(),
             name,
             i2cStakeholder.getI2cStakeholderRef(),
             i2cStakeholder.getI2cAccountRef());
@@ -82,10 +97,11 @@ public class AllocationService {
 
   @Transactional
   public AllocationRecord createAllocation(
-      final TypedId<BusinessId> businessId,
-      @NonNull final TypedId<AllocationId> parentAllocationId,
-      final String name,
-      final Amount amount) {
+      TypedId<BusinessId> businessId,
+      @NonNull TypedId<AllocationId> parentAllocationId,
+      String name,
+      User user,
+      Amount amount) {
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
     Account parentAccount = null;
@@ -116,14 +132,14 @@ public class AllocationService {
             businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
-    // FIXME(akimov) Restore stakeholder ref as soon as i2c fixes the program configuration
     AddStakeholderResponse i2cStakeholder =
-        i2Client.addStakeholder(name); // , parent.getI2cStakeholderRef());
+        i2Client.addStakeholder(name, parent.getI2cStakeholderRef());
 
     Allocation allocation =
         new Allocation(
             businessId,
             account.getId(),
+            user.getId(),
             name,
             i2cStakeholder.getI2cStakeholderRef(),
             i2cStakeholder.getI2cAccountRef());
@@ -151,14 +167,38 @@ public class AllocationService {
         .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
   }
 
-  public AllocationRecord getAllocation(Business business, TypedId<AllocationId> allocationId) {
+  // TODO: improve entity retrieval to make a single db call
+  public AllocationDetailsRecord getAllocation(
+      Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
 
     Account account =
         accountService.retrieveAllocationAccount(
             business.getId(), business.getCurrency(), allocationId);
 
-    return new AllocationRecord(allocation, account);
+    return new AllocationDetailsRecord(
+        allocation,
+        account,
+        userService.retrieveUser(allocation.getOwnerId()),
+        transactionLimitService.retrieveSpendLimit(
+            business.getId(), TransactionLimitType.ALLOCATION, allocationId.toUuid()));
+  }
+
+  @Transactional
+  public void updateAllocation(
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      String name,
+      TypedId<AllocationId> parentAllocationId,
+      TypedId<UserId> ownerId) {
+    Allocation allocation = retrieveAllocation(businessId, allocationId);
+    TransactionLimit limit =
+        transactionLimitService.retrieveSpendLimit(
+            businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid());
+
+    BeanUtils.setNotEmpty(name, allocation::setName);
+    BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
+    BeanUtils.setNotNull(ownerId, allocation::setOwnerId);
   }
 
   public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {
@@ -248,54 +288,65 @@ public class AllocationService {
       @NonNull TypedId<CardId> cardId,
       @NonNull AllocationReallocationType allocationReallocationType,
       @NonNull Amount amount) {
-    AllocationRecord allocationRecord = getAllocation(business, allocationId);
-    if (!allocationRecord.account().getId().equals(accountId)) {
+    AllocationDetailsRecord allocationDetailsRecord = getAllocation(business, allocationId);
+    if (!allocationDetailsRecord.account().getId().equals(accountId)) {
       throw new IdMismatchException(
-          IdType.ACCOUNT_ID, accountId, allocationRecord.account().getId());
+          IdType.ACCOUNT_ID, accountId, allocationDetailsRecord.account().getId());
     }
 
     // TODO: Allocations have a default program - the question is do we need to keep the funding
     // type?
     /*
-        Program program = programService.retrieveProgram(allocationRecord.allocation.getProgramId());
+        Program program = programService.retrieveProgram(allocationDetailsRecord.allocation.getProgramId());
         if (program.getFundingType() != FundingType.INDIVIDUAL) {
           throw new TypeMismatchException(FundingType.INDIVIDUAL, program.getFundingType());
         }
     */
 
-    CardRecord card = cardService.getCard(business.getId(), cardId);
+    CardDetailsRecord cardDetailsRecord = cardService.getCard(business.getId(), cardId);
 
     AccountReallocateFundsRecord reallocateFundsRecord;
     switch (allocationReallocationType) {
       case ALLOCATION_TO_CARD -> {
-        if (allocationRecord.account.getLedgerBalance().isLessThan(amount)) {
+        if (allocationDetailsRecord.account.getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
-              "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
+              "Account",
+              allocationDetailsRecord.account.getId(),
+              AdjustmentType.REALLOCATE,
+              amount);
         }
 
         reallocateFundsRecord =
             accountService.reallocateFunds(
-                allocationRecord.account.getId(), card.account().getId(), amount);
+                allocationDetailsRecord.account.getId(),
+                cardDetailsRecord.account().getId(),
+                amount);
       }
       case CARD_TO_ALLOCATION -> {
-        if (card.account().getLedgerBalance().isLessThan(amount)) {
+        if (cardDetailsRecord.account().getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
-              "Account", allocationRecord.account.getId(), AdjustmentType.REALLOCATE, amount);
+              "Account",
+              allocationDetailsRecord.account.getId(),
+              AdjustmentType.REALLOCATE,
+              amount);
         }
 
         reallocateFundsRecord =
             accountService.reallocateFunds(
-                card.account().getId(), allocationRecord.account.getId(), amount);
+                cardDetailsRecord.account().getId(),
+                allocationDetailsRecord.account.getId(),
+                amount);
       }
       default -> throw new IllegalArgumentException(
           "invalid fundsTransactType " + allocationReallocationType);
     }
 
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation,
+        allocationDetailsRecord.allocation,
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation, reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+        allocationDetailsRecord.allocation,
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
   }

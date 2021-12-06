@@ -39,7 +39,6 @@ import com.tranwall.capital.service.UserFilterCriteria;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +72,7 @@ public class UserController {
   private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("")
-  private CreateUserResponse createUser(@RequestBody CreateUserRequest request) throws IOException {
+  private CreateUserResponse createUser(@RequestBody CreateUserRequest request) {
 
     CreateUpdateUserRecord userServiceUser =
         userService.createUser(
@@ -120,26 +119,21 @@ public class UserController {
 
     List<CreateUserResponse> response = new ArrayList<>(request.size());
     for (CreateUserRequest createUserRequest : request) {
-      try {
-        CreateUpdateUserRecord userServiceUser =
-            userService.createUser(
-                CurrentUser.get().businessId(),
-                UserType.EMPLOYEE,
-                createUserRequest.getFirstName(),
-                createUserRequest.getLastName(),
-                createUserRequest.getAddress() != null
-                    ? createUserRequest.getAddress().toAddress()
-                    : null,
-                createUserRequest.getEmail(),
-                createUserRequest.getPhone(),
-                createUserRequest.isGeneratePassword(),
-                null);
-        response.add(
-            new CreateUserResponse(
-                userServiceUser.user().getId(), userServiceUser.password(), null));
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      CreateUpdateUserRecord userServiceUser =
+          userService.createUser(
+              CurrentUser.get().businessId(),
+              UserType.EMPLOYEE,
+              createUserRequest.getFirstName(),
+              createUserRequest.getLastName(),
+              createUserRequest.getAddress() != null
+                  ? createUserRequest.getAddress().toAddress()
+                  : null,
+              createUserRequest.getEmail(),
+              createUserRequest.getPhone(),
+              createUserRequest.isGeneratePassword(),
+              null);
+      response.add(
+          new CreateUserResponse(userServiceUser.user().getId(), userServiceUser.password(), null));
     }
 
     return response;

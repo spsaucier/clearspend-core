@@ -30,6 +30,10 @@ public class Amount {
   }
 
   public static Amount of(com.tranwall.capital.common.data.model.Amount amount) {
-    return new Amount(amount.getCurrency(), amount.getAmount());
+    return amount != null ? new Amount(amount.getCurrency(), amount.getAmount()) : null;
+  }
+
+  public static com.tranwall.capital.common.data.model.Amount toDomainAmount(Amount amount) {
+    return amount != null ? amount.toAmount() : null;
   }
 }

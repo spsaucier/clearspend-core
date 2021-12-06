@@ -98,17 +98,22 @@ public class BusinessControllerTest extends BaseCapitalTest {
         createBusinessRecord.allocationRecord().allocation();
     AllocationRecord allocationChild1 =
         testHelper.createAllocation(
-            createBusinessRecord.business().getId(), "child_1", rootAllocation.getId());
+            createBusinessRecord.business().getId(),
+            "child_1",
+            rootAllocation.getId(),
+            createBusinessRecord.user());
     AllocationRecord allocationGrandchild1 =
         testHelper.createAllocation(
             createBusinessRecord.business().getId(),
             "grandchild_1",
-            allocationChild1.allocation().getId());
+            allocationChild1.allocation().getId(),
+            createBusinessRecord.user());
     AllocationRecord allocationGrandchild2 =
         testHelper.createAllocation(
             createBusinessRecord.business().getId(),
             "grandchild_2",
-            allocationChild1.allocation().getId());
+            allocationChild1.allocation().getId(),
+            createBusinessRecord.user());
 
     MockHttpServletResponse response =
         mvc.perform(

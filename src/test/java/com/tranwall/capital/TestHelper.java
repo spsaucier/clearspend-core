@@ -69,17 +69,16 @@ import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BinService;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.tranwall.capital.service.BusinessService;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.FusionAuthService;
 import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import com.tranwall.capital.util.PhoneUtil;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -366,18 +365,6 @@ public class TestHelper {
     return businessService.retrieveBusiness(businessId);
   }
 
-  private BusinessAndAllocationsRecord createBusiness(TypedId<BusinessId> businessId) {
-    return businessService.createBusiness(
-        businessId,
-        faker.company().name(),
-        BusinessType.LLC,
-        generateEntityAddress(),
-        generateEmployerIdentificationNumber(),
-        faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        Currency.USD);
-  }
-
   public void deleteBusiness(TypedId<BusinessId> businessId) {
     businessRepository.deleteById(businessId);
   }
@@ -390,8 +377,8 @@ public class TestHelper {
     transactionLimitRepository.deleteByBusinessId(businessId);
   }
 
-  public BusinessOwner createBusinessOwner(
-      TypedId<BusinessId> businessId, String email, String password) throws IOException {
+  public BusinessOwnerAndUserRecord createBusinessOwner(
+      TypedId<BusinessId> businessId, String email, String password) {
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
@@ -470,31 +457,56 @@ public class TestHelper {
   }
 
   public AllocationRecord createAllocation(
-      TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
+      TypedId<BusinessId> businessId,
+      String name,
+      TypedId<AllocationId> parentAllocationId,
+      User user) {
     return allocationService.createAllocation(
-        businessId, parentAllocationId, name, Amount.of(Currency.USD));
+        businessId, parentAllocationId, name, user, Amount.of(Currency.USD));
   }
 
   public record CreateBusinessRecord(
       Program program,
       Business business,
       BusinessOwner businessOwner,
+      User user,
       String email,
       AllocationRecord allocationRecord,
       Cookie authCookie) {}
 
-  @SneakyThrows
   public CreateBusinessRecord createBusiness() {
+    return createBusiness(null);
+  }
+
+  @SneakyThrows
+  public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId) {
     String email = generateEmail();
     String password = generatePassword();
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(null);
+    Program program = retrievePooledProgram();
+    Business business =
+        businessService.createBusiness(
+            businessId,
+            faker.company().name(),
+            BusinessType.LLC,
+            generateEntityAddress(),
+            generateEmployerIdentificationNumber(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            Currency.USD);
+    BusinessOwnerAndUserRecord businessOwner =
+        createBusinessOwner(business.getId(), email, password);
+
+    AllocationRecord rootAllocation =
+        allocationService.createRootAllocation(
+            business.getId(), businessOwner.user(), business.getLegalName() + " - root");
 
     return new CreateBusinessRecord(
-        retrievePooledProgram(),
-        businessAndAllocationsRecord.business(),
-        createBusinessOwner(businessAndAllocationsRecord.business().getId(), email, password),
+        program,
+        business,
+        businessOwner.businessOwner(),
+        businessOwner.user(),
         email,
-        businessAndAllocationsRecord.allocationRecord(),
+        rootAllocation,
         login(email, password));
   }
 
@@ -503,7 +515,7 @@ public class TestHelper {
     allocationRepository.deleteByBusinessId(businessId);
   }
 
-  public CreateUpdateUserRecord createUser(Business business) throws IOException {
+  public CreateUpdateUserRecord createUser(Business business) {
     return userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,

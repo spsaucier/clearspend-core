@@ -10,6 +10,6 @@ public class I2CBooleanSerializer extends JsonSerializer<Boolean> {
   @Override
   public void serialize(Boolean value, JsonGenerator gen, SerializerProvider serializers)
       throws IOException {
-    gen.writeString(value ? "1" : "0");
+    gen.writeString(value ? "Y" : "N");
   }
 }

@@ -19,6 +19,7 @@ import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessBankAccount;
+import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.User;
@@ -42,8 +43,9 @@ import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BinService;
 import com.tranwall.capital.service.BusinessBankAccountService;
+import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.tranwall.capital.service.BusinessService;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.NetworkMessageService;
@@ -88,6 +90,7 @@ public class TestDataController {
   private final BinService binService;
   private final BusinessBankAccountService businessBankAccountService;
   private final BusinessService businessService;
+  private final BusinessOwnerService businessOwnerService;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final ProgramService programService;
@@ -106,6 +109,9 @@ public class TestDataController {
   private Program pooledPlasticProgram;
   private List<Bin> allBins;
   private List<Program> allPrograms;
+
+  public record BusinessRecord(
+      Business business, BusinessOwner businessOwner, User user, Allocation allocation) {}
 
   @PostConstruct
   void init() {
@@ -180,8 +186,9 @@ public class TestDataController {
   private CreateTestDataResponse createTestData() throws IOException {
 
     // create a new business
-    BusinessAndAllocationsRecord businessAndAllocationsRecord = createBusiness(null);
-    Business business = businessAndAllocationsRecord.business();
+    BusinessRecord businessRecord = createBusiness(new TypedId<>());
+    Business business = businessRecord.business();
+    createUser(business);
 
     // create bankAccount, deposit $10,000 and withdraw $267.34
     BusinessBankAccount businessBankAccount =
@@ -204,14 +211,15 @@ public class TestDataController {
         Amount.of(business.getCurrency(), BigDecimal.valueOf(267.34)),
         false);
 
-    AllocationRecord parentAllocation = businessAndAllocationsRecord.allocationRecord();
+    Allocation parentAllocation = businessRecord.allocation();
 
     // create child allocation and load $1326.86
     AllocationRecord childAllocation =
         allocationService.createAllocation(
             business.getId(),
-            parentAllocation.allocation().getId(),
+            parentAllocation.getId(),
             faker.company().name(),
+            businessRecord.user(),
             Amount.of(Currency.USD));
     businessService.reallocateBusinessFunds(
         business.getId(),
@@ -226,6 +234,7 @@ public class TestDataController {
             business.getId(),
             childAllocation.allocation().getId(),
             faker.company().name(),
+            businessRecord.user(),
             Amount.of(Currency.USD));
     businessService.reallocateBusinessFunds(
         business.getId(),
@@ -243,7 +252,7 @@ public class TestDataController {
         cardService.issueCard(
             individualVirtualProgram,
             business.getId(),
-            parentAllocation.allocation().getId(),
+            parentAllocation.getId(),
             user.user().getId(),
             business.getCurrency(),
             true,
@@ -251,8 +260,8 @@ public class TestDataController {
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
-        parentAllocation.allocation().getId(),
-        parentAllocation.allocation().getAccountId(),
+        parentAllocation.getId(),
+        parentAllocation.getAccountId(),
         cardRecord.card().getId(),
         AllocationReallocationType.ALLOCATION_TO_CARD,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(173.45)));
@@ -271,7 +280,7 @@ public class TestDataController {
         cardService.issueCard(
             individualPlasticProgram,
             business.getId(),
-            parentAllocation.allocation().getId(),
+            parentAllocation.getId(),
             user.user().getId(),
             business.getCurrency(),
             true,
@@ -279,8 +288,8 @@ public class TestDataController {
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
-        parentAllocation.allocation().getId(),
-        parentAllocation.allocation().getAccountId(),
+        parentAllocation.getId(),
+        parentAllocation.getAccountId(),
         cardRecord.card().getId(),
         AllocationReallocationType.ALLOCATION_TO_CARD,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(91.17)));
@@ -342,7 +351,7 @@ public class TestDataController {
                 business,
                 Collections.emptyList(),
                 List.of(
-                    businessAndAllocationsRecord.allocationRecord().allocation(),
+                    businessRecord.allocation(),
                     childAllocation.allocation(),
                     grandchildAllocation.allocation()),
                 cards,
@@ -358,16 +367,38 @@ public class TestDataController {
         faker.number().digits(8));
   }
 
-  private BusinessAndAllocationsRecord createBusiness(TypedId<BusinessId> businessId) {
-    return businessService.createBusiness(
-        businessId,
-        faker.company().name(),
-        BusinessType.LLC,
-        generateEntityAddress(),
-        generateEmployerIdentificationNumber(),
-        faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        Currency.USD);
+  private BusinessRecord createBusiness(TypedId<BusinessId> businessId) {
+    Business business =
+        businessService.createBusiness(
+            businessId,
+            faker.company().name(),
+            BusinessType.LLC,
+            generateEntityAddress(),
+            generateEmployerIdentificationNumber(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            Currency.USD);
+
+    BusinessOwnerAndUserRecord businessOwnerRecord =
+        businessOwnerService.createBusinessOwner(
+            new TypedId<>(),
+            businessId,
+            faker.name().firstName(),
+            faker.name().lastName(),
+            generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            null);
+
+    AllocationRecord allocationRecord =
+        allocationService.createRootAllocation(
+            businessId, businessOwnerRecord.user(), business.getLegalName() + " - root");
+
+    return new BusinessRecord(
+        business,
+        businessOwnerRecord.businessOwner(),
+        businessOwnerRecord.user(),
+        allocationRecord.allocation());
   }
 
   public Address generateEntityAddress() {
@@ -385,9 +416,12 @@ public class TestDataController {
   }
 
   public AllocationRecord createAllocation(
-      TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
+      TypedId<BusinessId> businessId,
+      String name,
+      TypedId<AllocationId> parentAllocationId,
+      User user) {
     return allocationService.createAllocation(
-        businessId, parentAllocationId, name, Amount.of(Currency.USD));
+        businessId, parentAllocationId, name, user, Amount.of(Currency.USD));
   }
 
   public CreateUpdateUserRecord createUser(com.tranwall.capital.data.model.Business business)

@@ -1,5 +1,10 @@
 package com.tranwall.capital.client.i2c.enums;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
 public enum MerchantGroup {
   UTILITIES("UT_MCG_CONFG"),
   RETAIL_STORES("RS_MCG_CONFG"),
@@ -27,9 +32,5 @@ public enum MerchantGroup {
   GAS_STATIONS("GAS_MCG_CONFG"),
   EDUCATION("EDU_MCG_CONFG");
 
-  private String i2cMerchantGroup;
-
-  MerchantGroup(String i2cMerchantGroup) {
-    this.i2cMerchantGroup = i2cMerchantGroup;
-  }
+  private final String i2cMerchantGroup;
 }

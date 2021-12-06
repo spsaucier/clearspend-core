@@ -14,7 +14,6 @@ import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.data.repository.UserRepositoryCustom;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -47,8 +46,7 @@ public class UserService {
       String email,
       String phone,
       boolean generatePassword,
-      String subjectRef)
-      throws IOException {
+      String subjectRef) {
     User user =
         new User(
             businessId,
@@ -139,6 +137,11 @@ public class UserService {
       TypedId<BusinessId> businessId, RequiredEncryptedStringWithHash userName) {
     return userRepository.findByBusinessIdAndFirstNameLikeOrLastNameLike(
         businessId, userName, userName);
+  }
+
+  public List<User> retrieveUsersByIds(
+      TypedId<BusinessId> businessId, List<TypedId<UserId>> userIds) {
+    return userRepository.findByBusinessIdAndIdIn(businessId, userIds);
   }
 
   public Page<UserRepositoryCustom.FilteredUserWithCardListRecord> retrieveUserPage(

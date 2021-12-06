@@ -87,16 +87,16 @@ client:
     userId: TWTest
     password: "{TWTest_Temp@/110}"
     stakeholder-program:
-      id: tranwall_virtual
+      id: tranwall_virtual_SDK
       bin: 601999
     virtual-program:
       id: tranwall_virtual
       bin: 601999
       starting-numbers: 6019990022
     plastic-program:
-      id: tranwall_virtual
+      id: transwall_test
       bin: 601999
-      starting-numbers: 6019990022
+      starting-numbers: 601999002
     push:
       userId: "replace-me"
       password: "replace-me-too"

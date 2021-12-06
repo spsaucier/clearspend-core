@@ -5,18 +5,19 @@ import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
+import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Set;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class IssueCardRequest {
 
   @JsonProperty("programId")
@@ -52,4 +53,10 @@ public class IssueCardRequest {
   @NonNull
   @NotNull(message = "isPersonal required")
   private Boolean isPersonal;
+
+  @JsonProperty("dailySpend")
+  private Amount dailySpend;
+
+  @JsonProperty("monthlySpend")
+  private Amount monthlySpend;
 }

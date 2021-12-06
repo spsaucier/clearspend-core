@@ -29,6 +29,7 @@ import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.ProgramRepository;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
+import com.tranwall.capital.service.AllocationService.AllocationDetailsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class BusinessService {
 
   @SneakyThrows
   @Transactional
-  public BusinessAndAllocationsRecord createBusiness(
+  public Business createBusiness(
       TypedId<BusinessId> businessId,
       String legalName,
       BusinessType type,
@@ -104,11 +105,7 @@ public class BusinessService {
 
     businessLimitService.initializeBusinessSpendLimit(business.getId());
 
-    AllocationRecord allocationRecord =
-        allocationService.createRootAllocation(
-            business.getId(), business.getLegalName() + " - root");
-
-    return new BusinessAndAllocationsRecord(business, allocationRecord);
+    return business;
   }
 
   @Transactional
@@ -157,7 +154,7 @@ public class BusinessService {
       @NonNull BusinessReallocationType businessReallocationType,
       Amount amount) {
     BusinessRecord businessRecord = getBusiness(businessId);
-    AllocationRecord allocationRecord =
+    AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(businessRecord.business, allocationId);
     if (!allocationRecord.account().getId().equals(accountId)) {
       throw new IdMismatchException(

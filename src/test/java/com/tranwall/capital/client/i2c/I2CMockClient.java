@@ -1,10 +1,12 @@
 package com.tranwall.capital.client.i2c;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.client.i2c.response.AddStakeholderResponse;
 import com.tranwall.capital.client.i2c.response.CreditFundsResponse;
 import com.tranwall.capital.client.i2c.response.ShareFundsResponse;
+import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.enums.CardType;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -17,8 +19,8 @@ import org.springframework.stereotype.Component;
 public class I2CMockClient extends I2Client {
   private final Faker faker = new Faker();
 
-  public I2CMockClient(I2ClientProperties properties) {
-    super(null, properties, null);
+  public I2CMockClient(I2ClientProperties properties, ObjectMapper mapper) {
+    super(null, properties, mapper);
   }
 
   @Override
@@ -63,4 +65,16 @@ public class I2CMockClient extends I2Client {
 
     return response;
   }
+
+  @Override
+  public AddStakeholderResponse addStakeholder(@NonNull String name) {
+    AddStakeholderResponse response = new AddStakeholderResponse();
+    response.setI2cAccountRef(faker.numerify("##########"));
+    response.setI2cStakeholderRef(faker.numerify("############"));
+
+    return response;
+  }
+
+  @Override
+  public void setCardRestrictions(String i2cCardRef, Amount dailyLimit, Amount monthlyLimit) {}
 }

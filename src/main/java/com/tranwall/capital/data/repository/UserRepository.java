@@ -23,4 +23,6 @@ public interface UserRepository
       TypedId<BusinessId> businessId,
       RequiredEncryptedStringWithHash userFirstName,
       RequiredEncryptedStringWithHash userLastName);
+
+  List<User> findByBusinessIdAndIdIn(TypedId<BusinessId> businessId, List<TypedId<UserId>> ids);
 }

@@ -20,10 +20,9 @@ import com.tranwall.capital.data.model.enums.BusinessType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.BusinessProspectRepository;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
-import com.tranwall.capital.service.BusinessService.BusinessAndAllocationsRecord;
+import com.tranwall.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
-import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +41,7 @@ public class BusinessProspectService {
   private final BusinessProspectRepository businessProspectRepository;
 
   private final BusinessService businessService;
+  private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
@@ -205,8 +205,7 @@ public class BusinessProspectService {
       BusinessType businessType,
       String businessPhone,
       String employerIdentificationNumber,
-      Address toAddress)
-      throws IOException {
+      Address toAddress) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
@@ -217,7 +216,7 @@ public class BusinessProspectService {
       throw new InvalidRequestException("password has not been set");
     }
 
-    BusinessAndAllocationsRecord businessAndAllocationsRecord =
+    Business business =
         businessService.createBusiness(
             businessProspect.getBusinessId(),
             legalName,
@@ -228,10 +227,10 @@ public class BusinessProspectService {
             businessPhone,
             Currency.USD);
 
-    BusinessOwner businessOwner =
+    BusinessOwnerAndUserRecord businessOwner =
         businessOwnerService.createBusinessOwner(
             businessProspect.getBusinessOwnerId(),
-            businessAndAllocationsRecord.business().getId(),
+            business.getId(),
             businessProspect.getFirstName().getEncrypted(),
             businessProspect.getLastName().getEncrypted(),
             toAddress,
@@ -243,10 +242,12 @@ public class BusinessProspectService {
     // later
     businessProspectRepository.delete(businessProspect);
 
+    AllocationRecord allocationRecord =
+        allocationService.createRootAllocation(
+            business.getId(), businessOwner.user(), business.getLegalName() + " - root");
+
     return new ConvertBusinessProspectRecord(
-        businessAndAllocationsRecord.business(),
-        businessAndAllocationsRecord.allocationRecord(),
-        businessOwner);
+        business, allocationRecord, businessOwner.businessOwner());
   }
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {

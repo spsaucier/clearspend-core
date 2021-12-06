@@ -3,6 +3,7 @@ package com.tranwall.capital.controller.type.allocation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.util.ArrayList;
@@ -29,6 +30,11 @@ public class Allocation {
   @JsonProperty("parentAllocationId")
   private TypedId<AllocationId> parentAllocationId;
 
+  @JsonProperty("ownerId")
+  @NonNull
+  @NotNull(message = "owner is required")
+  private TypedId<UserId> ownerId;
+
   @JsonProperty("childrenAllocationIds")
   private List<TypedId<AllocationId>> childrenAllocationIds = new ArrayList<>();
 
@@ -42,6 +48,7 @@ public class Allocation {
         new Allocation(
             record.allocation().getId(),
             record.allocation().getName(),
+            record.allocation().getOwnerId(),
             Account.of(record.account()));
 
     result.setParentAllocationId(record.allocation().getParentAllocationId());

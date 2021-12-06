@@ -57,7 +57,8 @@ class AccountServiceTest extends BaseCapitalTest {
         testHelper.createAllocation(
             createBusinessRecord.business().getId(),
             "name",
-            createBusinessRecord.allocationRecord().allocation().getId());
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
 
     AccountReallocateFundsRecord adjustmentRecord =
         accountService.reallocateFunds(

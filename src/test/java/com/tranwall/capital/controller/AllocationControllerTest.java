@@ -1,14 +1,19 @@
 package com.tranwall.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.controller.type.allocation.AllocationDetails;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationRequest;
+import com.tranwall.capital.controller.type.allocation.UpdateAllocationRequest;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessBankAccount;
@@ -44,6 +49,8 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final AccountService accountService;
   private final AllocationService allocationService;
 
+  private final Faker faker = new Faker();
+
   private Cookie authCookie;
 
   @BeforeEach
@@ -62,6 +69,7 @@ class AllocationControllerTest extends BaseCapitalTest {
                 .getRootAllocation(testHelper.retrieveBusiness().getId())
                 .allocation()
                 .getId(),
+            testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO));
 
     String body = objectMapper.writeValueAsString(request);
@@ -90,12 +98,12 @@ class AllocationControllerTest extends BaseCapitalTest {
             allocationService
                 .getRootAllocation(testHelper.retrieveBusiness().getId())
                 .allocation()
-                .getId());
+                .getId(),
+            testHelper.createUser(business).user());
 
     MockHttpServletResponse response =
         mvc.perform(
                 get(String.format("/allocations/%s", allocationRecord.allocation().getId()))
-                    .header("businessId", business.getId().toString())
                     .contentType("application/json")
                     .cookie(authCookie))
             .andExpect(status().isOk())
@@ -116,16 +124,19 @@ class AllocationControllerTest extends BaseCapitalTest {
             allocationService
                 .getRootAllocation(testHelper.retrieveBusiness().getId())
                 .allocation()
-                .getId());
+                .getId(),
+            testHelper.createUser(business).user());
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(), "", parentAllocationRecord.allocation().getId());
+            business.getId(),
+            "",
+            parentAllocationRecord.allocation().getId(),
+            testHelper.createUser(business).user());
 
     MockHttpServletResponse response =
         mvc.perform(
                 get(String.format(
                         "/allocations/%s/children", parentAllocationRecord.allocation().getId()))
-                    .header("businessId", business.getId().toString())
                     .contentType("application/json")
                     .cookie(authCookie))
             .andExpect(status().isOk())
@@ -150,7 +161,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             allocationService
                 .getRootAllocation(testHelper.retrieveBusiness().getId())
                 .allocation()
-                .getId());
+                .getId(),
+            testHelper.createUser(business).user());
     Card card =
         testHelper.issueCard(
             business,
@@ -176,7 +188,6 @@ class AllocationControllerTest extends BaseCapitalTest {
         mvc.perform(
                 post(String.format(
                         "/allocations/%s/transactions", allocationRecord.allocation().getId()))
-                    .header("businessId", business.getId().toString())
                     .contentType("application/json")
                     .content(body)
                     .cookie(authCookie))
@@ -195,6 +206,7 @@ class AllocationControllerTest extends BaseCapitalTest {
         new CreateAllocationRequest(
             testHelper.generateFullName(),
             allocationService.getRootAllocation(business.getId()).allocation().getId(),
+            testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.valueOf(10)));
 
     String body = objectMapper.writeValueAsString(request);
@@ -202,7 +214,6 @@ class AllocationControllerTest extends BaseCapitalTest {
     MockHttpServletResponse response =
         mvc.perform(
                 post("/allocations")
-                    .header("businessId", business.getId().toString())
                     .contentType("application/json")
                     .content(body)
                     .cookie(authCookie))
@@ -210,5 +221,48 @@ class AllocationControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
     log.info(response.getContentAsString());
+  }
+
+  @Test
+  @SneakyThrows
+  void updateAllocation_success() {
+    // given
+    Business business = testHelper.retrieveBusiness();
+    AllocationRecord allocationRecord =
+        testHelper.createAllocation(
+            business.getId(),
+            faker.name().name(),
+            allocationService
+                .getRootAllocation(testHelper.retrieveBusiness().getId())
+                .allocation()
+                .getId(),
+            testHelper.createUser(business).user());
+
+    UpdateAllocationRequest updateAllocationRequest = new UpdateAllocationRequest();
+    updateAllocationRequest.setName("Changed name");
+    updateAllocationRequest.setOwnerId(testHelper.createUser(business).user().getId());
+
+    // when
+    MockHttpServletResponse response =
+        mvc.perform(
+                patch("/allocations/" + allocationRecord.allocation().getId())
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(updateAllocationRequest))
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    AllocationDetails allocationDetails =
+        objectMapper.readValue(response.getContentAsString(), AllocationDetails.class);
+
+    // then
+    assertThat(allocationDetails.getAllocation().getAllocationId())
+        .isEqualTo(allocationRecord.allocation().getId());
+    assertThat(allocationDetails.getAllocation().getName())
+        .isEqualTo(updateAllocationRequest.getName());
+    assertThat(allocationDetails.getAllocation().getOwnerId())
+        .isEqualTo(allocationRecord.allocation().getOwnerId());
+    assertThat(allocationDetails.getOwner()).isNotNull();
   }
 }

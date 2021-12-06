@@ -12,9 +12,9 @@ import com.tranwall.capital.data.model.enums.BusinessStatus;
 import com.tranwall.capital.data.model.enums.KnowYourBusinessStatus;
 import com.tranwall.capital.data.model.enums.KnowYourCustomerStatus;
 import com.tranwall.capital.service.BusinessOwnerService;
+import com.tranwall.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.tranwall.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,8 +34,8 @@ public class BusinessOwnerController {
 
   @PostMapping("")
   private CreateBusinessOwnerResponse createBusinessOwner(
-      @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) throws IOException {
-    BusinessOwner businessOwner =
+      @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
+    BusinessOwnerAndUserRecord businessOwnerRecord =
         businessOwnerService.createBusinessOwner(
             null,
             CurrentUser.get().businessId(),
@@ -45,7 +45,7 @@ public class BusinessOwnerController {
             request.getEmail(),
             request.getPhone(),
             null);
-    return new CreateBusinessOwnerResponse(businessOwner.getId(), null);
+    return new CreateBusinessOwnerResponse(businessOwnerRecord.businessOwner().getId(), null);
   }
 
   @PatchMapping("/{businessOwnerId}")

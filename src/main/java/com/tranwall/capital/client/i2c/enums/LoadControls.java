@@ -1,5 +1,10 @@
 package com.tranwall.capital.client.i2c.enums;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
 public enum LoadControls {
   MAXIMUM_CARD_BALANCE_LIMIT("MX_CARD_BAL_LIMIT"),
   MAX_CARD_SUPPLEMENTARY_BALANCE_LIMIT_MAXIMUM_BALANCE_LIMIT_FOR_CARDHOLDER_MAX_CARD_WHOLE_BALANCE_LIMIT(
@@ -33,9 +38,5 @@ public enum LoadControls {
   N_DAYS_LOAD_FREQUENCY_SUPPLEMENTARY_THEIR_PURSE_CARDS("N_DAYS_LOAD_FRQ_SP"),
   N_DAYS_LOAD_FREQUENCY_FOR_CARD_HOLDER("N_DAYS_LOAD_FRQ_CH");
 
-  private String i2cLoadControl;
-
-  LoadControls(String i2cLoadControl) {
-    this.i2cLoadControl = i2cLoadControl;
-  }
+  private final String i2cLoadControl;
 }

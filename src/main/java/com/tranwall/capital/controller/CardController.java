@@ -1,11 +1,9 @@
 package com.tranwall.capital.controller;
 
 import com.tranwall.capital.common.typedid.data.BusinessId;
-import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.PagedData;
-import com.tranwall.capital.controller.type.card.Card;
 import com.tranwall.capital.controller.type.card.IssueCardRequest;
 import com.tranwall.capital.controller.type.card.IssueCardResponse;
 import com.tranwall.capital.controller.type.card.SearchCardData;
@@ -14,13 +12,10 @@ import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.CardFilterCriteria;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.ProgramService;
-import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,18 +54,6 @@ public class CardController {
                         null)));
 
     return issueCardResponseList;
-  }
-
-  @GetMapping("/{cardId}")
-  private Card getCard(
-      @PathVariable(value = "cardId")
-          @Parameter(
-              required = true,
-              name = "cardId",
-              description = "ID of the allocation record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<CardId> cardId) {
-    return new Card(cardService.getCard(CurrentUser.get().businessId(), cardId).card());
   }
 
   @PostMapping("/search")

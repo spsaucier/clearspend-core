@@ -4,12 +4,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tranwall.capital.client.i2c.I2ClientProperties.Program;
+import com.tranwall.capital.client.i2c.enums.AlertRecipient;
+import com.tranwall.capital.client.i2c.enums.Frequency;
+import com.tranwall.capital.client.i2c.enums.ParameterValueType;
+import com.tranwall.capital.client.i2c.enums.SpendingControl;
 import com.tranwall.capital.client.i2c.request.ActivateCardRequest;
 import com.tranwall.capital.client.i2c.request.AddCardRequest;
 import com.tranwall.capital.client.i2c.request.AddStakeholderRequest;
 import com.tranwall.capital.client.i2c.request.CreditFundsRequest;
 import com.tranwall.capital.client.i2c.request.GetCardStatusRequest;
+import com.tranwall.capital.client.i2c.request.Restriction;
+import com.tranwall.capital.client.i2c.request.RestrictionParameter;
 import com.tranwall.capital.client.i2c.request.SetCardStatusRequest;
+import com.tranwall.capital.client.i2c.request.SetCardholderRestrictionsRequest;
 import com.tranwall.capital.client.i2c.request.ShareFundsRequest;
 import com.tranwall.capital.client.i2c.response.ActivateCardResponse;
 import com.tranwall.capital.client.i2c.response.AddCardResponse;
@@ -19,10 +26,14 @@ import com.tranwall.capital.client.i2c.response.CreditFundsResponse;
 import com.tranwall.capital.client.i2c.response.GetCardStatusResponse;
 import com.tranwall.capital.client.i2c.response.SetCardStatusResponse;
 import com.tranwall.capital.client.i2c.response.ShareFundsResponse;
+import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardType;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Objects;
 import lombok.NonNull;
 import lombok.SneakyThrows;
@@ -132,6 +143,27 @@ public class I2Client {
         ActivateCardRequest.builder()
             .acquirer(acquirer)
             .card(Card.builder().i2cCardRef(i2cCardRef).build())
+            .build(),
+        ActivateCardResponse.class);
+  }
+
+  public void setCardRestrictions(String i2cCardRef, Amount dailyLimit, Amount monthlyLimit) {
+    List<Restriction> restrictions = new ArrayList<>();
+
+    if (dailyLimit != null) {
+      restrictions.add(createSpendRestriction(Frequency.DAILY, dailyLimit.getAmount()));
+    }
+
+    if (monthlyLimit != null) {
+      restrictions.add(createSpendRestriction(Frequency.MONTHLY, monthlyLimit.getAmount()));
+    }
+
+    callI2C(
+        "setCardholderRestrictions",
+        SetCardholderRestrictionsRequest.builder()
+            .acquirer(acquirer)
+            .card(Card.builder().i2cCardRef(i2cCardRef).build())
+            .restrictions(restrictions)
             .build(),
         ActivateCardResponse.class);
   }
@@ -254,5 +286,22 @@ public class I2Client {
   @SneakyThrows
   private String createRootRequest(String rootName, Object request) {
     return String.format(ROOT_REQUEST_TEMPLATE, rootName, mapper.writeValueAsString(request));
+  }
+
+  private Restriction createSpendRestriction(Frequency frequency, BigDecimal amount) {
+    return Restriction.builder()
+        .spendingControl(SpendingControl.PURCHASE_LIMIT)
+        .alertRecipient(AlertRecipient.CARDHOLDER)
+        .restrictionParameters(
+            Collections.singletonList(
+                RestrictionParameter.builder()
+                    .spendingControl(SpendingControl.PURCHASE_LIMIT)
+                    .parameterValueType(ParameterValueType.MAX_FIELD_ONLY)
+                    .cardParamMaxValue(amount.toString())
+                    .frequency(frequency)
+                    .sendEmailFlag(false)
+                    .sendSmsFlag(false)
+                    .build()))
+        .build();
   }
 }

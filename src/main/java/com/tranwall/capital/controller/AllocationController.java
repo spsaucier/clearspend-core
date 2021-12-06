@@ -6,20 +6,25 @@ import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
+import com.tranwall.capital.controller.type.allocation.AllocationDetails;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardResponse;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationRequest;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationResponse;
+import com.tranwall.capital.controller.type.allocation.UpdateAllocationRequest;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
+import com.tranwall.capital.service.AllocationService.AllocationDetailsRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessService;
+import com.tranwall.capital.service.UserService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +38,7 @@ public class AllocationController {
 
   private final AllocationService allocationService;
   private final BusinessService businessService;
+  private final UserService userService;
 
   @PostMapping("")
   private CreateAllocationResponse createAllocation(
@@ -42,13 +48,14 @@ public class AllocationController {
             CurrentUser.get().businessId(),
             request.getParentAllocationId(),
             request.getName(),
+            userService.retrieveUser(request.getOwnerId()),
             request.getAmount().toAmount());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
   }
 
   @GetMapping("/{allocationId}")
-  private Allocation getAllocation(
+  private AllocationDetails getAllocation(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -56,14 +63,36 @@ public class AllocationController {
               description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
-    AllocationRecord allocationRecord =
+    AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
             businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
 
-    return new Allocation(
-        allocationRecord.allocation().getId(),
-        allocationRecord.allocation().getName(),
-        Account.of(allocationRecord.account()));
+    return new AllocationDetails(allocationRecord);
+  }
+
+  @PatchMapping("/{allocationId}")
+  private AllocationDetails updateAllocation(
+      @PathVariable(value = "allocationId")
+          @Parameter(
+              required = true,
+              name = "allocationId",
+              description = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AllocationId> allocationId,
+      @RequestBody @Validated UpdateAllocationRequest request) {
+
+    allocationService.updateAllocation(
+        CurrentUser.get().businessId(),
+        allocationId,
+        request.getName(),
+        request.getParentAllocationId(),
+        request.getOwnerId());
+
+    AllocationDetailsRecord allocationRecord =
+        allocationService.getAllocation(
+            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
+
+    return new AllocationDetails(allocationRecord);
   }
 
   @GetMapping("/{allocationId}/children")
@@ -82,7 +111,10 @@ public class AllocationController {
         .map(
             e ->
                 new Allocation(
-                    e.allocation().getId(), e.allocation().getName(), Account.of(e.account())))
+                    e.allocation().getId(),
+                    e.allocation().getName(),
+                    e.allocation().getOwnerId(),
+                    Account.of(e.account())))
         .collect(Collectors.toList());
   }
 

@@ -20,6 +20,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class TransactionLimitService {
 
   private final TransactionLimitRepository transactionLimitRepository;
 
+  @Transactional
   public TransactionLimit initializeAllocationSpendLimit(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
     Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
@@ -46,6 +48,7 @@ public class TransactionLimitService {
             businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid(), limits));
   }
 
+  @Transactional
   public TransactionLimit initializeCardSpendLimit(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId, TypedId<CardId> cardId) {
     return duplicateSpendLimit(

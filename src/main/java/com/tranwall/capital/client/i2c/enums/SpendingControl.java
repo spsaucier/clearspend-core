@@ -1,6 +1,12 @@
 package com.tranwall.capital.client.i2c.enums;
 
-public enum SpendingControl {
+import com.tranwall.capital.client.i2c.util.I2CEnumSerializable;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
+public enum SpendingControl implements I2CEnumSerializable<SpendingControl> {
   BLOCK_ONLINE_TRANSACTIONS("CH_ECOM_CONFG"),
   BLOCK_POS_PURCHASES("CH_POS_CONFG"),
   BLOCK_ATM_WITHDRAWALS("CH_ATM_CONFG"),
@@ -15,9 +21,10 @@ public enum SpendingControl {
   PURCHASE_LIMIT("PUR_LMT"),
   CASH_WITHDRAWAL_LIMIT("CA_PUR_LMT");
 
-  private String i2cSpendingControl;
+  private final String i2cSpendingControl;
 
-  SpendingControl(String i2cSpendingControl) {
-    this.i2cSpendingControl = i2cSpendingControl;
+  @Override
+  public String serialize() {
+    return i2cSpendingControl;
   }
 }

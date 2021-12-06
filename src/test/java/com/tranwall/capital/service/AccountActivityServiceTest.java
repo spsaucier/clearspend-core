@@ -23,7 +23,6 @@ import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.type.PageToken;
-import java.io.IOException;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -85,7 +84,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
+            business.getId(),
+            "",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -126,7 +128,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void retrieveLatestAccountActivity() throws IOException {
+  void retrieveLatestAccountActivity() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     accountService.depositFunds(
@@ -138,7 +140,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
+            business.getId(),
+            "",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -199,7 +204,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             false);
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
+            business.getId(),
+            "",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),

@@ -6,6 +6,7 @@ import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
@@ -52,6 +53,12 @@ public class Allocation extends TypedMutable<AllocationId> {
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "user")
+  @Column(updatable = false)
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<UserId> ownerId;
 
   @NonNull private String name;
 

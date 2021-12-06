@@ -21,7 +21,7 @@ import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.MerchantType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.service.CardService.CardRecord;
+import com.tranwall.capital.service.CardService.CardDetailsRecord;
 import com.tranwall.capital.service.type.NetworkCommon;
 import java.time.OffsetDateTime;
 import javax.transaction.Transactional;
@@ -156,13 +156,13 @@ public class AccountActivityService {
       TypedId<UserId> userId,
       TypedId<CardId> cardId,
       AccountActivityFilterCriteria accountActivityFilterCriteria) {
-    CardRecord card = cardService.getCard(businessId, cardId);
-    if (!card.card().getUserId().equals(userId)) {
-      throw new IdMismatchException(IdType.USER_ID, userId, card.card().getUserId());
+    CardDetailsRecord cardDetailsRecord = cardService.getCard(businessId, cardId);
+    if (!cardDetailsRecord.card().getUserId().equals(userId)) {
+      throw new IdMismatchException(IdType.USER_ID, userId, cardDetailsRecord.card().getUserId());
     }
 
-    accountActivityFilterCriteria.setCardId(card.card().getId());
-    accountActivityFilterCriteria.setAllocationId(card.card().getAllocationId());
+    accountActivityFilterCriteria.setCardId(cardDetailsRecord.card().getId());
+    accountActivityFilterCriteria.setAllocationId(cardDetailsRecord.card().getAllocationId());
     accountActivityFilterCriteria.setUserId(userId);
 
     return accountActivityRepository.find(businessId, accountActivityFilterCriteria);
