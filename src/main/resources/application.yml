@@ -20,6 +20,7 @@ spring:
         format_sql: true
   flyway:
     clean-on-validation-error: false
+    outOfOrder: true
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false

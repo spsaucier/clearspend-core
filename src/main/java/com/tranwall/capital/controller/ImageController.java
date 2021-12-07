@@ -4,11 +4,13 @@ import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
+import com.tranwall.capital.data.model.Receipt;
 import com.tranwall.capital.service.ReceiptService;
 import io.swagger.annotations.ApiParam;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -29,19 +31,20 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/images")
 @RequiredArgsConstructor
+@Slf4j
 public class ImageController {
 
   private final ReceiptService receiptService;
 
   @PostMapping("/receipts")
   private CreateReceiptResponse storeReceiptImage(
-      @RequestParam("receipt") @ApiParam("receipt") MultipartFile receiptFile) throws IOException {
+      @RequestParam("receipt") MultipartFile receiptFile) throws IOException {
     CurrentUser currentUser = CurrentUser.get();
-    return new CreateReceiptResponse(
-        receiptService
-            .storeReceiptImage(
-                currentUser.businessId(), currentUser.userId(), receiptFile.getBytes())
-            .getId());
+    final Receipt receipt =
+        receiptService.storeReceiptImage(
+            currentUser.businessId(), currentUser.userId(), receiptFile.getBytes());
+    log.info("Stored receipt: {}", receipt);
+    return new CreateReceiptResponse(receipt.getId());
   }
 
   @GetMapping("/receipts/{receiptId}")

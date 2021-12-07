@@ -2,9 +2,9 @@ package com.tranwall.capital.controller;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.github.dockerjava.api.command.CreateImageResponse;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
+import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import javax.servlet.http.Cookie;
@@ -47,21 +47,15 @@ class ImageControllerTest extends BaseCapitalTest {
     MockMultipartFile image =
         new MockMultipartFile(
             "receipt", "hello.txt", MediaType.TEXT_PLAIN_VALUE, "Hello, World!".getBytes());
-    //    MockMultipartFile currency = new MockMultipartFile("currency", "USD".getBytes());
-    //    MockMultipartFile amount = new MockMultipartFile("amount", "100.00".getBytes());
 
     MockHttpServletResponse response =
         mvc.perform(
-                MockMvcRequestBuilders.multipart("/images/receipts")
-                    .file(image)
-                    //                    .file(currency)
-                    //                    .file(amount)
-                    .cookie(userCookie))
+                MockMvcRequestBuilders.multipart("/images/receipts").file(image).cookie(userCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
-    CreateImageResponse createImageResponse =
-        objectMapper.readValue(response.getContentAsString(), CreateImageResponse.class);
+    CreateReceiptResponse createImageResponse =
+        objectMapper.readValue(response.getContentAsString(), CreateReceiptResponse.class);
     log.info(
         "\n{}",
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(createImageResponse));
