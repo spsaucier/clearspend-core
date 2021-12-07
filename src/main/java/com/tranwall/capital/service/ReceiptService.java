@@ -1,6 +1,5 @@
 package com.tranwall.capital.service;
 
-import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
@@ -33,9 +32,9 @@ public class ReceiptService {
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
   public Receipt storeReceiptImage(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, Amount amount, byte[] receiptFile)
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, byte[] receiptFile)
       throws IOException {
-    Receipt receipt = new Receipt(businessId, userId, amount);
+    Receipt receipt = new Receipt(businessId, userId);
 
     String receiptPath = getReceiptPath(businessId, userId, receipt.getId());
     receiptImageService.storeReceiptImage(businessId, userId, receipt.getId(), receiptFile);

@@ -3,7 +3,6 @@ package com.tranwall.capital.controller;
 import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
-import com.tranwall.capital.controller.type.receipt.CreateReceiptRequest;
 import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.service.ReceiptService;
 import io.swagger.annotations.ApiParam;
@@ -15,11 +14,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,17 +35,12 @@ public class ImageController {
 
   @PostMapping("/receipts")
   private CreateReceiptResponse storeReceiptImage(
-      @RequestParam("receipt") @ApiParam("receipt") MultipartFile receiptFile,
-      @Validated @RequestBody CreateReceiptRequest request)
-      throws IOException {
+      @RequestParam("receipt") @ApiParam("receipt") MultipartFile receiptFile) throws IOException {
     CurrentUser currentUser = CurrentUser.get();
     return new CreateReceiptResponse(
         receiptService
             .storeReceiptImage(
-                currentUser.businessId(),
-                currentUser.userId(),
-                request.getAmount().toAmount(),
-                receiptFile.getBytes())
+                currentUser.businessId(), currentUser.userId(), receiptFile.getBytes())
             .getId());
   }
 

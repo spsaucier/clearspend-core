@@ -58,7 +58,7 @@ public class Receipt extends TypedMutable<ReceiptId> {
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AdjustmentId> adjustmentId;
 
-  @NonNull @Embedded private Amount amount;
+  @Embedded private Amount amount;
 
   private String path;
 }

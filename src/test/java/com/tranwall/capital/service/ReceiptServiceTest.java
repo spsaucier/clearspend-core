@@ -4,12 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
-import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Receipt;
-import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
-import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +35,6 @@ class ReceiptServiceTest extends BaseCapitalTest {
           receiptService.storeReceiptImage(
               userRecord.user().getBusinessId(),
               userRecord.user().getId(),
-              Amount.of(Currency.USD, BigDecimal.TEN),
               fileContents.getBytes());
     }
   }
@@ -48,10 +44,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
   void storeReceiptImage_success() {
     Receipt receipt =
         receiptService.storeReceiptImage(
-            userRecord.user().getBusinessId(),
-            userRecord.user().getId(),
-            Amount.of(Currency.USD, BigDecimal.TEN),
-            fileContents.getBytes());
+            userRecord.user().getBusinessId(), userRecord.user().getId(), fileContents.getBytes());
     assertThat(receipt).isNotNull();
   }
 
