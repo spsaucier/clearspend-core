@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tranwall.capital.data.model.NetworkMessage;
+import com.tranwall.capital.data.model.enums.AccountActivityStatus;
 import com.tranwall.capital.data.repository.NetworkMessageRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentRecord;
 import com.tranwall.capital.service.AccountService.HoldRecord;
@@ -41,6 +42,7 @@ public class NetworkMessageService {
 
   @Transactional
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
+    // update common with data we have locally
     common.getRequestedAmount().ensurePositive();
     CardRecord cardRecord = cardService.getCardByCardNumber(common.getCardNumber());
     common.setBusinessId(cardRecord.card().getBusinessId());
@@ -50,6 +52,14 @@ public class NetworkMessageService {
         allocationService.retrieveAllocation(
             common.getBusinessId(), cardRecord.card().getAllocationId()));
 
+    // TODO(kuchlein): lookup local merchantName table to retrieve logo
+    // common.getAccountActivity().setMerchantLogoUrl();
+
+    // TODO(kuchlein): lookup local merchantAddress table to retrieve lat/long
+    // common.getAccountActivity().setMerchantLatitude();
+    // common.getAccountActivity().setMerchantLongitude();
+
+    // actually process the network message from i2c
     switch (common.getNetworkMessageType()) {
       case PRE_AUTH_TRANSACTION, PRE_AUTH_TRANSACTION_ADVICE -> processPreAuth(common);
       case FINANCIAL_TRANSACTION, FINANCIAL_TRANSACTION_ADVICE -> processFinancialAuth(common);
@@ -59,6 +69,7 @@ public class NetworkMessageService {
           "invalid networkMessageType " + common.getNetworkMessageType());
     }
 
+    // store any data that resulted from processing the network message from i2c
     NetworkMessage networkMessage =
         new NetworkMessage(
             cardRecord.card().getBusinessId(),
@@ -70,13 +81,17 @@ public class NetworkMessageService {
             common.getMerchantAddress(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode());
-    //      networkMessage.setRequest(common.getRequest());
+
+    // TODO(kuchlein): determine why we can't simply use the request as the field type
+    // networkMessage.setRequest(common.getRequest());
     try {
       networkMessage.setRequest(objectMapper.writeValueAsString(common.getRequest()));
     } catch (JsonProcessingException e) {
       log.error("failed to serialize common.request", e);
     }
 
+    // card may be null in the case of i2c sending us transactions for cards that we've not issued
+    // TODO(kuchlein): determine if i2c handle this for us or not
     if (common.getCard() != null) {
       networkMessage.setCardId(common.getCard().getId());
     }
@@ -89,6 +104,8 @@ public class NetworkMessageService {
               common.getRequestedAmount(),
               OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
+      common.getAccountActivity().setActivityTime(holdRecord.hold().getCreated());
+      common.getAccountActivity().setHideAfter(holdRecord.hold().getExpirationDate());
       accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
     }
 
@@ -97,11 +114,15 @@ public class NetworkMessageService {
           accountService.recordNetworkAdjustment(
               common.getAccount(), common.getCreditOrDebit(), common.getRequestedAmount());
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
+      common.getAccountActivity().setActivityTime(adjustmentRecord.adjustment().getCreated());
       accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
           common, adjustmentRecord.adjustment());
     }
 
     if (common.isPostDecline()) {
+      // TODO(kuchlein): do we need a separate decline table?
+      common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.DECLINED);
+      common.getAccountActivity().setActivityTime(OffsetDateTime.now());
       accountActivityService.recordNetworkDeclineAccountAccountActivity(common);
     }
 
@@ -114,6 +135,7 @@ public class NetworkMessageService {
       return;
     }
 
+    common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);
   }
 
@@ -123,6 +145,7 @@ public class NetworkMessageService {
       return;
     }
 
+    common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
   }
 

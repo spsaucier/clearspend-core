@@ -63,7 +63,7 @@ import com.tranwall.capital.data.repository.BusinessRepository;
 import com.tranwall.capital.data.repository.TransactionLimitRepository;
 import com.tranwall.capital.data.repository.UserRepository;
 import com.tranwall.capital.service.AccountService;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BinService;
@@ -444,7 +444,7 @@ public class TestHelper {
     return businessBankAccounts.get(0);
   }
 
-  public AdjustmentRecord transactBankAccount(
+  public AdjustmentAndHoldRecord transactBankAccount(
       BankAccountTransactType bankAccountTransactType, BigDecimal amount, boolean placeHold) {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
     Account businessAccount = allocationService.getRootAllocation(businessId).account();

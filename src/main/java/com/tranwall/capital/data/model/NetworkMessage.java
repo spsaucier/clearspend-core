@@ -93,6 +93,7 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
+  // TODO(kuchlein): determine why we can't simply use the request as the field type
+  // private EventNotificationAdvanceRequest request;
   private String request;
-  //  private EventNotificationAdvanceRequest request;
 }

@@ -69,6 +69,8 @@ public class NetworkCommon {
 
   private boolean postDecline = false;
 
+  private AccountActivity accountActivity = new AccountActivity();
+
   public NetworkCommon(I2cTransaction i2cTransaction, I2cCard i2cCard) {
     cardNumber = i2cCard.getCardNumber();
     i2cCard.setEncryptedCardNumber(new NullableEncryptedString(i2cCard.getCardNumber()));

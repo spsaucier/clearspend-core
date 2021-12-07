@@ -68,7 +68,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     int count =
         accountActivityRepository.countByBusinessId(createBusinessRecord.business().getId());
-    Assertions.assertEquals(1, count);
+    Assertions.assertEquals(2, count);
   }
 
   @Test
@@ -124,7 +124,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         true);
 
     int count = accountActivityRepository.countByBusinessId(business.getId());
-    Assertions.assertEquals(1, count);
+    Assertions.assertEquals(2, count);
   }
 
   @Test

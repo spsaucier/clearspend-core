@@ -18,12 +18,12 @@ import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Hold;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.embedded.MerchantDetails;
+import com.tranwall.capital.data.model.enums.AccountActivityStatus;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.MerchantType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.CardService.CardDetailsRecord;
 import com.tranwall.capital.service.type.NetworkCommon;
-import java.time.OffsetDateTime;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -44,20 +44,39 @@ public class AccountActivityService {
   private final UserService userService;
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordBankAccountAccountActivity(
-      Allocation allocation, AccountActivityType type, Adjustment adjustment) {
-    final AccountActivity accountActivity =
+  public void recordBankAccountAccountActivity(
+      Allocation allocation, AccountActivityType type, Adjustment adjustment, Hold hold) {
+    AccountActivity adjustmentAccountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
             allocation.getId(),
             allocation.getName(),
             adjustment.getAccountId(),
             type,
+            AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
             adjustment.getAmount());
-    accountActivity.setAdjustmentId(adjustment.getId());
+    adjustmentAccountActivity.setAdjustmentId(adjustment.getId());
 
-    return accountActivityRepository.save(accountActivity);
+    if (hold != null) {
+      adjustmentAccountActivity.setVisibleAfter(hold.getExpirationDate());
+
+      AccountActivity holdAccountActivity =
+          new AccountActivity(
+              adjustment.getBusinessId(),
+              allocation.getId(),
+              allocation.getName(),
+              adjustment.getAccountId(),
+              type,
+              AccountActivityStatus.PENDING,
+              hold.getCreated(),
+              adjustment.getAmount());
+      holdAccountActivity.setHideAfter(hold.getExpirationDate());
+
+      accountActivityRepository.save(holdAccountActivity);
+    }
+
+    accountActivityRepository.save(adjustmentAccountActivity);
   }
 
   @Transactional(TxType.REQUIRED)
@@ -70,6 +89,7 @@ public class AccountActivityService {
             allocation.getName(),
             adjustment.getAccountId(),
             REALLOCATE,
+            AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
             adjustment.getAmount());
     accountActivity.setAdjustmentId(adjustment.getId());
@@ -97,10 +117,6 @@ public class AccountActivityService {
       NetworkCommon common, Amount amount, Hold hold, Adjustment adjustment) {
 
     Allocation allocation = common.getAllocation();
-    OffsetDateTime activityTime =
-        hold != null
-            ? hold.getCreated()
-            : adjustment != null ? adjustment.getCreated() : OffsetDateTime.now();
     AccountActivity accountActivity =
         new AccountActivity(
             common.getBusinessId(),
@@ -108,15 +124,21 @@ public class AccountActivityService {
             allocation.getName(),
             common.getAccount().getId(),
             common.getNetworkMessageType().getAccountActivityType(),
-            activityTime,
+            common.getAccountActivity().getAccountActivityStatus(),
+            common.getAccountActivity().getActivityTime(),
             amount);
     accountActivity.setUserId(common.getCard().getUserId());
+
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
             MerchantType.OTHERS,
             common.getMerchantNumber(),
-            common.getMerchantCategoryCode()));
+            common.getMerchantCategoryCode(),
+            common.getAccountActivity().getMerchantLogoUrl(),
+            common.getAccountActivity().getMerchantLatitude(),
+            common.getAccountActivity().getMerchantLongitude()));
+
     User cardOwner = userService.retrieveUser(common.getCard().getUserId());
     accountActivity.setCard(
         new com.tranwall.capital.data.model.embedded.CardDetails(
@@ -124,6 +146,7 @@ public class AccountActivityService {
             common.getCard().getLastFour(),
             cardOwner.getFirstName(),
             cardOwner.getLastName()));
+
     if (adjustment != null) {
       accountActivity.setAdjustmentId(adjustment.getId());
     }

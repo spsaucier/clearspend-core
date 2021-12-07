@@ -1,6 +1,7 @@
 package com.tranwall.capital.data.model.embedded;
 
 import com.tranwall.capital.data.model.enums.MerchantType;
+import java.math.BigDecimal;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -24,4 +25,11 @@ public class MerchantDetails {
   private String merchantNumber;
 
   private Integer merchantCategoryCode;
+
+  // path only
+  private String logoUrl;
+
+  private BigDecimal latitude;
+
+  private BigDecimal longitude;
 }

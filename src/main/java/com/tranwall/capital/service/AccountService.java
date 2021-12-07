@@ -50,6 +50,8 @@ public class AccountService {
 
   public record AdjustmentRecord(Account account, Adjustment adjustment) {}
 
+  public record AdjustmentAndHoldRecord(Account account, Adjustment adjustment, Hold hold) {}
+
   public record HoldRecord(Account account, Hold hold) {}
 
   public record AccountReallocateFundsRecord(
@@ -66,7 +68,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord depositFunds(
+  public AdjustmentAndHoldRecord depositFunds(
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
       Allocation rootAllocation,
@@ -79,14 +81,16 @@ public class AccountService {
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
+    Hold hold = null;
     if (placeHold) {
-      holdRepository.save(
-          new Hold(
-              businessId,
-              rootAllocationAccount.getId(),
-              HoldStatus.PLACED,
-              amount.negate(),
-              OffsetDateTime.now().plusDays(5)));
+      hold =
+          holdRepository.save(
+              new Hold(
+                  businessId,
+                  rootAllocationAccount.getId(),
+                  HoldStatus.PLACED,
+                  amount.negate(),
+                  OffsetDateTime.now().plusDays(5)));
     }
 
     // flush everything to the db before trying to call i2c
@@ -94,11 +98,11 @@ public class AccountService {
 
     i2Client.creditFunds(rootAllocation.getI2cAccountRef(), amount.getAmount());
 
-    return new AdjustmentRecord(rootAllocationAccount, adjustment);
+    return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, hold);
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord withdrawFunds(
+  public AdjustmentAndHoldRecord withdrawFunds(
       TypedId<BusinessId> businessId, Account rootAllocationAccount, Amount amount) {
     amount.ensurePositive();
 
@@ -113,7 +117,7 @@ public class AccountService {
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().sub(amount));
     rootAllocationAccount = accountRepository.save(rootAllocationAccount);
 
-    return new AdjustmentRecord(rootAllocationAccount, adjustment);
+    return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, null);
   }
 
   @Transactional(TxType.REQUIRED)

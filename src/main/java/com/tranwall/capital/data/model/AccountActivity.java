@@ -13,6 +13,7 @@ import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.embedded.CardDetails;
 import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.embedded.ReceiptDetails;
+import com.tranwall.capital.data.model.enums.AccountActivityStatus;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import javax.persistence.Column;
@@ -79,6 +80,18 @@ public class AccountActivity extends TypedMutable<AccountActivityId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountActivityType type;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private AccountActivityStatus status;
+
+  // the time after which this record should be hidden from the user. Set to a non-null value if
+  // this record should always be hidden.
+  private OffsetDateTime hideAfter;
+
+  // the time after which this record should be visible to the user. Leave null if this record
+  // should always be visible.
+  private OffsetDateTime visibleAfter;
 
   @Embedded private MerchantDetails merchant;
 

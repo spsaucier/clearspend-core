@@ -3,6 +3,7 @@ package com.tranwall.capital.controller.type.activity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.data.model.embedded.MerchantDetails;
 import com.tranwall.capital.data.model.enums.MerchantType;
+import java.math.BigDecimal;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -29,6 +30,15 @@ public class Merchant {
   @NonNull
   private Integer merchantCategoryCode;
 
+  @JsonProperty("merchantLogoUrl")
+  private String logoUrl;
+
+  @JsonProperty("merchantLatitude")
+  private BigDecimal latitude;
+
+  @JsonProperty("merchantLongitude")
+  private BigDecimal longitude;
+
   public Merchant(MerchantDetails merchant) {
     if (merchant == null) {
       return;
@@ -37,5 +47,7 @@ public class Merchant {
     type = merchant.getType();
     merchantCategoryCode = merchant.getMerchantCategoryCode();
     merchantNumber = merchant.getMerchantNumber();
+    latitude = merchant.getLatitude();
+    longitude = merchant.getLongitude();
   }
 }

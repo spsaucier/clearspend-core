@@ -25,7 +25,7 @@ import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -58,7 +58,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
-    AdjustmentRecord adjustmentRecord =
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccountId,
@@ -79,7 +79,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("700.51")),
         false);
-    AdjustmentRecord adjustmentRecord =
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccountId,

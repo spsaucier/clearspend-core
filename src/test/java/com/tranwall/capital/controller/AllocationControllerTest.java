@@ -24,7 +24,7 @@ import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
@@ -152,7 +152,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     Business business = testHelper.retrieveBusiness();
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
     Amount amount = new Amount(business.getCurrency(), BigDecimal.valueOf(100));
-    AdjustmentRecord deposit =
+    AdjustmentAndHoldRecord deposit =
         testHelper.transactBankAccount(BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
     AllocationRecord allocationRecord =
         testHelper.createAllocation(

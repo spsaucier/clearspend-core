@@ -5,7 +5,7 @@ import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -43,13 +43,13 @@ public class BusinessBankAccountDemoController {
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {
     // TODO: Get business UUID from JWT
-    AdjustmentRecord adjustmentRecord =
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
             CurrentUser.get().businessId(),
             businessBankAccountId,
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
             false);
-    return new CreateAdjustmentResponse(adjustmentRecord.adjustment().getId());
+    return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }
 }

@@ -20,7 +20,7 @@ import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import java.io.IOException;
 import java.util.Arrays;
@@ -130,7 +130,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  public AdjustmentRecord transactBankAccount(
+  public AdjustmentAndHoldRecord transactBankAccount(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
       @NonNull BankAccountTransactType bankAccountTransactType,
@@ -152,7 +152,7 @@ public class BusinessBankAccountService {
     // TODO(kuchlein): Need to call someone to actually move the money
 
     final AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
-    AdjustmentRecord adjustmentRecord =
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         switch (bankAccountTransactType) {
           case DEPOSIT -> accountService.depositFunds(
               businessId,
@@ -169,9 +169,12 @@ public class BusinessBankAccountService {
             ? BANK_DEPOSIT
             : AccountActivityType.BANK_WITHDRAWAL;
     accountActivityService.recordBankAccountAccountActivity(
-        allocationRecord.allocation(), type, adjustmentRecord.adjustment());
+        allocationRecord.allocation(),
+        type,
+        adjustmentAndHoldRecord.adjustment(),
+        adjustmentAndHoldRecord.hold());
 
-    return adjustmentRecord;
+    return adjustmentAndHoldRecord;
   }
 
   boolean validateOwners(@NonNull List<BusinessOwner> owners, @NonNull List<Owner> plaidOwners) {

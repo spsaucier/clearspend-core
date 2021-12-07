@@ -10,7 +10,7 @@ import com.tranwall.capital.controller.type.business.bankaccount.TransactBankAcc
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.enums.BusinessOnboardingStep;
 import com.tranwall.capital.data.model.enums.BusinessStatus;
-import com.tranwall.capital.service.AccountService.AdjustmentRecord;
+import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
 import com.tranwall.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -94,7 +94,7 @@ public class BusinessBankAccountController {
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    AdjustmentRecord adjustmentRecord =
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
             businessId,
             businessBankAccountId,
@@ -107,6 +107,6 @@ public class BusinessBankAccountController {
           businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
     }
 
-    return new CreateAdjustmentResponse(adjustmentRecord.adjustment().getId());
+    return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }
 }
