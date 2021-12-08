@@ -2,16 +2,22 @@ package com.tranwall.capital.data.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.data.type.TypedIdArrayType;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TransactionLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -37,7 +43,10 @@ import org.hibernate.annotations.TypeDefs;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-@TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
+@TypeDefs({
+  @TypeDef(name = "json", typeClass = JsonType.class),
+  @TypeDef(name = "uuid-array", typeClass = TypedIdArrayType.class)
+})
 public class TransactionLimit extends TypedMutable<TransactionLimitId> {
 
   @NonNull
@@ -60,4 +69,14 @@ public class TransactionLimit extends TypedMutable<TransactionLimitId> {
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits;
+
+  @NonNull
+  @Column(columnDefinition = "uuid[]")
+  @Type(type = "uuid-array")
+  private List<TypedId<MccGroup>> disabledMccGroups = new ArrayList<>();
+
+  @NonNull
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private Set<TransactionChannel> disabledTransactionChannels = new HashSet<>();
 }

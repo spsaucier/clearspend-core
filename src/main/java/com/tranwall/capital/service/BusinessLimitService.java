@@ -41,8 +41,8 @@ public class BusinessLimitService {
     allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.valueOf(30_0000));
 
     Map<LimitType, Map<LimitPeriod, BigDecimal>> limitTypeMap = new HashMap<>();
-    limitTypeMap.put(LimitType.DEPOSIT, allocationDurationMap);
-    limitTypeMap.put(LimitType.WITHDRAW, allocationDurationMap);
+    limitTypeMap.put(LimitType.ACH_DEPOSIT, allocationDurationMap);
+    limitTypeMap.put(LimitType.ACH_WITHDRAW, allocationDurationMap);
 
     limits.put(Currency.USD, limitTypeMap);
 
@@ -65,7 +65,7 @@ public class BusinessLimitService {
         AdjustmentType.DEPOSIT,
         amount,
         adjustments,
-        limit.getLimits().get(amount.getCurrency()).get(LimitType.DEPOSIT));
+        limit.getLimits().get(amount.getCurrency()).get(LimitType.ACH_DEPOSIT));
   }
 
   public void ensureWithinWithdrawLimit(TypedId<BusinessId> businessId, Amount amount) {
@@ -84,7 +84,7 @@ public class BusinessLimitService {
         AdjustmentType.WITHDRAW,
         amount,
         adjustments,
-        limit.getLimits().get(amount.getCurrency()).get(LimitType.WITHDRAW));
+        limit.getLimits().get(amount.getCurrency()).get(LimitType.ACH_WITHDRAW));
   }
 
   @VisibleForTesting
