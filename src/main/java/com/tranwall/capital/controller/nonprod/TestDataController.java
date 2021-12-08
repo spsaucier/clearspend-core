@@ -197,6 +197,7 @@ public class TestDataController {
             faker.number().digits(11),
             faker.funnyName().name(),
             UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
             business.getId());
     businessBankAccountService.transactBankAccount(
         business.getId(),

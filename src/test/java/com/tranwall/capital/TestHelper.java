@@ -410,7 +410,7 @@ public class TestHelper {
     MockHttpServletResponse response =
         mvc.perform(
                 get("/business-bank-accounts/link-token")
-                    .header("businessId", businessId.toString())
+                    .cookie(defaultAuthCookie)
                     .contentType("application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -431,6 +431,7 @@ public class TestHelper {
             generateRoutingNumber(),
             generateAccountNumber(),
             generateAccountName(),
+            UUID.randomUUID().toString(),
             UUID.randomUUID().toString(),
             businessId)
         .getId();

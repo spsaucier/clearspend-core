@@ -73,21 +73,26 @@ public class TestPlaidClient extends PlaidClient {
     super(plaidProperties, plaidApi);
   }
 
+  /**
+   * Create a Plaid sandbox link token. The strategy for creating the sandbox tokens is quite
+   * different from the regular strategy, hence the different implementation for integration
+   * testing.
+   *
+   * @param bankId identifying the institution (bank) to link. The number is unique to each test
+   *     run, and can be found in the constants {@link #SANDBOX_INSTITUTIONS_BY_NAME} and {@link
+   *     #SANDBOX_INSTITUTIONS}. If the value provided is not a valid institution business ID, First
+   *     Gingham Credit Union will be used by default.
+   * @return A link token
+   * @throws IOException for connection failures and the like
+   * @throws PlaidClientException if Plaid gives an error
+   */
   @Override
-  public String createLinkToken(TypedId<BusinessId> businessId) throws IOException {
-    if (!INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.containsKey(businessId)) {
-      throw new PlaidClientException(
-          """
-              {
-                "display_message": null,
-                "documentation_url": "https://plaid.com/docs/?ref=error#invalid-request-errors",
-                "error_code": "MISSING_FIELDS",
-                "error_message": "the following required fields are missing: public_token",
-                "error_type": "INVALID_REQUEST",
-                "suggested_action": "Use a businessId from TestPlaidClient"
-              }""",
-          "");
+  public String createLinkToken(TypedId<BusinessId> bankId) throws IOException {
+    if (!INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.containsKey(bankId)) {
+      log.info("Using default institution: First Gingham Credit Union");
+      bankId = SANDBOX_INSTITUTIONS_BY_NAME.get("First Gingham Credit Union");
     }
+    final TypedId<BusinessId> businessId = bankId;
     SandboxPublicTokenCreateRequest request =
         new SandboxPublicTokenCreateRequest()
             .institutionId(INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.get(businessId));

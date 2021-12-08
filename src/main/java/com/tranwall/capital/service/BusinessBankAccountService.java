@@ -45,7 +45,6 @@ public class BusinessBankAccountService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final AllocationService allocationService;
-  private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
 
   private final PlaidClient plaidClient;
@@ -53,7 +52,8 @@ public class BusinessBankAccountService {
   public record BusinessBankAccountRecord(
       RequiredEncryptedStringWithHash routingNumber,
       RequiredEncryptedStringWithHash accountNumber,
-      RequiredEncryptedStringWithHash accessToken) {}
+      RequiredEncryptedStringWithHash accessToken,
+      RequiredEncryptedStringWithHash accountRef) {}
 
   @Transactional
   public BusinessBankAccount createBusinessBankAccount(
@@ -61,13 +61,15 @@ public class BusinessBankAccountService {
       String accountNumber,
       String accountName,
       String accessToken,
+      String accountRef,
       TypedId<BusinessId> businessId) {
     BusinessBankAccount businessBankAccount =
         new BusinessBankAccount(
             businessId,
             new RequiredEncryptedStringWithHash(routingNumber),
             new RequiredEncryptedStringWithHash(accountNumber),
-            new RequiredEncryptedStringWithHash(accessToken));
+            new RequiredEncryptedStringWithHash(accessToken),
+            new RequiredEncryptedStringWithHash(accountRef));
     businessBankAccount.setName(accountName);
 
     return businessBankAccountRepository.save(businessBankAccount);
@@ -105,7 +107,8 @@ public class BusinessBankAccountService {
 
     List<BusinessBankAccount> newAccounts =
         accountsResponse.achList().stream()
-            .filter(ach -> validateOwners(owners, accountOwners.get(ach.getAccountId())))
+            // TODO CAP-259 if owner doesn't validate, log it (but do not reject)
+            // .filter(ach -> validateOwners(owners, accountOwners.get(ach.getAccountId())))
             .map(
                 ach ->
                     createBusinessBankAccount(
@@ -113,6 +116,7 @@ public class BusinessBankAccountService {
                         ach.getAccount(),
                         accountNames.get(ach.getAccountId()),
                         accountsResponse.accessToken(),
+                        ach.getAccountId(),
                         businessId))
             .toList();
 
@@ -198,6 +202,7 @@ public class BusinessBankAccountService {
         plaidOwners.stream()
             .map(Owner::getAddresses)
             .flatMap(Collection::stream)
+            .filter(a -> "US".equals(a.getData().getCountry()))
             .map(a -> a.getData().getPostalCode())
             .filter(Objects::nonNull)
             .map(z -> z.trim().substring(0, 5).toLowerCase())

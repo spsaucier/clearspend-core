@@ -42,4 +42,6 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId> {
   @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
 
   @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
+
+  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash plaidAccountRef;
 }
