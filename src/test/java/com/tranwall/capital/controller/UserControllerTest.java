@@ -15,6 +15,7 @@ import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.controller.type.Address;
+import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.card.UserCardResponse;
 import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
 import com.tranwall.capital.controller.type.card.limits.Limit;
@@ -25,10 +26,12 @@ import com.tranwall.capital.controller.type.user.SearchUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserRequest;
 import com.tranwall.capital.controller.type.user.UpdateUserResponse;
 import com.tranwall.capital.controller.type.user.User;
+import com.tranwall.capital.controller.type.user.UserPageData;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
+import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
@@ -38,12 +41,14 @@ import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.CardService;
 import com.tranwall.capital.service.CardService.CardRecord;
 import com.tranwall.capital.service.NetworkMessageService;
+import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.Cookie;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +61,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-// @Transactional
+@Transactional
 public class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
@@ -64,6 +69,7 @@ public class UserControllerTest extends BaseCapitalTest {
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
+  private final ProgramService programService;
 
   private final Faker faker = new Faker();
 
@@ -603,5 +609,282 @@ public class UserControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
     log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(4, userPageData.getTotalElements());
+  }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersFilteredByAllocation() {
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    testHelper.createBin();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    Business business = createBusinessRecord.business();
+    AllocationService.AllocationRecord allocation =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation1",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation2 =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation2",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation3 =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation3",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation2.allocation(),
+        user.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation3.allocation(),
+        user1.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setAllocations(List.of(allocation3.allocation().getId()));
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(1, userPageData.getTotalElements());
+  }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersFilteredByCardType() {
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    testHelper.createBin();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    Business business = createBusinessRecord.business();
+    AllocationService.AllocationRecord allocation =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation1",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation2 =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation2",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation3 =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation3",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation2.allocation(),
+        user.user(),
+        testHelper.retrieveIndividualProgram(),
+        Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation3.allocation(),
+        user1.user(),
+        testHelper.retrievePooledProgram(),
+        Currency.USD);
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setHasPhysicalCard(true);
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(1, userPageData.getTotalElements());
+    Assertions.assertTrue(
+        userPageData.getContent().get(0).getCardInfoList().stream()
+            .anyMatch(
+                cardInfo ->
+                    programService
+                        .retrieveProgram(
+                            cardService
+                                .retrieveCard(business.getId(), cardInfo.getCardId())
+                                .getProgramId())
+                        .getCardType()
+                        .equals(CardType.PLASTIC)));
+  }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersFilteredBySmartSearch() {
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    testHelper.createBin();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    Business business = createBusinessRecord.business();
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber(),
+            true,
+            null);
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setSearchText("Name");
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(1, userPageData.getTotalElements());
+    Assertions.assertEquals("Name", userPageData.getContent().get(0).getUserData().getFirstName());
   }
 }
