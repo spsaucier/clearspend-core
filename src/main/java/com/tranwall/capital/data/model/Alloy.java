@@ -36,6 +36,7 @@ public class Alloy extends TypedMutable<AlloyId> {
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  @NonNull
   private TypedId<BusinessId> businessId;
 
   @JoinColumn(referencedColumnName = "id", table = "business_owner")

@@ -5,7 +5,7 @@ create table if not exists alloy
     created             timestamp without time zone not null,
     updated             timestamp without time zone not null,
     version             bigint                      not null,
-    business_id         uuid                        references business (id),
+    business_id         uuid                        not null references business (id),
     business_owner_id   uuid                        references business_owner (id),
     entity_token        varchar(50)                 not null,
     type                varchar(20)                 not null

@@ -3,9 +3,15 @@ package com.tranwall.capital.controller;
 import com.tranwall.capital.client.alloy.AlloyClient;
 import com.tranwall.capital.client.alloy.response.EntityInformation;
 import com.tranwall.capital.client.alloy.response.OnboardResponse;
+import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.review.AlloyWebHookResponse;
+import com.tranwall.capital.controller.type.review.ChildEntity;
+import com.tranwall.capital.controller.type.review.GroupManualReviewOutcome;
+import com.tranwall.capital.controller.type.review.KybDocuments;
 import com.tranwall.capital.controller.type.review.KybErrorCode;
+import com.tranwall.capital.controller.type.review.KycDocuments;
 import com.tranwall.capital.controller.type.review.KycErrorCode;
 import com.tranwall.capital.controller.type.review.ManualReviewResponse;
 import com.tranwall.capital.data.model.Alloy;
@@ -23,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -86,11 +91,14 @@ public class ManualReviewController {
   }
 
   @PatchMapping("/alloy/web-hook")
-  public void updateHookFromAlloy(@RequestBody AlloyWebHookResponse body) {
-    if (Objects.equals(body.getData().getOutcome(), "Approved")) {
+  public void updateHookFromAlloy(@RequestBody AlloyWebHookResponse webHookResponse) {
+    String reviewOutcome = webHookResponse.getData().getOutcome();
+
+    if (reviewOutcome.equals(GroupManualReviewOutcome.APPROVED.getValue())) {
       List<Alloy> alloyEntities = new ArrayList<>();
 
-      body.getData()
+      webHookResponse
+          .getData()
           .getChildEntities()
           .forEach(
               childEntity -> {
@@ -123,6 +131,56 @@ public class ManualReviewController {
         alloyRepository.deleteAll(alloyEntities);
       }
     }
+
+    if (reviewOutcome.equals(GroupManualReviewOutcome.DENIED.getValue())) {
+      ChildEntity childEntity =
+          webHookResponse.getData().getChildEntities().stream().findFirst().orElse(null);
+
+      assert childEntity != null;
+      List<Alloy> alloyTokenReferenceList =
+          alloyRepository.findAllByEntityToken(childEntity.getEntityToken());
+
+      Alloy alloy = alloyTokenReferenceList.get(0);
+      TypedId<BusinessId> businessId;
+      if (alloy.getType() == AlloyTokenType.BUSINESS) {
+        businessId = alloy.getBusinessId();
+      } else {
+        businessId =
+            businessOwnerService.retrieveBusinessOwner(alloy.getBusinessOwnerId()).getBusinessId();
+      }
+
+      businessService.updateBusiness(
+          businessId,
+          BusinessStatus.CLOSED,
+          BusinessOnboardingStep.REVIEW,
+          KnowYourBusinessStatus.FAIL);
+    }
+
+    if (reviewOutcome.equals(GroupManualReviewOutcome.RESUBMIT_DOCUMENT.getValue())) {
+      log.info("resubmit");
+
+      ChildEntity childEntity =
+          webHookResponse.getData().getChildEntities().stream().findFirst().orElse(null);
+
+      assert childEntity != null;
+      List<Alloy> alloyTokenReferenceList =
+          alloyRepository.findAllByEntityToken(childEntity.getEntityToken());
+
+      Alloy alloy = alloyTokenReferenceList.get(0);
+      TypedId<BusinessId> businessId;
+      if (alloy.getType() == AlloyTokenType.BUSINESS) {
+        businessId = alloy.getBusinessId();
+      } else {
+        businessId =
+            businessOwnerService.retrieveBusinessOwner(alloy.getBusinessOwnerId()).getBusinessId();
+      }
+
+      businessService.updateBusiness(
+          businessId,
+          BusinessStatus.ONBOARDING,
+          BusinessOnboardingStep.SOFT_FAIL,
+          KnowYourBusinessStatus.REVIEW);
+    }
   }
 
   private List<ManualReviewResponse.KycDocuments> buildKycRequiredDocuments(
@@ -137,11 +195,13 @@ public class ManualReviewController {
                             kycErrorCode ->
                                 new ManualReviewResponse.RequiredDocument(
                                     kycErrorCode.getDocuments().stream()
-                                        .map(Enum::name)
+                                        .map(KycDocuments::getDocumentName)
                                         .collect(Collectors.joining(" or ")),
                                     kycErrorCode.getDocuments().get(0).getDocumentType().name(),
                                     kycOwnerDocuments.entityTokenId))
+                        .distinct()
                         .collect(Collectors.toList())))
+        .distinct()
         .collect(Collectors.toList());
   }
 
@@ -153,13 +213,14 @@ public class ManualReviewController {
                 kybErrorCode ->
                     new ManualReviewResponse.RequiredDocument(
                         kybErrorCode.getDocuments().stream()
-                            .map(Enum::name)
+                            .map(KybDocuments::getDocumentName)
                             .collect(Collectors.joining(" or ")),
                         kybErrorCode.getDocuments().stream()
                             .map(kybDocuments -> kybDocuments.getDocumentType().name())
                             .distinct()
                             .collect(Collectors.joining("|")),
                         documentsForManualReview.kybDocuments.entityTokenId))
+            .distinct()
             .collect(Collectors.toList())
         : Collections.emptyList();
   }

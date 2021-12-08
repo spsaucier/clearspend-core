@@ -28,6 +28,12 @@ public class OnboardResponse {
   @JsonProperty("parent_entity_token")
   String parentEntityToken;
 
+  @JsonProperty("group_token")
+  String groupToken;
+
+  @JsonProperty("external_entity_id")
+  String externalEntityId;
+
   @JsonProperty("application_token")
   String applicationToken;
 

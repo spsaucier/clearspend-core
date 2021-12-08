@@ -56,7 +56,7 @@ public class Data {
   Agent agent;
 
   @JsonProperty("notes")
-  List<String> notes;
+  Object notes;
 
   @JsonProperty("child_entities")
   List<ChildEntity> childEntities;

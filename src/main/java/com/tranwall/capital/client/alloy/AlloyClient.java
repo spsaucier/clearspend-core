@@ -38,14 +38,17 @@ public class AlloyClient {
   private final WebClient individualWebClient;
   private final WebClient businessWebClient;
   private final WebClient documentWebClient;
+  private final WebClient groupEvaluationWebClient;
 
   public AlloyClient(
       @Qualifier("alloyIndividualWebClient") WebClient individualWebClient,
       @Qualifier("alloyBusinessWebClient") WebClient businessWebClient,
-      @Qualifier("alloyDocumentWebClient") WebClient documentWebClient) {
+      @Qualifier("alloyDocumentWebClient") WebClient documentWebClient,
+      @Qualifier("alloyGroupWebClient") WebClient groupEvaluationWebClient) {
     this.individualWebClient = individualWebClient;
     this.businessWebClient = businessWebClient;
     this.documentWebClient = documentWebClient;
+    this.groupEvaluationWebClient = groupEvaluationWebClient;
   }
 
   public record KycEvaluationResponse(
@@ -74,6 +77,15 @@ public class AlloyClient {
             owner.getDateOfBirth());
 
     OnboardResponse response = callEvaluationsEndpoint(individualWebClient, request, alloyGroup);
+
+    OnboardResponse groupEvaluationResponse = runGroupEvaluation(alloyGroup);
+
+    if (!response
+        .getSummary()
+        .getOutcome()
+        .equals(groupEvaluationResponse.getSummary().getOutcome())) {
+      response = groupEvaluationResponse;
+    }
 
     return new KycEvaluationResponse(
         response.getEntityToken(),
@@ -109,6 +121,15 @@ public class AlloyClient {
         toKnowYourBusinessStatus(response.getSummary().getOutcome()),
         ObjectUtils.firstNonNull(
             response.getSummary().getOutcomeReasons(), Collections.emptyList()));
+  }
+
+  public OnboardResponse runGroupEvaluation(String groupExternalToken) {
+    return groupEvaluationWebClient
+        .post()
+        .uri("groups/" + groupExternalToken + "/evaluations")
+        .retrieve()
+        .bodyToMono(OnboardResponse.class)
+        .block();
   }
 
   public EntityInformation getEntityInformationForBusinessEntity(String entityToken) {

@@ -163,7 +163,7 @@ public class BusinessOwnerService {
     if (kycEvaluationResponse.status() == KnowYourCustomerStatus.REVIEW) {
       Alloy alloy =
           new Alloy(
-              null,
+              businessOwner.getBusinessId(),
               businessOwnerId,
               AlloyTokenType.BUSINESS_OWNER,
               kycEvaluationResponse.entityToken());
@@ -178,7 +178,7 @@ public class BusinessOwnerService {
       case REVIEW -> {
         Alloy alloy =
             new Alloy(
-                null,
+                businessOwner.getBusinessId(),
                 businessOwnerId,
                 AlloyTokenType.BUSINESS_OWNER,
                 kycEvaluationResponse.entityToken());
