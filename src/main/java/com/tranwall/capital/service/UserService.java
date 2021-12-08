@@ -1,7 +1,6 @@
 package com.tranwall.capital.service;
 
 import com.tranwall.capital.common.data.model.Address;
-import com.tranwall.capital.common.error.InvalidRequestException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessId;
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +36,34 @@ public class UserService {
 
   public record CreateUpdateUserRecord(User user, String password) {}
 
+  /** Creates a user for an existing fusion auth user */
+  @Transactional
+  public User createUserForFusionAuthUser(
+      @NonNull TypedId<UserId> userId,
+      TypedId<BusinessId> businessId,
+      UserType type,
+      String firstName,
+      String lastName,
+      @Nullable Address address,
+      String email,
+      String phone,
+      @NonNull String subjectRef) {
+    User user =
+        new User(
+            businessId,
+            type,
+            new RequiredEncryptedStringWithHash(firstName),
+            new RequiredEncryptedStringWithHash(lastName),
+            new RequiredEncryptedStringWithHash(email),
+            new NullableEncryptedStringWithHash(phone));
+    user.setId(userId);
+    user.setAddress(address);
+    user.setSubjectRef(subjectRef);
+
+    return userRepository.save(user);
+  }
+
+  /** Creates a new user and a corresponding fusion auth user */
   @Transactional
   public CreateUpdateUserRecord createUser(
       TypedId<BusinessId> businessId,
@@ -44,9 +72,9 @@ public class UserService {
       String lastName,
       @Nullable Address address,
       String email,
-      String phone,
-      boolean generatePassword,
-      String subjectRef) {
+      String phone) {
+    String password = PasswordUtil.generatePassword();
+
     User user =
         new User(
             businessId,
@@ -56,21 +84,12 @@ public class UserService {
             new RequiredEncryptedStringWithHash(email),
             new NullableEncryptedStringWithHash(phone));
     user.setAddress(address);
-    user.setSubjectRef(subjectRef);
+    user.setSubjectRef(
+        fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
 
-    String password = null;
-    if (generatePassword) {
-      if (StringUtils.isNoneEmpty(subjectRef)) {
-        throw new InvalidRequestException(
-            "SubjectRef must be empty when generate password is true");
-      }
-      password = PasswordUtil.generatePassword();
-      user.setSubjectRef(
-          fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
-      twilioService.sendNotificationEmail(
-          user.getEmail().getEncrypted(),
-          String.format("Welcome to ClearSpend, your password is %s", password));
-    }
+    twilioService.sendNotificationEmail(
+        user.getEmail().getEncrypted(),
+        String.format("Welcome to ClearSpend, your password is %s", password));
 
     return new CreateUpdateUserRecord(userRepository.save(user), password);
   }

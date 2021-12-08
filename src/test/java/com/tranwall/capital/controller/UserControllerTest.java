@@ -303,9 +303,7 @@ public class UserControllerTest extends BaseCapitalTest {
         "Last",
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+        faker.phoneNumber().phoneNumber());
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -313,9 +311,7 @@ public class UserControllerTest extends BaseCapitalTest {
         "Last",
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+        faker.phoneNumber().phoneNumber());
 
     MockHttpServletResponse response =
         mvc.perform(get("/users/list").contentType("application/json").cookie(authCookie))
@@ -428,9 +424,7 @@ public class UserControllerTest extends BaseCapitalTest {
             "Last",
             testHelper.generateEntityAddress(),
             faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            true,
-            null);
+            faker.phoneNumber().phoneNumber());
 
     Cookie authCookie =
         testHelper.login(userRecord.user().getEmail().getEncrypted(), userRecord.password());
@@ -504,9 +498,7 @@ public class UserControllerTest extends BaseCapitalTest {
             "Last",
             testHelper.generateEntityAddress(),
             faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            true,
-            null);
+            faker.phoneNumber().phoneNumber());
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -514,9 +506,7 @@ public class UserControllerTest extends BaseCapitalTest {
         "Last",
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+        faker.phoneNumber().phoneNumber());
 
     MockHttpServletResponse responseFilteredByUserName =
         mvc.perform(
@@ -560,9 +550,7 @@ public class UserControllerTest extends BaseCapitalTest {
             "Last",
             testHelper.generateEntityAddress(),
             faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            true,
-            null);
+            faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
             business.getId(),
@@ -571,9 +559,7 @@ public class UserControllerTest extends BaseCapitalTest {
             "Last",
             testHelper.generateEntityAddress(),
             faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            true,
-            null);
+            faker.phoneNumber().phoneNumber());
 
     testHelper.issueCard(
         business,

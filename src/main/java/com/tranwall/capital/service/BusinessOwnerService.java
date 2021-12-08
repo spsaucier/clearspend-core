@@ -23,9 +23,9 @@ import com.tranwall.capital.data.model.enums.RelationshipToBusiness;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AlloyRepository;
 import com.tranwall.capital.data.repository.BusinessOwnerRepository;
-import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,19 +78,26 @@ public class BusinessOwnerService {
     }
     businessOwner.setSubjectRef(subjectRef);
 
-    CreateUpdateUserRecord user =
-        userService.createUser(
-            businessId,
-            UserType.BUSINESS_OWNER,
-            firstName,
-            lastName,
-            address,
-            email,
-            phone,
-            false,
-            subjectRef);
+    businessOwner = businessOwnerRepository.save(businessOwner);
 
-    return new BusinessOwnerAndUserRecord(businessOwnerRepository.save(businessOwner), user.user());
+    User user =
+        Objects.isNull(subjectRef)
+            ? userService
+                .createUser(
+                    businessId, UserType.BUSINESS_OWNER, firstName, lastName, address, email, phone)
+                .user()
+            : userService.createUserForFusionAuthUser(
+                new TypedId<>(businessOwner.getId().toUuid()),
+                businessId,
+                UserType.BUSINESS_OWNER,
+                firstName,
+                lastName,
+                address,
+                email,
+                phone,
+                subjectRef);
+
+    return new BusinessOwnerAndUserRecord(businessOwner, user);
   }
 
   public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

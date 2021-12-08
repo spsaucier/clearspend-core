@@ -51,6 +51,7 @@ public class CreateUserRequest {
   @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
   private String phone;
 
+  @Deprecated
   @JsonProperty("generatePassword")
   @Schema(title = "Flag to indicate whether a password should be created for the user")
   private boolean generatePassword;

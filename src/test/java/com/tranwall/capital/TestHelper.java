@@ -523,9 +523,7 @@ public class TestHelper {
         faker.name().lastName(),
         generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+        faker.phoneNumber().phoneNumber());
   }
 
   public Card issueCard(

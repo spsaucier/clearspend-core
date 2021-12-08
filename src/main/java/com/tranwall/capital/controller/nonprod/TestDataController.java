@@ -433,9 +433,7 @@ public class TestDataController {
         faker.name().lastName(),
         generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber(),
-        true,
-        null);
+        faker.phoneNumber().phoneNumber());
   }
 
   private CreateTestDataResponse getAllData(TypedId<BusinessId> businessId) {
