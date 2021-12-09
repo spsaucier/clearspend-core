@@ -6,6 +6,7 @@ import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.common.CardInfo;
 import com.tranwall.capital.data.model.AccountActivity;
+import com.tranwall.capital.data.model.enums.AccountActivityStatus;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
@@ -37,6 +38,9 @@ public class AccountActivityResponse {
   @NonNull
   private AccountActivityType type;
 
+  @JsonProperty("status")
+  private AccountActivityStatus status;
+
   @JsonProperty("amount")
   @NonNull
   private Amount amount;
@@ -51,6 +55,7 @@ public class AccountActivityResponse {
     this.card = new CardInfo(accountActivity.getAllocationName(), accountActivity.getCard());
     this.merchant = new Merchant(accountActivity.getMerchant());
     this.type = accountActivity.getType();
+    this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
     this.receipt = new ReceiptDetails(accountActivity.getReceipt());
   }
