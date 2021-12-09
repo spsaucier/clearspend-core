@@ -22,20 +22,18 @@ import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.service.ContactValidator.ValidationResult;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BusinessBankAccountService {
@@ -46,6 +44,7 @@ public class BusinessBankAccountService {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
+  private final ContactValidator contactValidator;
 
   private final PlaidClient plaidClient;
 
@@ -107,8 +106,22 @@ public class BusinessBankAccountService {
 
     List<BusinessBankAccount> newAccounts =
         accountsResponse.achList().stream()
-            // TODO CAP-259 if owner doesn't validate, log it (but do not reject)
-            // .filter(ach -> validateOwners(owners, accountOwners.get(ach.getAccountId())))
+            .peek(
+                ach -> {
+                  // Logging validation failures for now.  Once we understand how it works
+                  // in practice, we plan to enforce.
+                  ValidationResult validation =
+                      contactValidator.validateOwners(
+                          owners, accountOwners.get(ach.getAccountId()));
+                  if (!validation.isValid()) {
+                    String account = ach.getAccountId();
+                    log.info(
+                        "Validation failed for Plaid account ref ending "
+                            + account.substring(account.length() - 6)
+                            + " "
+                            + validation);
+                  }
+                })
             .map(
                 ach ->
                     createBusinessBankAccount(
@@ -179,58 +192,5 @@ public class BusinessBankAccountService {
         adjustmentAndHoldRecord.hold());
 
     return adjustmentAndHoldRecord;
-  }
-
-  boolean validateOwners(@NonNull List<BusinessOwner> owners, @NonNull List<Owner> plaidOwners) {
-    Set<String> plaidNames =
-        plaidOwners.stream()
-            .map(Owner::getNames)
-            .flatMap(Collection::stream)
-            .map(s -> Arrays.asList(s.split("\\s+")))
-            .flatMap(Collection::stream)
-            .distinct()
-            .map(String::toLowerCase)
-            .collect(Collectors.toSet());
-
-    /*
-     * This validation trims the string to 5 characters - which is shorter than many
-     * non-US postal codes (CA comes to mind, with its pattern like "K1A 0A2").  It could be
-     * done entirely differently, or a (lambda) function could provide specialization for US
-     * ZIP codes, any other countries needing processing to unify values, and a default.
-     */
-    Set<String> plaidZips =
-        plaidOwners.stream()
-            .map(Owner::getAddresses)
-            .flatMap(Collection::stream)
-            .filter(a -> "US".equals(a.getData().getCountry()))
-            .map(a -> a.getData().getPostalCode())
-            .filter(Objects::nonNull)
-            .map(z -> z.trim().substring(0, 5).toLowerCase())
-            .collect(Collectors.toSet());
-
-    Set<String> ownersZips =
-        owners.stream()
-            .map(
-                a ->
-                    a.getAddress()
-                        .getPostalCode()
-                        .getEncrypted()
-                        .trim()
-                        .substring(0, 5)
-                        .toLowerCase())
-            .collect(Collectors.toSet());
-
-    // last name could include a space - check for all parts of it
-    Set<Set<String>> ownersLastNames =
-        owners.stream()
-            .map(
-                businessOwner ->
-                    Stream.of(businessOwner.getLastName().getEncrypted().split("\\s+"))
-                        .map(String::toLowerCase)
-                        .collect(Collectors.toSet()))
-            .collect(Collectors.toSet());
-
-    return ownersLastNames.stream().anyMatch(plaidNames::containsAll)
-        && plaidZips.stream().anyMatch(ownersZips::contains);
   }
 }
