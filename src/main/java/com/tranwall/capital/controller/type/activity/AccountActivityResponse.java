@@ -11,10 +11,12 @@ import com.tranwall.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NonNull;
 
 @Builder
 @AllArgsConstructor
+@Getter
 public class AccountActivityResponse {
 
   @JsonProperty("accountActivityId")
@@ -52,11 +54,15 @@ public class AccountActivityResponse {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
     this.accountName = accountActivity.getAllocationName();
-    this.card = new CardInfo(accountActivity.getAllocationName(), accountActivity.getCard());
-    this.merchant = new Merchant(accountActivity.getMerchant());
+    if (accountActivity.getCard() != null && accountActivity.getCard().getCardId() != null) {
+      this.card = new CardInfo(accountActivity.getAllocationName(), accountActivity.getCard());
+      this.receipt = new ReceiptDetails(accountActivity.getReceipt());
+    }
+    if (accountActivity.getMerchant() != null) {
+      this.merchant = new Merchant(accountActivity.getMerchant());
+    }
     this.type = accountActivity.getType();
     this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
-    this.receipt = new ReceiptDetails(accountActivity.getReceipt());
   }
 }

@@ -10,6 +10,7 @@ import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.type.PageToken;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,21 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
         creCriteriaBuilderFactory
             .create(entityManager, AccountActivity.class, "accountActivity")
             .select("accountActivity");
+
+    select
+        .whereOr()
+        .where("accountActivity.hideAfter")
+        .ge(OffsetDateTime.now())
+        .where("accountActivity.hideAfter")
+        .isNull()
+        .endOr();
+    select
+        .whereOr()
+        .where("accountActivity.visibleAfter")
+        .le(OffsetDateTime.now())
+        .where("accountActivity.visibleAfter")
+        .isNull()
+        .endOr();
 
     if (businessId != null) {
       select.where("accountActivity.businessId").eqLiteral(businessId);
@@ -81,7 +97,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           .endOr();
     }
 
-    select.orderByAsc("accountActivity.id");
+    select.orderByDesc("accountActivity.activityTime");
+    select.orderByDesc("accountActivity.id");
 
     PageToken pageToken = criteria.getPageToken();
     int maxResults = pageToken.getPageSize();

@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +17,7 @@ import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.Account;
+import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.Card;
@@ -25,6 +27,8 @@ import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.BusinessReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
+import com.tranwall.capital.data.repository.AccountActivityRepository;
+import com.tranwall.capital.service.AccountActivityService;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
 import com.tranwall.capital.service.BusinessBankAccountService;
@@ -33,6 +37,8 @@ import com.tranwall.capital.service.NetworkMessageService;
 import com.tranwall.capital.service.UserService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +60,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   private final BusinessService businessService;
   private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
+  private final AccountActivityService accountActivityService;
+  private final AccountActivityRepository accountActivityRepository;
 
   private Bin bin;
   private Program program;
@@ -122,15 +130,20 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             .getResponse();
 
     // we should have just one bank deposit
-    assertEquals(
-        1,
-        objectMapper.readValue(response.getContentAsString(), PagedData.class).getContent().size());
+    PagedData<AccountActivityResponse> pagedData =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
+    assertEquals(1, pagedData.getContent().size());
+    assertEquals(pagedData.getTotalElements(), 1);
     log.info(response.getContentAsString());
   }
 
   @SneakyThrows
   @Test
-  void getFilteredAccountActivityPageData() {
+  void getFilteredByTextAccountActivityPageData() {
     if (bin == null) {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
@@ -217,9 +230,143 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
     // we should have just one bank deposit
     PagedData<AccountActivityResponse> pagedData =
-        objectMapper.readValue(response.getContentAsString(), PagedData.class);
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
     assertEquals(1, pagedData.getContent().size());
     assertEquals(pagedData.getTotalElements(), 1);
+    log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void getFilteredAccountActivityPageDataForVisibleAfterCase() {
+    if (bin == null) {
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+    }
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
+
+    testHelper.createBusinessOwner(business.getId(), email, password);
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccountId,
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("100")),
+        true);
+
+    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
+    accountActivityRequest.setPageRequest(new PageRequest(0, 10));
+    accountActivityRequest.setFrom(OffsetDateTime.now().minusDays(1));
+    accountActivityRequest.setTo(OffsetDateTime.now().plusDays(1));
+
+    String body = objectMapper.writeValueAsString(accountActivityRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    PagedData<AccountActivityResponse> pagedData =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
+    assertEquals(1, pagedData.getTotalElements());
+    List<AccountActivityResponse> pagedDataContent = pagedData.getContent();
+    AccountActivity accountActivity =
+        accountActivityRepository
+            .findById(pagedDataContent.get(0).getAccountActivityId())
+            .orElse(null);
+    assert accountActivity != null;
+    assertTrue(accountActivity.getHideAfter().isAfter(OffsetDateTime.now()));
+    assertEquals(2, accountActivityRepository.findAll().size());
+    log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void getFilteredAccountActivityPageDataForHideAfterCase() {
+    if (bin == null) {
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+    }
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
+    testHelper.createBusinessOwner(business.getId(), email, password);
+    Cookie authCookie = testHelper.login(email, password);
+
+    businessBankAccountService.transactBankAccount(
+        business.getId(),
+        businessBankAccountId,
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("100")),
+        true);
+
+    accountActivityRepository.saveAll(
+        accountActivityRepository.findAll().stream()
+            .peek(
+                accountActivity -> {
+                  if (accountActivity.getHideAfter() != null)
+                    accountActivity.setHideAfter(accountActivity.getHideAfter().minusDays(20));
+                  if (accountActivity.getVisibleAfter() != null)
+                    accountActivity.setVisibleAfter(
+                        accountActivity.getVisibleAfter().minusDays(20));
+                })
+            .collect(Collectors.toList()));
+
+    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
+    accountActivityRequest.setPageRequest(new PageRequest(0, 10));
+    accountActivityRequest.setFrom(OffsetDateTime.now().minusDays(1));
+    accountActivityRequest.setTo(OffsetDateTime.now().plusDays(1));
+
+    String body = objectMapper.writeValueAsString(accountActivityRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    PagedData<AccountActivityResponse> pagedData =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
+    assertEquals(1, pagedData.getTotalElements());
+    List<AccountActivityResponse> pagedDataContent = pagedData.getContent();
+    AccountActivity accountActivity =
+        accountActivityRepository
+            .findById(pagedDataContent.get(0).getAccountActivityId())
+            .orElse(null);
+    assert accountActivity != null;
+    assertTrue(accountActivity.getVisibleAfter().isBefore(OffsetDateTime.now()));
+    assertEquals(2, accountActivityRepository.findAll().size());
     log.info(response.getContentAsString());
   }
 }
