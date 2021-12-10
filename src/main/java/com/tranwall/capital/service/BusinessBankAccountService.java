@@ -4,8 +4,11 @@ import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEP
 
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
+import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Owner;
 import com.tranwall.capital.client.plaid.PlaidClient;
+import com.tranwall.capital.client.plaid.PlaidClientException;
+import com.tranwall.capital.client.plaid.PlaidErrorCode;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
@@ -94,52 +97,59 @@ public class BusinessBankAccountService {
     // is not in the plaid metadata
     String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken);
     PlaidClient.AccountsResponse accountsResponse = plaidClient.getAccounts(accessToken);
-    PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken);
     Map<String, String> accountNames =
         accountsResponse.accounts().stream()
             .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
-    Map<String, List<Owner>> accountOwners =
-        ownersResponse.accounts().stream()
-            .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
 
-    List<BusinessOwner> owners = businessOwnerService.findBusinessOwnerByBusinessId(businessId);
+    try {
+      PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken);
+      Map<String, List<Owner>> accountOwners =
+          ownersResponse.accounts().stream()
+              .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
 
-    List<BusinessBankAccount> newAccounts =
-        accountsResponse.achList().stream()
-            .peek(
-                ach -> {
-                  // Logging validation failures for now.  Once we understand how it works
-                  // in practice, we plan to enforce.
-                  ValidationResult validation =
-                      contactValidator.validateOwners(
-                          owners, accountOwners.get(ach.getAccountId()));
-                  if (!validation.isValid()) {
-                    String account = ach.getAccountId();
-                    log.info(
-                        "Validation failed for Plaid account ref ending "
-                            + account.substring(account.length() - 6)
-                            + " "
-                            + validation);
-                  }
-                })
-            .map(
-                ach ->
-                    createBusinessBankAccount(
-                        ach.getRouting(),
-                        ach.getAccount(),
-                        accountNames.get(ach.getAccountId()),
-                        accountsResponse.accessToken(),
-                        ach.getAccountId(),
-                        businessId))
-            .toList();
+      List<BusinessOwner> owners = businessOwnerService.findBusinessOwnerByBusinessId(businessId);
+      accountsResponse
+          .achList()
+          .forEach(
+              ach -> {
+                // Logging validation failures for now.  Once we understand how it works
+                // in practice, we plan to enforce.
+                ValidationResult validation =
+                    contactValidator.validateOwners(owners, accountOwners.get(ach.getAccountId()));
+                if (!validation.isValid()) {
+                  String account = ach.getAccountId();
+                  log.info(
+                      "Validation failed for Plaid account ref ending "
+                          + account.substring(account.length() - 6)
+                          + " "
+                          + validation);
+                }
+              });
 
-    if (newAccounts.isEmpty()) {
-      // TODO CAP-224 do something if there are no accounts with matching owners
-      // NB the validation does processing special to US zip codes.
-      throw new RuntimeException("Owner name/zip validation failed");
+    } catch (PlaidClientException e) {
+      if (!e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
+        throw e;
+      } else {
+        log.info(
+            "Institution does not support owner validation for Plaid account refs ending "
+                + accountsResponse.achList().stream()
+                    .map(NumbersACH::getAccountId)
+                    .map(s -> s.substring(s.length() - 6))
+                    .collect(Collectors.toList()));
+      }
     }
 
-    return newAccounts;
+    return accountsResponse.achList().stream()
+        .map(
+            ach ->
+                createBusinessBankAccount(
+                    ach.getRouting(),
+                    ach.getAccount(),
+                    accountNames.get(ach.getAccountId()),
+                    accountsResponse.accessToken(),
+                    ach.getAccountId(),
+                    businessId))
+        .toList();
   }
 
   public List<BusinessBankAccount> getBusinessBankAccounts(TypedId<BusinessId> businessId) {

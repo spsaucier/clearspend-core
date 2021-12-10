@@ -3,6 +3,7 @@ package com.tranwall.capital.client.plaid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -10,6 +11,7 @@ import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
 import com.plaid.client.model.Address;
 import com.plaid.client.model.Owner;
+import com.plaid.client.model.Products;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.client.plaid.PlaidClient.OwnersResponse;
 import com.tranwall.capital.common.typedid.data.BusinessId;
@@ -22,7 +24,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,8 @@ class PlaidClientTest extends BaseCapitalTest {
   @Test
   void getAccounts() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken = underTest.createLinkToken(businessId());
+    String linkToken =
+        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
     String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
     PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
     assertNotNull(accounts);
@@ -44,7 +46,8 @@ class PlaidClientTest extends BaseCapitalTest {
   @Test
   void getOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken = underTest.createLinkToken(businessId());
+    String linkToken =
+        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
     String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
     PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken);
     assertNotNull(owners);
@@ -58,7 +61,8 @@ class PlaidClientTest extends BaseCapitalTest {
   @Test
   void getAccountsAndOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken = underTest.createLinkToken(businessId());
+    String linkToken =
+        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
     String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
     PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
     PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken);
@@ -75,6 +79,20 @@ class PlaidClientTest extends BaseCapitalTest {
     assertFalse(accessAccts.isEmpty());
   }
 
+  @Test
+  void getAccountsAndOwnersButTheInstitutionDoesNotSupportOwners() throws IOException {
+    assumeTrue(underTest.isConfigured());
+    String linkToken =
+        underTest.createLinkToken(
+            TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Flexible Platypus Open Banking"));
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
+    assertFalse(accounts.accounts().isEmpty());
+    PlaidClientException e =
+        assertThrows(PlaidClientException.class, () -> underTest.getOwners(accessToken));
+    assertEquals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED, e.getErrorCode());
+  }
+
   /**
    * This method was used to dump out the accounts in the sandbox for banks referenced in their
    * sandbox documentation, so that we would have a list of information we would be checking
@@ -83,7 +101,7 @@ class PlaidClientTest extends BaseCapitalTest {
    * <p>By exercising every bank in their test set, it revealed some subtle issues in API coding.
    */
   @Test
-  void getAllOwners() throws PlaidClientException {
+  void getAllOwners() {
     assumeTrue(underTest.isConfigured());
     List<List<String>> rows = new ArrayList<>();
     TestPlaidClient.SANDBOX_INSTITUTIONS.forEach(
@@ -91,14 +109,18 @@ class PlaidClientTest extends BaseCapitalTest {
           try {
             String linkToken;
             try {
-              linkToken = underTest.createLinkToken(institution.businessId());
+              linkToken =
+                  underTest.createLinkToken(
+                      institution.businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
             } catch (PlaidClientException e) {
-              if (Stream.of("INVALID_PRODUCT_FOR_INSTITUTION", "PRODUCTS_NOT_SUPPORTED")
-                  .anyMatch(m -> e.getMessage().contains(m))) {
-                return;
+              switch (e.getErrorCode()) {
+                case INVALID_PRODUCT, PRODUCTS_NOT_SUPPORTED -> {
+                  log.info("Institution {}: {}", institution.name(), e.getErrorCode());
+                  log.debug("PlaidClientException", e);
+                  return;
+                }
+                default -> throw e;
               }
-
-              throw e;
             }
             String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
             OwnersResponse response = underTest.getOwners(accessToken);

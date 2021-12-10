@@ -1,5 +1,6 @@
 package com.tranwall.capital.client.plaid;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.Products;
 import com.plaid.client.model.SandboxPublicTokenCreateRequest;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
@@ -7,7 +8,7 @@ import com.plaid.client.request.PlaidApi;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -22,6 +23,13 @@ import retrofit2.Response;
 @Component
 @Slf4j
 public class TestPlaidClient extends PlaidClient {
+
+  public TestPlaidClient(
+      @NonNull PlaidProperties plaidProperties,
+      @NonNull PlaidApi plaidApi,
+      @NonNull ObjectMapper mapper) {
+    super(plaidProperties, plaidApi, mapper);
+  }
 
   /**
    * Sandbox-specific institution IDs used for testing. See sandbox documentation for more
@@ -69,10 +77,6 @@ public class TestPlaidClient extends PlaidClient {
                     SandboxInstitution::businessId, SandboxInstitution::sandbox_id));
   }
 
-  public TestPlaidClient(@NonNull PlaidProperties plaidProperties, @NonNull PlaidApi plaidApi) {
-    super(plaidProperties, plaidApi);
-  }
-
   /**
    * Create a Plaid sandbox link token. The strategy for creating the sandbox tokens is quite
    * different from the regular strategy, hence the different implementation for integration
@@ -82,12 +86,14 @@ public class TestPlaidClient extends PlaidClient {
    *     run, and can be found in the constants {@link #SANDBOX_INSTITUTIONS_BY_NAME} and {@link
    *     #SANDBOX_INSTITUTIONS}. If the value provided is not a valid institution business ID, First
    *     Gingham Credit Union will be used by default.
+   * @param products a list of products to expect from the institution
    * @return A link token
    * @throws IOException for connection failures and the like
    * @throws PlaidClientException if Plaid gives an error
    */
   @Override
-  public String createLinkToken(TypedId<BusinessId> bankId) throws IOException {
+  public String createLinkToken(TypedId<BusinessId> bankId, List<Products> products)
+      throws IOException {
     if (!INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.containsKey(bankId)) {
       log.info("Using default institution: First Gingham Credit Union");
       bankId = SANDBOX_INSTITUTIONS_BY_NAME.get("First Gingham Credit Union");
@@ -96,7 +102,7 @@ public class TestPlaidClient extends PlaidClient {
     SandboxPublicTokenCreateRequest request =
         new SandboxPublicTokenCreateRequest()
             .institutionId(INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.get(businessId));
-    request.setInitialProducts(Arrays.asList(Products.AUTH, Products.IDENTITY));
+    request.setInitialProducts(products);
 
     Response<SandboxPublicTokenCreateResponse> createResponse =
         client().sandboxPublicTokenCreate(request).execute();
@@ -110,11 +116,10 @@ public class TestPlaidClient extends PlaidClient {
               .findFirst()
               .toString();
       log.debug(institution);
-      if (e.getMessage().contains("INVALID_INSTITUTION")) {
-        throw new PlaidClientException(e.getMessage(), institution);
-      } else {
-        throw e;
+      if (PlaidErrorCode.INVALID_INSTITUTION.equals(e.getErrorCode())) {
+        log.error("Invalid institution " + institution);
       }
+      throw e;
     }
   }
 }
