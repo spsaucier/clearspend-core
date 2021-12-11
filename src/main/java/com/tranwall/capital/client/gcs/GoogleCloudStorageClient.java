@@ -58,6 +58,7 @@ public class GoogleCloudStorageClient {
   }
 
   public byte[] readFile(String path) {
+    log.info("reading from {}", path);
     byte[] bytes = bucket.get(path).getContent();
     log.info("read: {} ({} bytes)", path, bytes.length);
 

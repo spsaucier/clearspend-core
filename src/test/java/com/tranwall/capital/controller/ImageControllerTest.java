@@ -1,5 +1,6 @@
 package com.tranwall.capital.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tranwall.capital.BaseCapitalTest;
@@ -59,5 +60,16 @@ class ImageControllerTest extends BaseCapitalTest {
     log.info(
         "\n{}",
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(createImageResponse));
+
+    // retrieve the image
+    response =
+        mvc.perform(
+                get("/images/receipts/{receiptId}", createImageResponse.getReceiptId())
+                    .cookie(userCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response.getContentAsString());
   }
 }

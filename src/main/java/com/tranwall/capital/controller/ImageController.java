@@ -7,11 +7,10 @@ import com.tranwall.capital.controller.type.receipt.CreateReceiptResponse;
 import com.tranwall.capital.data.model.Receipt;
 import com.tranwall.capital.service.ReceiptService;
 import io.swagger.annotations.ApiParam;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -66,10 +65,17 @@ public class ImageController {
     CurrentUser currentUser = CurrentUser.get();
     byte[] receiptImage =
         receiptService.getReceiptImage(currentUser.businessId(), currentUser.userId(), receiptId);
+    log.info(
+        "returning image: businessIid {}, userId {}, receiptId {} ({} bytes)",
+        currentUser.businessId(),
+        currentUser.userId(),
+        receiptId,
+        receiptImage.length);
+
     return ResponseEntity.ok()
         .headers(headers)
         .contentLength(receiptImage.length)
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
-        .body(new InputStreamResource(new ByteArrayInputStream(receiptImage)));
+        .body(new ByteArrayResource(receiptImage));
   }
 }
