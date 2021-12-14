@@ -7,13 +7,13 @@ import org.apache.commons.lang3.StringUtils;
 @UtilityClass
 public class BeanUtils {
 
-  <T> void setNotNull(T value, Consumer<T> consumer) {
+  public <T> void setNotNull(T value, Consumer<T> consumer) {
     if (value != null) {
       consumer.accept(value);
     }
   }
 
-  void setNotEmpty(String value, Consumer<String> consumer) {
+  public void setNotEmpty(String value, Consumer<String> consumer) {
     if (StringUtils.isNotEmpty(value)) {
       consumer.accept(value);
     }

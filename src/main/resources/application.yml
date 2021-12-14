@@ -32,18 +32,6 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${client.fusionauth.base-url}
-  cloud:
-    gcp:
-      project-id:
-      core:
-        enabled: false
-      storage:
-        enabled: ${spring.cloud.gcp.core.enabled}
-        auto-create-files: true
-        credentials:
-          encoded-key:
-          scopes: www.googleapis.com/auth/devstorage.read_write
-
 tranwall:
   encryption:
     key:

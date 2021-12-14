@@ -31,6 +31,8 @@ import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.model.enums.NetworkMessageDeviceType;
 import com.tranwall.capital.data.model.enums.NetworkMessageTransactionType;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
@@ -61,7 +63,9 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -85,6 +89,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class TestDataController {
+  private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>>
+      DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
   private final AllocationService allocationService;
   private final BinService binService;
@@ -221,7 +227,10 @@ public class TestDataController {
             parentAllocation.getId(),
             faker.company().name(),
             businessRecord.user(),
-            Amount.of(Currency.USD));
+            Amount.of(Currency.USD),
+            DEFAULT_TRANSACTION_LIMITS,
+            Collections.emptyList(),
+            Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
         childAllocation.allocation().getId(),
@@ -236,7 +245,10 @@ public class TestDataController {
             childAllocation.allocation().getId(),
             faker.company().name(),
             businessRecord.user(),
-            Amount.of(Currency.USD));
+            Amount.of(Currency.USD),
+            DEFAULT_TRANSACTION_LIMITS,
+            Collections.emptyList(),
+            Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
         grandchildAllocation.allocation().getId(),
@@ -422,7 +434,14 @@ public class TestDataController {
       TypedId<AllocationId> parentAllocationId,
       User user) {
     return allocationService.createAllocation(
-        businessId, parentAllocationId, name, user, Amount.of(Currency.USD));
+        businessId,
+        parentAllocationId,
+        name,
+        user,
+        Amount.of(Currency.USD),
+        DEFAULT_TRANSACTION_LIMITS,
+        Collections.emptyList(),
+        Collections.emptySet());
   }
 
   public CreateUpdateUserRecord createUser(com.tranwall.capital.data.model.Business business)

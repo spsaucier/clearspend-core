@@ -10,24 +10,35 @@ import com.github.javafaker.Faker;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.data.model.Amount;
-import com.tranwall.capital.controller.type.allocation.AllocationDetails;
+import com.tranwall.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationRequest;
 import com.tranwall.capital.controller.type.allocation.UpdateAllocationRequest;
+import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
+import com.tranwall.capital.controller.type.card.limits.Limit;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Business;
 import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.Card;
+import com.tranwall.capital.data.model.MccGroup;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.AllocationReallocationType;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.service.AccountService;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.service.MccGroupService;
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +59,7 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
   private final AllocationService allocationService;
+  private final MccGroupService mccGroupService;
 
   private final Faker faker = new Faker();
 
@@ -70,7 +82,10 @@ class AllocationControllerTest extends BaseCapitalTest {
                 .allocation()
                 .getId(),
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
-            new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO));
+            new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
+            Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
+            Collections.emptyList(),
+            Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -207,7 +222,10 @@ class AllocationControllerTest extends BaseCapitalTest {
             testHelper.generateFullName(),
             allocationService.getRootAllocation(business.getId()).allocation().getId(),
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
-            new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.valueOf(10)));
+            new com.tranwall.capital.controller.type.Amount(Currency.USD, BigDecimal.valueOf(10)),
+            Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
+            Collections.emptyList(),
+            Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -241,6 +259,19 @@ class AllocationControllerTest extends BaseCapitalTest {
     UpdateAllocationRequest updateAllocationRequest = new UpdateAllocationRequest();
     updateAllocationRequest.setName("Changed name");
     updateAllocationRequest.setOwnerId(testHelper.createUser(business).user().getId());
+    updateAllocationRequest.setLimits(
+        Collections.singletonList(
+            new CurrencyLimit(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(LimitPeriod.DAILY, new Limit(BigDecimal.TEN, BigDecimal.ZERO))))));
+    updateAllocationRequest.setDisabledMccGroups(
+        mccGroupService.retrieveMccGroups(business.getId()).stream()
+            .map(MccGroup::getId)
+            .collect(Collectors.toList()));
+    updateAllocationRequest.setDisabledTransactionChannels(
+        Collections.singleton(TransactionChannel.MOTO));
 
     // when
     MockHttpServletResponse response =
@@ -253,16 +284,22 @@ class AllocationControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    AllocationDetails allocationDetails =
-        objectMapper.readValue(response.getContentAsString(), AllocationDetails.class);
+    AllocationDetailsResponse allocationDetailsResponse =
+        objectMapper.readValue(response.getContentAsString(), AllocationDetailsResponse.class);
 
     // then
-    assertThat(allocationDetails.getAllocation().getAllocationId())
+    assertThat(allocationDetailsResponse.getAllocation().getAllocationId())
         .isEqualTo(allocationRecord.allocation().getId());
-    assertThat(allocationDetails.getAllocation().getName())
+    assertThat(allocationDetailsResponse.getAllocation().getName())
         .isEqualTo(updateAllocationRequest.getName());
-    assertThat(allocationDetails.getAllocation().getOwnerId())
+    assertThat(allocationDetailsResponse.getAllocation().getOwnerId())
         .isEqualTo(allocationRecord.allocation().getOwnerId());
-    assertThat(allocationDetails.getOwner()).isNotNull();
+    assertThat(allocationDetailsResponse.getOwner()).isNotNull();
+    assertThat(allocationDetailsResponse.getLimits())
+        .isEqualTo(updateAllocationRequest.getLimits());
+    assertThat(allocationDetailsResponse.getDisabledMccGroups())
+        .isEqualTo(updateAllocationRequest.getDisabledMccGroups());
+    assertThat(allocationDetailsResponse.getDisabledTransactionChannels())
+        .isEqualTo(updateAllocationRequest.getDisabledTransactionChannels());
   }
 }

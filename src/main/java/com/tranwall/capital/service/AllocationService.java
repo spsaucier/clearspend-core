@@ -13,6 +13,7 @@ import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.MccGroupId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.data.model.Account;
@@ -24,14 +25,19 @@ import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.AllocationReallocationType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.tranwall.capital.data.repository.AllocationRepository;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
-import com.tranwall.capital.service.CardService.CardDetailsRecord;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -101,7 +107,10 @@ public class AllocationService {
       @NonNull TypedId<AllocationId> parentAllocationId,
       String name,
       User user,
-      Amount amount) {
+      Amount amount,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
     Account parentAccount = null;
@@ -150,12 +159,16 @@ public class AllocationService {
 
     allocation = allocationRepository.save(allocation);
 
-    transactionLimitService.initializeAllocationSpendLimit(
-        allocation.getBusinessId(), allocation.getId());
-
     if (parentAccount != null) {
       accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
     }
+
+    transactionLimitService.createAllocationSpendLimit(
+        businessId,
+        allocationId,
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
 
     return new AllocationRecord(allocation, account);
   }
@@ -190,15 +203,23 @@ public class AllocationService {
       TypedId<AllocationId> allocationId,
       String name,
       TypedId<AllocationId> parentAllocationId,
-      TypedId<UserId> ownerId) {
+      TypedId<UserId> ownerId,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
+
     Allocation allocation = retrieveAllocation(businessId, allocationId);
-    TransactionLimit limit =
-        transactionLimitService.retrieveSpendLimit(
-            businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid());
 
     BeanUtils.setNotEmpty(name, allocation::setName);
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
     BeanUtils.setNotNull(ownerId, allocation::setOwnerId);
+
+    transactionLimitService.updateAllocationSpendLimit(
+        businessId,
+        allocationId,
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
   }
 
   public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {

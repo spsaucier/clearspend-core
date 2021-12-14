@@ -52,6 +52,7 @@ public class BusinessService {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
+  private final MccGroupService mccGroupService;
 
   private final AlloyClient alloyClient;
 
@@ -104,6 +105,8 @@ public class BusinessService {
     business = businessRepository.save(business);
 
     businessLimitService.initializeBusinessSpendLimit(business.getId());
+
+    mccGroupService.initializeMccGroups(business.getId());
 
     return business;
   }

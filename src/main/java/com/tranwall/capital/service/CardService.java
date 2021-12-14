@@ -6,7 +6,6 @@ import com.tranwall.capital.client.i2c.response.AddCardResponse;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
-import com.tranwall.capital.common.typedid.data.AccountId;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
@@ -15,35 +14,25 @@ import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.crypto.HashUtil;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.Account;
-import com.tranwall.capital.data.model.Allocation;
 import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
-import com.tranwall.capital.data.model.TransactionLimit;
 import com.tranwall.capital.data.model.User;
 import com.tranwall.capital.data.model.enums.AccountType;
 import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
-import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
@@ -62,11 +51,6 @@ public class CardService {
   private final I2Client i2Client;
 
   public record CardRecord(Card card, Account account) {}
-
-  public record CardDetailsRecord(Card card, Account account, TransactionLimit limit) {}
-
-  public record UserCardRecord(
-      Card card, Allocation allocation, Account account, TransactionLimit transactionLimit) {}
 
   @Transactional
   public CardRecord issueCard(
@@ -149,21 +133,9 @@ public class CardService {
 
   public CardDetailsRecord getCard(
       TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
-    Card card = retrieveCard(businessId, cardId);
-
-    if (card.getFundingType() == FundingType.POOLED) {
-      return new CardDetailsRecord(
-          card,
-          null,
-          transactionLimitService.retrieveSpendLimit(
-              businessId, TransactionLimitType.CARD, cardId.toUuid()));
-    }
-
-    return new CardDetailsRecord(
-        card,
-        accountService.retrieveCardAccount(card.getAccountId(), true),
-        transactionLimitService.retrieveSpendLimit(
-            businessId, TransactionLimitType.CARD, cardId.toUuid()));
+    return cardRepository
+        .findDetailsByBusinessIdAndId(businessId, cardId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
   }
 
   // should only be used by NetworkService
@@ -181,84 +153,18 @@ public class CardService {
     return new CardRecord(card, accountService.retrieveCardAccount(card.getAccountId(), true));
   }
 
-  public List<UserCardRecord> getUserCards(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-    // lookup cards for the user
-    List<Card> cards = cardRepository.findByBusinessIdAndUserId(businessId, userId);
-    if (cards.isEmpty()) {
-      return Collections.emptyList();
-    }
+  public List<CardDetailsRecord> getUserCards(
+      TypedId<BusinessId> businessId, TypedId<UserId> userId) {
 
-    // get the accountIds associated with the cards if any
-    Set<TypedId<AccountId>> accountIdSet =
-        cards.stream().map(Card::getAccountId).filter(Objects::nonNull).collect(Collectors.toSet());
-
-    // lookup allocations that the cards are associated with
-    Map<TypedId<AllocationId>, Allocation> allocationMap =
-        allocationRepository
-            .findByBusinessIdAndIdIn(
-                businessId, cards.stream().map(Card::getAllocationId).collect(Collectors.toSet()))
-            .stream()
-            .collect(Collectors.toMap(Allocation::getId, Function.identity()));
-
-    // add the allocation accounts to list of accounts to lookup
-    accountIdSet.addAll(
-        allocationMap.values().stream().map(Allocation::getAccountId).collect(Collectors.toSet()));
-
-    // lookup all the accounts
-    Map<TypedId<AccountId>, Account> accountMap =
-        accountService.findAccountsByIds(accountIdSet).stream()
-            .collect(Collectors.toMap(Account::getId, Function.identity()));
-
-    // lookup all the transactionLimits
-    Map<UUID, TransactionLimit> transactionLimitMap =
-        transactionLimitService
-            .retrieveSpendLimits(
-                businessId,
-                TransactionLimitType.CARD,
-                cards.stream().map(e -> e.getId().toUuid()).collect(Collectors.toList()))
-            .stream()
-            .collect(Collectors.toMap(TransactionLimit::getOwnerId, Function.identity()));
-
-    return cards.stream()
-        .map(
-            card -> {
-              Allocation allocation = allocationMap.get(card.getAllocationId());
-              TypedId<AccountId> accountId =
-                  ObjectUtils.firstNonNull(card.getAccountId(), allocation.getAccountId());
-              return new UserCardRecord(
-                  card,
-                  allocation,
-                  accountMap.get(accountId),
-                  transactionLimitMap.get(card.getId().toUuid()));
-            })
-        .toList();
+    return cardRepository.findDetailsByBusinessIdAndUserId(businessId, userId);
   }
 
-  public List<Card> getCardsForUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-    return cardRepository.findByBusinessIdAndUserId(businessId, userId);
-  }
-
-  public UserCardRecord getUserCard(
+  public CardDetailsRecord getUserCard(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> cardId) {
-    Card card =
-        cardRepository
-            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    Allocation allocation =
-        allocationRepository
-            .findById(card.getAllocationId())
-            .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId, cardId));
-
-    Account account =
-        accountService.retrieveCardAccount(
-            card.getAccountId() != null ? card.getAccountId() : allocation.getAccountId(), true);
-
-    TransactionLimit transactionLimit =
-        transactionLimitService.retrieveSpendLimit(
-            businessId, TransactionLimitType.CARD, card.getId().toUuid());
-
-    return new UserCardRecord(card, allocation, account, transactionLimit);
+    return cardRepository
+        .findDetailsByBusinessIdAndUserIdAndId(businessId, cardId, userId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
   }
 
   @Transactional
@@ -319,6 +225,6 @@ public class CardService {
   }
 
   public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {
-    return cardRepository.find(filterCriteria);
+    return cardRepository.filter(filterCriteria);
   }
 }

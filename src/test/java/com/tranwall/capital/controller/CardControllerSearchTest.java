@@ -92,7 +92,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   void searchAllCards() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
 
-    PagedData<SearchCardData> result = callSearcCards(request, 3);
+    PagedData<SearchCardData> result = callSearchCards(request, 3);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -122,7 +122,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setAllocationId(childAllocation.allocation().getId());
 
-    PagedData<SearchCardData> result = callSearcCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, 1);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -140,7 +140,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 20));
     request.setUserId(userA.user().getId());
 
-    PagedData<SearchCardData> result = callSearcCards(request, 2);
+    PagedData<SearchCardData> result = callSearchCards(request, 2);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -164,7 +164,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(childCardA.getCardNumber().getEncrypted());
 
-    PagedData<SearchCardData> result = callSearcCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, 1);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -182,7 +182,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText("ROOT");
 
-    PagedData<SearchCardData> result = callSearcCards(request, 2);
+    PagedData<SearchCardData> result = callSearchCards(request, 2);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -206,7 +206,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(userB.user().getLastName().getEncrypted());
 
-    PagedData<SearchCardData> result = callSearcCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, 1);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -223,12 +223,12 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   void searchTotalElementsShouldBeCalculated() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 1));
 
-    PagedData<SearchCardData> result = callSearcCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, 1);
 
     assertThat(result.getTotalElements()).isEqualTo(3);
   }
 
-  private PagedData<SearchCardData> callSearcCards(SearchCardRequest request, long expectedSize)
+  private PagedData<SearchCardData> callSearchCards(SearchCardRequest request, long expectedSize)
       throws Exception {
     String body = objectMapper.writeValueAsString(request);
 

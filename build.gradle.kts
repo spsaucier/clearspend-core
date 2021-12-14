@@ -1,14 +1,13 @@
 plugins {
     java
-    id("org.springframework.boot") version "2.5.5"
+    id("org.springframework.boot") version "2.6.1"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    id("org.flywaydb.flyway") version "8.0.0-beta1"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
     id("com.diffplug.spotless") version "5.16.0"
 }
 
-group = "com.example"
+group = "com.clearspend.capital"
 version = "0.0.1-SNAPSHOT"
 
 repositories {
@@ -38,6 +37,10 @@ snyk {
 }
 
 tasks {
+    compileJava {
+        options.compilerArgs.add("-parameters")
+    }
+
     test {
         jvmArgs(
                 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
@@ -49,16 +52,8 @@ tasks {
     }
 }
 
-dependencyManagement {
-    var springCloudGcpVersion = "2.0.4"
-
-    imports {
-        mavenBom("com.google.cloud:spring-cloud-gcp-dependencies:$springCloudGcpVersion")
-    }
-}
-
 dependencies {
-    val testContainersVersion = "1.16.0"
+    val testContainersVersion = "1.16.2"
     val blazePersistenceVersion = "1.6.3"
 
     //annotation processor and dependencies
@@ -75,7 +70,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("com.google.cloud:spring-cloud-gcp-starter-storage")
 
     //3rd party libs managed by spring BOM
     implementation("org.apache.commons:commons-lang3")
@@ -93,11 +87,8 @@ dependencies {
     implementation("com.sendgrid:sendgrid-java:4.7.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
-    implementation("com.google.cloud:google-cloud-nio:0.123.10")
+    implementation("com.google.cloud:google-cloud-nio:0.123.17")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
-    implementation("com.blazebit:blaze-persistence-core-api:1.6.3")
-    implementation("com.blazebit:blaze-persistence-core-impl:1.6.3")
-    implementation("com.blazebit:blaze-persistence-integration-hibernate-5.4:1.6.3")
 
     implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")

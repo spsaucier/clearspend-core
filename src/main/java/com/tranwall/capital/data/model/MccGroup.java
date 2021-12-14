@@ -2,11 +2,17 @@ package com.tranwall.capital.data.model;
 
 import com.google.common.collect.Range;
 import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.MccGroupId;
+import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.data.model.enums.I2CMccGroup;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,6 +24,11 @@ import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 import org.hibernate.annotations.TypeDefs;
 
+/**
+ * Initial design idea is that in the future it might be possible to manipulate mcc groups thus it
+ * is a mutable entity. Current implementation implies that *only* I2C mcc groups will be used (thus
+ * the reference is not null and an enum)
+ */
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -34,4 +45,14 @@ public class MccGroup extends TypedMutable<MccGroupId> {
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private List<Range<String>> mccCodes;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private I2CMccGroup i2cMccGroupRef;
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "business")
+  @Column(updatable = false)
+  @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<BusinessId> businessId;
 }

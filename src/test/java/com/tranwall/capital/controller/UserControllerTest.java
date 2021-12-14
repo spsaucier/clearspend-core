@@ -16,9 +16,8 @@ import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.controller.nonprod.TestDataController;
 import com.tranwall.capital.controller.type.Address;
 import com.tranwall.capital.controller.type.PagedData;
-import com.tranwall.capital.controller.type.card.UserCardResponse;
+import com.tranwall.capital.controller.type.card.CardDetailsResponse;
 import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
-import com.tranwall.capital.controller.type.card.limits.Limit;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
@@ -33,8 +32,6 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
-import com.tranwall.capital.data.model.enums.LimitPeriod;
-import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.model.enums.NetworkMessageType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.service.AllocationService;
@@ -45,8 +42,8 @@ import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -337,34 +334,30 @@ public class UserControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<UserCardResponse> userCardListResponse =
+    List<CardDetailsResponse> userCardListResponse =
         objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
     log.info(
         "\n{}",
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userCardListResponse));
 
-    for (UserCardResponse userCardResponse : userCardListResponse) {
-      assertThat(userCardResponse.getCard()).isNotNull();
-      assertThat(userCardResponse.getCard().getCardNumber())
+    for (CardDetailsResponse cardDetailsResponse : userCardListResponse) {
+      assertThat(cardDetailsResponse.getCard()).isNotNull();
+      assertThat(cardDetailsResponse.getCard().getCardNumber())
           .isIn(card.getCardNumber().getEncrypted(), card2.getCardNumber().getEncrypted());
 
-      assertThat(userCardResponse.getAvailableBalance()).isNotNull();
-      assertThat(userCardResponse.getAvailableBalance().getCurrency())
+      assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
+      assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())
           .isEqualTo(business.getCurrency());
 
-      assertThat(userCardResponse.getLedgerBalance()).isNotNull();
-      assertThat(userCardResponse.getLedgerBalance().getCurrency())
+      assertThat(cardDetailsResponse.getLedgerBalance()).isNotNull();
+      assertThat(cardDetailsResponse.getLedgerBalance().getCurrency())
           .isEqualTo(business.getCurrency());
 
-      assertThat(userCardResponse.getLimits()).isNotNull();
-      assertThat(userCardResponse.getLimits()).hasSize(1);
-      CurrencyLimit currencyLimit = userCardResponse.getLimits().get(0);
-      assertThat(currencyLimit.getCurrency()).isEqualTo(Currency.USD);
-      assertThat(currencyLimit.getTypeMap()).hasSize(1);
-      assertThat(currencyLimit.getTypeMap()).hasSize(1);
-      Map<LimitPeriod, Limit> typeLimit = currencyLimit.getTypeMap().get(LimitType.PURCHASE);
-      assertThat(typeLimit).hasSize(2);
-      assertThat(typeLimit.keySet()).contains(LimitPeriod.DAILY, LimitPeriod.MONTHLY);
+      assertThat(cardDetailsResponse.getLimits())
+          .containsOnly(new CurrencyLimit(Currency.USD, new HashMap<>()));
+
+      assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
+      assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
     }
   }
 
@@ -380,29 +373,29 @@ public class UserControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    UserCardResponse userCardResponse =
-        objectMapper.readValue(response.getContentAsString(), UserCardResponse.class);
+    CardDetailsResponse cardDetailsResponse =
+        objectMapper.readValue(response.getContentAsString(), CardDetailsResponse.class);
     log.info(
-        "\n{}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(userCardResponse));
+        "\n{}",
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(cardDetailsResponse));
 
-    assertThat(userCardResponse.getCard()).isNotNull();
-    assertThat(userCardResponse.getCard().getCardNumber())
+    assertThat(cardDetailsResponse.getCard()).isNotNull();
+    assertThat(cardDetailsResponse.getCard().getCardNumber())
         .isEqualTo(card.getCardNumber().getEncrypted());
 
-    assertThat(userCardResponse.getAvailableBalance()).isNotNull();
-    assertThat(userCardResponse.getAvailableBalance().getCurrency())
+    assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
+    assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())
         .isEqualTo(business.getCurrency());
 
-    assertThat(userCardResponse.getLedgerBalance()).isNotNull();
-    assertThat(userCardResponse.getLedgerBalance().getCurrency()).isEqualTo(business.getCurrency());
+    assertThat(cardDetailsResponse.getLedgerBalance()).isNotNull();
+    assertThat(cardDetailsResponse.getLedgerBalance().getCurrency())
+        .isEqualTo(business.getCurrency());
 
-    assertThat(userCardResponse.getLimits()).isNotNull();
-    CurrencyLimit currencyLimit = userCardResponse.getLimits().get(0);
-    assertThat(currencyLimit.getCurrency()).isEqualTo(Currency.USD);
-    assertThat(currencyLimit.getTypeMap()).hasSize(1);
-    Map<LimitPeriod, Limit> typeLimit = currencyLimit.getTypeMap().get(LimitType.PURCHASE);
-    assertThat(typeLimit).hasSize(2);
-    assertThat(typeLimit.keySet()).contains(LimitPeriod.DAILY, LimitPeriod.MONTHLY);
+    assertThat(cardDetailsResponse.getLimits())
+        .containsOnly(new CurrencyLimit(Currency.USD, new HashMap<>()));
+
+    assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
+    assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
   }
 
   void blockCard() {}

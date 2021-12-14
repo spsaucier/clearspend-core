@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.data.model.TypedMutable;
 import com.tranwall.capital.common.data.type.TypedIdArrayType;
 import com.tranwall.capital.common.typedid.data.BusinessId;
+import com.tranwall.capital.common.typedid.data.MccGroupId;
 import com.tranwall.capital.common.typedid.data.TransactionLimitId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.enums.Currency;
@@ -13,8 +14,6 @@ import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.data.model.enums.TransactionLimitType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,10 +72,10 @@ public class TransactionLimit extends TypedMutable<TransactionLimitId> {
   @NonNull
   @Column(columnDefinition = "uuid[]")
   @Type(type = "uuid-array")
-  private List<TypedId<MccGroup>> disabledMccGroups = new ArrayList<>();
+  private List<TypedId<MccGroupId>> disabledMccGroups;
 
   @NonNull
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
-  private Set<TransactionChannel> disabledTransactionChannels = new HashSet<>();
+  private Set<TransactionChannel> disabledTransactionChannels;
 }

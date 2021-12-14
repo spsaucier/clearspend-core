@@ -6,12 +6,13 @@ import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.account.Account;
 import com.tranwall.capital.controller.type.allocation.Allocation;
-import com.tranwall.capital.controller.type.allocation.AllocationDetails;
+import com.tranwall.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.tranwall.capital.controller.type.allocation.AllocationFundCardResponse;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationRequest;
 import com.tranwall.capital.controller.type.allocation.CreateAllocationResponse;
 import com.tranwall.capital.controller.type.allocation.UpdateAllocationRequest;
+import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
 import com.tranwall.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.tranwall.capital.service.AllocationService;
 import com.tranwall.capital.service.AllocationService.AllocationDetailsRecord;
@@ -49,13 +50,16 @@ public class AllocationController {
             request.getParentAllocationId(),
             request.getName(),
             userService.retrieveUser(request.getOwnerId()),
-            request.getAmount().toAmount());
+            request.getAmount().toAmount(),
+            CurrencyLimit.toMap(request.getLimits()),
+            request.getDisabledMccGroups(),
+            request.getDisabledTransactionChannels());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
   }
 
   @GetMapping("/{allocationId}")
-  private AllocationDetails getAllocation(
+  private AllocationDetailsResponse getAllocation(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -67,11 +71,11 @@ public class AllocationController {
         allocationService.getAllocation(
             businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
 
-    return new AllocationDetails(allocationRecord);
+    return AllocationDetailsResponse.of(allocationRecord);
   }
 
   @PatchMapping("/{allocationId}")
-  private AllocationDetails updateAllocation(
+  private AllocationDetailsResponse updateAllocation(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -86,13 +90,16 @@ public class AllocationController {
         allocationId,
         request.getName(),
         request.getParentAllocationId(),
-        request.getOwnerId());
+        request.getOwnerId(),
+        CurrencyLimit.toMap(request.getLimits()),
+        request.getDisabledMccGroups(),
+        request.getDisabledTransactionChannels());
 
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
             businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
 
-    return new AllocationDetails(allocationRecord);
+    return AllocationDetailsResponse.of(allocationRecord);
   }
 
   @GetMapping("/{allocationId}/children")

@@ -22,7 +22,7 @@ import com.tranwall.capital.data.model.enums.AccountActivityStatus;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.MerchantType;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
-import com.tranwall.capital.service.CardService.CardDetailsRecord;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.service.type.NetworkCommon;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;

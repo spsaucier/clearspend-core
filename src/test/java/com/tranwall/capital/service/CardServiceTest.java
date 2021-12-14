@@ -12,7 +12,7 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.CardRepository;
-import com.tranwall.capital.service.CardService.UserCardRecord;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
 import lombok.SneakyThrows;
@@ -65,7 +65,7 @@ class CardServiceTest extends BaseCapitalTest {
     testHelper.issueCard(business, allocation, userRecord.user(), program, Currency.USD);
     log.info("allCards: {}", cardRepository.findAll());
     log.info("businessId: {}, userId: {}", business.getId(), userRecord.user().getId());
-    List<UserCardRecord> userCardRecords =
+    List<CardDetailsRecord> userCardRecords =
         cardService.getUserCards(business.getId(), userRecord.user().getId());
     log.info("userCardRecords: {}", userCardRecords);
     assertThat(userCardRecords).hasSize(1);

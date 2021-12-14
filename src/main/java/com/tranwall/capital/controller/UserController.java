@@ -8,14 +8,13 @@ import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.ReceiptId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
-import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
 import com.tranwall.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.tranwall.capital.controller.type.card.Card;
+import com.tranwall.capital.controller.type.card.CardDetailsResponse;
 import com.tranwall.capital.controller.type.card.UpdateCardStatusRequest;
-import com.tranwall.capital.controller.type.card.UserCardResponse;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.controller.type.user.CreateUserRequest;
 import com.tranwall.capital.controller.type.user.CreateUserResponse;
@@ -28,12 +27,12 @@ import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
 import com.tranwall.capital.data.model.enums.UserType;
+import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
 import com.tranwall.capital.service.BusinessOwnerService;
 import com.tranwall.capital.service.BusinessProspectService;
 import com.tranwall.capital.service.CardService;
-import com.tranwall.capital.service.CardService.UserCardRecord;
 import com.tranwall.capital.service.ReceiptService;
 import com.tranwall.capital.service.UserFilterCriteria;
 import com.tranwall.capital.service.UserService;
@@ -184,26 +183,16 @@ public class UserController {
   }
 
   @GetMapping("/cards")
-  private List<UserCardResponse> getUserCards() {
+  private List<CardDetailsResponse> getUserCards() {
     CurrentUser currentUser = CurrentUser.get();
+
     return cardService.getUserCards(currentUser.businessId(), currentUser.userId()).stream()
-        .map(
-            userCardRecord -> {
-              UserCardResponse userCardResponse =
-                  new UserCardResponse(
-                      new Card(userCardRecord.card()),
-                      Amount.of(userCardRecord.account().getLedgerBalance()),
-                      Amount.of(userCardRecord.account().getAvailableBalance()),
-                      userCardRecord.allocation().getName());
-              userCardResponse.setLimitsFromTransactionLimits(
-                  userCardRecord.transactionLimit().getLimits());
-              return userCardResponse;
-            })
+        .map(CardDetailsResponse::of)
         .toList();
   }
 
   @GetMapping("/cards/{cardId}")
-  private UserCardResponse getUserCard(
+  private CardDetailsResponse getUserCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -212,17 +201,10 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
     CurrentUser currentUser = CurrentUser.get();
-    UserCardRecord userCardRecord =
+    CardDetailsRecord userCardRecord =
         cardService.getUserCard(currentUser.businessId(), currentUser.userId(), cardId);
 
-    final UserCardResponse userCardResponse =
-        new UserCardResponse(
-            new Card(userCardRecord.card()),
-            Amount.of(userCardRecord.account().getLedgerBalance()),
-            Amount.of(userCardRecord.account().getAvailableBalance()),
-            userCardRecord.allocation().getName());
-    userCardResponse.setLimitsFromTransactionLimits(userCardRecord.transactionLimit().getLimits());
-    return userCardResponse;
+    return CardDetailsResponse.of(userCardRecord);
   }
 
   @PatchMapping("/cards/{cardId}/block")

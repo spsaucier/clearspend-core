@@ -52,6 +52,8 @@ import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Country;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
 import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AccountRepository;
 import com.tranwall.capital.data.repository.AllocationRepository;
@@ -82,7 +84,10 @@ import com.tranwall.capital.util.PhoneUtil;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -97,6 +102,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class TestHelper {
+  private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>>
+      DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
   public static final TypedId<BinId> binId = new TypedId<>("2691dad4-82f7-47ec-9cae-0686a22572fc");
   public static final TypedId<ProgramId> pooledProgramId =
@@ -463,7 +470,14 @@ public class TestHelper {
       TypedId<AllocationId> parentAllocationId,
       User user) {
     return allocationService.createAllocation(
-        businessId, parentAllocationId, name, user, Amount.of(Currency.USD));
+        businessId,
+        parentAllocationId,
+        name,
+        user,
+        Amount.of(Currency.USD),
+        DEFAULT_TRANSACTION_LIMITS,
+        Collections.emptyList(),
+        Collections.emptySet());
   }
 
   public record CreateBusinessRecord(
