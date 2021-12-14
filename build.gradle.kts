@@ -90,6 +90,8 @@ dependencies {
     implementation("com.google.cloud:google-cloud-nio:0.123.17")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
 
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+
     implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-integration-hibernate-5.4:$blazePersistenceVersion")

@@ -114,3 +114,12 @@ logging:
   level:
     root: INFO
     com.tranwall.capital: DEBUG
+
+management:
+  metrics:
+    tags:
+      application: capital-core
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
