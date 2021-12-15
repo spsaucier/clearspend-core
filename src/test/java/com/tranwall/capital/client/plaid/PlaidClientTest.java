@@ -24,11 +24,13 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
+@Transactional
 class PlaidClientTest extends BaseCapitalTest {
 
   @Autowired private PlaidClient underTest;
@@ -93,6 +95,17 @@ class PlaidClientTest extends BaseCapitalTest {
     assertEquals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED, e.getErrorCode());
   }
 
+  @Test
+  void testBalanceCheck() throws IOException {
+    assumeTrue(underTest.isConfigured());
+    String linkToken = underTest.createLinkToken(businessId());
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
+    List<AccountBase> balances = underTest.getBalances(accessToken);
+    assertNotNull(balances);
+    assertNotNull(accounts);
+  }
+
   /**
    * This method was used to dump out the accounts in the sandbox for banks referenced in their
    * sandbox documentation, so that we would have a list of information we would be checking
@@ -144,6 +157,21 @@ class PlaidClientTest extends BaseCapitalTest {
                                                         accountIdentity.getOfficialName(),
                                                         accountIdentity.getType().toString(),
                                                         accountIdentity.getMask(),
+                                                        String.valueOf(
+                                                            accountIdentity
+                                                                .getBalances()
+                                                                .getCurrent()),
+                                                        String.valueOf(
+                                                            accountIdentity
+                                                                .getBalances()
+                                                                .getAvailable()),
+                                                        String.valueOf(
+                                                            accountIdentity
+                                                                .getBalances()
+                                                                .getLimit()),
+                                                        accountIdentity
+                                                            .getBalances()
+                                                            .getIsoCurrencyCode(),
                                                         owner.getNames().toString(),
                                                         address.getStreet(),
                                                         address.getCity(),
@@ -156,9 +184,14 @@ class PlaidClientTest extends BaseCapitalTest {
         });
     Set<String> uniqueCells = rows.stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
-    // Just a few basic assertions to show items that are validated
     // debug or print out the rows to get the full table.
-    // rows.forEach(r -> System.out.println(String.join("\t",r.toArray(new String[0]))));
+    /*
+     System.out.println(
+        "Bank\tAccount name\tOfficial Account Name\tType\tMask\tCurrent Bal\tAvail Bal\tLimit\tBal Curr\tOwner\tStreet\tCity\tRegion\tPostCode\tCountry");
+    rows.forEach(r -> System.out.println(String.join("\t", r.toArray(new String[0]))));
+     */
+
+    // Just a few basic assertions to show items that are validated
     assertTrue(uniqueCells.contains("93405-2255"));
     assertTrue(uniqueCells.contains("[Alberta Bobbeth Charleson]"));
     assertTrue(uniqueCells.contains("First Gingham Credit Union"));

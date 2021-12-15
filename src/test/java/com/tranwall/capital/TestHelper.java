@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
+import com.tranwall.capital.client.plaid.PlaidClient;
 import com.tranwall.capital.common.data.model.Address;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.AllocationId;
@@ -81,6 +82,7 @@ import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import com.tranwall.capital.util.PhoneUtil;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -88,7 +90,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -102,6 +108,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class TestHelper {
+
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>>
       DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
@@ -110,8 +117,25 @@ public class TestHelper {
       new TypedId<>("6faf3838-b2d7-422c-8d6f-c2294ebc73b4");
   public static final TypedId<ProgramId> individualProgramId =
       new TypedId<>("033955d1-f18e-497e-9905-88ba71e90208");
-  public static final TypedId<BusinessId> businessId =
-      new TypedId<>("82a79d15-9e47-421b-ab8f-78532f4f8bc7");
+  /**
+   * List of BusinessIds for testing. It's easy to search for these. Use {@link
+   * #getNextBusinessId()} to get the first unused one from the list or to generate another one if
+   * the test requires many.
+   */
+  public static final List<TypedId<BusinessId>> businessIds =
+      Stream.of(
+              "82a79d15-9e47-421b-ab8f-78532f4f8bc7",
+              "961c7ab8-0f04-4322-a208-3e0e8a044835",
+              "7fab4c66-959d-4130-980a-c3e4c93a8996",
+              "651a69ce-ac11-43b5-83c4-e36aae34566e",
+              "be808a40-fd9c-40de-b321-0c369972940a",
+              "3e969bdb-3922-469d-9177-0e13139e048d",
+              "09b17a56-c465-4335-b93b-1949b2fb71a8",
+              "0220e85a-7c88-4045-ade1-55dd396377e6",
+              "683dfc70-de16-40fd-8dc9-4386f024580f",
+              "032b1e14-ccbd-4234-9f70-2c735324910a")
+          .map(TypedId<BusinessId>::new)
+          .collect(Collectors.toList());
 
   private final AccountRepository accountRepository;
   private final AllocationRepository allocationRepository;
@@ -134,8 +158,9 @@ public class TestHelper {
   private final FusionAuthService fusionAuthService;
   private final ProgramService programService;
   private final UserService userService;
+  private final PlaidClient plaidClient;
 
-  private final Faker faker = new Faker(new SecureRandom());
+  private final Faker faker = new Faker(new SecureRandom(new byte[] {0}));
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -152,9 +177,33 @@ public class TestHelper {
       Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {}
 
   public void init() {
+    TypedId<BusinessId> businessId = businessIds.get(0);
     if (businessRepository.findById(businessId).isEmpty()) {
       createBusiness(businessId);
-      createBusinessBankAccount();
+    } else {
+      log.debug("Default businessID {} already exists, not creating.", businessId);
+    }
+    if (businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId).isEmpty()) {
+      createBusinessBankAccount(businessId);
+    } else {
+      log.debug("Business bank account already exists for default business. Not creating");
+    }
+  }
+
+  /** @return the first unused BusinessId from {@link #businessIds} */
+  private TypedId<BusinessId> getNextBusinessId() {
+    Set<TypedId<BusinessId>> used =
+        businessRepository.findAll().stream().map(Business::getId).collect(Collectors.toSet());
+    Optional<TypedId<BusinessId>> optionalNewId =
+        businessIds.stream().filter(a -> !used.contains(a)).findFirst();
+
+    // If the default list of IDs is not enough for the test, make another.
+    if (optionalNewId.isPresent()) {
+      return optionalNewId.get();
+    } else {
+      TypedId<BusinessId> newId = new TypedId<>(UUID.randomUUID());
+      businessIds.add(newId);
+      return newId;
     }
   }
 
@@ -369,7 +418,7 @@ public class TestHelper {
   }
 
   public Business retrieveBusiness() {
-    return businessService.retrieveBusiness(businessId);
+    return businessService.retrieveBusiness(businessIds.get(0));
   }
 
   public void deleteBusiness(TypedId<BusinessId> businessId) {
@@ -428,25 +477,21 @@ public class TestHelper {
         .linkToken();
   }
 
-  public TypedId<BusinessBankAccountId> createBusinessBankAccount() {
-    return createBusinessBankAccount(businessId);
-  }
-
   public TypedId<BusinessBankAccountId> createBusinessBankAccount(TypedId<BusinessId> businessId) {
-    return businessBankAccountService
-        .createBusinessBankAccount(
-            generateRoutingNumber(),
-            generateAccountNumber(),
-            generateAccountName(),
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            businessId)
-        .getId();
+    try {
+      String linkToken = plaidClient.createLinkToken(businessId);
+      List<BusinessBankAccount> accounts =
+          businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId);
+      return accounts.get(0).getId();
+    } catch (IOException e) {
+      log.info("Exception initializing with plaid", e);
+      throw new RuntimeException(e);
+    }
   }
 
   public BusinessBankAccount retrieveBusinessBankAccount() {
     List<BusinessBankAccount> businessBankAccounts =
-        businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId);
+        businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessIds.get(0));
     assertThat(businessBankAccounts).isNotEmpty();
 
     return businessBankAccounts.get(0);
@@ -454,6 +499,7 @@ public class TestHelper {
 
   public AdjustmentAndHoldRecord transactBankAccount(
       BankAccountTransactType bankAccountTransactType, BigDecimal amount, boolean placeHold) {
+    TypedId<BusinessId> businessId = businessIds.get(0);
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
     Account businessAccount = allocationService.getRootAllocation(businessId).account();
     return businessBankAccountService.transactBankAccount(
@@ -490,7 +536,7 @@ public class TestHelper {
       Cookie authCookie) {}
 
   public CreateBusinessRecord createBusiness() {
-    return createBusiness(null);
+    return createBusiness(getNextBusinessId());
   }
 
   @SneakyThrows
@@ -514,6 +560,8 @@ public class TestHelper {
     AllocationRecord rootAllocation =
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName() + " - root");
+
+    log.debug("Created business {} with owner and root allocation.", businessId);
 
     return new CreateBusinessRecord(
         program,

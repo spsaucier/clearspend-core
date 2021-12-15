@@ -2,6 +2,7 @@ package com.tranwall.capital.service;
 
 import static com.tranwall.capital.data.model.enums.AccountActivityType.BANK_DEPOSIT;
 
+import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
 import com.plaid.client.model.NumbersACH;
@@ -12,6 +13,7 @@ import com.tranwall.capital.client.plaid.PlaidErrorCode;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.IdMismatchException;
 import com.tranwall.capital.common.error.IdMismatchException.IdType;
+import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
@@ -19,8 +21,10 @@ import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.BusinessBankAccount;
+import com.tranwall.capital.data.model.BusinessBankAccountBalance;
 import com.tranwall.capital.data.model.BusinessOwner;
 import com.tranwall.capital.data.model.enums.AccountActivityType;
+import com.tranwall.capital.data.model.enums.AdjustmentType;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.repository.BusinessBankAccountRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -29,7 +33,9 @@ import com.tranwall.capital.service.ContactValidator.ValidationResult;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +49,7 @@ public class BusinessBankAccountService {
 
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
+  private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -73,6 +80,11 @@ public class BusinessBankAccountService {
             new RequiredEncryptedStringWithHash(accessToken),
             new RequiredEncryptedStringWithHash(accountRef));
     businessBankAccount.setName(accountName);
+
+    log.debug(
+        "Created business bank account {} for businessID {}",
+        businessBankAccount.getId(),
+        businessId);
 
     return businessBankAccountRepository.save(businessBankAccount);
   }
@@ -139,16 +151,27 @@ public class BusinessBankAccountService {
       }
     }
 
+    Map<String, AccountBalance> accountBalances =
+        accountsResponse.accounts().stream()
+            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getBalances));
+
     return accountsResponse.achList().stream()
         .map(
-            ach ->
-                createBusinessBankAccount(
-                    ach.getRouting(),
-                    ach.getAccount(),
-                    accountNames.get(ach.getAccountId()),
-                    accountsResponse.accessToken(),
-                    ach.getAccountId(),
-                    businessId))
+            ach -> {
+              BusinessBankAccount businessBankAccount =
+                  createBusinessBankAccount(
+                      ach.getRouting(),
+                      ach.getAccount(),
+                      accountNames.get(ach.getAccountId()),
+                      accountsResponse.accessToken(),
+                      ach.getAccountId(),
+                      businessId);
+
+              businessBankAccountBalanceService.createBusinessBankAccountBalance(
+                  businessBankAccount.getId(), accountBalances.get(ach.getAccountId()));
+
+              return businessBankAccount;
+            })
         .toList();
   }
 
@@ -181,12 +204,15 @@ public class BusinessBankAccountService {
     final AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         switch (bankAccountTransactType) {
-          case DEPOSIT -> accountService.depositFunds(
-              businessId,
-              allocationRecord.account(),
-              allocationRecord.allocation(),
-              amount,
-              placeHold);
+          case DEPOSIT -> {
+            checkBalance(amount, businessBankAccount);
+            yield accountService.depositFunds(
+                businessId,
+                allocationRecord.account(),
+                allocationRecord.allocation(),
+                amount,
+                placeHold);
+          }
           case WITHDRAW -> accountService.withdrawFunds(
               businessId, allocationRecord.account(), amount);
         };
@@ -202,5 +228,36 @@ public class BusinessBankAccountService {
         adjustmentAndHoldRecord.hold());
 
     return adjustmentAndHoldRecord;
+  }
+
+  /**
+   * Check the balance from a foreign financial institution before initiating a transfer.
+   *
+   * @param amount amount being transferred
+   * @param businessBankAccount from which the money is proposed to come
+   */
+  private void checkBalance(Amount amount, BusinessBankAccount businessBankAccount) {
+    TypedId<BusinessBankAccountId> businessBankAccountId = businessBankAccount.getId();
+    try {
+      @NonNull
+      BusinessBankAccountBalance balance =
+          businessBankAccountBalanceService.getNewBalance(businessBankAccountId);
+      if (Stream.of(balance.getCurrent(), balance.getAvailable())
+          .filter(Objects::nonNull)
+          .filter(a -> a.getCurrency().equals(amount.getCurrency()))
+          .noneMatch(a -> a.isGreaterThan(amount))) {
+        throw new InsufficientFundsException(
+            "Financial institution", businessBankAccountId, AdjustmentType.DEPOSIT, amount);
+      }
+    } catch (PlaidClientException e) {
+      if (e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
+        String plaidAccountRef = businessBankAccount.getPlaidAccountRef().getEncrypted();
+        log.info(
+            "Institution does not support balance check for plaid account ref ending {}",
+            plaidAccountRef.substring(plaidAccountRef.length() - 6));
+      }
+    } catch (IOException e) {
+      log.warn("Skipping balance check", e);
+    }
   }
 }

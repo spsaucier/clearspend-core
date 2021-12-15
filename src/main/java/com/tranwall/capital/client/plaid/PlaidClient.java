@@ -3,6 +3,8 @@ package com.tranwall.capital.client.plaid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
+import com.plaid.client.model.AccountsBalanceGetRequest;
+import com.plaid.client.model.AccountsGetResponse;
 import com.plaid.client.model.AuthGetRequest;
 import com.plaid.client.model.AuthGetResponse;
 import com.plaid.client.model.CountryCode;
@@ -119,6 +121,12 @@ public class PlaidClient {
     AuthGetResponse body = validBody(authGetResponse);
 
     return new AccountsResponse(accessToken, body.getAccounts(), body.getNumbers().getAch());
+  }
+
+  public List<AccountBase> getBalances(String accessToken) throws IOException {
+    AccountsBalanceGetRequest request = new AccountsBalanceGetRequest().accessToken(accessToken);
+    Response<AccountsGetResponse> response = client().accountsBalanceGet(request).execute();
+    return validBody(response).getAccounts();
   }
 
   /**

@@ -1,0 +1,747 @@
+{
+  "accounts": [
+    {
+      "accountId": "mock-account-checking",
+      "balances": {
+        "available": 10000.0,
+        "current": 10100.0,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "0000",
+      "name": "Mock Checking",
+      "officialName": "Mock Gold Standard 0% Interest Checking",
+      "type": "DEPOSITORY",
+      "subtype": "CHECKING",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-savings",
+      "balances": {
+        "available": 2000.0,
+        "current": 2100.0,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "1111",
+      "name": "Plaid Saving",
+      "officialName": "Plaid Silver Standard 0.1% Interest Saving",
+      "type": "DEPOSITORY",
+      "subtype": "SAVINGS",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-cd",
+      "balances": {
+        "available": null,
+        "current": 1000.0,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "2222",
+      "name": "Mock CD",
+      "officialName": "Mock Bronze Standard 0.2% Interest CD",
+      "type": "DEPOSITORY",
+      "subtype": "CD",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-credit-card",
+      "balances": {
+        "available": null,
+        "current": 410.0,
+        "limit": 20000.0,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "3333",
+      "name": "Mock Credit Card",
+      "officialName": "Mock Diamond 12.5% APR Interest Credit Card",
+      "type": "CREDIT",
+      "subtype": "CREDIT_CARD",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-money-market",
+      "balances": {
+        "available": 43200.0,
+        "current": 43200.0,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "4444",
+      "name": "Plaid Money Market",
+      "officialName": "Plaid Platinum Standard 1.85% Interest Money Market",
+      "type": "DEPOSITORY",
+      "subtype": "MONEY_MARKET",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-ira",
+      "balances": {
+        "available": null,
+        "current": 320.76,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "5555",
+      "name": "Mock IRA",
+      "officialName": null,
+      "type": "INVESTMENT",
+      "subtype": "IRA",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-401k",
+      "balances": {
+        "available": null,
+        "current": 23631.9805,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "6666",
+      "name": "Mock 401k",
+      "officialName": null,
+      "type": "INVESTMENT",
+      "subtype": "_401K",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-student-loan",
+      "balances": {
+        "available": null,
+        "current": 65262.0,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "7777",
+      "name": "Mock Student Loan",
+      "officialName": null,
+      "type": "LOAN",
+      "subtype": "STUDENT",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "accountId": "mock-account-mortgage",
+      "balances": {
+        "available": null,
+        "current": 56302.06,
+        "limit": null,
+        "isoCurrencyCode": "USD",
+        "unofficialCurrencyCode": null,
+        "lastUpdatedDatetime": null
+      },
+      "mask": "8888",
+      "name": "Mock Mortgage",
+      "officialName": null,
+      "type": "LOAN",
+      "subtype": "MORTGAGE",
+      "verificationStatus": null,
+      "owners": [
+        {
+          "names": [
+            "Anthony Edward Stark"
+          ],
+          "phoneNumbers": [
+            {
+              "data": "1112223333",
+              "primary": false,
+              "type": "HOME"
+            },
+            {
+              "data": "1112224444",
+              "primary": false,
+              "type": "WORK"
+            },
+            {
+              "data": "1112225555",
+              "primary": false,
+              "type": "MOBILE1"
+            }
+          ],
+          "emails": [
+            {
+              "data": "tony@starkenterprises.com",
+              "primary": true,
+              "type": "PRIMARY"
+            },
+            {
+              "data": "accountholder1@example.com",
+              "primary": false,
+              "type": "SECONDARY"
+            },
+            {
+              "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+              "primary": false,
+              "type": "OTHER"
+            }
+          ],
+          "addresses": [
+            {
+              "data": {
+                "city": "College Point",
+                "region": "NY",
+                "street": "2212 119th St",
+                "postalCode": "11356",
+                "country": "US"
+              },
+              "primary": true
+            },
+            {
+              "data": {
+                "city": "Mountain View",
+                "region": "CA",
+                "street": "1600 Amphitheatre Pkwy",
+                "postalCode": "94043",
+                "country": "US"
+              },
+              "primary": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "item": {
+    "itemId": "mock-jyyQWjzBD3T5QdAGVRmBiDADxpnvJef1Xk3kg",
+    "institutionId": "ins_mock_bank",
+    "webhook": "",
+    "error": null,
+    "availableProducts": [
+      "ASSETS",
+      "BALANCE",
+      "CREDIT_DETAILS",
+      "INCOME",
+      "INVESTMENTS",
+      "LIABILITIES",
+      "TRANSACTIONS"
+    ],
+    "billedProducts": [
+      "AUTH",
+      "IDENTITY"
+    ],
+    "consentExpirationTime": null,
+    "updateType": "BACKGROUND"
+  },
+  "requestId": "mock-S6GULNK25uTqhZs",
+  "accessToken": "access-mock-82a79d15-9e47-421b-ab8f-78532f4f8bc7"
+}

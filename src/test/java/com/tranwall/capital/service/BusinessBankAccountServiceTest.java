@@ -1,25 +1,42 @@
 package com.tranwall.capital.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.tranwall.capital.BaseCapitalTest;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.TestHelper.CreateBusinessRecord;
+import com.tranwall.capital.client.plaid.PlaidClient;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.error.InsufficientFundsException;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.data.model.Bin;
+import com.tranwall.capital.data.model.BusinessBankAccount;
+import com.tranwall.capital.data.model.BusinessBankAccountBalance;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.BankAccountTransactType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.repository.BusinessBankAccountBalanceRepository;
 import com.tranwall.capital.service.AccountService.AdjustmentAndHoldRecord;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.transaction.Transactional;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
@@ -28,6 +45,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;
   @Autowired private BusinessBankAccountService bankAccountService;
+  @Autowired private PlaidClient plaidClient;
+  @Autowired private BusinessBankAccountBalanceRepository businessBankAccountBalanceRepository;
 
   private Bin bin;
   private Program program;
@@ -98,5 +117,70 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                     BankAccountTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
                     true));
+  }
+
+  @Test
+  void depositFunds_insufficientFunds() {
+    assumeTrue(plaidClient.isConfigured());
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    InsufficientFundsException insufficientFundsException =
+        assertThrows(
+            InsufficientFundsException.class,
+            () ->
+                bankAccountService.transactBankAccount(
+                    createBusinessRecord.business().getId(),
+                    businessBankAccountId,
+                    BankAccountTransactType.DEPOSIT,
+                    Amount.of(Currency.USD, new BigDecimal("15000.00")),
+                    true));
+  }
+
+  @SneakyThrows
+  @Test
+  void testLinkBusinessBankAccounts() {
+    assumeTrue(plaidClient.isConfigured());
+    int balancesBeforeTest = businessBankAccountBalanceRepository.findAll().size();
+
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+
+    // Set up to capture the log
+    Logger accountLogger = (Logger) LoggerFactory.getLogger(BusinessBankAccountService.class);
+    ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+    listAppender.start();
+    accountLogger.addAppender(listAppender);
+
+    // under test
+    List<BusinessBankAccount> linked =
+        bankAccountService.linkBusinessBankAccounts(
+            bankAccountService.getLinkToken(businessId), businessId);
+
+    // Since we didn't mock the user to match the Plaid sandbox, there should be a
+    // validation error for each account in the logs, showing that name and zip don't match.
+    List<String> messages =
+        listAppender.list.stream()
+            .map(ILoggingEvent::getMessage)
+            .filter(m -> m.contains("Validation failed for Plaid account ref ending "))
+            .collect(Collectors.toList());
+
+    assertEquals(2, messages.size());
+    assertTrue(
+        messages.stream()
+            .allMatch(
+                m -> m.endsWith("ValidationResult[namesMatch=false, postalCodesMatch=false]")));
+
+    // Check that balances are recorded
+    TypedId<BusinessBankAccountId> businessBankAccountId = linked.get(0).getId();
+    Optional<BusinessBankAccountBalance> optionalBalance =
+        businessBankAccountBalanceRepository.findFirstByBusinessBankAccountIdOrderByCreatedDesc(
+            businessBankAccountId);
+    assertTrue(businessBankAccountBalanceRepository.findAll().size() > balancesBeforeTest);
+    BusinessBankAccountBalance balance = optionalBalance.orElseThrow(NoSuchElementException::new);
+
+    assertTrue(balance.getAvailable().isPositive());
+    assertTrue(balance.getCurrent().isPositive());
+    assertNull(balance.getLimit());
   }
 }

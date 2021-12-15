@@ -1,13 +1,18 @@
 package com.tranwall.capital.client.plaid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.plaid.client.model.AccountBase;
+import com.plaid.client.model.AccountsGetResponse;
+import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Products;
 import com.plaid.client.model.SandboxPublicTokenCreateRequest;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import com.plaid.client.request.PlaidApi;
+import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -15,7 +20,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import retrofit2.Response;
 
@@ -24,11 +31,23 @@ import retrofit2.Response;
 @Slf4j
 public class TestPlaidClient extends PlaidClient {
 
+  private final ObjectMapper objectMapper;
+  private final Resource mockAccountsResponse;
+  private final Resource mockBalancesResponse;
+  private final Resource mockOwnersResponse;
+
   public TestPlaidClient(
       @NonNull PlaidProperties plaidProperties,
       @NonNull PlaidApi plaidApi,
-      @NonNull ObjectMapper mapper) {
+      @NonNull ObjectMapper mapper,
+      @Value("classpath:plaidResponses/accounts.json") @NonNull Resource mockAccountsResponse,
+      @Value("classpath:plaidResponses/balances.json") @NonNull Resource mockBalancesResponse,
+      @Value("classpath:plaidResponses/owners.json") @NonNull Resource mockOwnersResponse) {
     super(plaidProperties, plaidApi, mapper);
+    this.objectMapper = mapper;
+    this.mockOwnersResponse = mockOwnersResponse;
+    this.mockAccountsResponse = mockAccountsResponse;
+    this.mockBalancesResponse = mockBalancesResponse;
   }
 
   /**
@@ -82,23 +101,22 @@ public class TestPlaidClient extends PlaidClient {
    * different from the regular strategy, hence the different implementation for integration
    * testing.
    *
-   * @param bankId identifying the institution (bank) to link. The number is unique to each test
-   *     run, and can be found in the constants {@link #SANDBOX_INSTITUTIONS_BY_NAME} and {@link
-   *     #SANDBOX_INSTITUTIONS}. If the value provided is not a valid institution business ID, First
-   *     Gingham Credit Union will be used by default.
+   * @param businessId identifying the business to link. One is assigned to each bank for testing
+   *     purposes. The number is unique to each test run, and can be found in the constants {@link
+   *     #SANDBOX_INSTITUTIONS_BY_NAME} and {@link #SANDBOX_INSTITUTIONS}. If the value provided is
+   *     not a valid institution business ID, First Gingham Credit Union will be used by default.
    * @param products a list of products to expect from the institution
    * @return A link token
    * @throws IOException for connection failures and the like
    * @throws PlaidClientException if Plaid gives an error
    */
   @Override
-  public String createLinkToken(TypedId<BusinessId> bankId, List<Products> products)
+  public String createLinkToken(TypedId<BusinessId> businessId, List<Products> products)
       throws IOException {
-    if (!INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.containsKey(bankId)) {
-      log.info("Using default institution: First Gingham Credit Union");
-      bankId = SANDBOX_INSTITUTIONS_BY_NAME.get("First Gingham Credit Union");
+    if (TestHelper.businessIds.contains(businessId)) {
+      return "link-token-mock-" + businessId;
     }
-    final TypedId<BusinessId> businessId = bankId;
+
     SandboxPublicTokenCreateRequest request =
         new SandboxPublicTokenCreateRequest()
             .institutionId(INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.get(businessId));
@@ -110,9 +128,10 @@ public class TestPlaidClient extends PlaidClient {
     try {
       return Objects.requireNonNull(validBody(createResponse)).getPublicToken();
     } catch (PlaidClientException e) {
+      TypedId<BusinessId> finalBusinessId = businessId;
       String institution =
           SANDBOX_INSTITUTIONS.stream()
-              .filter(i -> i.businessId.equals(businessId))
+              .filter(i -> i.businessId.equals(finalBusinessId))
               .findFirst()
               .toString();
       log.debug(institution);
@@ -121,5 +140,69 @@ public class TestPlaidClient extends PlaidClient {
       }
       throw e;
     }
+  }
+
+  @Override
+  public String exchangePublicTokenForAccessToken(@NonNull String linkToken) throws IOException {
+    if (isMockLinkToken(linkToken)) {
+      return linkToken.replaceFirst("^link-token-mock-", "access-mock-");
+    }
+    return super.exchangePublicTokenForAccessToken(linkToken);
+  }
+
+  private boolean isMockLinkToken(@NonNull String linkToken) {
+    return linkToken.startsWith("link-token-mock-");
+  }
+
+  private boolean isMockAccessToken(String accessToken) {
+    return accessToken.startsWith("access-mock-");
+  }
+
+  record PlaidNumbers(List<NumbersACH> ach) {}
+
+  record PlaidAccountResponse(List<AccountBase> accounts, PlaidNumbers numbers) {}
+
+  @Override
+  public AccountsResponse getAccounts(String accessToken) throws IOException {
+    if (isMockAccessToken(accessToken)) {
+      PlaidAccountResponse response =
+          objectMapper.readValue(mockAccountsResponse.getFile(), PlaidAccountResponse.class);
+      return new AccountsResponse(accessToken, response.accounts(), response.numbers().ach());
+    }
+
+    return super.getAccounts(accessToken);
+  }
+
+  @Override
+  public List<AccountBase> getBalances(String accessToken) throws IOException {
+    if (isMockAccessToken(accessToken)) {
+      return objectMapper
+          .readValue(mockBalancesResponse.getFile(), AccountsGetResponse.class)
+          .getAccounts();
+    }
+
+    return super.getBalances(accessToken);
+  }
+
+  @Override
+  public OwnersResponse getOwners(String accessToken) throws IOException {
+    if (isMockAccessToken(accessToken)) {
+      return objectMapper.readValue(mockOwnersResponse.getFile(), OwnersResponse.class);
+    }
+
+    return super.getOwners(accessToken);
+  }
+
+  /*
+   * Useful for writing out full responses for mocking
+   */
+  @Override
+  protected <T> @NonNull T validBody(Response<T> response) throws IOException {
+    T t = super.validBody(response);
+    StringWriter writer = new StringWriter();
+    objectMapper.writeValue(writer, t);
+    System.out.println(writer.toString());
+
+    return t;
   }
 }
