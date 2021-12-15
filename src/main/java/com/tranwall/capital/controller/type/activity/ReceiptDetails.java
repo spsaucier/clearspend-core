@@ -13,11 +13,11 @@ public class ReceiptDetails {
   @JsonProperty("receiptId")
   private TypedId<ReceiptId> receiptId;
 
-  public ReceiptDetails(com.tranwall.capital.data.model.embedded.ReceiptDetails card) {
-    if (card == null) {
+  public ReceiptDetails(com.tranwall.capital.data.model.embedded.ReceiptDetails receiptDetails) {
+    if (receiptDetails == null) {
       return;
     }
 
-    receiptId = card.getReceiptId();
+    receiptId = receiptDetails.getReceiptId();
   }
 }

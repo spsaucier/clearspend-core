@@ -90,8 +90,13 @@ public class ReceiptService {
     receipt.setAccountId(accountActivity.getAccountId());
     receipt.setAdjustmentId(accountActivity.getAdjustmentId());
 
-    receiptRepository.save(receipt);
-    accountActivityRepository.save(accountActivity);
+    receipt = receiptRepository.save(receipt);
+    accountActivity = accountActivityRepository.save(accountActivity);
+    log.debug(
+        "Linked receipt {} to accountActivity {} ({})",
+        receipt.getId(),
+        accountActivity.getId(),
+        accountActivity.getReceipt());
   }
 
   @Transactional

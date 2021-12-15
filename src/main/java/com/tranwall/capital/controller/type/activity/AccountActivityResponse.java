@@ -54,13 +54,9 @@ public class AccountActivityResponse {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
     this.accountName = accountActivity.getAllocationName();
-    if (accountActivity.getCard() != null && accountActivity.getCard().getCardId() != null) {
-      this.card = new CardInfo(accountActivity.getAllocationName(), accountActivity.getCard());
-      this.receipt = new ReceiptDetails(accountActivity.getReceipt());
-    }
-    if (accountActivity.getMerchant() != null) {
-      this.merchant = new Merchant(accountActivity.getMerchant());
-    }
+    this.card = new CardInfo(accountActivity.getAllocationName(), accountActivity.getCard());
+    this.receipt = new ReceiptDetails(accountActivity.getReceipt());
+    this.merchant = new Merchant(accountActivity.getMerchant());
     this.type = accountActivity.getType();
     this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
