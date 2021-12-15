@@ -36,15 +36,7 @@ public class BusinessLimitService {
   public BusinessLimit initializeBusinessSpendLimit(TypedId<BusinessId> businessId) {
     Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
 
-    HashMap<LimitPeriod, BigDecimal> allocationDurationMap = new HashMap<>();
-    allocationDurationMap.put(LimitPeriod.DAILY, BigDecimal.valueOf(10_000));
-    allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.valueOf(30_0000));
-
-    Map<LimitType, Map<LimitPeriod, BigDecimal>> limitTypeMap = new HashMap<>();
-    limitTypeMap.put(LimitType.ACH_DEPOSIT, allocationDurationMap);
-    limitTypeMap.put(LimitType.ACH_WITHDRAW, allocationDurationMap);
-
-    limits.put(Currency.USD, limitTypeMap);
+    limits.put(Currency.USD, new HashMap<>());
 
     return businessLimitRepository.save(new BusinessLimit(businessId, limits));
   }
@@ -94,21 +86,23 @@ public class BusinessLimitService {
       Amount amount,
       List<Adjustment> adjustments,
       Map<LimitPeriod, BigDecimal> limits) {
-    for (Entry<LimitPeriod, BigDecimal> limit : limits.entrySet()) {
-      OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey().getDuration());
+    if (limits != null) {
+      for (Entry<LimitPeriod, BigDecimal> limit : limits.entrySet()) {
+        OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey().getDuration());
 
-      BigDecimal usage =
-          adjustments.stream()
-              .filter(adjustment -> adjustment.getEffectiveDate().isAfter(startDate))
-              .map(
-                  adjustment ->
-                      amount.isPositive()
-                          ? adjustment.getAmount().getAmount()
-                          : adjustment.getAmount().getAmount().negate())
-              .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal usage =
+            adjustments.stream()
+                .filter(adjustment -> adjustment.getEffectiveDate().isAfter(startDate))
+                .map(
+                    adjustment ->
+                        amount.isPositive()
+                            ? adjustment.getAmount().getAmount()
+                            : adjustment.getAmount().getAmount().negate())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-      if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
-        throw new InsufficientFundsException("Business", businessId, type, amount);
+        if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
+          throw new InsufficientFundsException("Business", businessId, type, amount);
+        }
       }
     }
   }
