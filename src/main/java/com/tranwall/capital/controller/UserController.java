@@ -259,7 +259,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}/account-activity")
-  private PagedData<AccountActivityResponse> getCarAccountActivity(
+  private PagedData<AccountActivityResponse> getCardAccountActivity(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,

@@ -36,4 +36,15 @@ public class AccountActivityFilterCriteria {
     this.to = dateTo;
     this.pageToken = PageRequest.toPageToken(pageRequest);
   }
+
+  public AccountActivityFilterCriteria(
+      TypedId<AllocationId> allocationId,
+      TypedId<UserId> userId,
+      OffsetDateTime from,
+      OffsetDateTime to) {
+    this.allocationId = allocationId;
+    this.userId = userId;
+    this.from = from;
+    this.to = to;
+  }
 }

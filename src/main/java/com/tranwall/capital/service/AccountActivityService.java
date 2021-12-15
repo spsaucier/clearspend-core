@@ -170,8 +170,11 @@ public class AccountActivityService {
     return accountActivityRepository.save(accountActivity);
   }
 
-  public AccountActivity retrieveAccountActivity(TypedId<AccountActivityId> accountActivityId) {
-    return accountActivityRepository.getById(accountActivityId);
+  public AccountActivity retrieveAccountActivity(
+      TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
+    return accountActivityRepository
+        .findByBusinessIdAndId(businessId, accountActivityId)
+        .orElse(null);
   }
 
   public Page<AccountActivity> getCardAccountActivity(

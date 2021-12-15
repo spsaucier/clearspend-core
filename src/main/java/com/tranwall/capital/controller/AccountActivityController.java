@@ -1,18 +1,29 @@
 package com.tranwall.capital.controller;
 
-import com.tranwall.capital.common.error.ForbiddenException;
 import com.tranwall.capital.common.typedid.data.AccountActivityId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
+import com.tranwall.capital.controller.type.activity.ChartData;
+import com.tranwall.capital.controller.type.activity.ChartDataRequest;
+import com.tranwall.capital.controller.type.activity.DashboardGraphData;
+import com.tranwall.capital.controller.type.activity.GraphData;
+import com.tranwall.capital.controller.type.activity.GraphDataRequest;
 import com.tranwall.capital.controller.type.common.PageRequest;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.repository.AccountActivityRepository;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.AccountActivityService;
+import com.tranwall.capital.service.type.ChartFilterCriteria;
+import com.tranwall.capital.service.type.DashboardData;
+import com.tranwall.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
@@ -61,12 +72,44 @@ public class AccountActivityController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId) {
     AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivity(accountActivityId);
-    // check if user has rights to read this information
-    if (CurrentUser.get().businessId() != accountActivity.getBusinessId()) {
-      throw new ForbiddenException();
-    }
+        accountActivityService.retrieveAccountActivity(
+            CurrentUser.get().businessId(), accountActivityId);
 
     return new AccountActivityResponse(accountActivity);
+  }
+
+  @PostMapping("/graph-data")
+  private DashboardGraphData retrieveDashboardGraphData(
+      @Validated @RequestBody GraphDataRequest request) {
+    DashboardData dashboardData =
+        accountActivityRepository.findDataForLineGraph(
+            CurrentUser.get().businessId(),
+            new GraphFilterCriteria(
+                request.getAllocationId(),
+                request.getUserId(),
+                request.getFrom(),
+                request.getTo()));
+
+    return new DashboardGraphData(
+        dashboardData.getTotalAmount(),
+        dashboardData
+            .getTotalAmount()
+            .divide(
+                BigDecimal.valueOf(dashboardData.getGraphData().size()),
+                2,
+                RoundingMode.UNNECESSARY),
+        dashboardData.getGraphData().stream()
+            .map(graphData -> new GraphData(graphData.getAmount(), graphData.getOffsetDateTime()))
+            .collect(Collectors.toList()));
+  }
+
+  @PostMapping("/category-spend")
+  private List<ChartData> getResultSpendByCategory(
+      @Validated @RequestBody ChartDataRequest request) {
+    return accountActivityRepository
+        .findDataForChart(CurrentUser.get().businessId(), new ChartFilterCriteria(request))
+        .stream()
+        .map(chartData -> new ChartData(chartData.name(), chartData.amount()))
+        .collect(Collectors.toList());
   }
 }

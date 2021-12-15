@@ -22,4 +22,7 @@ public interface AccountActivityRepository
 
   Optional<AccountActivity> findByBusinessIdAndUserIdAndAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AdjustmentId> adjustmentId);
+
+  Optional<AccountActivity> findByBusinessIdAndId(
+      TypedId<BusinessId> businessId, TypedId<AccountActivityId> id);
 }
