@@ -4,7 +4,6 @@ import com.tranwall.capital.common.masking.annotation.Sensitive;
 import com.tranwall.capital.common.typedid.data.CardId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
-import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.JoinColumn;
@@ -22,7 +21,6 @@ import org.hibernate.annotations.Type;
 public class CardDetails {
 
   @JoinColumn(referencedColumnName = "id", table = "card")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<CardId> cardId;
 
