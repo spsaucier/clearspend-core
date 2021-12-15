@@ -113,7 +113,8 @@ public class BusinessProspectService {
                 () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
 
     if (businessProspect.getPhone() != null
-        && StringUtils.isNotBlank(businessProspect.getPhone().getEncrypted())) {
+        && StringUtils.isNotBlank(businessProspect.getPhone().getEncrypted())
+        && businessProspect.isPhoneVerified()) {
       throw new InvalidRequestException("phone already set");
     }
 
