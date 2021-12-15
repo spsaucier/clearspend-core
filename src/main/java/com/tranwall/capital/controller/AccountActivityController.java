@@ -6,8 +6,8 @@ import com.tranwall.capital.controller.type.CurrentUser;
 import com.tranwall.capital.controller.type.PagedData;
 import com.tranwall.capital.controller.type.activity.AccountActivityRequest;
 import com.tranwall.capital.controller.type.activity.AccountActivityResponse;
-import com.tranwall.capital.controller.type.activity.ChartData;
 import com.tranwall.capital.controller.type.activity.ChartDataRequest;
+import com.tranwall.capital.controller.type.activity.ChartDataResponse;
 import com.tranwall.capital.controller.type.activity.DashboardGraphData;
 import com.tranwall.capital.controller.type.activity.GraphData;
 import com.tranwall.capital.controller.type.activity.GraphDataRequest;
@@ -22,6 +22,7 @@ import com.tranwall.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -90,26 +91,32 @@ public class AccountActivityController {
                 request.getFrom(),
                 request.getTo()));
 
-    return new DashboardGraphData(
-        dashboardData.getTotalAmount(),
-        dashboardData
-            .getTotalAmount()
-            .divide(
-                BigDecimal.valueOf(dashboardData.getGraphData().size()),
-                2,
-                RoundingMode.UNNECESSARY),
-        dashboardData.getGraphData().stream()
-            .map(graphData -> new GraphData(graphData.getAmount(), graphData.getOffsetDateTime()))
-            .collect(Collectors.toList()));
+    BigDecimal averageSpend =
+        dashboardData.getGraphData().size() > 0
+            ? dashboardData
+                .getTotalAmount()
+                .divide(
+                    new BigDecimal(dashboardData.getGraphData().size()),
+                    2,
+                    RoundingMode.UNNECESSARY)
+            : BigDecimal.ZERO;
+    List<GraphData> graphDataList =
+        dashboardData.getGraphData().size() > 0
+            ? dashboardData.getGraphData().stream()
+                .map(
+                    graphData ->
+                        new GraphData(graphData.getAmount(), graphData.getOffsetDateTime()))
+                .collect(Collectors.toList())
+            : Collections.emptyList();
+    return new DashboardGraphData(dashboardData.getTotalAmount(), averageSpend, graphDataList);
   }
 
   @PostMapping("/category-spend")
-  private List<ChartData> getResultSpendByCategory(
+  private ChartDataResponse getResultSpendByCategory(
       @Validated @RequestBody ChartDataRequest request) {
-    return accountActivityRepository
-        .findDataForChart(CurrentUser.get().businessId(), new ChartFilterCriteria(request))
-        .stream()
-        .map(chartData -> new ChartData(chartData.name(), chartData.amount()))
-        .collect(Collectors.toList());
+    return new ChartDataResponse(
+        accountActivityRepository.findDataForChart(
+            CurrentUser.get().businessId(), new ChartFilterCriteria(request)),
+        request.getChartFilter());
   }
 }

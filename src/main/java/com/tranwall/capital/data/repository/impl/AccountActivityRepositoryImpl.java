@@ -4,19 +4,30 @@ import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.PaginatedCriteriaBuilder;
+import com.tranwall.capital.common.data.model.Amount;
+import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.tranwall.capital.data.model.AccountActivity;
 import com.tranwall.capital.data.model.User;
+import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.MerchantType;
+import com.tranwall.capital.data.model.enums.UserType;
 import com.tranwall.capital.data.repository.AccountActivityRepositoryCustom;
 import com.tranwall.capital.service.AccountActivityFilterCriteria;
 import com.tranwall.capital.service.BeanUtils;
+import com.tranwall.capital.service.type.AllocationChartData;
+import com.tranwall.capital.service.type.ChartData;
 import com.tranwall.capital.service.type.ChartFilterCriteria;
 import com.tranwall.capital.service.type.DashboardData;
 import com.tranwall.capital.service.type.GraphData;
 import com.tranwall.capital.service.type.GraphFilterCriteria;
+import com.tranwall.capital.service.type.MerchantCategoryChartData;
+import com.tranwall.capital.service.type.MerchantChartData;
 import com.tranwall.capital.service.type.PageToken;
+import com.tranwall.capital.service.type.UserChartData;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -37,10 +48,9 @@ import org.springframework.stereotype.Repository;
 public class AccountActivityRepositoryImpl implements AccountActivityRepositoryCustom {
 
   public static final int LIMIT_SIZE_FOR_CHART = 4;
+
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
-
-  public record ChartData(String name, BigDecimal amount) {}
 
   @Override
   public Page<AccountActivity> find(
@@ -166,7 +176,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   }
 
   @Override
-  public List<ChartData> findDataForChart(
+  public ChartData findDataForChart(
       @NonNull TypedId<BusinessId> businessId, ChartFilterCriteria criteria) {
     // query
     CriteriaBuilder<Tuple> query =
@@ -197,11 +207,15 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           .eqExpression("user.id")
           .end()
           .select("accountActivity.userId")
+          .select("user.type")
           .select("user.firstName")
           .select("user.lastName")
           .groupBy("accountActivity.userId");
       case MERCHANT -> query
           .select("accountActivity.merchant.name")
+          .select("accountActivity.merchant.type")
+          .select("accountActivity.merchant.merchantNumber")
+          .select("accountActivity.merchant.merchantCategoryCode")
           .groupBy("accountActivity.merchant.name");
       case MERCHANT_CATEGORY -> query
           .select("accountActivity.merchant.merchantCategoryCode")
@@ -210,6 +224,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     }
 
     query.select("COALESCE(SUM(accountActivity.amount.amount), 0)", "s");
+    query.select("accountActivity.amount.currency");
     query.orderByDesc("s");
 
     CriteriaBuilder<Tuple> queryOthers = query.copy(Tuple.class);
@@ -219,34 +234,83 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
 
     List<Tuple> resultList = query.getResultList();
 
-    List<ChartData> chartDataList =
-        resultList.stream()
-            .map(
-                tuple ->
-                    switch (criteria.getChartFilterType()) {
-                      case MERCHANT_CATEGORY, ALLOCATION -> new ChartData(
-                          tuple.get(1).toString(), (BigDecimal) tuple.get(2));
-                      case MERCHANT -> new ChartData(
-                          (String) tuple.get(0), (BigDecimal) tuple.get(1));
-                      case EMPLOYEE -> new ChartData(
-                          ((RequiredEncryptedStringWithHash) tuple.get(1)).getEncrypted()
-                              + " "
-                              + ((RequiredEncryptedStringWithHash) tuple.get(2)).getEncrypted(),
-                          (BigDecimal) tuple.get(3));
-                    })
-            .collect(Collectors.toList());
+    ChartData chartData =
+        switch (criteria.getChartFilterType()) {
+          case MERCHANT_CATEGORY -> new ChartData(
+              resultList.stream()
+                  .map(
+                      tuple ->
+                          new MerchantCategoryChartData(
+                              MerchantType.valueOf(tuple.get(1).toString()),
+                              new Amount(
+                                  Currency.valueOf(tuple.get(3).toString()),
+                                  (BigDecimal) tuple.get(2))))
+                  .collect(Collectors.toList()),
+              null,
+              null,
+              null);
+          case ALLOCATION -> new ChartData(
+              null,
+              resultList.stream()
+                  .map(
+                      tuple ->
+                          new AllocationChartData(
+                              (TypedId<AllocationId>) tuple.get(0),
+                              tuple.get(1).toString(),
+                              new Amount(
+                                  Currency.valueOf(tuple.get(3).toString()),
+                                  (BigDecimal) tuple.get(2))))
+                  .collect(Collectors.toList()),
+              null,
+              null);
+
+          case MERCHANT -> new ChartData(
+              null,
+              null,
+              null,
+              resultList.stream()
+                  .map(
+                      tuple ->
+                          new MerchantChartData(
+                              new Amount(
+                                  Currency.valueOf(tuple.get(5).toString()),
+                                  (BigDecimal) tuple.get(4)),
+                              (Integer) tuple.get(3),
+                              MerchantType.valueOf(tuple.get(1).toString()),
+                              tuple.get(2).toString(),
+                              tuple.get(0).toString()))
+                  .collect(Collectors.toList()));
+
+          case EMPLOYEE -> new ChartData(
+              null,
+              null,
+              resultList.stream()
+                  .map(
+                      tuple ->
+                          new UserChartData(
+                              (TypedId<UserId>) tuple.get(0),
+                              UserType.valueOf(tuple.get(1).toString()),
+                              ((RequiredEncryptedStringWithHash) tuple.get(2)).getEncrypted(),
+                              ((RequiredEncryptedStringWithHash) tuple.get(3)).getEncrypted(),
+                              new Amount(
+                                  Currency.valueOf(tuple.get(5).toString()),
+                                  (BigDecimal) tuple.get(4))))
+                  .collect(Collectors.toList()),
+              null);
+        };
+
     if (resultList.size() == LIMIT_SIZE_FOR_CHART) {
       List<Tuple> resultListForOthers = queryOthers.getResultList();
       BigDecimal amount =
           resultListForOthers.stream()
-              .map(tuple -> new BigDecimal(tuple.get(tuple.getElements().size() - 1).toString()))
+              .map(tuple -> new BigDecimal(tuple.get(tuple.getElements().size() - 2).toString()))
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
       if (amount.doubleValue() > 0) {
-        chartDataList.add(new ChartData("Others", amount));
+        chartData.addOtherCategory(criteria.getChartFilterType(), amount);
       }
     }
 
-    return chartDataList;
+    return chartData;
   }
 }

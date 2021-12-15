@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,8 +12,8 @@ import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.nonprod.TestDataController;
-import com.tranwall.capital.controller.type.activity.ChartData;
 import com.tranwall.capital.controller.type.activity.ChartDataRequest;
+import com.tranwall.capital.controller.type.activity.ChartDataResponse;
 import com.tranwall.capital.controller.type.activity.ChartFilterType;
 import com.tranwall.capital.data.model.Account;
 import com.tranwall.capital.data.model.Bin;
@@ -30,7 +31,6 @@ import com.tranwall.capital.service.UserService;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
-import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -120,11 +120,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<ChartData> chartData =
-        objectMapper.readValue(
-            response.getContentAsString(),
-            objectMapper.getTypeFactory().constructParametricType(List.class, ChartData.class));
-    assertEquals(5, chartData.size());
+    ChartDataResponse chartData =
+        objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
+    assertEquals(5, chartData.getUserChartData().size());
     log.info(response.getContentAsString());
   }
 
@@ -207,11 +205,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<ChartData> chartData =
-        objectMapper.readValue(
-            response.getContentAsString(),
-            objectMapper.getTypeFactory().constructParametricType(List.class, ChartData.class));
-    assertEquals(5, chartData.size());
+    ChartDataResponse chartData =
+        objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
+    assertEquals(5, chartData.getAllocationChartData().size());
     log.info(response.getContentAsString());
   }
 
@@ -302,11 +298,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<ChartData> chartData =
-        objectMapper.readValue(
-            response.getContentAsString(),
-            objectMapper.getTypeFactory().constructParametricType(List.class, ChartData.class));
-    assertEquals(1, chartData.size());
+    ChartDataResponse chartData =
+        objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
+    assertEquals(5, chartData.getMerchantChartData().size());
     log.info(response.getContentAsString());
   }
 
@@ -366,11 +360,51 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    List<ChartData> chartData =
-        objectMapper.readValue(
-            response.getContentAsString(),
-            objectMapper.getTypeFactory().constructParametricType(List.class, ChartData.class));
-    assertEquals(1, chartData.size());
+    ChartDataResponse chartData =
+        objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
+    assertEquals(1, chartData.getMerchantCategoryChartData().size());
+    log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void getChartDataFilterWhenNoTransactionsArePresent() {
+    if (bin == null) {
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+    }
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+
+    testHelper.createBusinessOwner(business.getId(), email, password);
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    ChartDataRequest chartDataRequest = new ChartDataRequest();
+    chartDataRequest.setChartFilter(ChartFilterType.EMPLOYEE);
+    chartDataRequest.setFrom(OffsetDateTime.now().minusDays(1));
+    chartDataRequest.setTo(OffsetDateTime.now().plusDays(1));
+
+    String body = objectMapper.writeValueAsString(chartDataRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity/category-spend")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    ChartDataResponse chartData =
+        objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
+    assertNull(chartData.getMerchantChartData());
+    assertEquals(0, chartData.getUserChartData().size());
+    assertNull(chartData.getAllocationChartData());
+    assertNull(chartData.getMerchantCategoryChartData());
     log.info(response.getContentAsString());
   }
 }

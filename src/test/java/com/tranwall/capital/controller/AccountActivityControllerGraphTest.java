@@ -154,4 +154,48 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
     assertEquals(BigDecimal.valueOf(15000, 2), dashboardGraphData.getAverageSpend());
     log.info(response.getContentAsString());
   }
+
+  @SneakyThrows
+  @Test
+  void getGraphDataWhenNoTransactionsArePresent() {
+    if (bin == null) {
+      bin = testHelper.createBin();
+      program = testHelper.createProgram(bin);
+    }
+    String email = testHelper.generateEmail();
+    String password = testHelper.generatePassword();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
+
+    testHelper.createBusinessOwner(business.getId(), email, password);
+
+    Cookie authCookie = testHelper.login(email, password);
+
+    GraphDataRequest graphDataRequest = new GraphDataRequest();
+    graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
+    graphDataRequest.setFrom(OffsetDateTime.now().minusDays(1));
+    graphDataRequest.setTo(OffsetDateTime.now().plusDays(1));
+
+    String body = objectMapper.writeValueAsString(graphDataRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity/graph-data")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    // we should have just one bank deposit
+    DashboardGraphData dashboardGraphData =
+        objectMapper.readValue(response.getContentAsString(), DashboardGraphData.class);
+    assertEquals(0, dashboardGraphData.getGraphData().size());
+    assertEquals(BigDecimal.valueOf(0), dashboardGraphData.getTotalSpend());
+    assertEquals(BigDecimal.valueOf(0), dashboardGraphData.getAverageSpend());
+    log.info(response.getContentAsString());
+  }
 }
