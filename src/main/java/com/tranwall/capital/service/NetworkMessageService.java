@@ -107,6 +107,12 @@ public class NetworkMessageService {
       common.getAccountActivity().setActivityTime(holdRecord.hold().getCreated());
       common.getAccountActivity().setHideAfter(holdRecord.hold().getExpirationDate());
       accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
+      log.debug(
+          "networkMessage {} hold {} (available {} / ledger {})",
+          networkMessage.getId(),
+          networkMessage.getHoldId(),
+          common.getAccount().getAvailableBalance(),
+          common.getAccount().getLedgerBalance());
     }
 
     if (common.isPostAdjustment()) {
@@ -117,6 +123,12 @@ public class NetworkMessageService {
       common.getAccountActivity().setActivityTime(adjustmentRecord.adjustment().getCreated());
       accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
           common, adjustmentRecord.adjustment());
+      log.debug(
+          "networkMessage {} adjustment {} (available {} / ledger {})",
+          networkMessage.getId(),
+          networkMessage.getAdjustmentId(),
+          common.getAccount().getAvailableBalance(),
+          common.getAccount().getLedgerBalance());
     }
 
     if (common.isPostDecline()) {
@@ -124,6 +136,11 @@ public class NetworkMessageService {
       common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.DECLINED);
       common.getAccountActivity().setActivityTime(OffsetDateTime.now());
       accountActivityService.recordNetworkDeclineAccountAccountActivity(common);
+      log.debug(
+          "networkMessage {} declined (available {} / ledger {})",
+          networkMessage.getId(),
+          common.getAccount().getAvailableBalance(),
+          common.getAccount().getLedgerBalance());
     }
 
     return networkMessageRepository.save(networkMessage);

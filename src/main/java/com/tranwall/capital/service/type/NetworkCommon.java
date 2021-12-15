@@ -1,5 +1,6 @@
 package com.tranwall.capital.service.type;
 
+import com.stripe.model.issuing.Authorization;
 import com.tranwall.capital.client.i2c.push.controller.type.EventNotificationAdvanceRequest;
 import com.tranwall.capital.client.i2c.push.controller.type.I2cCard;
 import com.tranwall.capital.client.i2c.push.controller.type.I2cTransaction;
@@ -105,4 +106,6 @@ public class NetworkCommon {
     i2cTransactionRef = i2cTransaction.getTransactionRef();
     request = new EventNotificationAdvanceRequest(null, i2cTransaction, i2cCard);
   }
+
+  public NetworkCommon(Authorization auth) {}
 }

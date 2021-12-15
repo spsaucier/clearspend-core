@@ -89,6 +89,7 @@ dependencies {
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
     implementation("com.google.cloud:google-cloud-nio:0.123.17")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
+    implementation("com.stripe:stripe-java:20.92.0") // from: https://github.com/stripe/stripe-java
 
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 

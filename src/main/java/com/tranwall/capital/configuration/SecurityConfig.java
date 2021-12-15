@@ -25,6 +25,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/i2c/push/**",
             "/manual-review/alloy/web-hook",
             "/non-production/**",
+            "/stripe/webhook/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/**");
