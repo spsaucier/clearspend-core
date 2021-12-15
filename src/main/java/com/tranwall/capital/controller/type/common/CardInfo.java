@@ -37,15 +37,16 @@ public class CardInfo {
   @NonNull
   private String ownerLastName;
 
-  public CardInfo(String name, CardDetails card) {
-    if (card == null || card.getCardId() == null) {
-      return;
+  public static CardInfo toCardInfo(String name, CardDetails in) {
+    if (in == null || in.getCardId() == null) {
+      return null;
     }
 
-    cardId = card.getCardId();
-    lastFour = card.getLastFour();
-    allocationName = name;
-    ownerFirstName = card.getOwnerFirstName().getEncrypted();
-    ownerLastName = card.getOwnerLastName().getEncrypted();
+    return new CardInfo(
+        in.getCardId(),
+        in.getLastFour(),
+        name,
+        in.getOwnerFirstName().getEncrypted(),
+        in.getOwnerLastName().getEncrypted());
   }
 }

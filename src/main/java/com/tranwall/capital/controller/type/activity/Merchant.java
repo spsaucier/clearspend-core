@@ -39,15 +39,17 @@ public class Merchant {
   @JsonProperty("merchantLongitude")
   private BigDecimal longitude;
 
-  public Merchant(MerchantDetails merchant) {
-    if (merchant == null) {
-      return;
+  public static Merchant toMerchant(MerchantDetails in) {
+    if (in == null) {
+      return null;
     }
-    name = merchant.getName();
-    type = merchant.getType();
-    merchantCategoryCode = merchant.getMerchantCategoryCode();
-    merchantNumber = merchant.getMerchantNumber();
-    latitude = merchant.getLatitude();
-    longitude = merchant.getLongitude();
+
+    Merchant merchant =
+        new Merchant(
+            in.getName(), in.getType(), in.getMerchantNumber(), in.getMerchantCategoryCode());
+    merchant.setLatitude(in.getLatitude());
+    merchant.setLongitude(in.getLongitude());
+
+    return merchant;
   }
 }

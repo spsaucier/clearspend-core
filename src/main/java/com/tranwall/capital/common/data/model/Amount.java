@@ -1,6 +1,7 @@
 package com.tranwall.capital.common.data.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.error.AmountException;
 import com.tranwall.capital.common.error.AmountException.AmountType;
@@ -72,14 +73,17 @@ public class Amount {
     return amount.compareTo(that.amount) > 0;
   }
 
+  @JsonIgnore
   public boolean isGreaterThanZero() {
     return amount.compareTo(BigDecimal.ZERO) > 0;
   }
 
+  @JsonIgnore
   public boolean isNegative() {
     return amount.compareTo(BigDecimal.ZERO) < 0;
   }
 
+  @JsonIgnore
   public boolean isPositive() {
     return amount.compareTo(BigDecimal.ZERO) > 0;
   }
