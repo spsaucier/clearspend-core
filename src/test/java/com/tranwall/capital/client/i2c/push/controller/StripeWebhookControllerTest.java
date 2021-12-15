@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-class I2cPushNotificationControllerTest extends BaseCapitalTest {
+class StripeWebhookControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;

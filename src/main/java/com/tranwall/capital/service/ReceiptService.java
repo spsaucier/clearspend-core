@@ -72,6 +72,7 @@ public class ReceiptService {
 
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.getAdjustmentId() != null) {
+      Receipt finalReceipt = receipt;
       AccountActivity previousAccountActivity =
           accountActivityRepository
               .findByBusinessIdAndUserIdAndAdjustmentId(
@@ -79,7 +80,10 @@ public class ReceiptService {
               .orElseThrow(
                   () ->
                       new RecordNotFoundException(
-                          Table.ACCOUNT_ACTIVITY, businessId, userId, receipt.getAdjustmentId()));
+                          Table.ACCOUNT_ACTIVITY,
+                          businessId,
+                          userId,
+                          finalReceipt.getAdjustmentId()));
       previousAccountActivity.setReceipt(null);
       accountActivityRepository.save(previousAccountActivity);
     }
