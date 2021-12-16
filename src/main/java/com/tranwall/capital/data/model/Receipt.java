@@ -44,17 +44,14 @@ public class Receipt extends TypedMutable<ReceiptId> {
   private TypedId<UserId> userId;
 
   @JoinColumn(referencedColumnName = "id", table = "allocation")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> allocationId;
 
   @JoinColumn(referencedColumnName = "id", table = "account")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
 
   @JoinColumn(referencedColumnName = "id", table = "adjustment")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AdjustmentId> adjustmentId;
 

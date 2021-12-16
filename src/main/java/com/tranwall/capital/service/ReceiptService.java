@@ -84,6 +84,9 @@ public class ReceiptService {
                           businessId,
                           userId,
                           finalReceipt.getAdjustmentId()));
+      receipt.setAllocationId(null);
+      receipt.setAccountId(null);
+      receipt.setAdjustmentId(null);
       previousAccountActivity.setReceipt(null);
       accountActivityRepository.save(previousAccountActivity);
     }
@@ -91,6 +94,7 @@ public class ReceiptService {
     AccountActivity accountActivity =
         accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
     accountActivity.setReceipt(new ReceiptDetails(receipt.getId()));
+    receipt.setAllocationId(accountActivity.getAllocationId());
     receipt.setAccountId(accountActivity.getAccountId());
     receipt.setAdjustmentId(accountActivity.getAdjustmentId());
 
@@ -120,8 +124,14 @@ public class ReceiptService {
     accountActivity.setReceipt(null);
     accountActivityRepository.save(accountActivity);
 
+    receipt.setAllocationId(null);
     receipt.setAccountId(null);
     receipt.setAdjustmentId(null);
     receiptRepository.save(receipt);
+    log.debug(
+        "Unlinked receipt {} to accountActivity {} ({})",
+        receipt.getId(),
+        accountActivity.getId(),
+        accountActivity.getReceipt());
   }
 }
