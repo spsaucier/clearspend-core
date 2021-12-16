@@ -20,10 +20,16 @@ import com.plaid.client.model.Products;
 import com.plaid.client.request.PlaidApi;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.crypto.data.model.embedded.EncryptedString;
+import com.tranwall.capital.data.model.PlaidLogEntry;
+import com.tranwall.capital.data.model.enums.PlaidResponseType;
+import com.tranwall.capital.data.repository.PlaidLogEntryRepository;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -42,14 +48,17 @@ public class PlaidClient {
   @NonNull private final PlaidProperties plaidProperties;
   @NonNull private final PlaidApi plaidApi;
   @NonNull private final ObjectMapper mapper;
+  @NonNull private final PlaidLogEntryRepository plaidLogEntryRepository;
 
   public PlaidClient(
       @NonNull PlaidProperties plaidProperties,
       @NonNull PlaidApi plaidApi,
-      @NonNull ObjectMapper mapper) {
+      @NonNull ObjectMapper mapper,
+      @NonNull PlaidLogEntryRepository plaidLogEntryRepository) {
     this.plaidProperties = plaidProperties;
     this.plaidApi = plaidApi;
     this.mapper = mapper;
+    this.plaidLogEntryRepository = plaidLogEntryRepository;
   }
 
   protected PlaidApi client() {
@@ -60,11 +69,12 @@ public class PlaidClient {
     return plaidProperties.isConfigured();
   }
 
-  public PlaidClient.OwnersResponse getOwners(String accessToken) throws IOException {
+  public PlaidClient.OwnersResponse getOwners(
+      String accessToken, @NonNull TypedId<BusinessId> businessId) throws IOException {
     IdentityGetRequest authGetRequest = new IdentityGetRequest().accessToken(accessToken);
     Response<IdentityGetResponse> authGetResponse = plaidApi.identityGet(authGetRequest).execute();
 
-    return new OwnersResponse(accessToken, validBody(authGetResponse).getAccounts());
+    return new OwnersResponse(accessToken, validBody(businessId, authGetResponse).getAccounts());
   }
 
   public record OwnersResponse(String accessToken, List<AccountIdentity> accounts) {}
@@ -111,34 +121,39 @@ public class PlaidClient {
     Response<LinkTokenCreateResponse> response = plaidApi.linkTokenCreate(request).execute();
     log.debug("{}", response.code());
 
-    return validBody(response).getLinkToken();
+    return validBody(businessId, response).getLinkToken();
   }
 
-  public AccountsResponse getAccounts(String accessToken) throws IOException {
+  public AccountsResponse getAccounts(String accessToken, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
     AuthGetRequest authGetRequest = new AuthGetRequest().accessToken(accessToken);
     Response<AuthGetResponse> authGetResponse = plaidApi.authGet(authGetRequest).execute();
 
-    AuthGetResponse body = validBody(authGetResponse);
+    AuthGetResponse body = validBody(businessId, authGetResponse);
 
     return new AccountsResponse(accessToken, body.getAccounts(), body.getNumbers().getAch());
   }
 
-  public List<AccountBase> getBalances(String accessToken) throws IOException {
+  public List<AccountBase> getBalances(String accessToken, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
     AccountsBalanceGetRequest request = new AccountsBalanceGetRequest().accessToken(accessToken);
     Response<AccountsGetResponse> response = client().accountsBalanceGet(request).execute();
-    return validBody(response).getAccounts();
+    final AccountsGetResponse accountsGetResponse = validBody(businessId, response);
+    return accountsGetResponse.getAccounts();
   }
 
   /**
    * Validate that the given response was successful and return its decoded body.
    *
-   * @param response A response to analyze for success
    * @param <T> The type of response expected
+   * @param businessId
+   * @param response A response to analyze for success
    * @return the body of the response, decoded
    * @throws IOException if there is a problem making a string out of the errorBody
    * @throws PlaidClientException if Plaid returned an error
    */
-  protected <T> @NonNull T validBody(Response<T> response) throws IOException {
+  protected <T> @NonNull T validBody(@NonNull TypedId<BusinessId> businessId, Response<T> response)
+      throws IOException {
     if (response == null || !response.isSuccessful()) {
       String errorMessage = "Error in response";
       String errorBody = "[empty]";
@@ -149,17 +164,30 @@ public class PlaidClient {
       log.debug(String.valueOf(response));
 
       PlaidError error = mapper.readValue(errorBody, PlaidError.class);
+      plaidLogEntryRepository.save(
+          new PlaidLogEntry(businessId, new EncryptedString(errorBody), PlaidResponseType.ERROR));
       throw new PlaidClientException(error, errorBody, String.valueOf(response));
     }
-    return Objects.requireNonNull(response.body());
+    final T responseObj = (T) Objects.requireNonNull(response.body());
+    PlaidResponseType responseType =
+        Arrays.stream(PlaidResponseType.values())
+            .filter(t -> t.responseClass.isAssignableFrom(responseObj.getClass()))
+            .findFirst()
+            .orElseThrow(() -> new NoSuchElementException(responseObj.getClass().getName()));
+    StringWriter writer = new StringWriter();
+    mapper.writeValue(writer, responseObj);
+    plaidLogEntryRepository.save(
+        new PlaidLogEntry(businessId, new EncryptedString(writer.toString()), responseType));
+    return responseObj;
   }
 
-  public String exchangePublicTokenForAccessToken(@NonNull String linkToken) throws IOException {
+  public String exchangePublicTokenForAccessToken(
+      @NonNull String linkToken, @NonNull TypedId<BusinessId> businessId) throws IOException {
     ItemPublicTokenExchangeRequest itemPublicTokenCreateRequest =
         new ItemPublicTokenExchangeRequest().publicToken(linkToken);
     Response<ItemPublicTokenExchangeResponse> response =
         plaidApi.itemPublicTokenExchange(itemPublicTokenCreateRequest).execute();
 
-    return validBody(response).getAccessToken();
+    return validBody(businessId, response).getAccessToken();
   }
 }

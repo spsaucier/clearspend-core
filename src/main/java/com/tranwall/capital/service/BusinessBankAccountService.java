@@ -107,14 +107,15 @@ public class BusinessBankAccountService {
     // TODO: Check for already existing access token
     // Will need some unique ID to look up in the database but can't use routing/account since that
     // is not in the plaid metadata
-    String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.AccountsResponse accountsResponse = plaidClient.getAccounts(accessToken);
+    String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
+    PlaidClient.AccountsResponse accountsResponse =
+        plaidClient.getAccounts(accessToken, businessId);
     Map<String, String> accountNames =
         accountsResponse.accounts().stream()
             .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
 
     try {
-      PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken);
+      PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken, businessId);
       Map<String, List<Owner>> accountOwners =
           ownersResponse.accounts().stream()
               .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));

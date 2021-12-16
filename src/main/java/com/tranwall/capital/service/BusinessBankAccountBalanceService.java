@@ -5,9 +5,12 @@ import com.plaid.client.model.AccountBase;
 import com.tranwall.capital.client.plaid.PlaidClient;
 import com.tranwall.capital.common.data.model.Amount;
 import com.tranwall.capital.common.data.model.TypedMutable;
+import com.tranwall.capital.common.error.RecordNotFoundException;
+import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.BusinessBankAccountId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.tranwall.capital.data.model.BusinessBankAccount;
 import com.tranwall.capital.data.model.BusinessBankAccountBalance;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.repository.BusinessBankAccountBalanceRepository;
@@ -16,7 +19,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -76,14 +78,18 @@ public class BusinessBankAccountBalanceService {
   public @NonNull BusinessBankAccountBalance getNewBalance(
       TypedId<BusinessBankAccountId> businessBankAccountId) throws IOException {
 
-    @NonNull
-    RequiredEncryptedStringWithHash accessToken =
+    BusinessBankAccount businessBankAccount =
         businessBankAccountRepository
             .findById(businessBankAccountId)
-            .orElseThrow(NoSuchElementException::new)
-            .getAccessToken();
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
 
-    List<AccountBase> accountBases = plaidClient.getBalances(accessToken.getEncrypted());
+    @NonNull RequiredEncryptedStringWithHash accessToken = businessBankAccount.getAccessToken();
+
+    List<AccountBase> accountBases =
+        plaidClient.getBalances(accessToken.getEncrypted(), businessBankAccount.getBusinessId());
     Map<String, TypedId<BusinessBankAccountId>> businessBankAccounts =
         businessBankAccountRepository.findAllByAccessToken(accessToken).stream()
             .collect(

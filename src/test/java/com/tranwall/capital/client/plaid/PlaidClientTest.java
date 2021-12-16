@@ -13,9 +13,13 @@ import com.plaid.client.model.Address;
 import com.plaid.client.model.Owner;
 import com.plaid.client.model.Products;
 import com.tranwall.capital.BaseCapitalTest;
+import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.client.plaid.PlaidClient.OwnersResponse;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.data.model.PlaidLogEntry;
+import com.tranwall.capital.data.model.enums.PlaidResponseType;
+import com.tranwall.capital.data.repository.PlaidLogEntryRepository;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,14 +40,45 @@ class PlaidClientTest extends BaseCapitalTest {
 
   @Autowired private PlaidClient underTest;
 
+  @Autowired private PlaidLogEntryRepository plaidLogEntryRepository;
+
+  @Autowired private TestHelper testHelper;
+
+  @BeforeEach
+  void init() {
+    assumeTrue(underTest.isConfigured());
+    TestPlaidClient.INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID
+        .keySet()
+        .forEach(testHelper::createBusiness);
+  }
+
   @Test
   void getAccounts() throws IOException {
     assumeTrue(underTest.isConfigured());
     String linkToken =
         underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
     assertNotNull(accounts);
+
+    checkLastLogTypes(
+        PlaidResponseType.SANDBOX_LINK_TOKEN,
+        PlaidResponseType.ACCESS_TOKEN,
+        PlaidResponseType.ACCOUNT);
+  }
+
+  void checkLastLogTypes(PlaidResponseType... expectedTypes) {
+    checkLastLogTypes(businessId(), expectedTypes);
+  }
+
+  void checkLastLogTypes(TypedId<BusinessId> businessId, PlaidResponseType... expectedTypes) {
+    List<PlaidLogEntry> logEntries =
+        plaidLogEntryRepository.findByBusinessIdOrderByCreatedAsc(businessId);
+    for (int i = 0; i < expectedTypes.length; i++) {
+      assertEquals(
+          expectedTypes[i],
+          logEntries.get(logEntries.size() - expectedTypes.length + i).getPlaidResponseType());
+    }
   }
 
   @Test
@@ -50,8 +86,8 @@ class PlaidClientTest extends BaseCapitalTest {
     assumeTrue(underTest.isConfigured());
     String linkToken =
         underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
+    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken, businessId());
     assertNotNull(owners);
     Owner owner = owners.accounts().get(0).getOwners().get(0);
     assertNotNull(owner);
@@ -65,9 +101,9 @@ class PlaidClientTest extends BaseCapitalTest {
     assumeTrue(underTest.isConfigured());
     String linkToken =
         underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
-    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken, businessId());
     assertNotNull(accounts);
     assertNotNull(owners);
 
@@ -79,31 +115,51 @@ class PlaidClientTest extends BaseCapitalTest {
         owners.accounts().stream().map(AccountIdentity::getAccountId).collect(Collectors.toSet());
     assertEquals(accessAccts, ownerAccts);
     assertFalse(accessAccts.isEmpty());
+
+    checkLastLogTypes(
+        PlaidResponseType.SANDBOX_LINK_TOKEN,
+        PlaidResponseType.ACCESS_TOKEN,
+        PlaidResponseType.ACCOUNT,
+        PlaidResponseType.OWNER);
   }
 
   @Test
   void getAccountsAndOwnersButTheInstitutionDoesNotSupportOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken =
-        underTest.createLinkToken(
-            TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Flexible Platypus Open Banking"));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
+    TypedId<BusinessId> businessId =
+        TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Flexible Platypus Open Banking");
+    String linkToken = underTest.createLinkToken(businessId);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId);
     assertFalse(accounts.accounts().isEmpty());
     PlaidClientException e =
-        assertThrows(PlaidClientException.class, () -> underTest.getOwners(accessToken));
+        assertThrows(
+            PlaidClientException.class, () -> underTest.getOwners(accessToken, businessId));
     assertEquals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED, e.getErrorCode());
+
+    checkLastLogTypes(
+        businessId,
+        PlaidResponseType.SANDBOX_LINK_TOKEN,
+        PlaidResponseType.ACCESS_TOKEN,
+        PlaidResponseType.ACCOUNT,
+        PlaidResponseType.ERROR);
   }
 
   @Test
   void testBalanceCheck() throws IOException {
     assumeTrue(underTest.isConfigured());
     String linkToken = underTest.createLinkToken(businessId());
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken);
-    List<AccountBase> balances = underTest.getBalances(accessToken);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+    List<AccountBase> balances = underTest.getBalances(accessToken, businessId());
     assertNotNull(balances);
     assertNotNull(accounts);
+
+    checkLastLogTypes(
+        PlaidResponseType.SANDBOX_LINK_TOKEN,
+        PlaidResponseType.ACCESS_TOKEN,
+        PlaidResponseType.ACCOUNT,
+        PlaidResponseType.BALANCE);
   }
 
   /**
@@ -121,10 +177,11 @@ class PlaidClientTest extends BaseCapitalTest {
         institution -> {
           try {
             String linkToken;
+            TypedId<BusinessId> businessId = institution.businessId();
             try {
               linkToken =
                   underTest.createLinkToken(
-                      institution.businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
+                      businessId, Arrays.asList(Products.AUTH, Products.IDENTITY));
             } catch (PlaidClientException e) {
               switch (e.getErrorCode()) {
                 case INVALID_PRODUCT, PRODUCTS_NOT_SUPPORTED -> {
@@ -135,8 +192,9 @@ class PlaidClientTest extends BaseCapitalTest {
                 default -> throw e;
               }
             }
-            String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken);
-            OwnersResponse response = underTest.getOwners(accessToken);
+
+            String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId);
+            OwnersResponse response = underTest.getOwners(accessToken, businessId);
             // log.info(institution.name());
             response
                 .accounts()

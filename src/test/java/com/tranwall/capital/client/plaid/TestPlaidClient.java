@@ -11,6 +11,7 @@ import com.plaid.client.request.PlaidApi;
 import com.tranwall.capital.TestHelper;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
+import com.tranwall.capital.data.repository.PlaidLogEntryRepository;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
@@ -40,10 +41,11 @@ public class TestPlaidClient extends PlaidClient {
       @NonNull PlaidProperties plaidProperties,
       @NonNull PlaidApi plaidApi,
       @NonNull ObjectMapper mapper,
+      @NonNull PlaidLogEntryRepository plaidLogEntryRepository,
       @Value("classpath:plaidResponses/accounts.json") @NonNull Resource mockAccountsResponse,
       @Value("classpath:plaidResponses/balances.json") @NonNull Resource mockBalancesResponse,
       @Value("classpath:plaidResponses/owners.json") @NonNull Resource mockOwnersResponse) {
-    super(plaidProperties, plaidApi, mapper);
+    super(plaidProperties, plaidApi, mapper, plaidLogEntryRepository);
     this.objectMapper = mapper;
     this.mockOwnersResponse = mockOwnersResponse;
     this.mockAccountsResponse = mockAccountsResponse;
@@ -126,7 +128,7 @@ public class TestPlaidClient extends PlaidClient {
         client().sandboxPublicTokenCreate(request).execute();
 
     try {
-      return Objects.requireNonNull(validBody(createResponse)).getPublicToken();
+      return Objects.requireNonNull(validBody(businessId, createResponse)).getPublicToken();
     } catch (PlaidClientException e) {
       TypedId<BusinessId> finalBusinessId = businessId;
       String institution =
@@ -143,11 +145,12 @@ public class TestPlaidClient extends PlaidClient {
   }
 
   @Override
-  public String exchangePublicTokenForAccessToken(@NonNull String linkToken) throws IOException {
+  public String exchangePublicTokenForAccessToken(
+      @NonNull String linkToken, @NonNull TypedId<BusinessId> businessId) throws IOException {
     if (isMockLinkToken(linkToken)) {
       return linkToken.replaceFirst("^link-token-mock-", "access-mock-");
     }
-    return super.exchangePublicTokenForAccessToken(linkToken);
+    return super.exchangePublicTokenForAccessToken(linkToken, businessId);
   }
 
   private boolean isMockLinkToken(@NonNull String linkToken) {
@@ -163,42 +166,46 @@ public class TestPlaidClient extends PlaidClient {
   record PlaidAccountResponse(List<AccountBase> accounts, PlaidNumbers numbers) {}
 
   @Override
-  public AccountsResponse getAccounts(String accessToken) throws IOException {
+  public AccountsResponse getAccounts(String accessToken, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
     if (isMockAccessToken(accessToken)) {
       PlaidAccountResponse response =
           objectMapper.readValue(mockAccountsResponse.getFile(), PlaidAccountResponse.class);
       return new AccountsResponse(accessToken, response.accounts(), response.numbers().ach());
     }
 
-    return super.getAccounts(accessToken);
+    return super.getAccounts(accessToken, businessId);
   }
 
   @Override
-  public List<AccountBase> getBalances(String accessToken) throws IOException {
+  public List<AccountBase> getBalances(String accessToken, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
     if (isMockAccessToken(accessToken)) {
       return objectMapper
           .readValue(mockBalancesResponse.getFile(), AccountsGetResponse.class)
           .getAccounts();
     }
 
-    return super.getBalances(accessToken);
+    return super.getBalances(accessToken, businessId);
   }
 
   @Override
-  public OwnersResponse getOwners(String accessToken) throws IOException {
+  public OwnersResponse getOwners(String accessToken, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
     if (isMockAccessToken(accessToken)) {
       return objectMapper.readValue(mockOwnersResponse.getFile(), OwnersResponse.class);
     }
 
-    return super.getOwners(accessToken);
+    return super.getOwners(accessToken, businessId);
   }
 
   /*
    * Useful for writing out full responses for mocking
    */
   @Override
-  protected <T> @NonNull T validBody(Response<T> response) throws IOException {
-    T t = super.validBody(response);
+  protected <T> @NonNull T validBody(@NonNull TypedId<BusinessId> businessId, Response<T> response)
+      throws IOException {
+    T t = super.validBody(businessId, response);
     StringWriter writer = new StringWriter();
     objectMapper.writeValue(writer, t);
     System.out.println(writer.toString());
