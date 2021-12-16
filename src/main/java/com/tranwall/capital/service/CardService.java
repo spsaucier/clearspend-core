@@ -9,6 +9,7 @@ import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AllocationId;
 import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.CardId;
+import com.tranwall.capital.common.typedid.data.MccGroupId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
 import com.tranwall.capital.crypto.HashUtil;
@@ -22,13 +23,19 @@ import com.tranwall.capital.data.model.enums.CardStatus;
 import com.tranwall.capital.data.model.enums.CardStatusReason;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.FundingType;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.data.repository.AllocationRepository;
 import com.tranwall.capital.data.repository.CardRepository;
 import com.tranwall.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.tranwall.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +67,10 @@ public class CardService {
       TypedId<UserId> userId,
       Currency currency,
       Boolean isPersonal,
-      String businessLegalName) {
+      String businessLegalName,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
@@ -112,15 +122,20 @@ public class CardService {
           accountService.createAccount(
               businessId, AccountType.CARD, card.getId().toUuid(), currency);
     } else {
-      // TODO(kuchlein): Not sure if we want to be doing this or not...
+      // card retrieval works best if we always have a ref to the account, so we can always get
+      // available balance
       account = accountService.retrieveAllocationAccount(businessId, currency, allocationId);
     }
     card.setAccountId(account.getId());
 
     card = cardRepository.save(card);
 
-    transactionLimitService.initializeCardSpendLimit(
-        card.getBusinessId(), card.getAllocationId(), card.getId());
+    transactionLimitService.createCardSpendLimit(
+        card.getBusinessId(),
+        card.getId(),
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
 
     return new CardRecord(card, account);
   }
@@ -222,6 +237,25 @@ public class CardService {
     // TODO(kuchlein): call i2c to retire/close the card
 
     return cardRepository.save(card);
+  }
+
+  @Transactional
+  public void updateCard(
+      TypedId<BusinessId> businessId,
+      TypedId<CardId> cardId,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
+
+    // check if this card does belong to the business
+    Card card = retrieveCard(businessId, cardId);
+
+    transactionLimitService.updateCardSpendLimit(
+        businessId,
+        card.getId(),
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
   }
 
   public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {

@@ -2,14 +2,19 @@ package com.tranwall.capital.controller.type.card;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.MccGroupId;
 import com.tranwall.capital.common.typedid.data.ProgramId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.common.typedid.data.UserId;
-import com.tranwall.capital.controller.type.Amount;
+import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import java.util.Set;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
@@ -54,9 +59,19 @@ public class IssueCardRequest {
   @NotNull(message = "isPersonal required")
   private Boolean isPersonal;
 
-  @JsonProperty("dailySpend")
-  private Amount dailySpend;
+  @NonNull
+  @NotEmpty(message = "limits must be provided")
+  @JsonProperty("limits")
+  @Valid
+  private List<CurrencyLimit> limits;
 
-  @JsonProperty("monthlySpend")
-  private Amount monthlySpend;
+  @NonNull
+  @NotNull(message = "disabled msc groups collection is required")
+  @JsonProperty("disabledMccGroups")
+  private List<TypedId<MccGroupId>> disabledMccGroups;
+
+  @NonNull
+  @NotNull(message = "disabled transactions channel collection is required")
+  @JsonProperty("disabledTransactionChannels")
+  Set<TransactionChannel> disabledTransactionChannels;
 }

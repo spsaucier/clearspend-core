@@ -81,7 +81,7 @@ dependencies {
 
     //other 3rd party libs
     implementation("com.google.guava:guava:30.1.1-jre")
-    implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.1")
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.20.0")
     implementation("com.sendgrid:sendgrid-java:4.7.5")

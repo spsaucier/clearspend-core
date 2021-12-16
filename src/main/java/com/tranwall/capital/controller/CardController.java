@@ -10,6 +10,8 @@ import com.tranwall.capital.controller.type.card.IssueCardRequest;
 import com.tranwall.capital.controller.type.card.IssueCardResponse;
 import com.tranwall.capital.controller.type.card.SearchCardData;
 import com.tranwall.capital.controller.type.card.SearchCardRequest;
+import com.tranwall.capital.controller.type.card.UpdateCardRequest;
+import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
 import com.tranwall.capital.service.BusinessService;
 import com.tranwall.capital.service.CardFilterCriteria;
 import com.tranwall.capital.service.CardService;
@@ -20,6 +22,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -67,12 +70,37 @@ public class CardController {
                                 request.getUserId(),
                                 request.getCurrency(),
                                 request.getIsPersonal(),
-                                businessLegalName)
+                                businessLegalName,
+                                CurrencyLimit.toMap(request.getLimits()),
+                                request.getDisabledMccGroups(),
+                                request.getDisabledTransactionChannels())
                             .card()
                             .getId(),
                         null)));
 
     return issueCardResponseList;
+  }
+
+  @PatchMapping("/{cardId}")
+  private CardDetailsResponse updateCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @RequestBody @Validated UpdateCardRequest request) {
+
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    cardService.updateCard(
+        businessId,
+        cardId,
+        CurrencyLimit.toMap(request.getLimits()),
+        request.getDisabledMccGroups(),
+        request.getDisabledTransactionChannels());
+
+    return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
   }
 
   @PostMapping("/search")

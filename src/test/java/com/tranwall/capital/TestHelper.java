@@ -599,7 +599,10 @@ public class TestHelper {
             user.getId(),
             currency,
             true,
-            business.getLegalName())
+            business.getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptyList(),
+            Collections.emptySet())
         .card();
   }
 

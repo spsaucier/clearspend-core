@@ -269,7 +269,10 @@ public class TestDataController {
             user.user().getId(),
             business.getCurrency(),
             true,
-            business.getLegalName());
+            business.getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptyList(),
+            Collections.emptySet());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -297,7 +300,10 @@ public class TestDataController {
             user.user().getId(),
             business.getCurrency(),
             true,
-            business.getLegalName());
+            business.getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptyList(),
+            Collections.emptySet());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -328,7 +334,10 @@ public class TestDataController {
                 user.user().getId(),
                 business.getCurrency(),
                 true,
-                business.getLegalName())
+                business.getLegalName(),
+                Map.of(Currency.USD, new HashMap<>()),
+                Collections.emptyList(),
+                Collections.emptySet())
             .card());
     cards.add(
         cardService
@@ -339,7 +348,10 @@ public class TestDataController {
                 user.user().getId(),
                 business.getCurrency(),
                 true,
-                business.getLegalName())
+                business.getLegalName(),
+                Map.of(Currency.USD, new HashMap<>()),
+                Collections.emptyList(),
+                Collections.emptySet())
             .card());
 
     CreateUpdateUserRecord user3 = createUser(business);
@@ -353,7 +365,10 @@ public class TestDataController {
                 user.user().getId(),
                 business.getCurrency(),
                 true,
-                business.getLegalName())
+                business.getLegalName(),
+                Map.of(Currency.USD, new HashMap<>()),
+                Collections.emptyList(),
+                Collections.emptySet())
             .card());
 
     return new CreateTestDataResponse(

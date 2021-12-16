@@ -1,5 +1,6 @@
 package com.tranwall.capital.service;
 
+import com.tranwall.capital.client.i2c.I2Client;
 import com.tranwall.capital.common.error.RecordNotFoundException;
 import com.tranwall.capital.common.error.RecordNotFoundException.Table;
 import com.tranwall.capital.common.typedid.data.AllocationId;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionLimitService {
 
   private final TransactionLimitRepository transactionLimitRepository;
+  private final I2Client i2Client;
 
   @Transactional
   public TransactionLimit initializeAllocationSpendLimit(
@@ -48,27 +50,12 @@ public class TransactionLimitService {
             new HashSet<>()));
   }
 
-  @Transactional
-  public TransactionLimit initializeCardSpendLimit(
-      TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId, TypedId<CardId> cardId) {
-    return duplicateSpendLimit(
-        businessId,
-        cardId.toUuid(),
-        retrieveSpendLimit(businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid()));
-  }
-
   public TransactionLimit retrieveSpendLimit(
       TypedId<BusinessId> businessId, TransactionLimitType type, UUID ownerId) {
     return transactionLimitRepository
         .findByBusinessIdAndTypeAndOwnerId(businessId, type, ownerId)
         .orElseThrow(
             () -> new RecordNotFoundException(Table.SPEND_LIMIT, businessId, type, ownerId));
-  }
-
-  public List<TransactionLimit> retrieveSpendLimits(
-      TypedId<BusinessId> businessId, TransactionLimitType type, List<UUID> ownerIds) {
-    return transactionLimitRepository.findByBusinessIdAndTypeAndOwnerIdIn(
-        businessId, type, ownerIds);
   }
 
   private TransactionLimit duplicateSpendLimit(
@@ -102,6 +89,24 @@ public class TransactionLimitService {
   }
 
   @Transactional
+  public TransactionLimit createCardSpendLimit(
+      TypedId<BusinessId> businessId,
+      TypedId<CardId> cardId,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
+
+    return transactionLimitRepository.save(
+        new TransactionLimit(
+            businessId,
+            TransactionLimitType.CARD,
+            cardId.toUuid(),
+            transactionLimits,
+            disabledMccGroups,
+            disabledTransactionChannels));
+  }
+
+  @Transactional
   public TransactionLimit updateAllocationSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
@@ -109,8 +114,41 @@ public class TransactionLimitService {
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
 
-    TransactionLimit transactionLimit =
-        retrieveSpendLimit(businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid());
+    return updateSpendLimit(
+        businessId,
+        TransactionLimitType.ALLOCATION,
+        allocationId.toUuid(),
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
+  }
+
+  @Transactional
+  public TransactionLimit updateCardSpendLimit(
+      TypedId<BusinessId> businessId,
+      TypedId<CardId> cardId,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
+
+    return updateSpendLimit(
+        businessId,
+        TransactionLimitType.CARD,
+        cardId.toUuid(),
+        transactionLimits,
+        disabledMccGroups,
+        disabledTransactionChannels);
+  }
+
+  private TransactionLimit updateSpendLimit(
+      TypedId<BusinessId> businessId,
+      TransactionLimitType limitType,
+      UUID ownerId,
+      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+      List<TypedId<MccGroupId>> disabledMccGroups,
+      Set<TransactionChannel> disabledTransactionChannels) {
+
+    TransactionLimit transactionLimit = retrieveSpendLimit(businessId, limitType, ownerId);
 
     BeanUtils.setNotNull(transactionLimits, transactionLimit::setLimits);
     BeanUtils.setNotNull(disabledMccGroups, transactionLimit::setDisabledMccGroups);

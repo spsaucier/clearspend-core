@@ -3,6 +3,7 @@ package com.tranwall.capital.controller.type.card.limits;
 import com.tranwall.capital.data.model.enums.Currency;
 import com.tranwall.capital.data.model.enums.LimitPeriod;
 import com.tranwall.capital.data.model.enums.LimitType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +23,9 @@ public class CurrencyLimit {
 
   @NotNull Currency currency;
 
-  @NotNull Map<LimitType, Map<LimitPeriod, Limit>> typeMap = new HashMap<>();
+  @Schema(ref = "#/components/schemas/LimitTypeMap")
+  @NotNull
+  Map<LimitType, Map<LimitPeriod, Limit>> typeMap = new HashMap<>();
 
   public static List<CurrencyLimit> ofMap(
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits) {

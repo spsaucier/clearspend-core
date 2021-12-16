@@ -40,7 +40,6 @@ public class Allocation extends TypedMutable<AllocationId> {
   private TypedId<BusinessId> businessId;
 
   @JoinColumn(referencedColumnName = "id", table = "allocation")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> parentAllocationId;
 
@@ -56,7 +55,6 @@ public class Allocation extends TypedMutable<AllocationId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "user")
-  @Column(updatable = false)
   @Type(type = "com.tranwall.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<UserId> ownerId;
 

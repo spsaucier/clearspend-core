@@ -1,6 +1,7 @@
 package com.tranwall.capital.controller;
 
 import com.tranwall.capital.common.typedid.data.AllocationId;
+import com.tranwall.capital.common.typedid.data.BusinessId;
 import com.tranwall.capital.common.typedid.data.TypedId;
 import com.tranwall.capital.controller.type.Amount;
 import com.tranwall.capital.controller.type.CurrentUser;
@@ -84,9 +85,10 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId,
       @RequestBody @Validated UpdateAllocationRequest request) {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
     allocationService.updateAllocation(
-        CurrentUser.get().businessId(),
+        businessId,
         allocationId,
         request.getName(),
         request.getParentAllocationId(),
@@ -96,8 +98,7 @@ public class AllocationController {
         request.getDisabledTransactionChannels());
 
     AllocationDetailsRecord allocationRecord =
-        allocationService.getAllocation(
-            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
+        allocationService.getAllocation(businessService.retrieveBusiness(businessId), allocationId);
 
     return AllocationDetailsResponse.of(allocationRecord);
   }

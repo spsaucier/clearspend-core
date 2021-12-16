@@ -11,6 +11,7 @@ import com.tranwall.capital.TestHelper.CreateBusinessRecord;
 import com.tranwall.capital.controller.type.card.CardDetailsResponse;
 import com.tranwall.capital.controller.type.card.IssueCardRequest;
 import com.tranwall.capital.controller.type.card.IssueCardResponse;
+import com.tranwall.capital.controller.type.card.UpdateCardRequest;
 import com.tranwall.capital.controller.type.card.limits.CurrencyLimit;
 import com.tranwall.capital.data.model.Bin;
 import com.tranwall.capital.data.model.Business;
@@ -18,10 +19,17 @@ import com.tranwall.capital.data.model.Card;
 import com.tranwall.capital.data.model.Program;
 import com.tranwall.capital.data.model.enums.CardType;
 import com.tranwall.capital.data.model.enums.Currency;
+import com.tranwall.capital.data.model.enums.LimitPeriod;
+import com.tranwall.capital.data.model.enums.LimitType;
+import com.tranwall.capital.data.model.enums.TransactionChannel;
 import com.tranwall.capital.service.AllocationService.AllocationRecord;
+import com.tranwall.capital.service.MccGroupService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +46,7 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
+  private final MccGroupService mccGroupService;
 
   private final Faker faker = new Faker();
 
@@ -86,7 +95,19 @@ public class CardControllerTest extends BaseCapitalTest {
             user.user().getId(),
             Currency.USD,
             Set.of(CardType.VIRTUAL, CardType.PLASTIC),
-            true);
+            true,
+            CurrencyLimit.ofMap(
+                Map.of(
+                    Currency.USD,
+                    Map.of(
+                        LimitType.PURCHASE,
+                        Map.of(
+                            LimitPeriod.DAILY,
+                            BigDecimal.ONE,
+                            LimitPeriod.MONTHLY,
+                            BigDecimal.TEN)))),
+            Collections.emptyList(),
+            Set.of(TransactionChannel.MOTO));
 
     List<IssueCardResponse> issueCardResponse =
         mockMvcHelper.queryList(
@@ -126,5 +147,50 @@ public class CardControllerTest extends BaseCapitalTest {
 
     assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
     assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
+  }
+
+  @Test
+  @SneakyThrows
+  void updateCardLimits() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            testHelper.createUser(business).user(),
+            program,
+            Currency.USD);
+
+    // when
+    UpdateCardRequest updateCardRequest = new UpdateCardRequest();
+    updateCardRequest.setLimits(
+        CurrencyLimit.ofMap(
+            Map.of(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(
+                        LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
+    updateCardRequest.setDisabledMccGroups(
+        Collections.singletonList(
+            mccGroupService.retrieveMccGroups(business.getId()).get(0).getId()));
+    updateCardRequest.setDisabledTransactionChannels(
+        Set.of(TransactionChannel.MOTO, TransactionChannel.ONLINE));
+
+    CardDetailsResponse cardDetailsResponse =
+        mockMvcHelper.queryObject(
+            "/cards/" + card.getId(),
+            HttpMethod.PATCH,
+            userCookie,
+            updateCardRequest,
+            CardDetailsResponse.class);
+
+    // then
+    assertThat(cardDetailsResponse.getLimits())
+        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getLimits());
+    assertThat(cardDetailsResponse.getDisabledMccGroups())
+        .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledMccGroups()));
+    assertThat(cardDetailsResponse.getDisabledTransactionChannels())
+        .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledTransactionChannels()));
   }
 }

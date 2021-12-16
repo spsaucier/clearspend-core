@@ -42,8 +42,10 @@ import com.tranwall.capital.service.ProgramService;
 import com.tranwall.capital.service.UserService;
 import com.tranwall.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -431,7 +433,10 @@ public class UserControllerTest extends BaseCapitalTest {
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName());
+            createBusinessRecord.business().getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptyList(),
+            Collections.emptySet());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     networkMessageService.processNetworkMessage(

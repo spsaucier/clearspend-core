@@ -293,7 +293,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     assertThat(allocationDetailsResponse.getAllocation().getName())
         .isEqualTo(updateAllocationRequest.getName());
     assertThat(allocationDetailsResponse.getAllocation().getOwnerId())
-        .isEqualTo(allocationRecord.allocation().getOwnerId());
+        .isEqualTo(updateAllocationRequest.getOwnerId());
     assertThat(allocationDetailsResponse.getOwner()).isNotNull();
     assertThat(allocationDetailsResponse.getLimits())
         .isEqualTo(updateAllocationRequest.getLimits());
