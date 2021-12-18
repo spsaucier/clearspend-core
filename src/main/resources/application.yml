@@ -111,6 +111,8 @@ client:
     auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}
     message-service-id: ${TWILIO_MESSAGE_SERVICE_ID:MGe85d68add5ac0ddb5a2526241aa0369f}
     verify-service-id: ${TWILIO_VERIFY_SERVICE_ID:VAbaf002bd328d70c5aadf45f92d8c49ac}
+  clearbit:
+    api-key: ${CLEARBIT_API_KEY:sk_2f09108fb81c88e6874543afaefac99c}
 
 logging:
   level:

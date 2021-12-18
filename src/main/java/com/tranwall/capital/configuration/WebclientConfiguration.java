@@ -7,6 +7,7 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -130,6 +131,20 @@ public class WebclientConfiguration {
         .defaultHeaders(
             headers -> {
               headers.setBasicAuth(clientId, secret);
+              headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            })
+        .build();
+  }
+
+  @Bean
+  WebClient clearbitWebClient(@Value("${client.clearbit.api-key}") String apiKey) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl("https://company.clearbit.com/v1")
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(apiKey, StringUtils.EMPTY);
               headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             })
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
