@@ -17,8 +17,8 @@
       "url": "/api/user/registration",
       "body": {
         "user": {
-          "email": "admin@tranwall.com",
-          "password": "Password1!"
+          "email": "admin@clearspend.com",
+          "password": "password"
         },
         "registration": {
           "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",

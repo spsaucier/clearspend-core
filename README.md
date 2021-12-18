@@ -10,11 +10,18 @@
 6. Start the services:
    - `docker-compose up` will start the databases (ours and 2 for [Fusion Auth](https://fusionauth.io)),
 and you'll want to run com.tranwall.capital.CapitalApplication with your IDE.
-   - `docker-compose --profile full up ` will also start this service in a container
+   - `docker-compose --profile mon up` will also start [Prometheus](https://prometheus.io/) and [Grafana](https://grafana.com/) to monitor this service running in your IDE.
+   - `docker-compose --profile ui up` will also start UI service in a container pointing to the application running in your IDE
+   To make it happen - checkout the latest capital-ui sources to the ../capital-ui folder and then use `docker-compose --profile ui build`  
    - [com.tranwall.capital.CapitalApplication](src/main/java/com/tranwall/capital/CapitalApplication.java) is the main class
 7. [Spring actuator](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#actuator) status check: `curl http://localhost:8080/actuator/health`
 
 See also [our schema](src/main/resources/db/migration/V1_0__Baseline.sql) which is managed by [flyway](https://flywaydb.org).
+
+Service urls and accounts:
+- Fusion Auth: http://127.0.0.1:9011 admin@clearspend.com/admin
+- Prometheus: http://127.0.0.1:9090
+- Grafana: http://127.0.0.1:3000 admin@clearspend.com/admin
 
 # To use Plaid features
 

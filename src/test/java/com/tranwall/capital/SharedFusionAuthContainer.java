@@ -19,7 +19,7 @@ public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuth
     super(DockerImageName.parse("fusionauth/fusionauth-app:1.30.2"));
     withNetwork(BaseCapitalTest.fusionAuthNetwork);
     withFileSystemBind(
-        "./fusionauth/kickstart", "/usr/local/fusionauth/kickstart", BindMode.READ_ONLY);
+        "./local/fusionauth/kickstart", "/usr/local/fusionauth/kickstart", BindMode.READ_ONLY);
     waitingFor(Wait.forLogMessage(".*Server startup in.*\\n", 1));
     dependsOn(FusionAuthPostgreSQLContainer.getInstance());
     int fusionAuthPort = SocketUtils.findAvailableTcpPort(40000);
