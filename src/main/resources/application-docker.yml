@@ -10,4 +10,4 @@ spring:
 logging:
   level:
     root: INFO
-    com.tranwall.capital: DEBUG
+    com.clearspend.capital: DEBUG

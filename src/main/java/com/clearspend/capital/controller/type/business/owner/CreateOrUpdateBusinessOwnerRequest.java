@@ -1,0 +1,79 @@
+package com.clearspend.capital.controller.type.business.owner;
+
+import static com.clearspend.capital.controller.type.Constants.EMAIL_PATTERN;
+import static com.clearspend.capital.controller.type.Constants.PHONE_PATTERN;
+
+import com.clearspend.capital.common.masking.annotation.Sensitive;
+import com.clearspend.capital.controller.type.Address;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDate;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import lombok.Data;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+
+@Data
+@RequiredArgsConstructor
+public class CreateOrUpdateBusinessOwnerRequest {
+
+  @Sensitive
+  @JsonProperty("firstName")
+  @NonNull
+  @NotNull(message = "firstName required")
+  @Schema(title = "The first name of the person", required = true, example = "John")
+  @Size(max = 100, message = "The first name should not be more than 100 characters.")
+  private String firstName;
+
+  @Sensitive
+  @JsonProperty("lastName")
+  @NonNull
+  @NotNull(message = "lastName required")
+  @Schema(title = "The last name of the person", required = true, example = "Wick")
+  @Size(max = 100, message = "The last name should not be more than 100 characters.")
+  private String lastName;
+
+  @Sensitive
+  @JsonProperty("dateOfBirth")
+  @NonNull
+  @NotNull(message = "dateOfBirth required")
+  @Schema(title = "The date of birth of the person", required = true, example = "1990-01-01")
+  private LocalDate dateOfBirth;
+
+  @Sensitive
+  @JsonProperty("taxIdentificationNumber")
+  @NonNull
+  @NotNull(message = "taxIdentificationNumber required")
+  @Schema(
+      title = "The tax identification number of the person",
+      required = true,
+      example = "091827364")
+  @Size(max = 10, message = "The taxIdentificationNumber should not be more than 10 characters.")
+  private String taxIdentificationNumber;
+
+  @Sensitive
+  @JsonProperty("email")
+  @NonNull
+  @NotNull(message = "email required")
+  @Schema(title = "Email address of the person", required = true, example = "johnw@hightable.com")
+  @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
+  @Size(max = 100, message = "The email should not be more than 100 characters.")
+  private String email;
+
+  @Sensitive
+  @JsonProperty("phone")
+  @Schema(title = "Phone address of the person", required = false, example = "+12345679")
+  @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
+  @Size(max = 20, message = "The phone should not be more than 20 characters.")
+  private String phone;
+
+  @NonNull private Address address;
+
+  @JsonProperty("isOnboarding")
+  @Schema(
+      title = "Indication if business owner is updated during the onboarding process",
+      example = "false")
+  private boolean isOnboarding;
+}
