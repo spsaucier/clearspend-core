@@ -41,6 +41,22 @@ public class Amount {
     return new Amount(currency, BigDecimal.ZERO);
   }
 
+  public static Amount fromStripeAmount(Currency currency, Long amount) {
+    return switch (currency) {
+      case UNSPECIFIED -> null;
+      case USD -> of(
+          currency,
+          BigDecimal.valueOf(amount).divide(BigDecimal.valueOf(100), 2, RoundingMode.UNNECESSARY));
+    };
+  }
+
+  public long toStripeAmount() {
+    return switch (currency) {
+      case UNSPECIFIED -> 0;
+      case USD -> amount.multiply(BigDecimal.valueOf(100)).longValue();
+    };
+  }
+
   public Amount add(Amount amount) {
     if (currency != amount.getCurrency()) {
       throw new CurrencyMismatchException(currency, amount.getCurrency());

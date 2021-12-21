@@ -12,7 +12,6 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
@@ -114,7 +113,7 @@ public class CardService {
             i2CardNumber.getNumber().substring(i2CardNumber.getNumber().length() - 4),
             new Address());
     card.setCardLine4(cardLine4.toString());
-    card.setI2cCardRef(i2cResponse.getI2cCardRef());
+    card.setCardRef(i2cResponse.getI2cCardRef());
 
     Account account;
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
@@ -154,11 +153,11 @@ public class CardService {
   }
 
   // should only be used by NetworkService
-  public CardRecord getCardByCardNumber(@NonNull String cardNumber) {
+  public CardRecord getCardByCardRef(@NonNull String cardRef) {
     Card card =
         cardRepository
-            .findByCardNumberHash(HashUtil.calculateHash(cardNumber))
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardNumber));
+            .findByCardRef(cardRef)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardRef));
 
     // TODO(kuchlein): Not sure if we want to be doing this or not...
     //    if (card.getFundingType() == FundingType.POOLED) {

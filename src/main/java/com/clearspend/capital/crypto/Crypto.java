@@ -33,7 +33,7 @@ import org.springframework.util.Assert;
 @Slf4j
 public class Crypto {
 
-  static String envPrefix = "tranwall.encryption.key.aes.";
+  static String envPrefix = "clearspend.encryption.key.aes.";
   private static final int maxKeys = 1000;
   private static final String keyDelimiter = "\\|";
   private final HashMap<String, String> replacementKeys = new HashMap<>();

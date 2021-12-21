@@ -114,6 +114,6 @@ public class Card extends TypedMutable<CardId> {
 
   @NonNull @Embedded private Address address;
 
-  // ReferenceID (12 or 15 digit Card Reference Number used to identify a card)
-  private String i2cCardRef;
+  // this is the identifier of this card at Stripe
+  private String cardRef;
 }

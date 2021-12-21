@@ -44,7 +44,7 @@ public class NetworkMessageService {
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
     // update common with data we have locally
     common.getRequestedAmount().ensurePositive();
-    CardRecord cardRecord = cardService.getCardByCardNumber(common.getCardNumber());
+    CardRecord cardRecord = cardService.getCardByCardRef(common.getCardRef());
     common.setBusinessId(cardRecord.card().getBusinessId());
     common.setCard(cardRecord.card());
     common.setAccount(cardRecord.account());
@@ -59,17 +59,16 @@ public class NetworkMessageService {
     // common.getAccountActivity().setMerchantLatitude();
     // common.getAccountActivity().setMerchantLongitude();
 
-    // actually process the network message from i2c
+    // actually process the network message from Stripe
     switch (common.getNetworkMessageType()) {
-      case PRE_AUTH_TRANSACTION, PRE_AUTH_TRANSACTION_ADVICE -> processPreAuth(common);
-      case FINANCIAL_TRANSACTION, FINANCIAL_TRANSACTION_ADVICE -> processFinancialAuth(common);
-      case REVERSAL_TRANSACTION, REVERSAL_TRANSACTION_ADVICE -> processReversal(common);
-      case SERVICE_FEE_TRANSACTION -> processServiceFee(common);
+      case PRE_AUTH, PRE_AUTH_ADVICE -> processPreAuth(common);
+      case FINANCIAL_AUTH, FINANCIAL_AUTH_ADVICE -> processFinancialAuth(common);
+      case REVERSAL, REVERSAL_ADVICE -> processReversal(common);
       default -> throw new IllegalArgumentException(
           "invalid networkMessageType " + common.getNetworkMessageType());
     }
 
-    // store any data that resulted from processing the network message from i2c
+    // store any data that resulted from processing the network message from Stripe
     NetworkMessage networkMessage =
         new NetworkMessage(
             cardRecord.card().getBusinessId(),
@@ -90,8 +89,9 @@ public class NetworkMessageService {
       log.error("failed to serialize common.request", e);
     }
 
-    // card may be null in the case of i2c sending us transactions for cards that we've not issued
-    // TODO(kuchlein): determine if i2c handle this for us or not
+    // card may be null in the case of Stripe sending us transactions for cards that we've not
+    // issued
+    // TODO(kuchlein): determine if Stripe handle this for us or not
     if (common.getCard() != null) {
       networkMessage.setCardId(common.getCard().getId());
     }

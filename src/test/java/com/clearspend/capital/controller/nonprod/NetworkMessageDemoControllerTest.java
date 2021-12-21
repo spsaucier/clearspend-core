@@ -66,7 +66,7 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
     NetworkMessageRequest request =
         new NetworkMessageRequest(
             card.getId(),
-            NetworkMessageType.FINANCIAL_TRANSACTION,
+            NetworkMessageType.FINANCIAL_AUTH,
             new Amount(business.getCurrency(), BigDecimal.TEN));
 
     String body = objectMapper.writeValueAsString(request);

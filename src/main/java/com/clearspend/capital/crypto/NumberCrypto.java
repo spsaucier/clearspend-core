@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 public class NumberCrypto {
   // Format Preserving Encryption
-  static String fpeEnvPrefix = "tranwall.encryption.fpe.";
+  static String fpeEnvPrefix = "clearspend.encryption.fpe.";
   private final byte[] panKey;
   private final byte[] panTweak;
 

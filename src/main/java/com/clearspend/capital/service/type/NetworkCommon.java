@@ -1,6 +1,5 @@
 package com.clearspend.capital.service.type;
 
-import com.clearspend.capital.client.i2c.push.controller.type.EventNotificationAdvanceRequest;
 import com.clearspend.capital.client.i2c.push.controller.type.I2cCard;
 import com.clearspend.capital.client.i2c.push.controller.type.I2cTransaction;
 import com.clearspend.capital.common.data.model.Amount;
@@ -11,13 +10,17 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.CreditOrDebit;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.NetworkMessageDeviceType;
 import com.clearspend.capital.data.model.enums.NetworkMessageType;
 import com.stripe.model.issuing.Authorization;
+import com.stripe.model.issuing.Authorization.MerchantData;
+import com.stripe.model.issuing.Transaction;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +29,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class NetworkCommon {
 
-  // the card number
-  @NonNull private String cardNumber;
+  // the identifier for this card at Stripe
+  @NonNull private String cardRef;
 
   @NonNull private NetworkMessageType networkMessageType;
 
@@ -35,10 +38,6 @@ public class NetworkCommon {
 
   // will always be positive
   @NonNull private Amount requestedAmount;
-
-  @NonNull private Amount transactionAmount;
-
-  @NonNull private String acquirerNumber;
 
   @NonNull private String merchantNumber;
 
@@ -48,13 +47,11 @@ public class NetworkCommon {
 
   @NonNull private Integer merchantCategoryCode;
 
-  @NonNull private NetworkMessageDeviceType networkMessageDeviceType;
-
   @NonNull private OffsetDateTime transactionDate;
 
-  @NonNull private String i2cTransactionRef;
+  @NonNull private String externalRef;
 
-  @NonNull private EventNotificationAdvanceRequest request;
+  @NonNull private String request;
 
   private TypedId<BusinessId> businessId;
 
@@ -73,20 +70,15 @@ public class NetworkCommon {
   private AccountActivity accountActivity = new AccountActivity();
 
   public NetworkCommon(I2cTransaction i2cTransaction, I2cCard i2cCard) {
-    cardNumber = i2cCard.getCardNumber();
+    cardRef = i2cCard.getCardNumber();
     i2cCard.setEncryptedCardNumber(new NullableEncryptedString(i2cCard.getCardNumber()));
     i2cCard.setCardNumber("");
-    networkMessageType = NetworkMessageType.fromMti(i2cTransaction.getMessageType());
+    //    networkMessageType = NetworkMessageType.fromMti(i2cTransaction.getMessageType());
     BigDecimal amount = new BigDecimal(i2cTransaction.getRequestedAmount());
     requestedAmount =
         Amount.of(Currency.of(i2cTransaction.getRequestedAmountCurrency()), amount.abs());
     creditOrDebit = requestedAmount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
-    transactionAmount =
-        Amount.of(
-            Currency.of(i2cTransaction.getTransactionCurrency()),
-            new BigDecimal(i2cTransaction.getTransactionAmount()));
 
-    acquirerNumber = i2cTransaction.getCardAcceptor().getAcquirerRef();
     merchantNumber = i2cTransaction.getCardAcceptor().getMerchantCode();
     merchantName = i2cTransaction.getCardAcceptor().getMerchantName();
     merchantAddress =
@@ -97,15 +89,65 @@ public class NetworkCommon {
             i2cTransaction.getCardAcceptor().getMerchantRegion(),
             i2cTransaction.getCardAcceptor().getMerchantPostalCode(),
             i2cTransaction.getCardAcceptor().getMerchantCountry());
-    merchantCategoryCode = i2cTransaction.getCardAcceptor().getMcc();
+    merchantCategoryCode = i2cTransaction.getCardAcceptor().getMerchantCategoryCode();
 
-    networkMessageDeviceType =
-        NetworkMessageDeviceType.fromI2cDeviceType(
-            i2cTransaction.getCardAcceptor().getDeviceType());
-    transactionDate = i2cTransaction.getDate().atTime(i2cTransaction.getTime());
-    i2cTransactionRef = i2cTransaction.getTransactionRef();
-    request = new EventNotificationAdvanceRequest(null, i2cTransaction, i2cCard);
+    externalRef = i2cTransaction.getTransactionRef();
   }
 
-  public NetworkCommon(Authorization auth) {}
+  public NetworkCommon(Authorization authorization, String rawJson) {
+    cardRef = authorization.getCard().getId();
+    networkMessageType = NetworkMessageType.PRE_AUTH;
+    Currency currency = Currency.of(authorization.getCurrency());
+    Amount amount =
+        Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
+    creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
+    requestedAmount = amount;
+
+    MerchantData merchantData = authorization.getMerchantData();
+    merchantNumber = merchantData.getNetworkId();
+    merchantName = merchantData.getName();
+    merchantAddress =
+        new ClearAddress(
+            "",
+            "",
+            merchantData.getCity(),
+            merchantData.getState(),
+            merchantData.getPostalCode(),
+            Country.of(merchantData.getCountry()));
+    merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
+
+    transactionDate =
+        OffsetDateTime.ofInstant(Instant.ofEpochMilli(authorization.getCreated()), ZoneOffset.UTC);
+    externalRef = authorization.getId();
+
+    request = rawJson;
+  }
+
+  public NetworkCommon(Transaction transaction, String rawJson) {
+    cardRef = transaction.getCard();
+    networkMessageType = NetworkMessageType.FINANCIAL_AUTH;
+    Currency currency = Currency.of(transaction.getCurrency());
+    Amount amount = Amount.fromStripeAmount(currency, transaction.getAmount());
+    creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
+    requestedAmount = amount;
+
+    MerchantData merchantData = transaction.getMerchantData();
+    merchantNumber = merchantData.getNetworkId();
+    merchantName = merchantData.getName();
+    merchantAddress =
+        new ClearAddress(
+            "",
+            "",
+            merchantData.getCity(),
+            merchantData.getState(),
+            merchantData.getPostalCode(),
+            Country.of(merchantData.getCountry()));
+    merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
+
+    transactionDate =
+        OffsetDateTime.ofInstant(Instant.ofEpochMilli(transaction.getCreated()), ZoneOffset.UTC);
+    externalRef = transaction.getId();
+
+    request = rawJson;
+  }
 }

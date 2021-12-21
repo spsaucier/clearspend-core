@@ -95,10 +95,7 @@ public class AccountActivityController {
         dashboardData.getGraphData().size() > 0
             ? dashboardData
                 .getTotalAmount()
-                .divide(
-                    new BigDecimal(dashboardData.getGraphData().size()),
-                    2,
-                    RoundingMode.UNNECESSARY)
+                .divide(new BigDecimal(dashboardData.getGraphData().size()), 2, RoundingMode.DOWN)
             : BigDecimal.ZERO;
     List<GraphData> graphDataList =
         dashboardData.getGraphData().size() > 0

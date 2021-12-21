@@ -6,6 +6,7 @@ import com.clearspend.capital.data.model.enums.Country;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.Embeddable;
+import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
@@ -21,9 +22,9 @@ import org.apache.logging.log4j.util.Strings;
 @MappedSuperclass
 public class Address {
 
-  @Sensitive private EncryptedString streetLine1;
+  @Embedded @Sensitive private EncryptedString streetLine1;
 
-  @Sensitive private EncryptedString streetLine2;
+  @Embedded @Sensitive private EncryptedString streetLine2;
 
   // typically, a city or town
   private String locality;
@@ -32,7 +33,7 @@ public class Address {
   private String region;
 
   // zip code in the US
-  @Sensitive private EncryptedString postalCode;
+  @Embedded @Sensitive private EncryptedString postalCode;
 
   @Enumerated(EnumType.STRING)
   private Country country;
@@ -65,5 +66,26 @@ public class Address {
     }
 
     return result;
+  }
+
+  public com.stripe.model.Address toStripeAddress() {
+    com.stripe.model.Address address = new com.stripe.model.Address();
+
+    if (streetLine1 != null) {
+      address.setLine1(streetLine1.getEncrypted());
+    }
+    if (streetLine2 != null) {
+      address.setLine2(streetLine2.getEncrypted());
+    }
+    address.setCity(locality);
+    address.setState(region);
+    if (postalCode != null) {
+      address.setPostalCode(postalCode.getEncrypted());
+    }
+    if (country != null) {
+      address.setCity(country.name());
+    }
+
+    return address;
   }
 }

@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.enums.NetworkMessageType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -128,7 +129,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void retrieveLatestAccountActivity() {
+  void retrieveLatestAccountActivity() throws JsonProcessingException {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     accountService.depositFunds(
@@ -168,7 +169,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            NetworkMessageType.PRE_AUTH,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),

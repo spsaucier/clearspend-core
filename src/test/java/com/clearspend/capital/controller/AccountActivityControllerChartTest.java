@@ -28,6 +28,7 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
@@ -127,7 +128,8 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   }
 
   private void createUserCardAndNetworkTransaction(
-      CreateBusinessRecord createBusinessRecord, Business business, int transactions) {
+      CreateBusinessRecord createBusinessRecord, Business business, int transactions)
+      throws JsonProcessingException {
     CreateUpdateUserRecord user = testHelper.createUser(business);
     Card card =
         testHelper.issueCard(
@@ -136,11 +138,11 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             user.user(),
             program,
             Currency.USD);
+    SecureRandom random = new SecureRandom();
     for (int i = 0; i < transactions; i++) {
-      SecureRandom random = new SecureRandom();
       networkMessageService.processNetworkMessage(
           TestDataController.generateNetworkCommon(
-              NetworkMessageType.FINANCIAL_TRANSACTION,
+              NetworkMessageType.FINANCIAL_AUTH,
               user.user(),
               card,
               createBusinessRecord.allocationRecord().account(),
@@ -215,7 +217,8 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
       CreateBusinessRecord createBusinessRecord,
       Business business,
       Account account,
-      int transactions) {
+      int transactions)
+      throws JsonProcessingException {
     CreateUpdateUserRecord user = testHelper.createUser(business);
     AllocationRecord allocation =
         testHelper.createAllocation(
@@ -229,11 +232,11 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(1000)));
     Card card =
         testHelper.issueCard(business, allocation.allocation(), user.user(), program, Currency.USD);
+    SecureRandom random = new SecureRandom();
     for (int i = 0; i < transactions; i++) {
-      SecureRandom random = new SecureRandom();
       networkMessageService.processNetworkMessage(
           TestDataController.generateNetworkCommon(
-              NetworkMessageType.FINANCIAL_TRANSACTION,
+              NetworkMessageType.FINANCIAL_AUTH,
               user.user(),
               card,
               allocation.account(),

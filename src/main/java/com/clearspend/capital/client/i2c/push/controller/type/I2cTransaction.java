@@ -143,16 +143,15 @@ public class I2cTransaction {
 
   @ApiModelProperty(
       value =
-          "A unique i2c internal identifier for a bank account definition in "
-              + "our system. Used in ACH transfers. "
+          "A unique i2c internal identifier for a bank account definition in our system. Used in "
+              + "ACH transfers. "
               + "Type: AN 31")
   @JsonProperty("BankAccountNumber")
   private String bankAccountNumber;
 
   @ApiModelProperty(
       value =
-          "A user friendly description, explaining the purpose of the "
-              + "transaction. "
+          "A user friendly description, explaining the purpose of the transaction. "
               + "Type: Str 255")
   @JsonProperty("TransactionDescription")
   private String transactionDescription;

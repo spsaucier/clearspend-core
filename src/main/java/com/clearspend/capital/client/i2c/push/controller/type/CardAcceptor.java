@@ -58,7 +58,7 @@ public class CardAcceptor {
 
   @ApiModelProperty(value = "Merchant Category Code")
   @JsonProperty("MCC")
-  private Integer mcc;
+  private Integer merchantCategoryCode;
 
   @ApiModelProperty(value = "Merchant Device Identifier. " + "Type: Str 8")
   @JsonProperty("DeviceId")

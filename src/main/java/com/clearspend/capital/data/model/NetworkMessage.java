@@ -10,7 +10,6 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.NetworkMessageId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.data.model.enums.NetworkMessageType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.util.UUID;
@@ -69,7 +68,7 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   private TypedId<AdjustmentId> adjustmentId;
 
   // required when the card number is not known to use (this may be handled directly by issuer)
-  @Embedded private NullableEncryptedString cardNumber;
+  private String cardRef;
 
   @NonNull
   @Column(updatable = false)
@@ -89,7 +88,7 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @NonNull private Integer merchantCategoryCode;
 
-  private String i2cTransactionRef;
+  private String externalRef;
 
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")

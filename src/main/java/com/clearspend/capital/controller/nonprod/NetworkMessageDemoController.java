@@ -12,6 +12,7 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ProgramRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -42,7 +43,7 @@ public class NetworkMessageDemoController {
 
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
   private NetworkMessageResponse processNetworkMessage(
-      @RequestBody @Validated NetworkMessageRequest request) {
+      @RequestBody @Validated NetworkMessageRequest request) throws JsonProcessingException {
 
     Card card = cardRepository.findById(request.getCardId()).orElseThrow();
     Account account = accountRepository.findById(card.getAccountId()).orElseThrow();

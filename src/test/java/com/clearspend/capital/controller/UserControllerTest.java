@@ -440,7 +440,7 @@ public class UserControllerTest extends BaseCapitalTest {
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            NetworkMessageType.PRE_AUTH,
             userRecord.user(),
             cardRecord.card(),
             cardRecord.account(),

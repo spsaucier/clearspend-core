@@ -113,7 +113,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            NetworkMessageType.PRE_AUTH,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -122,7 +122,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_TRANSACTION_ADVICE,
+            NetworkMessageType.FINANCIAL_AUTH,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),

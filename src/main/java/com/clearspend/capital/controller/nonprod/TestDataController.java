@@ -1,9 +1,5 @@
 package com.clearspend.capital.controller.nonprod;
 
-import com.clearspend.capital.client.i2c.push.controller.type.CardAcceptor;
-import com.clearspend.capital.client.i2c.push.controller.type.CardStatus;
-import com.clearspend.capital.client.i2c.push.controller.type.I2cCard;
-import com.clearspend.capital.client.i2c.push.controller.type.I2cTransaction;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -32,8 +28,6 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.NetworkMessageDeviceType;
-import com.clearspend.capital.data.model.enums.NetworkMessageTransactionType;
 import com.clearspend.capital.data.model.enums.NetworkMessageType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.AllocationRepository;
@@ -54,13 +48,23 @@ import com.clearspend.capital.service.ProgramService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
+import com.stripe.model.issuing.Authorization;
+import com.stripe.model.issuing.Authorization.MerchantData;
+import com.stripe.model.issuing.Authorization.PendingRequest;
+import com.stripe.model.issuing.Cardholder;
+import com.stripe.model.issuing.Cardholder.Billing;
+import com.stripe.model.issuing.Cardholder.Individual;
+import com.stripe.model.issuing.Transaction;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.OffsetTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,7 +75,6 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -89,6 +92,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class TestDataController {
+
+  public static final ObjectMapper objectMapper =
+      new ObjectMapper()
+          .registerModule(new JavaTimeModule())
+          .registerModule(new Jdk8Module())
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>>
       DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
@@ -285,7 +297,7 @@ public class TestDataController {
     Amount amount = Amount.of(Currency.USD, BigDecimal.TEN);
     networkMessageService.processNetworkMessage(
         generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            NetworkMessageType.PRE_AUTH,
             user.user(),
             cardRecord.card(),
             cardRecord.account(),
@@ -316,7 +328,7 @@ public class TestDataController {
     amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
     networkMessageService.processNetworkMessage(
         generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_TRANSACTION,
+            NetworkMessageType.FINANCIAL_AUTH,
             user.user(),
             cardRecord.card(),
             cardRecord.account(),
@@ -508,162 +520,93 @@ public class TestDataController {
       Card card,
       Account account,
       Program program,
-      Amount amount) {
+      Amount amount)
+      throws JsonProcessingException {
     Faker faker = Faker.instance();
 
-    // individual fields below so it's easier to understand what's being set in Transaction and Card
-    String notificationEventRef = faker.number().digits(40);
-    String transactionRef = faker.number().digits(11);
-    String messageType = networkMessageType.getMti();
-    LocalDate date = LocalDate.now();
-    OffsetTime time = OffsetTime.now();
-    String transactionType = NetworkMessageTransactionType.PURCHASE_TRANS.getI2cTransactionType();
-    String service = RandomStringUtils.randomAlphanumeric(120);
-    String requestedAmount = amount.getAmount().toString();
-    String requestedAmountCurrency = amount.getCurrency().name();
-    String transactionAmount = amount.getAmount().toString();
-    String transactionCurrency = amount.getCurrency().name();
-    String transactionResponseCode = "Type: AN 2";
-    String interchangeFee = amount.getAmount().abs().multiply(BigDecimal.valueOf(0.02)).toString();
-    String panEntryMode = "021"; // 02 (Magnetic stripe) + 1 (Terminal can accept PINs)
-    String authorizationCode = RandomStringUtils.randomAlphanumeric(16);
-    String acquirerReferenceNumber = RandomStringUtils.randomAlphanumeric(20);
-    String retrievalReferenceNumber = RandomStringUtils.randomAlphanumeric(80);
-    String systemTraceAuditNumber = RandomStringUtils.randomAlphanumeric(24);
-    String networkRef = "Type: AN 25";
-    String originalTransactionRef = ""; // ""Type: N 11";
-    String transferRef = ""; // ""Type: N 30";
-    String bankAccountNumber = RandomStringUtils.randomAlphanumeric(31);
-    String transactionDescription = RandomStringUtils.randomAlphanumeric(255);
-    String externalTransReference = RandomStringUtils.randomAlphanumeric(40);
-    String externalUserReference = RandomStringUtils.randomAlphanumeric(40);
-    String externalLinkedCardRefRef = "Type: AN 11";
-    String externalLinkedCardProfileSet1 = RandomStringUtils.randomAlphanumeric(255);
-    String externalLinkedCardProfileSet2 = RandomStringUtils.randomAlphanumeric(255);
-    String panSequenceNumber = "001"; // ""Type: AN 3";
-    String fraudParameter = RandomStringUtils.randomAlphanumeric(20);
-
-    String acquirerRef = RandomStringUtils.randomAlphanumeric(44);
-    String merchantCode = RandomStringUtils.randomAlphanumeric(15);
-    String merchantNameAndLocation = "Merchant Name            Tucson85641  AZUSA";
-    String merchantLocality = "Tucson";
-    String merchantRegion = "AZ";
-    String merchantPostalCode = "85641";
-    Integer mcc = 6060;
-    String deviceRef = RandomStringUtils.randomAlphanumeric(8);
-    String deviceType = NetworkMessageDeviceType.POS.getI2cDeviceType();
-    OffsetDateTime localDateTime = OffsetDateTime.now();
-    CardAcceptor cardAcceptor =
-        new CardAcceptor(
-            acquirerRef,
-            merchantCode,
-            merchantNameAndLocation,
-            merchantLocality,
-            merchantRegion,
-            merchantPostalCode,
-            mcc,
-            deviceRef,
-            deviceType,
-            localDateTime);
-
-    I2cTransaction i2cTransaction =
-        new I2cTransaction(
-            notificationEventRef,
-            transactionRef,
-            messageType,
-            date,
-            time,
-            cardAcceptor,
-            transactionType,
-            service,
-            requestedAmount,
-            requestedAmountCurrency,
-            transactionAmount,
-            transactionCurrency,
-            transactionResponseCode,
-            interchangeFee,
-            panEntryMode,
-            authorizationCode,
-            acquirerReferenceNumber,
-            retrievalReferenceNumber,
-            systemTraceAuditNumber,
-            networkRef,
-            originalTransactionRef,
-            transferRef,
-            bankAccountNumber,
-            transactionDescription,
-            externalTransReference,
-            externalUserReference,
-            externalLinkedCardRefRef,
-            externalLinkedCardProfileSet1,
-            externalLinkedCardProfileSet2,
-            panSequenceNumber,
-            fraudParameter);
-
-    String cardNumber = card.getCardNumber().getEncrypted();
-    String cardProgramRef = program.getI2cCardProgramRef();
-    String cardReferenceRef = card.getI2cCardRef();
-    String primaryCardNumber = card.getCardNumber().getEncrypted();
-    String primaryCardReferenceRef = card.getI2cCardRef();
-    // TODO(kuchlein): @Slava, do we have this somewhere? Ditto for memberRef
-    String customerRef = RandomStringUtils.randomAlphanumeric(20);
-    String memberRef = RandomStringUtils.randomAlphanumeric(25);
-    String availableBalance =
-        account.getAvailableBalance() != null
-            ? account.getAvailableBalance().getAmount().toString()
-            : "";
-    String ledgerBalance = account.getLedgerBalance().getAmount().toString();
-    String cardStatus = CardStatus.OPEN.getI2cCardStatus();
-    String firstName = user.getFirstName().getEncrypted();
-    String lastName = user.getLastName().getEncrypted();
-    String addressLine1 = "";
-    String addressLine2 = "";
-    String locality = "";
-    String region = "";
-    String postalCode = "";
-    String country = "";
-    final Address address = user.getAddress();
-    if (address != null) {
-      addressLine1 =
-          address.getStreetLine1() != null ? address.getStreetLine1().getEncrypted() : "";
-      addressLine2 =
-          address.getStreetLine2() != null ? address.getStreetLine2().getEncrypted() : "";
-      locality = address.getLocality() != null ? address.getLocality() : "";
-      region = address.getRegion() != null ? address.getRegion() : "";
-      postalCode = address.getPostalCode() != null ? address.getPostalCode().getEncrypted() : "";
-      country = address.getCountry() != null ? address.getCountry().name() : "";
+    Cardholder cardholder = new Cardholder();
+    if (card.getAddress() != null) {
+      Billing billing = new Billing();
+      billing.setAddress(card.getAddress().toStripeAddress());
+      cardholder.setBilling(billing);
     }
-    String phone = user.getPhone().getEncrypted();
-    String email = user.getEmail().getEncrypted();
-    String sourceCardReferenceNumber = ""; // ""Type: AN 40";
-    String sourceCardNumber = ""; // ""Type: N 19";
+    cardholder.setCreated(user.getCreated().toEpochSecond());
+    cardholder.setEmail(user.getEmail().getEncrypted());
+    cardholder.setId("stripe_" + user.getId().toString());
+    Individual individual = new Individual();
+    individual.setFirstName(user.getFirstName().getEncrypted());
+    individual.setLastName(user.getLastName().getEncrypted());
+    cardholder.setIndividual(individual);
+    cardholder.setName(card.getCardLine3());
+    if (user.getPhone() != null) {
+      cardholder.setPhoneNumber(user.getPhone().getEncrypted());
+    }
+    cardholder.setStatus("active");
+    cardholder.setType("individual");
 
-    I2cCard i2cCard =
-        new I2cCard(
-            cardNumber,
-            null,
-            cardProgramRef,
-            cardReferenceRef,
-            primaryCardNumber,
-            primaryCardReferenceRef,
-            customerRef,
-            memberRef,
-            availableBalance,
-            ledgerBalance,
-            cardStatus,
-            firstName,
-            lastName,
-            addressLine1,
-            addressLine2,
-            locality,
-            region,
-            postalCode,
-            country,
-            phone,
-            email,
-            sourceCardReferenceNumber,
-            sourceCardNumber);
+    com.stripe.model.issuing.Card stripeCard = new com.stripe.model.issuing.Card();
+    stripeCard.setBrand("Visa");
+    stripeCard.setCardholder(cardholder);
+    stripeCard.setCreated(card.getCreated().toEpochSecond());
+    stripeCard.setCurrency(account.getLedgerBalance().getCurrency().name());
+    stripeCard.setExpMonth((long) card.getExpirationDate().getMonthValue());
+    stripeCard.setExpYear((long) card.getExpirationDate().getYear());
+    stripeCard.setId(card.getCardRef());
+    stripeCard.setLast4(card.getLastFour());
+    stripeCard.setStatus("active");
+    stripeCard.setType(card.getType().toStripeType());
 
-    return new NetworkCommon(i2cTransaction, i2cCard);
+    MerchantData merchantData = new MerchantData();
+    merchantData.setCategory("bakeries");
+    merchantData.setCategoryCode("5462");
+    merchantData.setCity("Tucson");
+    merchantData.setPostalCode("85641");
+    merchantData.setState("AZ");
+    merchantData.setCountry("US");
+    merchantData.setName("Tuscon Bakery");
+    merchantData.setNetworkId(faker.number().digits(10));
+
+    return switch (networkMessageType) {
+      case PRE_AUTH -> {
+        PendingRequest pendingRequest = new PendingRequest();
+        pendingRequest.setAmount(amount.toStripeAmount());
+        pendingRequest.setCurrency(amount.getCurrency().name());
+        pendingRequest.setIsAmountControllable(false);
+        pendingRequest.setMerchantAmount(amount.toStripeAmount());
+        pendingRequest.setMerchantCurrency(amount.getCurrency().name());
+
+        Authorization stripeAuthorization = new Authorization();
+        stripeAuthorization.setAmount(0L);
+        stripeAuthorization.setApproved(false);
+        stripeAuthorization.setAuthorizationMethod("online");
+        stripeAuthorization.setCard(stripeCard);
+        stripeAuthorization.setCardholder(cardholder.getId());
+        stripeAuthorization.setCreated(System.currentTimeMillis());
+        stripeAuthorization.setCurrency(amount.getCurrency().name());
+        stripeAuthorization.setId("stripe_" + UUID.randomUUID());
+        stripeAuthorization.setMerchantAmount(amount.toStripeAmount());
+        stripeAuthorization.setMerchantData(merchantData);
+        stripeAuthorization.setPendingRequest(pendingRequest);
+        stripeAuthorization.setStatus("pending");
+
+        yield new NetworkCommon(
+            stripeAuthorization, objectMapper.writeValueAsString(stripeAuthorization));
+      }
+      case FINANCIAL_AUTH -> {
+        Transaction stripeTransaction = new Transaction();
+        stripeTransaction.setAmount(amount.toStripeAmount());
+        stripeTransaction.setCard(stripeCard.getId());
+        stripeTransaction.setCardholder(cardholder.getId());
+        stripeTransaction.setCreated(System.currentTimeMillis());
+        stripeTransaction.setCurrency(amount.getCurrency().name());
+        stripeTransaction.setId("stripe_" + UUID.randomUUID());
+        stripeTransaction.setMerchantAmount(amount.toStripeAmount());
+        stripeTransaction.setMerchantData(merchantData);
+
+        yield new NetworkCommon(
+            stripeTransaction, objectMapper.writeValueAsString(stripeTransaction));
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + networkMessageType);
+    };
   }
 }

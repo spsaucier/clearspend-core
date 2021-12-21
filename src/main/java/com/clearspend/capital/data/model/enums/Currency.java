@@ -19,7 +19,7 @@ public enum Currency {
 
   public static Currency of(String currency) {
     try {
-      return currency == null ? UNSPECIFIED : valueOf(currency.trim());
+      return currency == null ? UNSPECIFIED : valueOf(currency.trim().toUpperCase());
     } catch (IllegalArgumentException e) {
       log.error("Invalid currency detected: " + currency);
       return UNSPECIFIED;

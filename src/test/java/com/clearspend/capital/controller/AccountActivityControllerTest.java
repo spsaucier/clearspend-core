@@ -201,7 +201,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH_TRANSACTION,
+            NetworkMessageType.PRE_AUTH,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
