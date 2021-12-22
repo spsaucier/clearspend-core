@@ -16,6 +16,7 @@ import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.repository.UserRepositoryCustom;
+import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.UserFilterCriteria;
 import com.clearspend.capital.service.type.PageToken;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -41,7 +43,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
   @Override
   public Page<FilteredUserWithCardListRecord> find(
-      TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
+      @NonNull TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
 
     CriteriaBuilder<User> userCriteriaBuilder =
         creCriteriaBuilderFactory
@@ -61,19 +63,24 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .end()
             .select("user");
 
-    if (businessId != null) {
-      userCriteriaBuilder.where("user.businessId").eqLiteral(businessId);
-    }
+    userCriteriaBuilder.where("user.businessId").eqLiteral(businessId);
 
-    if (criteria.getHasVirtualCard() != null && criteria.getHasVirtualCard()) {
-      userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.VIRTUAL);
-    }
-    if (criteria.getHasPhysicalCard() != null && criteria.getHasPhysicalCard()) {
-      userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.PLASTIC);
-    }
+    BeanUtils.setNotNull(
+        criteria.getHasVirtualCard(),
+        hasVirtualCode ->
+            userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.VIRTUAL));
 
-    if (criteria.getAllocations() != null && criteria.getAllocations().size() > 0) {
-      userCriteriaBuilder.where("card.allocationId").in(criteria.getAllocations());
+    BeanUtils.setNotNull(
+        criteria.getHasPhysicalCard(),
+        hasPlasticCode ->
+            userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.PLASTIC));
+
+    BeanUtils.setNotNull(
+        criteria.getAllocations(),
+        allocations -> userCriteriaBuilder.where("card.allocationId").in(allocations));
+
+    if (criteria.getIncludeArchived() == null || !criteria.getIncludeArchived()) {
+      userCriteriaBuilder.where("user.archived").eq(false);
     }
 
     String searchText = criteria.getSearchText();
@@ -99,9 +106,10 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     userCriteriaBuilder.groupBy("user.id");
 
-    if (criteria.getWithoutCard() != null && criteria.getWithoutCard()) {
-      userCriteriaBuilder.having("count(card)").eqLiteral("0");
-    }
+    BeanUtils.setNotNull(
+        criteria.getWithoutCard(),
+        withoutCard -> userCriteriaBuilder.having("count(card)").eqLiteral("0"));
+
     // we should order by an unique identifier to apply pagination
     userCriteriaBuilder.orderByDesc("user.created");
     userCriteriaBuilder.orderByDesc("user.id");

@@ -359,4 +359,17 @@ public class UserController {
     receiptService.unlinkReceipt(
         currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
   }
+
+  @PatchMapping("/{userId}/archive")
+  private boolean archiveUser(
+      @PathVariable(value = Common.USER_ID)
+          @Parameter(
+              required = true,
+              name = Common.USER_ID,
+              description = "ID of the user record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<UserId> userId) {
+
+    return userService.archiveUser(CurrentUser.get().businessId(), userId);
+  }
 }

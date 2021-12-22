@@ -859,4 +859,111 @@ public class UserControllerTest extends BaseCapitalTest {
     Assertions.assertEquals(1, userPageData.getTotalElements());
     Assertions.assertEquals("Name", userPageData.getContent().get(0).getUserData().getFirstName());
   }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersExcludeArchivedUsers() {
+    testHelper.createBin();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+
+    userService.archiveUser(business.getId(), user.user().getId());
+    userService.archiveUser(business.getId(), user1.user().getId());
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(1, userPageData.getTotalElements());
+  }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersIncludeArchivedUsers() {
+    testHelper.createBin();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+
+    userService.archiveUser(business.getId(), user.user().getId());
+    userService.archiveUser(business.getId(), user1.user().getId());
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setIncludeArchived(true);
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    Assertions.assertEquals(3, userPageData.getTotalElements());
+  }
 }

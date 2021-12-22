@@ -167,4 +167,13 @@ public class UserService {
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
     return userRepository.find(businessId, userFilterCriteria);
   }
+
+  public boolean archiveUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
+    User user =
+        userRepository
+            .findByBusinessIdAndId(businessId, userId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+    user.setArchived(true);
+    return userRepository.save(user).isArchived();
+  }
 }

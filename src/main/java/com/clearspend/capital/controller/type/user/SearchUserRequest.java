@@ -29,6 +29,9 @@ public class SearchUserRequest {
   @Size(max = 50)
   private String searchText;
 
+  @JsonProperty("includeArchived")
+  private Boolean includeArchived;
+
   @JsonProperty("pageRequest")
   PageRequest pageRequest;
 }

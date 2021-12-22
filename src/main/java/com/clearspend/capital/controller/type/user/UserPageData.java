@@ -25,6 +25,10 @@ public class UserPageData {
   @NonNull
   private String email;
 
+  @JsonProperty("archived")
+  @NonNull
+  private Boolean archived;
+
   @JsonProperty("cardInfoList")
   @NonNull
   private List<CardInfo> cardInfoList;
@@ -32,6 +36,7 @@ public class UserPageData {
   public UserPageData(User user, List<UserRepositoryImpl.CardAndAllocationName> cards) {
     this.userData = new UserData(user);
     this.email = user.getEmail().getEncrypted();
+    this.archived = user.isArchived();
     this.cardInfoList =
         cards != null
             ? cards.stream()

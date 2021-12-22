@@ -47,6 +47,9 @@ public class User {
   @NonNull
   private String phone;
 
+  @JsonProperty("archived")
+  private boolean archived;
+
   public User(com.clearspend.capital.data.model.User user) {
     this.userId = user.getId();
     this.businessId = user.getBusinessId();
@@ -56,6 +59,7 @@ public class User {
     this.address = new Address(user.getAddress());
     this.email = user.getEmail().getEncrypted();
     this.phone = user.getPhone().getEncrypted();
+    this.archived = user.isArchived();
   }
 
   public User(BusinessOwner businessOwner) {

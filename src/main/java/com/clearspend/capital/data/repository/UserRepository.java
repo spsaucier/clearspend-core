@@ -19,6 +19,8 @@ public interface UserRepository
 
   Optional<User> findBySubjectRef(String subjectRef);
 
+  Optional<User> findByBusinessIdAndId(TypedId<BusinessId> businessId, TypedId<UserId> id);
+
   List<User> findByBusinessIdAndFirstNameLikeOrLastNameLike(
       TypedId<BusinessId> businessId,
       RequiredEncryptedStringWithHash userFirstName,

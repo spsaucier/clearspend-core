@@ -14,6 +14,7 @@ import lombok.Data;
 public class UserFilterCriteria {
 
   private List<TypedId<AllocationId>> allocations;
+  private Boolean includeArchived;
   private Boolean hasVirtualCard;
   private Boolean hasPhysicalCard;
   private Boolean withoutCard;
@@ -26,6 +27,7 @@ public class UserFilterCriteria {
     hasVirtualCard = request.getHasVirtualCard();
     withoutCard = request.getWithoutCard();
     searchText = request.getSearchText();
+    includeArchived = request.getIncludeArchived();
     this.pageToken = PageRequest.toPageToken(request.getPageRequest());
   }
 }
