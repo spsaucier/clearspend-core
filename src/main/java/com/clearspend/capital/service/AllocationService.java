@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.NonNull;
@@ -79,7 +78,7 @@ public class AllocationService {
     // creating the account because the allocation references it
     Account account =
         accountService.createAccount(
-            businessId, AccountType.ALLOCATION, allocationId.toUuid(), Currency.USD);
+            businessId, AccountType.ALLOCATION, allocationId, null, Currency.USD);
 
     // create new allocation and set its ID to that which was used for the Account record
     AddStakeholderResponse i2cStakeholder = i2Client.addStakeholder(name);
@@ -138,7 +137,7 @@ public class AllocationService {
     // creating the account because the allocation references it
     Account account =
         accountService.createAccount(
-            businessId, AccountType.ALLOCATION, allocationId.toUuid(), amount.getCurrency());
+            businessId, AccountType.ALLOCATION, allocationId, null, amount.getCurrency());
 
     // create new allocation and set its ID to that which was used for the Account record
     AddStakeholderResponse i2cStakeholder =
@@ -254,10 +253,10 @@ public class AllocationService {
       return Collections.emptyList();
     }
 
-    Map<UUID, Account> accountMap = getAllocationAccountMap(business, allocations);
+    Map<TypedId<AllocationId>, Account> accountMap = getAllocationAccountMap(business, allocations);
 
     return allocations.stream()
-        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
+        .map(e -> new AllocationRecord(e, accountMap.get(e.getId())))
         .collect(Collectors.toList());
   }
 
@@ -279,14 +278,14 @@ public class AllocationService {
       return Collections.emptyList();
     }
 
-    Map<UUID, Account> accountMap = getAllocationAccountMap(business, allocations);
+    Map<TypedId<AllocationId>, Account> accountMap = getAllocationAccountMap(business, allocations);
 
     return allocations.stream()
-        .map(e -> new AllocationRecord(e, accountMap.get(e.getId().toUuid())))
+        .map(e -> new AllocationRecord(e, accountMap.get(e.getId())))
         .collect(Collectors.toList());
   }
 
-  private Map<UUID, Account> getAllocationAccountMap(
+  private Map<TypedId<AllocationId>, Account> getAllocationAccountMap(
       Business business, List<Allocation> allocations) {
     // get list of accounts to go with the allocations and put into map to make the response easier
     // to create. Expect count to be equal
@@ -298,7 +297,8 @@ public class AllocationService {
     if (allocations.size() != accounts.size()) {
       throw new IllegalStateException("allocation vs account count mismatch");
     }
-    return accounts.stream().collect(Collectors.toMap(Account::getOwnerId, Function.identity()));
+    return accounts.stream()
+        .collect(Collectors.toMap(Account::getAllocationId, Function.identity()));
   }
 
   @Transactional

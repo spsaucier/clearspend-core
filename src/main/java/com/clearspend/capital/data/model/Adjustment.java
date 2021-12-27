@@ -42,6 +42,7 @@ public class Adjustment extends TypedMutable<AdjustmentId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
+  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")

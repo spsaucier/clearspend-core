@@ -10,6 +10,7 @@ import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
@@ -27,7 +28,6 @@ import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.NonNull;
@@ -59,12 +59,19 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public Account createAccount(
-      TypedId<BusinessId> businessId, AccountType type, UUID ownerId, Currency currency) {
+      TypedId<BusinessId> businessId,
+      AccountType type,
+      TypedId<AllocationId> allocationId,
+      TypedId<CardId> cardId,
+      Currency currency) {
     LedgerAccount ledgerAccount =
         ledgerService.createLedgerAccount(type.getLedgerAccountType(), currency);
 
-    return accountRepository.save(
-        new Account(businessId, ledgerAccount.getId(), type, ownerId, Amount.of(currency)));
+    Account account =
+        new Account(businessId, allocationId, ledgerAccount.getId(), type, Amount.of(currency));
+    account.setCardId(cardId);
+
+    return accountRepository.save(account);
   }
 
   @Transactional(TxType.REQUIRED)
@@ -170,12 +177,12 @@ public class AccountService {
   public Account retrieveRootAllocationAccount(
       TypedId<BusinessId> businessId,
       Currency currency,
-      TypedId<AllocationId> owner,
+      TypedId<AllocationId> allocationId,
       boolean fetchHolds) {
     Account account =
         accountRepository
-            .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
-                businessId, AccountType.ALLOCATION, owner.toUuid(), currency)
+            .findByBusinessIdAndTypeAndAllocationIdAndLedgerBalance_Currency(
+                businessId, AccountType.ALLOCATION, allocationId, currency)
             .orElseThrow(
                 () ->
                     new RecordNotFoundException(
@@ -196,36 +203,30 @@ public class AccountService {
 
   public Account retrieveAllocationAccount(
       TypedId<BusinessId> businessId, Currency currency, TypedId<AllocationId> allocationId) {
-    return retrieveAccount(businessId, currency, AccountType.ALLOCATION, allocationId.toUuid());
-  }
-
-  public Account retrieveCardAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
-    return retrieveAccount(accountId, fetchHolds);
-  }
-
-  private Account retrieveAccount(
-      TypedId<BusinessId> businessId, Currency currency, AccountType type, UUID ownerId) {
     Account account =
         accountRepository
-            .findByBusinessIdAndTypeAndOwnerIdAndLedgerBalance_Currency(
-                businessId, type, ownerId, currency)
+            .findByBusinessIdAndTypeAndAllocationIdAndLedgerBalance_Currency(
+                businessId, AccountType.ALLOCATION, allocationId, currency)
             .orElseThrow(
-                () -> new RecordNotFoundException(Table.ACCOUNT, businessId, type, businessId));
+                () ->
+                    new RecordNotFoundException(
+                        Table.ACCOUNT, businessId, AccountType.ALLOCATION, allocationId, currency));
 
     fetchHolds(account, true);
 
     return account;
   }
 
+  public Account retrieveCardAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
+    return retrieveAccount(accountId, fetchHolds);
+  }
+
   public List<Account> retrieveAllocationAccounts(
       TypedId<BusinessId> businessId,
       Currency currency,
       List<TypedId<AllocationId>> allocationIds) {
-    return accountRepository.findByBusinessIdAndTypeAndOwnerIdIsInAndLedgerBalance_Currency(
-        businessId,
-        AccountType.ALLOCATION,
-        allocationIds.stream().map(TypedId::toUuid).toList(),
-        currency);
+    return accountRepository.findByBusinessIdAndTypeAndAllocationIdIsInAndLedgerBalance_Currency(
+        businessId, AccountType.ALLOCATION, allocationIds, currency);
   }
 
   // used to fetch a small set of accounts and their available balances/holds. Note this is super

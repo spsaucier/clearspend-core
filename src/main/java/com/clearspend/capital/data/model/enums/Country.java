@@ -11,252 +11,250 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public enum Country {
   UNSPECIFIED(""),
-  ABW("AD"), // Aruba
-  AFG("AE"), // Afghanistan
-  AGO("AF"), // Angola
-  AIA("AG"), // Anguilla
-  ALA("AI"), // Åland Islands
+  ABW("AW"), // Aruba
+  AFG("AF"), // Afghanistan
+  AGO("AO"), // Angola
+  AIA("AI"), // Anguilla
+  ALA("AX"), // Aland Islands
   ALB("AL"), // Albania
-  AND("AM"), // Andorra
-  ARE("AO"), // United Arab Emirates
-  ARG("AQ"), // Argentina
-  ARM("AR"), // Armenia
+  AND("AD"), // Andorra
+  ANT("AN"), // Netherlands Antilles
+  ARE("AE"), // United Arab Emirates
+  ARG("AR"), // Argentina
+  ARM("AM"), // Armenia
   ASM("AS"), // American Samoa
-  ATA("AT"), // Antarctica
-  ATF("AU"), // French Southern Territories
-  ATG("AW"), // Antigua and Barbuda
-  AUS("AX"), // Australia
-  AUT("AZ"), // Austria
-  AZE("BA"), // Azerbaijan
-  BDI("BB"), // Burundi
-  BEL("BD"), // Belgium
-  BEN("BE"), // Benin
-  BES("BF"), // Bonaire, Sint Eustatius and Saba
-  BFA("BG"), // Burkina Faso
-  BGD("BH"), // Bangladesh
-  BGR("BI"), // Bulgaria
-  BHR("BJ"), // Bahrain
-  BHS("BL"), // Bahamas
-  BIH("BM"), // Bosnia and Herzegovina
-  BLM("BN"), // Saint Barthélemy
-  BLR("BO"), // Belarus
-  BLZ("BQ"), // Belize
-  BMU("BR"), // Bermuda
-  BOL("BS"), // Bolivia (Plurinational State of)
-  BRA("BT"), // Brazil
-  BRB("BV"), // Barbados
-  BRN("BW"), // Brunei Darussalam
-  BTN("BY"), // Bhutan
-  BVT("BZ"), // Bouvet Island
-  BWA("CA"), // Botswana
-  CAF("CC"), // Central African Republic
-  CAN("CD"), // Canada
-  CCK("CF"), // Cocos (Keeling) Islands
-  CHE("CG"), // Switzerland
-  CHL("CH"), // Chile
-  CHN("CI"), // China
-  CIV("CK"), // Côte d'Ivoire
-  CMR("CL"), // Cameroon
-  COD("CM"), // Congo, Democratic Republic of the
-  COG("CN"), // Congo
-  COK("CO"), // Cook Islands
-  COL("CR"), // Colombia
-  COM("CU"), // Comoros
-  CPV("CV"), // Cabo Verde
-  CRI("CW"), // Costa Rica
-  CUB("CX"), // Cuba
-  CUW("CY"), // Curaçao
-  CXR("CZ"), // Christmas Island
-  CYM("DE"), // Cayman Islands
-  CYP("DJ"), // Cyprus
-  CZE("DK"), // Czechia
-  DEU("DM"), // Germany
-  DJI("DO"), // Djibouti
-  DMA("DZ"), // Dominica
-  DNK("EC"), // Denmark
-  DOM("EE"), // Dominican Republic
-  DZA("EG"), // Algeria
-  ECU("EH"), // Ecuador
-  EGY("ER"), // Egypt
-  ERI("ES"), // Eritrea
-  ESH("ET"), // Western Sahara
-  ESP("FI"), // Spain
-  EST("FJ"), // Estonia
-  ETH("FK"), // Ethiopia
-  FIN("FM"), // Finland
-  FJI("FO"), // Fiji
-  FLK("FR"), // Falkland Islands (Malvinas)
-  FRA("GA"), // France
-  FRO("GB"), // Faroe Islands
-  FSM("GD"), // Micronesia (Federated States of)
-  GAB("GE"), // Gabon
-  GBR("GF"), // United Kingdom of Great Britain and Northern Ireland
-  GEO("GG"), // Georgia
-  GGY("GH"), // Guernsey
-  GHA("GI"), // Ghana
-  GIB("GL"), // Gibraltar
-  GIN("GM"), // Guinea
-  GLP("GN"), // Guadeloupe
-  GMB("GP"), // Gambia
-  GNB("GQ"), // Guinea-Bissau
-  GNQ("GR"), // Equatorial Guinea
-  GRC("GS"), // Greece
-  GRD("GT"), // Grenada
-  GRL("GU"), // Greenland
-  GTM("GW"), // Guatemala
-  GUF("GY"), // French Guiana
-  GUM("HK"), // Guam
-  GUY("HM"), // Guyana
-  HKG("HN"), // Hong Kong
-  HMD("HR"), // Heard Island and McDonald Islands
-  HND("HT"), // Honduras
-  HRV("HU"), // Croatia
-  HTI("ID"), // Haiti
-  HUN("IE"), // Hungary
-  IDN("IL"), // Indonesia
+  ATA("AQ"), // Antarctica
+  ATF("TF"), // French Southern Territories
+  ATG("AG"), // Antigua and Barbuda
+  AUS("AU"), // Australia
+  AUT("AT"), // Austria
+  AZE("AZ"), // Azerbaijan
+  BDI("BI"), // Burundi
+  BEL("BE"), // Belgium
+  BEN("BJ"), // Benin
+  BFA("BF"), // Burkina Faso
+  BGD("BD"), // Bangladesh
+  BGR("BG"), // Bulgaria
+  BHR("BH"), // Bahrain
+  BHS("BS"), // Bahamas
+  BIH("BA"), // Bosnia and Herzegovina
+  BLM("BL"), // Saint-Barthélemy
+  BLR("BY"), // Belarus
+  BLZ("BZ"), // Belize
+  BMU("BM"), // Bermuda
+  BOL("BO"), // Bolivia
+  BRA("BR"), // Brazil
+  BRB("BB"), // Barbados
+  BRN("BN"), // Brunei Darussalam
+  BTN("BT"), // Bhutan
+  BVT("BV"), // Bouvet Island
+  BWA("BW"), // Botswana
+  CAF("CF"), // Central African Republic
+  CAN("CA"), // Canada
+  CCK("CC"), // Cocos (Keeling) Islands
+  CHE("CH"), // Switzerland
+  CHL("CL"), // Chile
+  CHN("CN"), // China
+  CIV("CI"), // Côte d'Ivoire
+  CMR("CM"), // Cameroon
+  COD("CD"), // Congo, (Kinshasa)
+  COG("CG"), // Congo (Brazzaville)
+  COK("CK"), // Cook Islands
+  COL("CO"), // Colombia
+  COM("KM"), // Comoros
+  CPV("CV"), // Cape Verde
+  CRI("CR"), // Costa Rica
+  CUB("CU"), // Cuba
+  CXR("CX"), // Christmas Island
+  CYM("KY"), // Cayman Islands
+  CYP("CY"), // Cyprus
+  CZE("CZ"), // Czech Republic
+  DEU("DE"), // Germany
+  DJI("DJ"), // Djibouti
+  DMA("DM"), // Dominica
+  DNK("DK"), // Denmark
+  DOM("DO"), // Dominican Republic
+  DZA("DZ"), // Algeria
+  ECU("EC"), // Ecuador
+  EGY("EG"), // Egypt
+  ERI("ER"), // Eritrea
+  ESH("EH"), // Western Sahara
+  ESP("ES"), // Spain
+  EST("EE"), // Estonia
+  ETH("ET"), // Ethiopia
+  FIN("FI"), // Finland
+  FJI("FJ"), // Fiji
+  FLK("FK"), // Falkland Islands (Malvinas)
+  FRA("FR"), // France
+  FRO("FO"), // Faroe Islands
+  FSM("FM"), // Micronesia, Federated States of
+  GAB("GA"), // Gabon
+  GBR("GB"), // United Kingdom
+  GEO("GE"), // Georgia
+  GGY("GG"), // Guernsey
+  GHA("GH"), // Ghana
+  GIB("GI"), // Gibraltar
+  GIN("GN"), // Guinea
+  GLP("GP"), // Guadeloupe
+  GMB("GM"), // Gambia
+  GNB("GW"), // Guinea-Bissau
+  GNQ("GQ"), // Equatorial Guinea
+  GRC("GR"), // Greece
+  GRD("GD"), // Grenada
+  GRL("GL"), // Greenland
+  GTM("GT"), // Guatemala
+  GUF("GF"), // French Guiana
+  GUM("GU"), // Guam
+  GUY("GY"), // Guyana
+  HKG("HK"), // Hong Kong, SAR China
+  HMD("HM"), // Heard and Mcdonald Islands
+  HND("HN"), // Honduras
+  HRV("HR"), // Croatia
+  HTI("HT"), // Haiti
+  HUN("HU"), // Hungary
+  IDN("ID"), // Indonesia
   IMN("IM"), // Isle of Man
   IND("IN"), // India
   IOT("IO"), // British Indian Ocean Territory
-  IRL("IQ"), // Ireland
-  IRN("IR"), // Iran (Islamic Republic of)
-  IRQ("IS"), // Iraq
-  ISL("IT"), // Iceland
-  ISR("JE"), // Israel
-  ITA("JM"), // Italy
-  JAM("JO"), // Jamaica
-  JEY("JP"), // Jersey
-  JOR("KE"), // Jordan
-  JPN("KG"), // Japan
-  KAZ("KH"), // Kazakhstan
-  KEN("KI"), // Kenya
-  KGZ("KM"), // Kyrgyzstan
-  KHM("KN"), // Cambodia
-  KIR("KP"), // Kiribati
-  KNA("KR"), // Saint Kitts and Nevis
-  KOR("KW"), // Korea, Republic of
-  KWT("KY"), // Kuwait
-  LAO("KZ"), // Lao People's Democratic Republic
-  LBN("LA"), // Lebanon
-  LBR("LB"), // Liberia
-  LBY("LC"), // Libya
-  LCA("LI"), // Saint Lucia
-  LIE("LK"), // Liechtenstein
-  LKA("LR"), // Sri Lanka
+  IRL("IE"), // Ireland
+  IRN("IR"), // Iran, Islamic Republic of
+  IRQ("IQ"), // Iraq
+  ISL("IS"), // Iceland
+  ISR("IL"), // Israel
+  ITA("IT"), // Italy
+  JAM("JM"), // Jamaica
+  JEY("JE"), // Jersey
+  JOR("JO"), // Jordan
+  JPN("JP"), // Japan
+  KAZ("KZ"), // Kazakhstan
+  KEN("KE"), // Kenya
+  KGZ("KG"), // Kyrgyzstan
+  KHM("KH"), // Cambodia
+  KIR("KI"), // Kiribati
+  KNA("KN"), // Saint Kitts and Nevis
+  KOR("KR"), // Korea (South)
+  KWT("KW"), // Kuwait
+  LAO("LA"), // Lao PDR
+  LBN("LB"), // Lebanon
+  LBR("LR"), // Liberia
+  LBY("LY"), // Libya
+  LCA("LC"), // Saint Lucia
+  LIE("LI"), // Liechtenstein
+  LKA("LK"), // Sri Lanka
   LSO("LS"), // Lesotho
   LTU("LT"), // Lithuania
   LUX("LU"), // Luxembourg
   LVA("LV"), // Latvia
-  MAC("LY"), // Macao
-  MAF("MA"), // Saint Martin (French part)
-  MAR("MC"), // Morocco
-  MCO("MD"), // Monaco
-  MDA("ME"), // Moldova, Republic of
-  MDG("MF"), // Madagascar
-  MDV("MG"), // Maldives
-  MEX("MH"), // Mexico
-  MHL("MK"), // Marshall Islands
-  MKD("ML"), // North Macedonia
-  MLI("MM"), // Mali
-  MLT("MN"), // Malta
-  MMR("MO"), // Myanmar
-  MNE("MP"), // Montenegro
-  MNG("MQ"), // Mongolia
-  MNP("MR"), // Northern Mariana Islands
-  MOZ("MS"), // Mozambique
-  MRT("MT"), // Mauritania
-  MSR("MU"), // Montserrat
-  MTQ("MV"), // Martinique
-  MUS("MW"), // Mauritius
-  MWI("MX"), // Malawi
+  MAC("MO"), // Macao, SAR China
+  MAF("MF"), // Saint-Martin (French part)
+  MAR("MA"), // Morocco
+  MCO("MC"), // Monaco
+  MDA("MD"), // Moldova
+  MDG("MG"), // Madagascar
+  MDV("MV"), // Maldives
+  MEX("MX"), // Mexico
+  MHL("MH"), // Marshall Islands
+  MKD("MK"), // Macedonia, Republic of
+  MLI("ML"), // Mali
+  MLT("MT"), // Malta
+  MMR("MM"), // Myanmar
+  MNE("ME"), // Montenegro
+  MNG("MN"), // Mongolia
+  MNP("MP"), // Northern Mariana Islands
+  MOZ("MZ"), // Mozambique
+  MRT("MR"), // Mauritania
+  MSR("MS"), // Montserrat
+  MTQ("MQ"), // Martinique
+  MUS("MU"), // Mauritius
+  MWI("MW"), // Malawi
   MYS("MY"), // Malaysia
-  MYT("MZ"), // Mayotte
+  MYT("YT"), // Mayotte
   NAM("NA"), // Namibia
   NCL("NC"), // New Caledonia
   NER("NE"), // Niger
   NFK("NF"), // Norfolk Island
   NGA("NG"), // Nigeria
   NIC("NI"), // Nicaragua
-  NIU("NL"), // Niue
-  NLD("NO"), // Netherlands
-  NOR("NP"), // Norway
-  NPL("NR"), // Nepal
-  NRU("NU"), // Nauru
+  NIU("NU"), // Niue
+  NLD("NL"), // Netherlands
+  NOR("NO"), // Norway
+  NPL("NP"), // Nepal
+  NRU("NR"), // Nauru
   NZL("NZ"), // New Zealand
   OMN("OM"), // Oman
-  PAK("PA"), // Pakistan
-  PAN("PE"), // Panama
-  PCN("PF"), // Pitcairn
-  PER("PG"), // Peru
+  PAK("PK"), // Pakistan
+  PAN("PA"), // Panama
+  PCN("PN"), // Pitcairn
+  PER("PE"), // Peru
   PHL("PH"), // Philippines
-  PLW("PK"), // Palau
-  PNG("PL"), // Papua New Guinea
-  POL("PM"), // Poland
-  PRI("PN"), // Puerto Rico
-  PRK("PR"), // Korea (Democratic People's Republic of)
-  PRT("PS"), // Portugal
-  PRY("PT"), // Paraguay
-  PSE("PW"), // Palestine, State of
-  PYF("PY"), // French Polynesia
+  PLW("PW"), // Palau
+  PNG("PG"), // Papua New Guinea
+  POL("PL"), // Poland
+  PRI("PR"), // Puerto Rico
+  PRK("KP"), // Korea (North)
+  PRT("PT"), // Portugal
+  PRY("PY"), // Paraguay
+  PSE("PS"), // Palestinian Territory
+  PYF("PF"), // French Polynesia
   QAT("QA"), // Qatar
   REU("RE"), // Réunion
   ROU("RO"), // Romania
-  RUS("RS"), // Russian Federation
-  RWA("RU"), // Rwanda
-  SAU("RW"), // Saudi Arabia
-  SDN("SA"), // Sudan
-  SEN("SB"), // Senegal
-  SGP("SC"), // Singapore
-  SGS("SD"), // South Georgia and the South Sandwich Islands
-  SHN("SE"), // Saint Helena, Ascension and Tristan da Cunha
-  SJM("SG"), // Svalbard and Jan Mayen
-  SLB("SH"), // Solomon Islands
-  SLE("SI"), // Sierra Leone
-  SLV("SJ"), // El Salvador
-  SMR("SK"), // San Marino
-  SOM("SL"), // Somalia
-  SPM("SM"), // Saint Pierre and Miquelon
-  SRB("SN"), // Serbia
-  SSD("SO"), // South Sudan
-  STP("SR"), // Sao Tome and Principe
-  SUR("SS"), // Suriname
-  SVK("ST"), // Slovakia
-  SVN("SV"), // Slovenia
-  SWE("SX"), // Sweden
-  SWZ("SY"), // Eswatini
-  SXM("SZ"), // Sint Maarten (Dutch part)
-  SYC("TC"), // Seychelles
-  SYR("TD"), // Syrian Arab Republic
-  TCA("TF"), // Turks and Caicos Islands
-  TCD("TG"), // Chad
-  TGO("TH"), // Togo
-  THA("TJ"), // Thailand
-  TJK("TK"), // Tajikistan
-  TKL("TL"), // Tokelau
+  RUS("RU"), // Russian Federation
+  RWA("RW"), // Rwanda
+  SAU("SA"), // Saudi Arabia
+  SDN("SD"), // Sudan
+  SEN("SN"), // Senegal
+  SGP("SG"), // Singapore
+  SGS("GS"), // South Georgia and the South Sandwich Islands
+  SHN("SH"), // Saint Helena
+  SJM("SJ"), // Svalbard and Jan Mayen Islands
+  SLB("SB"), // Solomon Islands
+  SLE("SL"), // Sierra Leone
+  SLV("SV"), // El Salvador
+  SMR("SM"), // San Marino
+  SOM("SO"), // Somalia
+  SPM("PM"), // Saint Pierre and Miquelon
+  SRB("RS"), // Serbia
+  SSD("SS"), // South Sudan
+  STP("ST"), // Sao Tome and Principe
+  SUR("SR"), // Suriname
+  SVK("SK"), // Slovakia
+  SVN("SI"), // Slovenia
+  SWE("SE"), // Sweden
+  SWZ("SZ"), // Swaziland
+  SYC("SC"), // Seychelles
+  SYR("SY"), // Syrian Arab Republic (Syria)
+  TCA("TC"), // Turks and Caicos Islands
+  TCD("TD"), // Chad
+  TGO("TG"), // Togo
+  THA("TH"), // Thailand
+  TJK("TJ"), // Tajikistan
+  TKL("TK"), // Tokelau
   TKM("TM"), // Turkmenistan
-  TLS("TN"), // Timor-Leste
+  TLS("TL"), // Timor-Leste
   TON("TO"), // Tonga
-  TTO("TR"), // Trinidad and Tobago
-  TUN("TT"), // Tunisia
-  TUR("TV"), // Turkey
-  TUV("TW"), // Tuvalu
-  TWN("TZ"), // Taiwan, Province of China
-  TZA("UA"), // Tanzania, United Republic of
+  TTO("TT"), // Trinidad and Tobago
+  TUN("TN"), // Tunisia
+  TUR("TR"), // Turkey
+  TUV("TV"), // Tuvalu
+  TWN("TW"), // Taiwan, Republic of China
+  TZA("TZ"), // Tanzania, United Republic of
   UGA("UG"), // Uganda
-  UKR("UM"), // Ukraine
-  UMI("US"), // United States Minor Outlying Islands
+  UKR("UA"), // Ukraine
+  UMI("UM"), // US Minor Outlying Islands
   URY("UY"), // Uruguay
-  USA("UZ"), // United States of America
-  UZB("VA"), // Uzbekistan
-  VAT("VC"), // Holy See
-  VCT("VE"), // Saint Vincent and the Grenadines
-  VEN("VG"), // Venezuela (Bolivarian Republic of)
-  VGB("VI"), // Virgin Islands (British)
-  VIR("VN"), // Virgin Islands (U.S.)
-  VNM("VU"), // Viet Nam
-  VUT("WF"), // Vanuatu
-  WLF("WS"), // Wallis and Futuna
-  WSM("YE"), // Samoa
-  YEM("YT"), // Yemen
+  USA("US"), // United States of America
+  UZB("UZ"), // Uzbekistan
+  VAT("VA"), // Holy See (Vatican City State)
+  VCT("VC"), // Saint Vincent and Grenadines
+  VEN("VE"), // Venezuela (Bolivarian Republic)
+  VGB("VG"), // British Virgin Islands
+  VIR("VI"), // Virgin Islands, US
+  VNM("VN"), // Viet Nam
+  VUT("VU"), // Vanuatu
+  WLF("WF"), // Wallis and Futuna Islands
+  WSM("WS"), // Samoa
+  YEM("YE"), // Yemen
   ZAF("ZA"), // South Africa
   ZMB("ZM"), // Zambia
   ZWE("ZW"), // Zimbabwe

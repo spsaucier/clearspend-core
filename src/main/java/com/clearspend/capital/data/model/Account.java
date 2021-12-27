@@ -3,13 +3,14 @@ package com.clearspend.capital.data.model;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.AccountId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.LedgerAccountId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.enums.AccountType;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -43,6 +44,14 @@ public class Account extends TypedMutable<AccountId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
+  // ideally this column/field would have a referential constraint pointing to allocation but since
+  // allocation has the opposite to account that's not possible
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "allocation")
+  @Column(updatable = false)
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AllocationId> allocationId;
+
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "ledger_account")
   @Column(updatable = false)
@@ -53,9 +62,10 @@ public class Account extends TypedMutable<AccountId> {
   @Enumerated(EnumType.STRING)
   private AccountType type;
 
-  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "card")
   @Column(updatable = false)
-  private UUID ownerId;
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<CardId> cardId;
 
   @NonNull @Embedded private Amount ledgerBalance;
 

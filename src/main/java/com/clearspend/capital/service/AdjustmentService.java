@@ -45,6 +45,7 @@ public class AdjustmentService {
     return adjustmentRepository.save(
         new Adjustment(
             account.getBusinessId(),
+            account.getAllocationId(),
             account.getId(),
             account.getLedgerAccountId(),
             bankJournalEntry.journalEntry().getId(),
@@ -62,6 +63,7 @@ public class AdjustmentService {
     return adjustmentRepository.save(
         new Adjustment(
             account.getBusinessId(),
+            account.getAllocationId(),
             account.getId(),
             account.getLedgerAccountId(),
             bankJournalEntry.journalEntry().getId(),
@@ -82,6 +84,7 @@ public class AdjustmentService {
         adjustmentRepository.save(
             new Adjustment(
                 fromAccount.getBusinessId(),
+                fromAccount.getAllocationId(),
                 fromAccount.getId(),
                 fromAccount.getLedgerAccountId(),
                 bankJournalEntry.journalEntry().getId(),
@@ -93,11 +96,12 @@ public class AdjustmentService {
     Adjustment toAdjustment =
         adjustmentRepository.save(
             new Adjustment(
-                fromAccount.getBusinessId(),
-                fromAccount.getId(),
-                fromAccount.getLedgerAccountId(),
+                toAccount.getBusinessId(),
+                toAccount.getAllocationId(),
+                toAccount.getId(),
+                toAccount.getLedgerAccountId(),
                 bankJournalEntry.journalEntry().getId(),
-                bankJournalEntry.fromPosting().getId(),
+                bankJournalEntry.toPosting().getId(),
                 AdjustmentType.REALLOCATE,
                 OffsetDateTime.now(),
                 amount));
@@ -116,6 +120,7 @@ public class AdjustmentService {
     return adjustmentRepository.save(
         new Adjustment(
             account.getBusinessId(),
+            account.getAllocationId(),
             account.getId(),
             account.getLedgerAccountId(),
             networkJournalEntry.journalEntry().getId(),

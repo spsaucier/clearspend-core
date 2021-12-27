@@ -1,20 +1,23 @@
 package com.clearspend.capital.controller.type.account;
 
 import com.clearspend.capital.common.typedid.data.AccountId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.LedgerAccountId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
 import javax.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class Account {
 
   @JsonProperty("accountId")
@@ -27,6 +30,11 @@ public class Account {
   @NotNull(message = "businessId required")
   private TypedId<BusinessId> businessId;
 
+  @JsonProperty("allocationId")
+  @NonNull
+  @NotNull(message = "allocationId required")
+  private TypedId<AllocationId> allocationId;
+
   @JsonProperty("ledgerAccountId")
   @NonNull
   @NotNull(message = "ledgerAccountId required")
@@ -37,10 +45,8 @@ public class Account {
   @NotNull(message = "type required")
   private AccountType type;
 
-  @JsonProperty("ownerId")
-  @NonNull
-  @NotNull(message = "ownerId required")
-  private UUID ownerId;
+  @JsonProperty("cardId")
+  private TypedId<CardId> cardId;
 
   @JsonProperty("ledgerBalance")
   @NonNull
@@ -51,9 +57,10 @@ public class Account {
     return new Account(
         account.getId(),
         account.getBusinessId(),
+        account.getAllocationId(),
         account.getLedgerAccountId(),
         account.getType(),
-        account.getOwnerId(),
+        account.getCardId(),
         Amount.of(account.getLedgerBalance()));
   }
 }

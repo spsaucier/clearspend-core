@@ -1,12 +1,9 @@
 package com.clearspend.capital.service.type;
 
-import com.clearspend.capital.client.i2c.push.controller.type.I2cCard;
-import com.clearspend.capital.client.i2c.push.controller.type.I2cTransaction;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -17,7 +14,6 @@ import com.clearspend.capital.data.model.enums.NetworkMessageType;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.MerchantData;
 import com.stripe.model.issuing.Transaction;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -68,31 +64,6 @@ public class NetworkCommon {
   private boolean postDecline = false;
 
   private AccountActivity accountActivity = new AccountActivity();
-
-  public NetworkCommon(I2cTransaction i2cTransaction, I2cCard i2cCard) {
-    cardRef = i2cCard.getCardNumber();
-    i2cCard.setEncryptedCardNumber(new NullableEncryptedString(i2cCard.getCardNumber()));
-    i2cCard.setCardNumber("");
-    //    networkMessageType = NetworkMessageType.fromMti(i2cTransaction.getMessageType());
-    BigDecimal amount = new BigDecimal(i2cTransaction.getRequestedAmount());
-    requestedAmount =
-        Amount.of(Currency.of(i2cTransaction.getRequestedAmountCurrency()), amount.abs());
-    creditOrDebit = requestedAmount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
-
-    merchantNumber = i2cTransaction.getCardAcceptor().getMerchantCode();
-    merchantName = i2cTransaction.getCardAcceptor().getMerchantName();
-    merchantAddress =
-        new ClearAddress(
-            "",
-            "",
-            i2cTransaction.getCardAcceptor().getMerchantLocality(),
-            i2cTransaction.getCardAcceptor().getMerchantRegion(),
-            i2cTransaction.getCardAcceptor().getMerchantPostalCode(),
-            i2cTransaction.getCardAcceptor().getMerchantCountry());
-    merchantCategoryCode = i2cTransaction.getCardAcceptor().getMerchantCategoryCode();
-
-    externalRef = i2cTransaction.getTransactionRef();
-  }
 
   public NetworkCommon(Authorization authorization, String rawJson) {
     cardRef = authorization.getCard().getId();

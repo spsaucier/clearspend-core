@@ -119,7 +119,7 @@ public class CardService {
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
       account =
           accountService.createAccount(
-              businessId, AccountType.CARD, card.getId().toUuid(), currency);
+              businessId, AccountType.CARD, allocationId, card.getId(), currency);
     } else {
       // card retrieval works best if we always have a ref to the account, so we can always get
       // available balance

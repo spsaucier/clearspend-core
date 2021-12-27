@@ -7,7 +7,6 @@ import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.business.Business;
-import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessService;
 import java.util.ArrayList;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BusinessController {
 
-  private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessService businessService;
 

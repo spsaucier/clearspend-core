@@ -6,6 +6,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.typedid.data.AccountId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.JournalEntryId;
 import com.clearspend.capital.common.typedid.data.LedgerAccountId;
@@ -30,6 +31,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
   private final TypedId<AccountId> accountId = new TypedId<>(UUID.randomUUID());
   private final TypedId<BusinessId> businessId = new TypedId<>(UUID.randomUUID());
+  private final TypedId<AllocationId> allocationId = new TypedId<>(UUID.randomUUID());
   private final TypedId<JournalEntryId> journalEntryId = new TypedId<>(UUID.randomUUID());
   private final TypedId<LedgerAccountId> ledgerAccountId = new TypedId<>(UUID.randomUUID());
   private final TypedId<PostingId> postingId = new TypedId<>(UUID.randomUUID());
@@ -129,6 +131,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
   private Adjustment newAdjustment(AdjustmentType deposit, OffsetDateTime time, BigDecimal amount) {
     return new Adjustment(
         businessId,
+        allocationId,
         accountId,
         ledgerAccountId,
         journalEntryId,
