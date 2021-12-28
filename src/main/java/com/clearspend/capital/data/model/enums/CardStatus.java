@@ -4,18 +4,18 @@ import com.clearspend.capital.common.error.InvalidStateTransitionException;
 import com.google.common.collect.ImmutableSetMultimap;
 import lombok.NonNull;
 
-// OPEN (initial) -> BLOCKED
-// BLOCKED -> OPEN
-// BLOCKED -> RETIRED (terminal)
+// ACTIVE (initial) -> INACTIVE
+// INACTIVE -> ACTIVE
+// INACTIVE -> CANCELLED (terminal)
 public enum CardStatus {
-  OPEN,
-  BLOCKED,
-  RETIRED;
+  ACTIVE,
+  INACTIVE,
+  CANCELLED;
 
   private static final ImmutableSetMultimap<CardStatus, CardStatus> validTransitions =
       ImmutableSetMultimap.<CardStatus, CardStatus>builder()
-          .putAll(OPEN, BLOCKED, RETIRED)
-          .putAll(BLOCKED, OPEN, RETIRED)
+          .putAll(ACTIVE, INACTIVE, CANCELLED)
+          .putAll(INACTIVE, ACTIVE, CANCELLED)
           .build();
 
   public CardStatus validTransition(@NonNull CardStatus next) {

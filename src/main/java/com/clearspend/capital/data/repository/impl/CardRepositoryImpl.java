@@ -60,8 +60,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
       byte[] encryptedValue = HashUtil.calculateHash(criteria.getSearchText());
       builder
           .whereOr()
-          .where("card.cardNumber.hash")
-          .eq(encryptedValue)
+          .where("card.lastFour")
+          .eq(criteria.getSearchText())
           .where("user.firstName.hash")
           .eq(encryptedValue)
           .where("user.lastName.hash")

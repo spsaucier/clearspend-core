@@ -80,4 +80,7 @@ public class Business extends TypedMutable<BusinessId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessStatusReason statusReason;
+
+  // identifier of this business (account in stripe terms) at Stripe
+  private String externalRef;
 }

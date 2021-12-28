@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.alloy.AlloyClient;
 import com.clearspend.capital.client.alloy.AlloyClient.KycEvaluationResponse;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
@@ -23,6 +24,7 @@ import com.clearspend.capital.data.model.enums.RelationshipToBusiness;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.AlloyRepository;
 import com.clearspend.capital.data.repository.BusinessOwnerRepository;
+import com.stripe.model.Person;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -47,6 +49,10 @@ public class BusinessOwnerService {
   private final UserService userService;
 
   private final AlloyClient alloyClient;
+
+  private final StripeClient stripeClient;
+
+  private final BusinessService businessService;
 
   public record BusinessOwnerAndUserRecord(BusinessOwner businessOwner, User user) {}
 
@@ -73,12 +79,16 @@ public class BusinessOwnerService {
             Country.UNSPECIFIED,
             KnowYourCustomerStatus.PENDING,
             BusinessOwnerStatus.ACTIVE);
-    if (businessOwnerId != null) {
-      businessOwner.setId(businessOwnerId);
-    }
+    businessOwner.setId(businessOwnerId != null ? businessOwnerId : new TypedId<>());
     businessOwner.setSubjectRef(subjectRef);
 
     businessOwner = businessOwnerRepository.save(businessOwner);
+    businessOwnerRepository.flush();
+
+    Person stripePerson =
+        stripeClient.createPerson(
+            businessOwner, businessService.retrieveBusiness(businessId).getExternalRef());
+    businessOwner.setExternalRef(stripePerson.getId());
 
     User user =
         Objects.isNull(subjectRef)

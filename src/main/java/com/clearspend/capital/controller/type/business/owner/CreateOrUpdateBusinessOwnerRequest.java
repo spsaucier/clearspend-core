@@ -64,6 +64,8 @@ public class CreateOrUpdateBusinessOwnerRequest {
 
   @Sensitive
   @JsonProperty("phone")
+  @NonNull
+  @NotNull(message = "phone required")
   @Schema(title = "Phone address of the person", required = false, example = "+12345679")
   @Pattern(regexp = PHONE_PATTERN, message = "Incorrect phone format.")
   @Size(max = 20, message = "The phone should not be more than 20 characters.")

@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
@@ -33,6 +34,7 @@ public class UserService {
 
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
+  private final StripeClient stripeClient;
 
   public record CreateUpdateUserRecord(User user, String password) {}
 
@@ -60,7 +62,12 @@ public class UserService {
     user.setAddress(address);
     user.setSubjectRef(subjectRef);
 
-    return userRepository.save(user);
+    user = userRepository.save(user);
+    userRepository.flush();
+
+    user.setExternalRef(stripeClient.createCardholder(user).getId());
+
+    return user;
   }
 
   /** Creates a new user and a corresponding fusion auth user */
@@ -84,14 +91,19 @@ public class UserService {
             new RequiredEncryptedStringWithHash(email),
             new NullableEncryptedStringWithHash(phone));
     user.setAddress(address);
+
+    user = userRepository.save(user);
+    userRepository.flush();
+
     user.setSubjectRef(
         fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
+    user.setExternalRef(stripeClient.createCardholder(user).getId());
 
     twilioService.sendNotificationEmail(
         user.getEmail().getEncrypted(),
         String.format("Welcome to ClearSpend, your password is %s", password));
 
-    return new CreateUpdateUserRecord(userRepository.save(user), password);
+    return new CreateUpdateUserRecord(user, password);
   }
 
   @Transactional

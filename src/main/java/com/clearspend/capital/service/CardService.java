@@ -1,8 +1,6 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.i2c.CardNumber;
-import com.clearspend.capital.client.i2c.I2Client;
-import com.clearspend.capital.client.i2c.response.AddCardResponse;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
@@ -12,7 +10,6 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Program;
@@ -20,6 +17,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.CardStatus;
 import com.clearspend.capital.data.model.enums.CardStatusReason;
+import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
@@ -39,6 +37,7 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
@@ -54,7 +53,7 @@ public class CardService {
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
 
-  private final I2Client i2Client;
+  private final StripeClient stripeClient;
 
   public record CardRecord(Card card, Account account) {}
 
@@ -70,12 +69,12 @@ public class CardService {
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
+    User user = userService.retrieveUser(userId);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
     StringBuilder cardLine4 = new StringBuilder();
     if (isPersonal) {
-      User user = userService.retrieveUser(userId);
       cardLine3.append(user.getFirstName()).append(" ").append(user.getLastName());
     } else {
       cardLine3.append(businessLegalName);
@@ -92,9 +91,6 @@ public class CardService {
       cardLine3 = name;
     }
 
-    AddCardResponse i2cResponse = i2Client.addCard(program.getCardType(), cardLine3.toString());
-    CardNumber i2CardNumber = i2cResponse.getCardNumber();
-
     Card card =
         new Card(
             program.getBin(),
@@ -102,18 +98,16 @@ public class CardService {
             businessId,
             allocationId,
             userId,
-            CardStatus.OPEN,
+            CardStatus.ACTIVE,
             CardStatusReason.NONE,
             program.getFundingType(),
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
             program.getCardType(),
-            new RequiredEncryptedStringWithHash(i2cResponse.getCardNumber().getNumber()),
-            i2CardNumber.getNumber().substring(i2CardNumber.getNumber().length() - 4),
+            StringUtils.EMPTY,
             new Address());
     card.setCardLine4(cardLine4.toString());
-    card.setCardRef(i2cResponse.getI2cCardRef());
 
     Account account;
     if (program.getFundingType() == FundingType.INDIVIDUAL) {
@@ -136,6 +130,15 @@ public class CardService {
         disabledMccGroups,
         disabledTransactionChannels);
 
+    cardRepository.flush();
+
+    com.stripe.model.issuing.Card stripeCard =
+        card.getType() == CardType.VIRTUAL
+            ? stripeClient.createVirtualCard(card, user.getExternalRef())
+            : stripeClient.createPhysicalCard(card, user.getAddress(), user.getExternalRef());
+    card.setExternalRef(stripeCard.getId());
+    card.setLastFour(stripeCard.getLast4());
+
     return new CardRecord(card, account);
   }
 
@@ -156,7 +159,7 @@ public class CardService {
   public CardRecord getCardByCardRef(@NonNull String cardRef) {
     Card card =
         cardRepository
-            .findByCardRef(cardRef)
+            .findByExternalRef(cardRef)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardRef));
 
     // TODO(kuchlein): Not sure if we want to be doing this or not...
@@ -192,7 +195,7 @@ public class CardService {
             .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.BLOCKED));
+    card.setStatus(card.getStatus().validTransition(CardStatus.INACTIVE));
     card.setStatusReason(statusReason);
 
     // TODO(kuchlein): call i2c to block the card
@@ -211,7 +214,7 @@ public class CardService {
             .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.OPEN));
+    card.setStatus(card.getStatus().validTransition(CardStatus.ACTIVE));
     card.setStatusReason(statusReason);
 
     // TODO(kuchlein): call i2c to unblock the card
@@ -230,7 +233,7 @@ public class CardService {
             .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.RETIRED));
+    card.setStatus(card.getStatus().validTransition(CardStatus.CANCELLED));
     card.setStatusReason(statusReason);
 
     // TODO(kuchlein): call i2c to retire/close the card

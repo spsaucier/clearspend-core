@@ -12,5 +12,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "client.stripe")
 public class StripeProperties {
+
+  private String apiKey;
   private String secret;
+
+  private boolean enableTelemetry;
+  private Integer connectTimeout;
+  private Integer readTimeout;
+  private Integer maxNetworkRetries;
+
+  private String tosAcceptanceIp;
 }

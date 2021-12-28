@@ -160,9 +160,9 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void searchByCardNumber() {
+  void searchByLast4CardNumber() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
-    request.setSearchText(childCardA.getCardNumber().getEncrypted());
+    request.setSearchText(childCardA.getLastFour());
 
     PagedData<SearchCardData> result = callSearchCards(request, 1);
 

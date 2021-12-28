@@ -34,6 +34,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
   @BeforeEach
   void init() throws Exception {
+    testHelper.init();
     this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
     if (onboardBusinessRecord == null) {
       mockServerHelper.expectOtpViaEmail();
@@ -56,6 +57,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             testHelper.generateDateOfBirth(),
             testHelper.generateTaxIdentificationNumber(),
             testHelper.generateEmail(),
+            testHelper.generatePhone(),
             testHelper.generateApiAddress());
 
     String body = objectMapper.writeValueAsString(request);
@@ -87,6 +89,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             testHelper.generateDateOfBirth(),
             testHelper.generateTaxIdentificationNumber(),
             businessProspect.getEmail().getEncrypted(),
+            businessProspect.getPhone().getEncrypted(),
             testHelper.generateApiAddress());
 
     String body = objectMapper.writeValueAsString(request);

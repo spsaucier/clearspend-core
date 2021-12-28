@@ -2,7 +2,6 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.TypedMutable;
-import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
@@ -10,7 +9,6 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.enums.CardStatus;
 import com.clearspend.capital.data.model.enums.CardStatusReason;
 import com.clearspend.capital.data.model.enums.CardType;
@@ -108,12 +106,10 @@ public class Card extends TypedMutable<CardId> {
   // renew, replace, etc.
   private boolean superseded;
 
-  // the card number or PAN (we may never have this but we will have lastFour)
-  @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash cardNumber;
   @NonNull private String lastFour;
 
   @NonNull @Embedded private Address address;
 
   // this is the identifier of this card at Stripe
-  private String cardRef;
+  private String externalRef;
 }

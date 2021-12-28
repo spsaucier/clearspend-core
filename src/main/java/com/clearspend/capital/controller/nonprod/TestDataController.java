@@ -551,7 +551,7 @@ public class TestDataController {
     stripeCard.setCurrency(account.getLedgerBalance().getCurrency().name());
     stripeCard.setExpMonth((long) card.getExpirationDate().getMonthValue());
     stripeCard.setExpYear((long) card.getExpirationDate().getYear());
-    stripeCard.setId(card.getCardRef());
+    stripeCard.setId(card.getExternalRef());
     stripeCard.setLast4(card.getLastFour());
     stripeCard.setStatus("active");
     stripeCard.setType(card.getType().toStripeType());

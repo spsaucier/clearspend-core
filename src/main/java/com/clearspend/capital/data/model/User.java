@@ -58,5 +58,7 @@ public class User extends TypedMutable<UserId> {
   // link to FusionAuth
   private String subjectRef;
 
+  private String externalRef;
+
   private boolean archived;
 }

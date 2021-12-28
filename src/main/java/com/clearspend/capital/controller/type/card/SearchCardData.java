@@ -49,7 +49,7 @@ public class SearchCardData {
   public static SearchCardData of(FilteredCardRecord record) {
     return new SearchCardData(
         record.card().getId(),
-        record.card().getCardNumber().getEncrypted(),
+        record.card().getLastFour(),
         new UserData(record.user()),
         new Item<>(record.allocation().getId(), record.allocation().getName()),
         Amount.of(record.account().getLedgerBalance()),

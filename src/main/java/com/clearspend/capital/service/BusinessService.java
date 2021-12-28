@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.alloy.AlloyClient;
 import com.clearspend.capital.client.alloy.AlloyClient.KybEvaluationResponse;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
@@ -55,6 +56,7 @@ public class BusinessService {
   private final MccGroupService mccGroupService;
 
   private final AlloyClient alloyClient;
+  private final StripeClient stripeClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
 
@@ -98,15 +100,15 @@ public class BusinessService {
       alloyRepository.save(alloy);
     }
 
-    if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.FAIL) {
-      business.setStatus(BusinessStatus.CLOSED);
-    }
-
     business = businessRepository.save(business);
 
-    businessLimitService.initializeBusinessSpendLimit(business.getId());
-
-    mccGroupService.initializeMccGroups(business.getId());
+    if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.FAIL) {
+      business.setStatus(BusinessStatus.CLOSED);
+    } else {
+      business.setExternalRef(stripeClient.createAccount(business).getId());
+      businessLimitService.initializeBusinessSpendLimit(business.getId());
+      mccGroupService.initializeMccGroups(business.getId());
+    }
 
     return business;
   }

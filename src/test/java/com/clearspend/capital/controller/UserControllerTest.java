@@ -344,7 +344,7 @@ public class UserControllerTest extends BaseCapitalTest {
     for (CardDetailsResponse cardDetailsResponse : userCardListResponse) {
       assertThat(cardDetailsResponse.getCard()).isNotNull();
       assertThat(cardDetailsResponse.getCard().getCardNumber())
-          .isIn(card.getCardNumber().getEncrypted(), card2.getCardNumber().getEncrypted());
+          .isIn(card.getLastFour(), card2.getLastFour());
 
       assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
       assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())
@@ -381,8 +381,7 @@ public class UserControllerTest extends BaseCapitalTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(cardDetailsResponse));
 
     assertThat(cardDetailsResponse.getCard()).isNotNull();
-    assertThat(cardDetailsResponse.getCard().getCardNumber())
-        .isEqualTo(card.getCardNumber().getEncrypted());
+    assertThat(cardDetailsResponse.getCard().getCardNumber()).isEqualTo(card.getLastFour());
 
     assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
     assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())

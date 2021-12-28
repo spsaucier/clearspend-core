@@ -85,12 +85,13 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     String searchText = criteria.getSearchText();
     if (StringUtils.isNotEmpty(searchText)) {
+      searchText = searchText.trim();
       String likeSearchString = "%" + searchText + "%";
       byte[] encryptedValue = HashUtil.calculateHash(searchText);
       userCriteriaBuilder
           .whereOr()
-          .where("card.cardNumber.hash")
-          .eq(encryptedValue)
+          .where("card.lastFour")
+          .eq(searchText)
           .where("user.firstName.hash")
           .eq(encryptedValue)
           .where("user.lastName.hash")

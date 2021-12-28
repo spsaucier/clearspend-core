@@ -128,8 +128,7 @@ public class CardControllerTest extends BaseCapitalTest {
             CardDetailsResponse.class);
 
     assertThat(cardDetailsResponse.getCard()).isNotNull();
-    assertThat(cardDetailsResponse.getCard().getCardNumber())
-        .isEqualTo(card.getCardNumber().getEncrypted());
+    assertThat(cardDetailsResponse.getCard().getCardNumber()).isEqualTo(card.getLastFour());
 
     assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
     assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())

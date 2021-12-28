@@ -129,9 +129,9 @@ public class I2Client {
             .getCode();
 
     return switch (statusCode) {
-      case CLOSED -> CardStatus.RETIRED;
-      case INACTIVE -> CardStatus.BLOCKED;
-      case OPEN -> CardStatus.OPEN;
+      case CLOSED -> CardStatus.CANCELLED;
+      case INACTIVE -> CardStatus.INACTIVE;
+      case OPEN -> CardStatus.ACTIVE;
       default -> throw new RuntimeException(
           String.format("I2C card status [%s] is not matched to our card statuses", statusCode));
     };
@@ -171,9 +171,9 @@ public class I2Client {
   public void setCardStatus(String i2cCardRef, CardStatus cardStatus) {
     CardStatusCode i2cCardStatusCode =
         switch (cardStatus) {
-          case RETIRED -> CardStatusCode.CLOSED;
-          case BLOCKED -> CardStatusCode.INACTIVE;
-          case OPEN -> CardStatusCode.OPEN;
+          case CANCELLED -> CardStatusCode.CLOSED;
+          case INACTIVE -> CardStatusCode.INACTIVE;
+          case ACTIVE -> CardStatusCode.OPEN;
         };
 
     SetCardStatusResponse response =

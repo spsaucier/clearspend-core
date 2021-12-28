@@ -104,6 +104,14 @@ client:
   stripe:
 #    secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     secret: "whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC"
+    api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
+    enable-telemetry: false
+    connect-timeout: 2000
+    read-timeout: 7000
+    max-network-retries: 2
+    # Terms of service acceptance ip address needed during stripe account creation.
+    # Current value equals to clearspend domain public ip
+    tos-acceptance-ip: ${STRIPE_TOS_ACCEPTANCE_IP:35.172.94.1}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC08834a8aab6f817ea96ae7149e8befff}
     auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}

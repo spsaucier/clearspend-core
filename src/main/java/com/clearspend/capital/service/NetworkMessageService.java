@@ -150,7 +150,7 @@ public class NetworkMessageService {
   }
 
   private void processPreAuth(NetworkCommon common) {
-    if (!common.getCard().getStatus().equals(CardStatus.OPEN)) {
+    if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
       common.setPostDecline(true);
       return;

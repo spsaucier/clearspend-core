@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 // from: https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3#Officially_assigned_code_elements
@@ -260,7 +261,7 @@ public enum Country {
   ZWE("ZW"), // Zimbabwe
   ;
 
-  private String twoCharacterCode;
+  @Getter private String twoCharacterCode;
 
   private static Map<String, Country> map = initializeMap();
 

@@ -80,4 +80,7 @@ public class BusinessOwner extends TypedMutable<BusinessOwnerId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessOwnerStatus status;
+
+  // identifier of this business owner (person in stripe terms) at Stripe
+  private String externalRef;
 }

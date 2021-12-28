@@ -120,7 +120,7 @@ public class Card {
     cardLine4 = card.getCardLine4();
     type = card.getType();
     superseded = card.isSuperseded();
-    cardNumber = card.getCardNumber().toString();
+    cardNumber = card.getLastFour();
     lastFour = card.getLastFour();
     address = card.getAddress();
   }
