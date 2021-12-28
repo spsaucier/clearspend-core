@@ -194,7 +194,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                           + " from (SELECT day as startdate, day + ((( ?::timestamp - ?::timestamp) / ?)) as enddate "
                           + " FROM generate_series ( ?::timestamp, "
                           + "                        ?::timestamp, "
-                          + "                       (( ?::timestamp - ?::timestamp) / ?)) day) as custom_time_series ");
+                          + "                       (( ?::timestamp - ?::timestamp) / ?)) day limit ?) as custom_time_series ");
 
                   PreparedStatement preparedStatement =
                       connection.prepareStatement(stringBuilder.toString());
@@ -237,6 +237,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                       ++parameterIndex, Timestamp.from(criteria.getTo().toInstant()).toString());
                   preparedStatement.setString(
                       ++parameterIndex, Timestamp.from(criteria.getFrom().toInstant()).toString());
+                  preparedStatement.setInt(++parameterIndex, slices);
                   preparedStatement.setInt(++parameterIndex, slices);
 
                   preparedStatement.execute();
