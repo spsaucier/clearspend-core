@@ -29,8 +29,8 @@ import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
-import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -62,16 +62,10 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
     }
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
-
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -118,7 +112,16 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
             card,
             createBusinessRecord.allocationRecord().account(),
             program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(100))));
+            Amount.of(Currency.USD, BigDecimal.valueOf(10))));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.PRE_AUTH,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            Amount.of(Currency.USD, BigDecimal.valueOf(10))));
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
@@ -127,7 +130,43 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
             card,
             createBusinessRecord.allocationRecord().account(),
             program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(200))));
+            Amount.of(Currency.USD, BigDecimal.valueOf(2))));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.FINANCIAL_AUTH,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            Amount.of(Currency.USD, BigDecimal.valueOf(4))));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.FINANCIAL_AUTH,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            Amount.of(Currency.USD, BigDecimal.valueOf(8))));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.FINANCIAL_AUTH,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            Amount.of(Currency.USD, BigDecimal.valueOf(20))));
+
+    networkMessageService.processNetworkMessage(
+        TestDataController.generateNetworkCommon(
+            NetworkMessageType.FINANCIAL_AUTH,
+            user.user(),
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            program,
+            Amount.of(Currency.USD, BigDecimal.valueOf(9))));
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();
     graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
@@ -141,17 +180,21 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 post("/account-activity/graph-data")
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
 
-    // we should have just one bank deposit
     DashboardGraphData dashboardGraphData =
         objectMapper.readValue(response.getContentAsString(), DashboardGraphData.class);
-    assertEquals(2, dashboardGraphData.getGraphData().size());
-    assertEquals(BigDecimal.valueOf(30000, 2), dashboardGraphData.getTotalSpend());
-    assertEquals(BigDecimal.valueOf(15000, 2), dashboardGraphData.getAverageSpend());
+    assertEquals(7, dashboardGraphData.getGraphData().size());
+    assertEquals(
+        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10, 0),
+        dashboardGraphData.getTotalSpend().setScale(0, RoundingMode.DOWN));
+    assertEquals(
+        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10)
+            .divide(new BigDecimal(7), 2, RoundingMode.DOWN),
+        dashboardGraphData.getAverageSpend());
     log.info(response.getContentAsString());
   }
 
@@ -162,16 +205,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
       bin = testHelper.createBin();
       program = testHelper.createProgram(bin);
     }
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
-    Business business = createBusinessRecord.business();
-
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();
     graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
@@ -185,17 +219,20 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 post("/account-activity/graph-data")
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
 
-    // we should have just one bank deposit
     DashboardGraphData dashboardGraphData =
         objectMapper.readValue(response.getContentAsString(), DashboardGraphData.class);
-    assertEquals(0, dashboardGraphData.getGraphData().size());
-    assertEquals(BigDecimal.valueOf(0), dashboardGraphData.getTotalSpend());
-    assertEquals(BigDecimal.valueOf(0), dashboardGraphData.getAverageSpend());
+    assertEquals(7, dashboardGraphData.getGraphData().size());
+    assertEquals(
+        BigDecimal.valueOf(0).setScale(2, RoundingMode.DOWN),
+        dashboardGraphData.getTotalSpend().setScale(2, RoundingMode.DOWN));
+    assertEquals(
+        BigDecimal.valueOf(0).setScale(2, RoundingMode.DOWN),
+        dashboardGraphData.getAverageSpend().setScale(2, RoundingMode.DOWN));
     log.info(response.getContentAsString());
   }
 }

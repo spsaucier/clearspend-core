@@ -10,5 +10,6 @@ import lombok.Getter;
 public class DashboardData {
 
   BigDecimal totalAmount;
+  BigDecimal averageAmount;
   List<GraphData> graphData;
 }

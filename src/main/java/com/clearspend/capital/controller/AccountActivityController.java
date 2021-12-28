@@ -102,7 +102,10 @@ public class AccountActivityController {
             ? dashboardData.getGraphData().stream()
                 .map(
                     graphData ->
-                        new GraphData(graphData.getAmount(), graphData.getOffsetDateTime()))
+                        new GraphData(
+                            graphData.getStartDate(),
+                            graphData.getEndDate(),
+                            graphData.getAmount()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
     return new DashboardGraphData(dashboardData.getTotalAmount(), averageSpend, graphDataList);

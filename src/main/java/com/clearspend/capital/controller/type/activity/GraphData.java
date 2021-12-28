@@ -4,13 +4,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 
 @AllArgsConstructor
 public class GraphData {
 
-  @JsonProperty("amount")
-  private BigDecimal amount;
+  @JsonProperty("from")
+  @NonNull
+  private OffsetDateTime from;
 
-  @JsonProperty("offsetDateTime")
-  private OffsetDateTime offsetDateTime;
+  @JsonProperty("to")
+  @NonNull
+  private OffsetDateTime to;
+
+  @JsonProperty("amount")
+  @NonNull
+  private BigDecimal amount;
 }

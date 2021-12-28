@@ -9,6 +9,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class GraphData {
 
+  private OffsetDateTime startDate;
+  private OffsetDateTime endDate;
   private BigDecimal amount;
-  private OffsetDateTime offsetDateTime;
+  private BigDecimal count;
 }

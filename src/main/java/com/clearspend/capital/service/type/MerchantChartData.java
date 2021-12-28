@@ -14,6 +14,7 @@ public class MerchantChartData {
   MerchantType merchantType;
   String name;
   String number;
+  String logoUrl;
 
   public MerchantChartData(String name, Amount amount) {
     this.name = name;
