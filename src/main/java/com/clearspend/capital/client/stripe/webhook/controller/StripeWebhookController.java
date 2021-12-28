@@ -41,8 +41,8 @@ public class StripeWebhookController {
 
   private final NetworkMessageService networkMessageService;
 
-  @PostMapping("/webhook")
-  private void webhook(HttpServletRequest request) {
+  @PostMapping("/webhook/connect")
+  private void connectWebhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
     // FIXME(kuchlein): need to encrypt the payload or simply drop the table. Kept like this to make
@@ -55,8 +55,8 @@ public class StripeWebhookController {
     try {
       String payload = IOUtils.toString(request.getReader());
       stripeWebhookLog.setRequest(payload);
-      log.info("payload: {}", payload);
-      event = Webhook.constructEvent(payload, sigHeader, stripeProperties.getSecret());
+      log.info("connect payload: {}", payload);
+      event = Webhook.constructEvent(payload, sigHeader, stripeProperties.getConnectSecret());
       stripeWebhookLog.setEventType(event.getType());
     } catch (IOException e) {
       stripeWebhookLog.setError(e.getMessage());
@@ -77,7 +77,78 @@ public class StripeWebhookController {
       // Deserialization failed, probably due to an API version mismatch.
       // Refer to the Javadoc documentation on `EventDataObjectDeserializer` for
       // instructions on how to handle this case, or return an error here.
-      throw new InvalidRequestException("failed to deserialize Stripe request");
+      throw new InvalidRequestException(
+          String.format("Unable to deserialize Stripe event data object for %s", event));
+      // throw new InvalidRequestException("failed to deserialize Stripe request");
+    }
+
+    // determine the event type and handle it
+    StripeEventType stripeEventType = StripeEventType.fromString(event.getType());
+    try {
+      switch (stripeEventType) {
+        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processPayment(
+            stripeEventType, dataObjectDeserializer);
+        case ISSUING_TRANSACTION_CREATED -> processCompletion(
+            stripeEventType, dataObjectDeserializer);
+        case ISSUING_CARD_CREATED -> processCard(stripeEventType, dataObjectDeserializer);
+        case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
+            stripeEventType, dataObjectDeserializer);
+        default -> {
+          String errorMessage = "unhandled eventType: " + event.getType();
+          log.error(errorMessage);
+          stripeWebhookLog.setError(errorMessage);
+        }
+      }
+    } catch (StripeException e) {
+      e.printStackTrace();
+    }
+
+    // capture total processing time or -1 if an error occurred
+    Instant end = Instant.now();
+    stripeWebhookLog.setProcessingTimeMs(
+        stripeWebhookLog.getError() != null ? Duration.between(start, end).toMillis() : -1);
+    stripeWebhookLogRepository.save(stripeWebhookLog);
+  }
+
+  @PostMapping("/webhook/direct")
+  private void directWebhook(HttpServletRequest request) {
+    Instant start = Instant.now();
+
+    // FIXME(kuchlein): need to encrypt the payload or simply drop the table. Kept like this to make
+    //  debugging easier
+    // record the data we get from Stripe into the database
+    StripeWebhookLog stripeWebhookLog = new StripeWebhookLog();
+
+    String sigHeader = request.getHeader("Stripe-Signature");
+    Event event;
+    try {
+      String payload = IOUtils.toString(request.getReader());
+      stripeWebhookLog.setRequest(payload);
+      log.info("direct payload: {}", payload);
+      event = Webhook.constructEvent(payload, sigHeader, stripeProperties.getDirectSecret());
+      stripeWebhookLog.setEventType(event.getType());
+    } catch (IOException e) {
+      stripeWebhookLog.setError(e.getMessage());
+      e.printStackTrace();
+      throw new InvalidRequestException("Failed to read body: " + e.getMessage());
+    } catch (SignatureVerificationException e) {
+      stripeWebhookLog.setError(e.getMessage());
+      e.printStackTrace();
+      throw new InvalidRequestException("Invalid signature: " + e.getMessage());
+    } finally {
+      // no matter what happens try to save the request into the database
+      stripeWebhookLog = stripeWebhookLogRepository.save(stripeWebhookLog);
+    }
+
+    // Deserialize the nested object inside the event
+    EventDataObjectDeserializer dataObjectDeserializer = event.getDataObjectDeserializer();
+    if (dataObjectDeserializer.getObject().isEmpty()) {
+      // Deserialization failed, probably due to an API version mismatch.
+      // Refer to the Javadoc documentation on `EventDataObjectDeserializer` for
+      // instructions on how to handle this case, or return an error here.
+      throw new InvalidRequestException(
+          String.format("Unable to deserialize Stripe event data object for %s", event));
+      // throw new InvalidRequestException("failed to deserialize Stripe request");
     }
 
     // determine the event type and handle it

@@ -103,7 +103,8 @@ client:
     forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-22ff7bff6c9c4c9d8692d826ca007eeb}
   stripe:
 #    secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
-    secret: "whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC"
+    connect-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
+    direct-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
     enable-telemetry: false
     connect-timeout: 2000

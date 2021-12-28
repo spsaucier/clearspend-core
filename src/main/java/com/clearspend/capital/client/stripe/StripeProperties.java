@@ -14,7 +14,8 @@ import org.springframework.context.annotation.Configuration;
 public class StripeProperties {
 
   private String apiKey;
-  private String secret;
+  private String directSecret;
+  private String connectSecret;
 
   private boolean enableTelemetry;
   private Integer connectTimeout;
