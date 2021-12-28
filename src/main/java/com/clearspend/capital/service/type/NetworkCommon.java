@@ -8,15 +8,18 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.Country;
-import com.clearspend.capital.data.model.enums.CreditOrDebit;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.MerchantData;
 import com.stripe.model.issuing.Transaction;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,8 @@ public class NetworkCommon {
   @NonNull private String cardRef;
 
   @NonNull private NetworkMessageType networkMessageType;
+
+  boolean allowPartialApproval;
 
   @NonNull private CreditOrDebit creditOrDebit;
 
@@ -49,6 +54,9 @@ public class NetworkCommon {
 
   @NonNull private String request;
 
+  // the amount we are approving this transaction for. Will be less than or equal to requestedAmount
+  @NonNull private Amount approvedAmount;
+
   private TypedId<BusinessId> businessId;
 
   private Allocation allocation;
@@ -63,16 +71,20 @@ public class NetworkCommon {
 
   private boolean postDecline = false;
 
+  private List<DeclineReason> declineReasons = new ArrayList<>();
+
   private AccountActivity accountActivity = new AccountActivity();
 
   public NetworkCommon(Authorization authorization, String rawJson) {
     cardRef = authorization.getCard().getId();
     networkMessageType = NetworkMessageType.PRE_AUTH;
+    allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount =
         Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
     creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
     requestedAmount = amount;
+    approvedAmount = Amount.of(amount.getCurrency());
 
     MerchantData merchantData = authorization.getMerchantData();
     merchantNumber = merchantData.getNetworkId();
@@ -101,6 +113,7 @@ public class NetworkCommon {
     Amount amount = Amount.fromStripeAmount(currency, transaction.getAmount());
     creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
     requestedAmount = amount;
+    approvedAmount = Amount.of(amount.getCurrency());
 
     MerchantData merchantData = transaction.getMerchantData();
     merchantNumber = merchantData.getNetworkId();

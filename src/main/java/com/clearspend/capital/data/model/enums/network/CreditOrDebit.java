@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.model.enums;
+package com.clearspend.capital.data.model.enums.network;
 
 import com.clearspend.capital.common.data.model.Amount;
 import java.math.BigDecimal;

@@ -9,7 +9,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
-import com.clearspend.capital.data.model.enums.CreditOrDebit;
+import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.service.LedgerService.BankJournalEntry;
 import com.clearspend.capital.service.LedgerService.NetworkJournalEntry;

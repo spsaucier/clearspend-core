@@ -14,9 +14,13 @@ import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Transaction;
 import com.stripe.net.Webhook;
+import com.stripe.param.issuing.AuthorizationApproveParams;
+import com.stripe.param.issuing.AuthorizationDeclineParams;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/stripe/webhook")
+@RequestMapping("/stripe")
 @RequiredArgsConstructor
 @Slf4j
 public class StripeWebhookController {
@@ -37,7 +41,7 @@ public class StripeWebhookController {
 
   private final NetworkMessageService networkMessageService;
 
-  @PostMapping("")
+  @PostMapping("/webhook")
   private void webhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
@@ -88,18 +92,19 @@ public class StripeWebhookController {
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
             stripeEventType, dataObjectDeserializer);
         default -> {
-          String msg = "unsupported eventType: " + event.getType();
-          log.error(msg);
-          throw new InvalidRequestException(msg);
+          String errorMessage = "unhandled eventType: " + event.getType();
+          log.error(errorMessage);
+          stripeWebhookLog.setError(errorMessage);
         }
       }
     } catch (StripeException e) {
       e.printStackTrace();
     }
 
-    // capture total processing time
+    // capture total processing time or -1 if an error occurred
     Instant end = Instant.now();
-    stripeWebhookLog.setProcessingTimeMs(Duration.between(start, end).toMillis());
+    stripeWebhookLog.setProcessingTimeMs(
+        stripeWebhookLog.getError() != null ? Duration.between(start, end).toMillis() : -1);
     stripeWebhookLogRepository.save(stripeWebhookLog);
   }
 
@@ -122,10 +127,20 @@ public class StripeWebhookController {
         NetworkCommon common = new NetworkCommon(auth, dataObjectDeserializer.getRawJson());
         NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
 
+        Map<String, String> metadata = getMetadata(common, networkMessage);
+
         if (common.isPostDecline()) {
-          auth.decline();
+          AuthorizationDeclineParams authorizationDeclineParams =
+              AuthorizationDeclineParams.builder().setMetadata(metadata).build();
+          auth.decline(authorizationDeclineParams);
         } else {
-          auth.approve();
+          auth.setApproved(true);
+          AuthorizationApproveParams authorizationApproveParams =
+              AuthorizationApproveParams.builder()
+                  .setAmount(common.getApprovedAmount().toStripeAmount())
+                  .setMetadata(metadata)
+                  .build();
+          auth.approve(authorizationApproveParams);
         }
       }
       case ISSUING_AUTHORIZATION_CREATED -> {
@@ -141,4 +156,32 @@ public class StripeWebhookController {
   private void processCardHolder(
       StripeEventType stripeEventType, EventDataObjectDeserializer dataObjectDeserializer)
       throws StripeException {}
+
+  private Map<String, String> getMetadata(NetworkCommon common, NetworkMessage networkMessage) {
+    Map<String, String> metadata = new HashMap<>();
+
+    if (networkMessage.getId() != null) {
+      metadata.put("networkMessageId", networkMessage.getId().toString());
+    }
+    if (common.getBusinessId() != null) {
+      metadata.put("businessId", common.getBusinessId().toString());
+    }
+    if (common.getAllocation().getId() != null) {
+      metadata.put("allocationId", common.getAllocation().getId().toString());
+    }
+    if (common.getCard() != null) {
+      metadata.put("cardId", common.getCard().getId().toString());
+    }
+    if (common.getAllocation() != null) {
+      metadata.put("accountId", common.getAllocation().getId().toString());
+    }
+    if (networkMessage.getAdjustmentId() != null) {
+      metadata.put("adjustmentId", networkMessage.getAdjustmentId().toString());
+    }
+    if (networkMessage.getHoldId() != null) {
+      metadata.put("holdId", networkMessage.getHoldId().toString());
+    }
+
+    return metadata;
+  }
 }

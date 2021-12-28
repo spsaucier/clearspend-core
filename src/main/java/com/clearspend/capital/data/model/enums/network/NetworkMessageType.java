@@ -1,4 +1,6 @@
-package com.clearspend.capital.data.model.enums;
+package com.clearspend.capital.data.model.enums.network;
+
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 
 public enum NetworkMessageType {
   PRE_AUTH(AccountActivityType.NETWORK_PRE_AUTH),

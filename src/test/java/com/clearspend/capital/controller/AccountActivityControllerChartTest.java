@@ -22,7 +22,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;

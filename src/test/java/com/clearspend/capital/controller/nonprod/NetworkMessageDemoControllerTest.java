@@ -14,7 +14,7 @@ import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;

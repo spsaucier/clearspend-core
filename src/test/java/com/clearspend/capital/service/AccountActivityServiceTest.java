@@ -19,7 +19,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;

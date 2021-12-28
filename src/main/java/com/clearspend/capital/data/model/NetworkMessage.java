@@ -10,7 +10,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.NetworkMessageId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.data.model.enums.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.util.UUID;
 import javax.persistence.Column;

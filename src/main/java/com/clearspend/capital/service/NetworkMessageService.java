@@ -1,7 +1,10 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.CardStatus;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
@@ -147,10 +150,33 @@ public class NetworkMessageService {
   }
 
   private void processPreAuth(NetworkCommon common) {
-    if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+    if (!common.getCard().getStatus().equals(CardStatus.OPEN)) {
+      common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
       common.setPostDecline(true);
       return;
     }
+
+    // account has no money at all
+    if (common.getAccount().getAvailableBalance().isLessThanOrEqualToZero()) {
+      common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
+      common.setPostDecline(true);
+      return;
+    }
+
+    // account has insufficient funds and partial approval isn't an option
+    if (!common.isAllowPartialApproval()) {
+      if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+        common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
+        common.setPostDecline(true);
+        return;
+      }
+      common.setApprovedAmount(common.getRequestedAmount());
+    } else {
+      common.setApprovedAmount(
+          Amount.min(common.getAccount().getAvailableBalance(), common.getRequestedAmount()));
+    }
+
+    // either we have sufficient funds or we can do a partial approval
 
     common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);
@@ -161,6 +187,7 @@ public class NetworkMessageService {
       common.setPostDecline(true);
       return;
     }
+    common.setApprovedAmount(common.getRequestedAmount());
 
     common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);

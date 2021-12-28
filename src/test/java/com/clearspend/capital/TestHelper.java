@@ -544,10 +544,11 @@ public class TestHelper {
     String email = generateEmail();
     String password = generatePassword();
     Program program = retrievePooledProgram();
+    String legalName = faker.company().name() + " " + UUID.randomUUID(); // more unique names
     Business business =
         businessService.createBusiness(
             businessId,
-            faker.company().name(),
+            legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
             BusinessType.LLC,
             generateEntityAddress(),
             generateEmployerIdentificationNumber(),

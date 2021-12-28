@@ -50,6 +50,11 @@ public class Amount {
     };
   }
 
+  public static Amount min(Amount left, Amount right) {
+    assert left.currency.equals(right.currency);
+    return left.isLessThan(right) ? left : right;
+  }
+
   public long toStripeAmount() {
     return switch (currency) {
       case UNSPECIFIED -> 0;
@@ -92,6 +97,11 @@ public class Amount {
   @JsonIgnore
   public boolean isGreaterThanZero() {
     return amount.compareTo(BigDecimal.ZERO) > 0;
+  }
+
+  @JsonIgnore
+  public boolean isLessThanOrEqualToZero() {
+    return amount.compareTo(BigDecimal.ZERO) <= 0;
   }
 
   @JsonIgnore
