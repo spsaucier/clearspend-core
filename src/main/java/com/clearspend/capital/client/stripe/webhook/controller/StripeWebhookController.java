@@ -17,6 +17,7 @@ import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Transaction;
 import com.stripe.net.Webhook;
 import com.stripe.param.issuing.AuthorizationApproveParams;
+import com.stripe.param.issuing.AuthorizationApproveParams.Builder;
 import com.stripe.param.issuing.AuthorizationDeclineParams;
 import java.io.IOException;
 import java.time.Duration;
@@ -187,15 +188,27 @@ public class StripeWebhookController {
         if (common.isPostDecline()) {
           AuthorizationDeclineParams authorizationDeclineParams =
               AuthorizationDeclineParams.builder().setMetadata(metadata).build();
+          log.debug(
+              "Stripe authorization {} for {} declined in {} for {}",
+              auth.getId(),
+              common.getRequestedAmount(),
+              networkMessage != null ? networkMessage.getId() : "n/a",
+              common.getRequestedAmount());
           auth.decline(authorizationDeclineParams);
         } else {
           auth.setApproved(true);
-          AuthorizationApproveParams authorizationApproveParams =
-              AuthorizationApproveParams.builder()
-                  .setAmount(common.getApprovedAmount().toStripeAmount())
-                  .setMetadata(metadata)
-                  .build();
-          auth.approve(authorizationApproveParams);
+          Builder authorizationApproveParams =
+              AuthorizationApproveParams.builder().setMetadata(metadata);
+          if (common.isAllowPartialApproval()) {
+            authorizationApproveParams.setAmount(common.getApprovedAmount().toStripeAmount());
+          }
+          log.debug(
+              "Stripe authorization {} for {} approved in {} for {}",
+              auth.getId(),
+              common.getRequestedAmount(),
+              networkMessage.getId(),
+              common.getRequestedAmount());
+          auth.approve(authorizationApproveParams.build());
         }
       }
       case ISSUING_AUTHORIZATION_CREATED -> {
