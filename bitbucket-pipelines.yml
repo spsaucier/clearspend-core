@@ -20,6 +20,23 @@ pipelines:
           - postgres
         script:
           - ./gradlew build
+    - step:
+        name: Build image and push to GCR
+        image: google/cloud-sdk:latest
+        artifacts:
+          - build/libs/*.jar
+        caches:
+          - gradle
+        services:
+          - docker
+        script:
+          - echo "$GCLOUD_API_KEYFILE" | base64 -d > ~/.gcloud-api-key.json
+          - export BITBUCKET_COMMIT_SHORT="${BITBUCKET_COMMIT::7}"
+          - gcloud auth activate-service-account --key-file ~/.gcloud-api-key.json
+          - docker login -u _json_key --password-stdin https://$DOCKER_GCR_REPO_URL < ~/.gcloud-api-key.json
+          - docker build -t $DOCKER_IMAGE_NAME:${BITBUCKET_COMMIT} .
+          - docker tag $DOCKER_IMAGE_NAME:${BITBUCKET_COMMIT} $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:$BITBUCKET_COMMIT_SHORT
+          - docker push $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME
   branches:
     master:
       - step:
@@ -45,21 +62,40 @@ pipelines:
             - docker
           script:
             - echo "$GCLOUD_API_KEYFILE" | base64 -d > ~/.gcloud-api-key.json
+            - export BITBUCKET_COMMIT_SHORT="${BITBUCKET_COMMIT::7}"
             - gcloud auth activate-service-account --key-file ~/.gcloud-api-key.json
             - docker login -u _json_key --password-stdin https://$DOCKER_GCR_REPO_URL < ~/.gcloud-api-key.json
             - docker build -t $DOCKER_IMAGE_NAME:${BITBUCKET_COMMIT} .
             - docker tag $DOCKER_IMAGE_NAME:${BITBUCKET_COMMIT} $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:latest
-            - docker push $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:latest
+            - docker tag $DOCKER_IMAGE_NAME:${BITBUCKET_COMMIT} $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:$BITBUCKET_COMMIT_SHORT
+            - docker push $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME
       - step:
           name: Deploy image to GKE
           image: google/cloud-sdk:latest
+          deployment: test
           runs-on:
-            - 'self.hosted'
+            - 'env.dev'
           script:
             - echo "$GKE_DEPLOY_KEY" | base64 -d > ~/.gcloud-api-key.json
             - gcloud auth activate-service-account --key-file ~/.gcloud-api-key.json
             - gcloud config set project $GCLOUD_PROJECT_ID
             - gcloud container clusters get-credentials $GCLOUD_CLUSTER --zone=$GCLOUD_ZONE --project $GCLOUD_PROJECT_ID
+            - kubectl rollout restart deployment capital-core
+    release:
+      - step:
+          name: Deploy image to QA
+          image: google/cloud-sdk:latest
+          deployment: staging
+          runs-on:
+            - 'env.qa'
+          script:
+            - echo "$GKE_DEPLOY_KEY" | base64 -d > ~/.gcloud-api-key.json
+            - gcloud auth activate-service-account --key-file ~/.gcloud-api-key.json
+            - gcloud config set project $GCLOUD_PROJECT_ID
+            - gcloud container clusters get-credentials $GCLOUD_QA_CLUSTER --zone=$GCLOUD_ZONE --project $GCLOUD_PROJECT_ID
+            - export BITBUCKET_COMMIT_SHORT="${BITBUCKET_COMMIT::7}"
+            - gcloud container images untag $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:QA --quiet
+            - gcloud container images add-tag $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:$BITBUCKET_COMMIT_SHORT $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:QA --quiet
             - kubectl rollout restart deployment capital-core
 
 definitions:
