@@ -223,13 +223,13 @@ public class StripeWebhookController {
     if (common.getBusinessId() != null) {
       metadata.put("businessId", common.getBusinessId().toString());
     }
-    if (common.getAllocation().getId() != null) {
+    if (common.getAllocation() != null && common.getAllocation().getId() != null) {
       metadata.put("allocationId", common.getAllocation().getId().toString());
     }
-    if (common.getCard() != null) {
+    if (common.getCard() != null && common.getCard().getId() != null) {
       metadata.put("cardId", common.getCard().getId().toString());
     }
-    if (common.getAllocation() != null) {
+    if (common.getAllocation() != null && common.getAllocation().getId() != null) {
       metadata.put("accountId", common.getAllocation().getId().toString());
     }
 
