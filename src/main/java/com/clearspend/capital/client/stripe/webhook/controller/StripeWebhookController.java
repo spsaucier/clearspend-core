@@ -85,7 +85,7 @@ public class StripeWebhookController {
   private void directWebhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
-    ParseRecord parseRecord = parseRequest("direct", request, stripeProperties.getConnectSecret());
+    ParseRecord parseRecord = parseRequest("direct", request, stripeProperties.getDirectSecret());
 
     // determine the event type and handle it
     StripeEventType stripeEventType =
