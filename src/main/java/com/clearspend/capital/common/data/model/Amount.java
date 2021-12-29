@@ -114,7 +114,7 @@ public class Amount {
     return amount.compareTo(BigDecimal.ZERO) > 0;
   }
 
-  public void ensurePositive() {
+  public void ensureNonNegative() {
     if (isNegative()) {
       throw new AmountException(AmountType.POSITIVE, this);
     }

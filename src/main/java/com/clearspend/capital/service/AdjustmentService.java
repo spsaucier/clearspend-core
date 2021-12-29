@@ -112,7 +112,7 @@ public class AdjustmentService {
   @Transactional(TxType.REQUIRED)
   public Adjustment recordNetworkAdjustment(
       Account account, @NonNull CreditOrDebit creditOrDebit, Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
 
     NetworkJournalEntry networkJournalEntry =
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), creditOrDebit, amount);

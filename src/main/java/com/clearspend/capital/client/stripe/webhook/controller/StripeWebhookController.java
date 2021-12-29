@@ -54,7 +54,7 @@ public class StripeWebhookController {
         StripeEventType.fromString(parseRecord.stripeWebhookLog.getEventType());
     try {
       switch (stripeEventType) {
-        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processPayment(
+        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
             stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
         case ISSUING_TRANSACTION_CREATED -> processCompletion(
             stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
@@ -92,7 +92,7 @@ public class StripeWebhookController {
         StripeEventType.fromString(parseRecord.stripeWebhookLog.getEventType());
     try {
       switch (stripeEventType) {
-        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processPayment(
+        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
             stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
         case ISSUING_TRANSACTION_CREATED -> processCompletion(
             stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
@@ -170,14 +170,7 @@ public class StripeWebhookController {
     return new ParseRecord(stripeWebhookLog, stripeObject, payload);
   }
 
-  private void processCompletion(
-      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson) {
-    Transaction transaction = (Transaction) stripeObject;
-    NetworkCommon common = new NetworkCommon(transaction, rawJson);
-    NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
-  }
-
-  private void processPayment(
+  private void processAuthorization(
       StripeEventType stripeEventType, StripeObject stripeObject, String rawJson)
       throws StripeException {
     switch (stripeEventType) {
@@ -211,6 +204,13 @@ public class StripeWebhookController {
     }
   }
 
+  private void processCompletion(
+      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson) {
+    Transaction transaction = (Transaction) stripeObject;
+    NetworkCommon common = new NetworkCommon(transaction, rawJson);
+    NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
+  }
+
   private void processCard(StripeEventType stripeEventType, StripeObject stripeObject)
       throws StripeException {}
 
@@ -220,9 +220,6 @@ public class StripeWebhookController {
   private Map<String, String> getMetadata(NetworkCommon common, NetworkMessage networkMessage) {
     Map<String, String> metadata = new HashMap<>();
 
-    if (networkMessage.getId() != null) {
-      metadata.put("networkMessageId", networkMessage.getId().toString());
-    }
     if (common.getBusinessId() != null) {
       metadata.put("businessId", common.getBusinessId().toString());
     }
@@ -235,11 +232,17 @@ public class StripeWebhookController {
     if (common.getAllocation() != null) {
       metadata.put("accountId", common.getAllocation().getId().toString());
     }
-    if (networkMessage.getAdjustmentId() != null) {
-      metadata.put("adjustmentId", networkMessage.getAdjustmentId().toString());
-    }
-    if (networkMessage.getHoldId() != null) {
-      metadata.put("holdId", networkMessage.getHoldId().toString());
+
+    if (networkMessage != null) {
+      if (networkMessage.getId() != null) {
+        metadata.put("networkMessageId", networkMessage.getId().toString());
+      }
+      if (networkMessage.getAdjustmentId() != null) {
+        metadata.put("adjustmentId", networkMessage.getAdjustmentId().toString());
+      }
+      if (networkMessage.getHoldId() != null) {
+        metadata.put("holdId", networkMessage.getHoldId().toString());
+      }
     }
 
     return metadata;

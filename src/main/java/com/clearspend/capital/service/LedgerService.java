@@ -111,7 +111,7 @@ public class LedgerService {
       TypedId<LedgerAccountId> ledgerAccountId,
       @NonNull CreditOrDebit creditOrDebit,
       Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
 
     LedgerAccount networkLedgerAccount =
         getOrCreateLedgerAccount(LedgerAccountType.NETWORK, amount.getCurrency());

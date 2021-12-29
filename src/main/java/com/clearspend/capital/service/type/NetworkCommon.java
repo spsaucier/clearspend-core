@@ -75,14 +75,18 @@ public class NetworkCommon {
 
   private AccountActivity accountActivity = new AccountActivity();
 
+  // Stripe authorizations
   public NetworkCommon(Authorization authorization, String rawJson) {
     cardRef = authorization.getCard().getId();
     networkMessageType = NetworkMessageType.PRE_AUTH;
-    allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
     Currency currency = Currency.of(authorization.getCurrency());
-    Amount amount =
-        Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
-    creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
+    Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
+    if (authorization.getPendingRequest() != null) {
+      allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
+      amount = Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
+    }
+    amount.ensureNonNegative();
+    creditOrDebit = CreditOrDebit.DEBIT; // assuming all authorizations are debits
     requestedAmount = amount;
     approvedAmount = Amount.of(amount.getCurrency());
 
@@ -106,6 +110,7 @@ public class NetworkCommon {
     request = rawJson;
   }
 
+  // Stripe completions (or more incorrect captures)
   public NetworkCommon(Transaction transaction, String rawJson) {
     cardRef = transaction.getCard();
     networkMessageType = NetworkMessageType.FINANCIAL_AUTH;

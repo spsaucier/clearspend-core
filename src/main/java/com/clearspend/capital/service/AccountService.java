@@ -81,7 +81,7 @@ public class AccountService {
       Allocation rootAllocation,
       Amount amount,
       boolean placeHold) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
 
     businessLimitService.ensureWithinDepositLimit(businessId, amount);
 
@@ -111,7 +111,7 @@ public class AccountService {
   @Transactional(TxType.REQUIRED)
   public AdjustmentAndHoldRecord withdrawFunds(
       TypedId<BusinessId> businessId, Account rootAllocationAccount, Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
 
     if (rootAllocationAccount.getAvailableBalance().isLessThan(amount)) {
       throw new InsufficientFundsException(
@@ -133,7 +133,7 @@ public class AccountService {
       @NonNull CreditOrDebit creditOrDebit,
       Amount amount,
       OffsetDateTime expirationDate) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
     Amount holdAmount = creditOrDebit == CreditOrDebit.DEBIT ? amount.negate() : amount;
     Hold hold =
         holdRepository.save(
@@ -153,7 +153,7 @@ public class AccountService {
   @Transactional(TxType.REQUIRED)
   public AdjustmentRecord recordNetworkAdjustment(
       Account account, @NonNull CreditOrDebit creditOrDebit, @NonNull Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
 
     Adjustment adjustment =
         adjustmentService.recordNetworkAdjustment(account, creditOrDebit, amount);
@@ -240,7 +240,7 @@ public class AccountService {
   @Transactional(TxType.REQUIRED)
   public AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
     if (fromAccountId.equals(toAccountId)) {
       throw new IllegalArgumentException(
           String.format("fromAccountId equals toAccountId: %s", fromAccountId));

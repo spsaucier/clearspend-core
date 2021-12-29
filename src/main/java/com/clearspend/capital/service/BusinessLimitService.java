@@ -42,7 +42,7 @@ public class BusinessLimitService {
   }
 
   public void ensureWithinDepositLimit(TypedId<BusinessId> businessId, Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
             businessId, List.of(AdjustmentType.DEPOSIT), 30);
@@ -61,7 +61,7 @@ public class BusinessLimitService {
   }
 
   public void ensureWithinWithdrawLimit(TypedId<BusinessId> businessId, Amount amount) {
-    amount.ensurePositive();
+    amount.ensureNonNegative();
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
             businessId, List.of(AdjustmentType.WITHDRAW), 30);

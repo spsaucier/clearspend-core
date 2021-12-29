@@ -4,6 +4,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.CardStatus;
+import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
@@ -46,8 +47,17 @@ public class NetworkMessageService {
   @Transactional
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
     // update common with data we have locally
-    common.getRequestedAmount().ensurePositive();
+    common.getRequestedAmount().ensureNonNegative();
     CardRecord cardRecord = cardService.getCardByCardRef(common.getCardRef());
+
+    // if the card isn't found, set decline bits and return to caller
+    if (cardRecord == null) {
+      common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
+      common.setPostDecline(true);
+      log.error("failed to find card with cardRef: " + common.getCardRef());
+      return null;
+    }
+
     common.setBusinessId(cardRecord.card().getBusinessId());
     common.setCard(cardRecord.card());
     common.setAccount(cardRecord.account());
@@ -150,6 +160,9 @@ public class NetworkMessageService {
   }
 
   private void processPreAuth(NetworkCommon common) {
+    assert common.getCreditOrDebit() == CreditOrDebit.DEBIT;
+    common.getRequestedAmount().ensureNonNegative();
+
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
       common.setPostDecline(true);

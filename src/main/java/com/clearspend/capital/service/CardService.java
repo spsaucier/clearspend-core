@@ -32,6 +32,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.transaction.Transactional;
 import lombok.NonNull;
@@ -157,11 +158,12 @@ public class CardService {
 
   // should only be used by NetworkService
   public CardRecord getCardByCardRef(@NonNull String cardRef) {
-    Card card =
-        cardRepository
-            .findByExternalRef(cardRef)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardRef));
+    Optional<Card> cardOptional = cardRepository.findByExternalRef(cardRef);
+    if (cardOptional.isEmpty()) {
+      return null;
+    }
 
+    Card card = cardOptional.get();
     // TODO(kuchlein): Not sure if we want to be doing this or not...
     //    if (card.getFundingType() == FundingType.POOLED) {
     //      return new CardRecord(card, null);
