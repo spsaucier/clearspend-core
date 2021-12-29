@@ -191,30 +191,24 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                           stringBuilder.append(" and account_activity.allocation_id = ? "));
                   stringBuilder.append(
                       " and account_activity.card_card_id is not null )"
-                          + " from (SELECT day as startdate, day + ((( ?::timestamp - ?::timestamp) / ?)) as enddate "
-                          + " FROM generate_series ( ?::timestamp, "
+                          + " from (select day as startdate, day + ((( ?::timestamp - ?::timestamp) / ?)) as enddate "
+                          + " from generate_series ( ?::timestamp, "
                           + "                        ?::timestamp, "
                           + "                       (( ?::timestamp - ?::timestamp) / ?)) day limit ?) as custom_time_series ");
 
                   PreparedStatement preparedStatement =
                       connection.prepareStatement(stringBuilder.toString());
-                  int parameterIndex = 0;
-                  preparedStatement.setObject(++parameterIndex, businessId.toUuid());
-                  if (criteria.getUserId() != null) {
-                    preparedStatement.setObject(++parameterIndex, criteria.getUserId().toUuid());
-                  }
-                  if (criteria.getAllocationId() != null) {
-                    preparedStatement.setObject(
-                        ++parameterIndex, criteria.getAllocationId().toUuid());
-                  }
 
-                  preparedStatement.setObject(++parameterIndex, businessId.toUuid());
-                  if (criteria.getUserId() != null) {
-                    preparedStatement.setObject(++parameterIndex, criteria.getUserId().toUuid());
-                  }
-                  if (criteria.getAllocationId() != null) {
-                    preparedStatement.setObject(
-                        ++parameterIndex, criteria.getAllocationId().toUuid());
+                  int parameterIndex = 0;
+                  for (int i = 0; i < 2; i++) {
+                    preparedStatement.setObject(++parameterIndex, businessId.toUuid());
+                    if (criteria.getUserId() != null) {
+                      preparedStatement.setObject(++parameterIndex, criteria.getUserId().toUuid());
+                    }
+                    if (criteria.getAllocationId() != null) {
+                      preparedStatement.setObject(
+                          ++parameterIndex, criteria.getAllocationId().toUuid());
+                    }
                   }
 
                   int slices =

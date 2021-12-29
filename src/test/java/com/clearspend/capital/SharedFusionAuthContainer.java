@@ -32,7 +32,7 @@ public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuth
                 "DATABASE_ROOT_PASSWORD", "docker",
                 "DATABASE_USERNAME", "fusionauth",
                 "DATABASE_PASSWORD", "docker",
-                "FUSIONAUTH_APP_MEMORY", "128m",
+                "FUSIONAUTH_APP_MEMORY", "192m",
                 "FUSIONAUTH_APP_RUNTIME_MODE", "development",
                 "FUSIONAUTH_APP_URL", "http://localhost:9011",
                 "SEARCH_TYPE", "database",

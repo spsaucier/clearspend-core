@@ -29,7 +29,7 @@ import lombok.RequiredArgsConstructor;
 public class NetworkCommon {
 
   // the identifier for this card at Stripe
-  @NonNull private String cardRef;
+  @NonNull private String cardExternalRef;
 
   @NonNull private NetworkMessageType networkMessageType;
 
@@ -77,7 +77,7 @@ public class NetworkCommon {
 
   // Stripe authorizations
   public NetworkCommon(Authorization authorization, String rawJson) {
-    cardRef = authorization.getCard().getId();
+    cardExternalRef = authorization.getCard().getId();
     networkMessageType = NetworkMessageType.PRE_AUTH;
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
@@ -112,11 +112,13 @@ public class NetworkCommon {
 
   // Stripe completions (or more incorrect captures)
   public NetworkCommon(Transaction transaction, String rawJson) {
-    cardRef = transaction.getCard();
+    cardExternalRef = transaction.getCard();
     networkMessageType = NetworkMessageType.FINANCIAL_AUTH;
     Currency currency = Currency.of(transaction.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, transaction.getAmount());
     creditOrDebit = amount.isPositive() ? CreditOrDebit.CREDIT : CreditOrDebit.DEBIT;
+    // FIXME(kuchlein): determine how credits show up
+    creditOrDebit = CreditOrDebit.DEBIT;
     requestedAmount = amount;
     approvedAmount = Amount.of(amount.getCurrency());
 

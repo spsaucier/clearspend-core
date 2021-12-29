@@ -48,13 +48,13 @@ public class NetworkMessageService {
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
     // update common with data we have locally
     common.getRequestedAmount().ensureNonNegative();
-    CardRecord cardRecord = cardService.getCardByCardRef(common.getCardRef());
+    CardRecord cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
 
     // if the card isn't found, set decline bits and return to caller
     if (cardRecord == null) {
       common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
       common.setPostDecline(true);
-      log.error("failed to find card with cardRef: " + common.getCardRef());
+      log.error("failed to find card with externalRef: " + common.getCardExternalRef());
       return null;
     }
 

@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +18,7 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
@@ -105,68 +107,82 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
             program,
             Currency.USD);
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(10))));
+    NetworkMessage networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.PRE_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(10))));
+    assertThat(networkMessage.getHoldId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(10))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.PRE_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(10))));
+    assertThat(networkMessage.getHoldId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(2))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.FINANCIAL_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(2))));
+    assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(4))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.FINANCIAL_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(4))));
+    assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(8))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.FINANCIAL_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(8))));
+    assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(20))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.FINANCIAL_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(20))));
+    assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            program,
-            Amount.of(Currency.USD, BigDecimal.valueOf(9))));
+    networkMessage =
+        networkMessageService.processNetworkMessage(
+            TestDataController.generateNetworkCommon(
+                NetworkMessageType.FINANCIAL_AUTH,
+                user.user(),
+                card,
+                createBusinessRecord.allocationRecord().account(),
+                program,
+                Amount.of(Currency.USD, BigDecimal.valueOf(9))));
+    assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();
     graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
@@ -189,11 +205,10 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
         objectMapper.readValue(response.getContentAsString(), DashboardGraphData.class);
     assertEquals(7, dashboardGraphData.getGraphData().size());
     assertEquals(
-        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10, 0),
+        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10, 0).negate(),
         dashboardGraphData.getTotalSpend().setScale(0, RoundingMode.DOWN));
     assertEquals(
-        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10)
-            .divide(new BigDecimal(7), 2, RoundingMode.DOWN),
+        dashboardGraphData.getTotalSpend().divide(new BigDecimal(7), 2, RoundingMode.DOWN),
         dashboardGraphData.getAverageSpend());
     log.info(response.getContentAsString());
   }

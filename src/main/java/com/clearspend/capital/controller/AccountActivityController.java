@@ -97,6 +97,7 @@ public class AccountActivityController {
                 .getTotalAmount()
                 .divide(new BigDecimal(dashboardData.getGraphData().size()), 2, RoundingMode.DOWN)
             : BigDecimal.ZERO;
+
     List<GraphData> graphDataList =
         dashboardData.getGraphData().size() > 0
             ? dashboardData.getGraphData().stream()
@@ -108,6 +109,7 @@ public class AccountActivityController {
                             graphData.getAmount()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
+
     return new DashboardGraphData(dashboardData.getTotalAmount(), averageSpend, graphDataList);
   }
 

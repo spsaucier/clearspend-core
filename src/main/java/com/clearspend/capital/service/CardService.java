@@ -157,8 +157,8 @@ public class CardService {
   }
 
   // should only be used by NetworkService
-  public CardRecord getCardByCardRef(@NonNull String cardRef) {
-    Optional<Card> cardOptional = cardRepository.findByExternalRef(cardRef);
+  public CardRecord getCardByExternalRef(@NonNull String externalRef) {
+    Optional<Card> cardOptional = cardRepository.findByExternalRef(externalRef);
     if (cardOptional.isEmpty()) {
       return null;
     }
