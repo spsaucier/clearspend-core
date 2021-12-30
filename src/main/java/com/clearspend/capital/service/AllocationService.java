@@ -315,15 +315,6 @@ public class AllocationService {
           IdType.ACCOUNT_ID, accountId, allocationDetailsRecord.account().getId());
     }
 
-    // TODO: Allocations have a default program - the question is do we need to keep the funding
-    // type?
-    /*
-        Program program = programService.retrieveProgram(allocationDetailsRecord.allocation.getProgramId());
-        if (program.getFundingType() != FundingType.INDIVIDUAL) {
-          throw new TypeMismatchException(FundingType.INDIVIDUAL, program.getFundingType());
-        }
-    */
-
     CardDetailsRecord cardDetailsRecord = cardService.getCard(business.getId(), cardId);
 
     AccountReallocateFundsRecord reallocateFundsRecord;

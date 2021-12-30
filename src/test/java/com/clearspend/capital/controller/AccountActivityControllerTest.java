@@ -18,17 +18,16 @@ import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
-import com.clearspend.capital.service.AccountActivityService;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
@@ -60,11 +59,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   private final BusinessService businessService;
   private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
-  private final AccountActivityService accountActivityService;
   private final AccountActivityRepository accountActivityRepository;
-
-  private Bin bin;
-  private Program program;
 
   @SneakyThrows
   @Test
@@ -144,10 +139,6 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredByTextAccountActivityPageData() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -194,8 +185,9 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             business,
             createBusinessRecord.allocationRecord().allocation(),
             user.user(),
-            program,
-            Currency.USD);
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(100));
 
@@ -205,7 +197,6 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
-            program,
             amount));
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
@@ -243,10 +234,6 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredAccountActivityPageDataForVisibleAfterCase() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -303,10 +290,6 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredAccountActivityPageDataForHideAfterCase() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();

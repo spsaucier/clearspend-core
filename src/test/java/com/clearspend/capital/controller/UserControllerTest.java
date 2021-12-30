@@ -23,19 +23,18 @@ import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.ProgramService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -67,14 +66,11 @@ public class UserControllerTest extends BaseCapitalTest {
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
-  private final ProgramService programService;
 
   private final Faker faker = new Faker();
 
-  private Bin bin;
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private Program program;
   private CreateUpdateUserRecord user;
   private Cookie userCookie;
   private Card card;
@@ -83,9 +79,7 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       user = testHelper.createUser(createBusinessRecord.business());
@@ -95,15 +89,17 @@ public class UserControllerTest extends BaseCapitalTest {
               business,
               createBusinessRecord.allocationRecord().allocation(),
               user.user(),
-              program,
-              Currency.USD);
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
       card2 =
           testHelper.issueCard(
               business,
               createBusinessRecord.allocationRecord().allocation(),
               user.user(),
-              program,
-              Currency.USD);
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
     }
   }
 
@@ -422,10 +418,11 @@ public class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie =
         testHelper.login(userRecord.user().getEmail().getEncrypted(), userRecord.password());
 
-    final Program program = testHelper.retrievePooledProgram();
     CardRecord cardRecord =
         cardService.issueCard(
-            program,
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
             userRecord.user().getBusinessId(),
             createBusinessRecord.allocationRecord().allocation().getId(),
             userRecord.user().getId(),
@@ -443,7 +440,6 @@ public class UserControllerTest extends BaseCapitalTest {
             userRecord.user(),
             cardRecord.card(),
             cardRecord.account(),
-            program,
             amount));
 
     MockHttpServletResponse response =
@@ -474,7 +470,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void getUsersForBusinessIdByUserName() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -526,7 +521,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void searchForUsers() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -562,20 +556,23 @@ public class UserControllerTest extends BaseCapitalTest {
         business,
         allocation.allocation(),
         user.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation.allocation(),
         user.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation.allocation(),
         user1.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setPageRequest(new PageRequest(0, 10));
@@ -606,7 +603,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void searchForUsersFilteredByAllocation() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -656,20 +652,23 @@ public class UserControllerTest extends BaseCapitalTest {
         business,
         allocation.allocation(),
         user.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation2.allocation(),
         user.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation3.allocation(),
         user1.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setAllocations(List.of(allocation3.allocation().getId()));
@@ -701,7 +700,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void searchForUsersFilteredByCardType() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -751,20 +749,23 @@ public class UserControllerTest extends BaseCapitalTest {
         business,
         allocation.allocation(),
         user.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation2.allocation(),
         user.user(),
-        testHelper.retrieveIndividualProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     testHelper.issueCard(
         business,
         allocation3.allocation(),
         user1.user(),
-        testHelper.retrievePooledProgram(),
-        Currency.USD);
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setHasPhysicalCard(true);
@@ -788,18 +789,16 @@ public class UserControllerTest extends BaseCapitalTest {
             objectMapper
                 .getTypeFactory()
                 .constructParametricType(PagedData.class, UserPageData.class));
-    Assertions.assertEquals(1, userPageData.getTotalElements());
+    log.debug("userPageData: {}", userPageData);
+    Assertions.assertEquals(2, userPageData.getTotalElements());
     Assertions.assertTrue(
         userPageData.getContent().get(0).getCardInfoList().stream()
             .anyMatch(
                 cardInfo ->
-                    programService
-                        .retrieveProgram(
-                            cardService
-                                .retrieveCard(business.getId(), cardInfo.getCardId())
-                                .getProgramId())
-                        .getCardType()
-                        .equals(CardType.PLASTIC)));
+                    cardService
+                        .retrieveCard(business.getId(), cardInfo.getCardId())
+                        .getType()
+                        .equals(CardType.PHYSICAL)));
   }
 
   @SneakyThrows
@@ -807,7 +806,6 @@ public class UserControllerTest extends BaseCapitalTest {
   void searchForUsersFilteredBySmartSearch() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
@@ -862,7 +860,6 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsersExcludeArchivedUsers() {
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 
@@ -915,7 +912,6 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsersIncludeArchivedUsers() {
-    testHelper.createBin();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 

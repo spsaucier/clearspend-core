@@ -11,11 +11,11 @@ import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -40,9 +40,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   private final TestHelper testHelper;
 
   private CreateBusinessRecord createBusinessRecord;
-  private Bin bin;
   private Business business;
-  private Program program;
 
   private Cookie authCookie;
 
@@ -59,9 +57,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord();
@@ -77,13 +73,28 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
       rootCardA =
           testHelper.issueCard(
-              business, rootAllocation.allocation(), userA.user(), program, Currency.USD);
+              business,
+              rootAllocation.allocation(),
+              userA.user(),
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
       rootCardB =
           testHelper.issueCard(
-              business, rootAllocation.allocation(), userB.user(), program, Currency.USD);
+              business,
+              rootAllocation.allocation(),
+              userB.user(),
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
       childCardA =
           testHelper.issueCard(
-              business, childAllocation.allocation(), userA.user(), program, Currency.USD);
+              business,
+              childAllocation.allocation(),
+              userA.user(),
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
     }
   }
 

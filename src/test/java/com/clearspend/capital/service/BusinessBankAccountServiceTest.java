@@ -18,10 +18,8 @@ import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.BusinessBankAccountBalance;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.repository.BusinessBankAccountBalanceRepository;
@@ -35,7 +33,6 @@ import javax.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,17 +45,6 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Autowired private BusinessBankAccountService bankAccountService;
   @Autowired private PlaidClient plaidClient;
   @Autowired private BusinessBankAccountBalanceRepository businessBankAccountBalanceRepository;
-
-  private Bin bin;
-  private Program program;
-
-  @BeforeEach
-  public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
-  }
 
   @Test
   void depositFunds() {

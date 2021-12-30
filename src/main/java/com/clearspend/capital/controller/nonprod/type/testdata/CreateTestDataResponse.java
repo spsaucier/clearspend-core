@@ -1,10 +1,8 @@
 package com.clearspend.capital.controller.nonprod.type.testdata;
 
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -17,12 +15,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CreateTestDataResponse {
-
-  @JsonProperty("bins")
-  List<Bin> bins;
-
-  @JsonProperty("programs")
-  List<Program> programs;
 
   @JsonProperty("businesses")
   List<TestBusiness> business;

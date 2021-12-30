@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
-import com.clearspend.capital.data.model.Bin;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -31,14 +29,10 @@ class UserServiceTest extends BaseCapitalTest {
   @Autowired private UserService userService;
 
   private CreateBusinessRecord createBusinessRecord;
-  private Bin bin;
-  private Program program;
 
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
     }
   }

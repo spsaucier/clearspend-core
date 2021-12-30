@@ -6,7 +6,6 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.common.typedid.data.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.BusinessProspectId;
-import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
@@ -36,8 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessProspectService {
 
-  public static final TypedId<ProgramId> DEFAULT_PROGRAM_ID =
-      new TypedId<>("6faf3838-b2d7-422c-8d6f-c2294ebc73b4");
   private final BusinessProspectRepository businessProspectRepository;
 
   private final BusinessService businessService;
@@ -45,8 +42,6 @@ public class BusinessProspectService {
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
-  private final ProgramService programService;
-  private final UserService userService;
 
   public BusinessProspect retrieveBusinessProspect(TypedId<BusinessOwnerId> businessOwnerId) {
     return businessProspectRepository

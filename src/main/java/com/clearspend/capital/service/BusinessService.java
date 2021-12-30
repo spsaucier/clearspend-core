@@ -28,7 +28,6 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.AlloyRepository;
 import com.clearspend.capital.data.repository.BusinessRepository;
-import com.clearspend.capital.data.repository.ProgramRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -44,9 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessService {
 
-  public static final String DEFAULT_PROGRAM_ID = "6faf3838-b2d7-422c-8d6f-c2294ebc73b4";
   private final BusinessRepository businessRepository;
-  private final ProgramRepository programRepository;
   private final AlloyRepository alloyRepository;
 
   private final AccountActivityService accountActivityService;

@@ -20,13 +20,14 @@ import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.MccGroup;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -104,7 +105,6 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getAllocation_success() {
-    Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
@@ -130,7 +130,6 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getAllocationChildren_success() {
-    Program program = testHelper.retrievePooledProgram();
     Business business = testHelper.retrieveBusiness();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
@@ -163,7 +162,6 @@ class AllocationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void reallocateAllocationFunds_success() {
-    Program program = testHelper.retrieveIndividualProgram();
     Business business = testHelper.retrieveBusiness();
     BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
     com.clearspend.capital.common.data.model.Amount amount =
@@ -185,8 +183,9 @@ class AllocationControllerTest extends BaseCapitalTest {
             business,
             allocationRecord.allocation(),
             testHelper.createUser(business).user(),
-            program,
-            amount.getCurrency());
+            amount.getCurrency(),
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL);
     Account businessAccount = allocationService.getRootAllocation(business.getId()).account();
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(

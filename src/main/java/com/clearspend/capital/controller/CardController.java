@@ -12,10 +12,11 @@ import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
-import com.clearspend.capital.service.ProgramService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class CardController {
 
   private final CardService cardService;
-  private final ProgramService programService;
   private final BusinessService businessService;
 
   @GetMapping("/{cardId}")
@@ -64,7 +64,9 @@ public class CardController {
                     new IssueCardResponse(
                         cardService
                             .issueCard(
-                                programService.retrieveProgram(request.getProgramId()),
+                                request.getBinType() != null ? request.getBinType() : BinType.DEBIT,
+                                request.getFundingType() != null ? request.getFundingType() : FundingType.POOLED,
+                                cardType,
                                 businessId,
                                 request.getAllocationId(),
                                 request.getUserId(),

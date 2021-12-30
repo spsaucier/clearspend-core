@@ -6,13 +6,13 @@ import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.CardId;
-import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.data.model.enums.CardStatus;
-import com.clearspend.capital.data.model.enums.CardStatusReason;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import javax.persistence.Column;
@@ -38,17 +38,6 @@ import org.hibernate.annotations.Type;
 @DynamicUpdate
 @Slf4j
 public class Card extends TypedMutable<CardId> {
-
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "bin")
-  @Column(updatable = false)
-  private String bin;
-
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "program")
-  @Column(updatable = false)
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<ProgramId> programId;
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -83,7 +72,16 @@ public class Card extends TypedMutable<CardId> {
 
   @NonNull
   @Enumerated(EnumType.STRING)
+  private BinType binType;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
   private FundingType fundingType;
+
+  // type of card, PLASTIC or VIRTUAL
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private CardType type;
 
   // date the card was issued
   @NonNull private OffsetDateTime issueDate;
@@ -98,9 +96,6 @@ public class Card extends TypedMutable<CardId> {
   // name on card (limit 26 characters)
   @NonNull private String cardLine3;
   private String cardLine4;
-
-  // type of card, PLASTIC or VIRTUAL
-  @NonNull private CardType type;
 
   // Flag to indicate whether this card has been superseded by another in some way like reissue,
   // renew, replace, etc.

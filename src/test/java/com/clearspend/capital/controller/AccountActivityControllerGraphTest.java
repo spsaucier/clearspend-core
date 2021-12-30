@@ -15,14 +15,14 @@ import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.type.activity.DashboardGraphData;
 import com.clearspend.capital.controller.type.activity.GraphDataRequest;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.NetworkMessage;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -54,16 +54,9 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
   private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
 
-  private Bin bin;
-  private Program program;
-
   @SneakyThrows
   @Test
   void getGraphData() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessBankAccountId> businessBankAccountId =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
@@ -104,8 +97,9 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
             business,
             createBusinessRecord.allocationRecord().allocation(),
             user.user(),
-            program,
-            Currency.USD);
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
 
     NetworkMessage networkMessage =
         networkMessageService.processNetworkMessage(
@@ -114,7 +108,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(10))));
     assertThat(networkMessage.getHoldId()).isNotNull();
 
@@ -125,7 +118,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(10))));
     assertThat(networkMessage.getHoldId()).isNotNull();
 
@@ -136,7 +128,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(2))));
     assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
@@ -147,7 +138,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(4))));
     assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
@@ -158,7 +148,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(8))));
     assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
@@ -169,7 +158,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(20))));
     assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
@@ -180,7 +168,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
                 user.user(),
                 card,
                 createBusinessRecord.allocationRecord().account(),
-                program,
                 Amount.of(Currency.USD, BigDecimal.valueOf(9))));
     assertThat(networkMessage.getAdjustmentId()).isNotNull();
 
@@ -216,10 +203,6 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getGraphDataWhenNoTransactionsArePresent() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();

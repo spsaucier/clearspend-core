@@ -9,11 +9,11 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.clearspend.capital.controller.type.Amount;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,19 +34,15 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
 
-  private Bin bin;
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private Program program;
   private CreateUpdateUserRecord user;
   private Card card;
 
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       user = testHelper.createUser(createBusinessRecord.business());
@@ -55,8 +51,9 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
               business,
               createBusinessRecord.allocationRecord().allocation(),
               user.user(),
-              program,
-              Currency.USD);
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
     }
   }
 

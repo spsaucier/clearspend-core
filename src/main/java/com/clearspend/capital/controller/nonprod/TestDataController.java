@@ -11,24 +11,23 @@ import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResp
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.BusinessOwner;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.BusinessRepository;
@@ -36,7 +35,6 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
-import com.clearspend.capital.service.BinService;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
@@ -44,7 +42,6 @@ import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.ProgramService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -72,7 +69,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -105,13 +101,11 @@ public class TestDataController {
       DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
   private final AllocationService allocationService;
-  private final BinService binService;
   private final BusinessBankAccountService businessBankAccountService;
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
-  private final ProgramService programService;
   private final UserService userService;
 
   private final AllocationRepository allocationRepository;
@@ -121,59 +115,8 @@ public class TestDataController {
 
   private final Faker faker = new Faker();
 
-  private Program individualVirtualProgram;
-  private Program pooledVirtualProgram;
-  private Program individualPlasticProgram;
-  private Program pooledPlasticProgram;
-  private List<Bin> allBins;
-  private List<Program> allPrograms;
-
   public record BusinessRecord(
       Business business, BusinessOwner businessOwner, User user, Allocation allocation) {}
-
-  @PostConstruct
-  void init() {
-    allBins = binService.findAllBins();
-    Bin bin =
-        allBins.size() > 0
-            ? allBins.get(0)
-            : binService.createBin(faker.random().nextInt(500000, 599999) + "", "Test Data BIN");
-
-    allPrograms = programService.findAllPrograms();
-    individualVirtualProgram =
-        allPrograms.stream()
-            .filter(
-                p ->
-                    p.getFundingType() == FundingType.INDIVIDUAL
-                        && p.getCardType() == CardType.VIRTUAL)
-            .findFirst()
-            .orElseGet(() -> createProgram(bin, FundingType.INDIVIDUAL, CardType.VIRTUAL));
-
-    pooledVirtualProgram =
-        allPrograms.stream()
-            .filter(
-                p ->
-                    p.getFundingType() == FundingType.POOLED && p.getCardType() == CardType.VIRTUAL)
-            .findFirst()
-            .orElseGet(() -> createProgram(bin, FundingType.POOLED, CardType.VIRTUAL));
-
-    individualPlasticProgram =
-        allPrograms.stream()
-            .filter(
-                p ->
-                    p.getFundingType() == FundingType.INDIVIDUAL
-                        && p.getCardType() == CardType.PLASTIC)
-            .findFirst()
-            .orElseGet(() -> createProgram(bin, FundingType.INDIVIDUAL, CardType.PLASTIC));
-
-    pooledPlasticProgram =
-        allPrograms.stream()
-            .filter(
-                p ->
-                    p.getFundingType() == FundingType.POOLED && p.getCardType() == CardType.PLASTIC)
-            .findFirst()
-            .orElseGet(() -> createProgram(bin, FundingType.POOLED, CardType.PLASTIC));
-  }
 
   @GetMapping("/db-content")
   private CreateTestDataResponse getDbContent() {
@@ -275,7 +218,9 @@ public class TestDataController {
     users.add(user);
     CardRecord cardRecord =
         cardService.issueCard(
-            individualVirtualProgram,
+            BinType.DEBIT,
+            FundingType.INDIVIDUAL,
+            CardType.VIRTUAL,
             business.getId(),
             parentAllocation.getId(),
             user.user().getId(),
@@ -301,12 +246,13 @@ public class TestDataController {
             user.user(),
             cardRecord.card(),
             cardRecord.account(),
-            individualVirtualProgram,
             amount));
 
     cardRecord =
         cardService.issueCard(
-            individualPlasticProgram,
+            BinType.DEBIT,
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL,
             business.getId(),
             parentAllocation.getId(),
             user.user().getId(),
@@ -332,7 +278,6 @@ public class TestDataController {
             user.user(),
             cardRecord.card(),
             cardRecord.account(),
-            individualPlasticProgram,
             amount));
 
     CreateUpdateUserRecord user2 = createUser(business);
@@ -340,7 +285,9 @@ public class TestDataController {
     cards.add(
         cardService
             .issueCard(
-                pooledVirtualProgram,
+                BinType.DEBIT,
+                FundingType.POOLED,
+                CardType.VIRTUAL,
                 business.getId(),
                 childAllocation.allocation().getId(),
                 user.user().getId(),
@@ -354,7 +301,9 @@ public class TestDataController {
     cards.add(
         cardService
             .issueCard(
-                pooledPlasticProgram,
+                BinType.DEBIT,
+                FundingType.POOLED,
+                CardType.PHYSICAL,
                 business.getId(),
                 childAllocation.allocation().getId(),
                 user.user().getId(),
@@ -371,7 +320,9 @@ public class TestDataController {
     cards.add(
         cardService
             .issueCard(
-                individualVirtualProgram,
+                BinType.DEBIT,
+                FundingType.INDIVIDUAL,
+                CardType.VIRTUAL,
                 business.getId(),
                 grandchildAllocation.allocation().getId(),
                 user.user().getId(),
@@ -384,8 +335,6 @@ public class TestDataController {
             .card());
 
     return new CreateTestDataResponse(
-        allBins,
-        allPrograms,
         List.of(
             new TestBusiness(
                 business,
@@ -396,15 +345,6 @@ public class TestDataController {
                     grandchildAllocation.allocation()),
                 cards,
                 users)));
-  }
-
-  private Program createProgram(Bin bin, FundingType fundingType, CardType cardType) {
-    return programService.createProgram(
-        UUID.randomUUID().toString(),
-        bin.getBin(),
-        fundingType,
-        cardType,
-        faker.number().digits(8));
   }
 
   private BusinessRecord createBusiness(TypedId<BusinessId> businessId) {
@@ -492,8 +432,6 @@ public class TestDataController {
     List<User> users = userRepository.findAll();
 
     return new CreateTestDataResponse(
-        binService.findAllBins(),
-        programService.findAllPrograms(),
         businesses.stream()
             .map(
                 business ->
@@ -515,12 +453,7 @@ public class TestDataController {
   }
 
   public static NetworkCommon generateNetworkCommon(
-      NetworkMessageType networkMessageType,
-      User user,
-      Card card,
-      Account account,
-      Program program,
-      Amount amount)
+      NetworkMessageType networkMessageType, User user, Card card, Account account, Amount amount)
       throws JsonProcessingException {
     Faker faker = Faker.instance();
 

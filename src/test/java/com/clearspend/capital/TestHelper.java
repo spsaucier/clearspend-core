@@ -33,23 +33,22 @@ import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.BusinessOwner;
 import com.clearspend.capital.data.model.BusinessProspect;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.BusinessBankAccountRepository;
@@ -59,11 +58,9 @@ import com.clearspend.capital.data.repository.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.BusinessRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
-import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
-import com.clearspend.capital.service.BinService;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
@@ -72,7 +69,6 @@ import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.FusionAuthService;
-import com.clearspend.capital.service.ProgramService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.util.PhoneUtil;
@@ -147,16 +143,13 @@ public class TestHelper {
   private final TransactionLimitRepository transactionLimitRepository;
   private final UserRepository userRepository;
 
-  private final AccountService accountService;
   private final AllocationService allocationService;
-  private final BinService binService;
   private final BusinessBankAccountService businessBankAccountService;
   private final BusinessOwnerService businessOwnerService;
   private final BusinessProspectService businessProspectService;
   private final BusinessService businessService;
   private final CardService cardService;
   private final FusionAuthService fusionAuthService;
-  private final ProgramService programService;
   private final UserService userService;
   private final PlaidClient plaidClient;
 
@@ -392,31 +385,6 @@ public class TestHelper {
     return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
   }
 
-  public Bin retrieveBin() {
-    return binService.retrieveBin(binId);
-  }
-
-  public Bin createBin() {
-    return binService.createBin(faker.random().nextInt(500000, 699999).toString(), "Unit test BIN");
-  }
-
-  public Program retrievePooledProgram() {
-    return programService.retrieveProgram(pooledProgramId);
-  }
-
-  public Program retrieveIndividualProgram() {
-    return programService.retrieveProgram(individualProgramId);
-  }
-
-  public Program createProgram(Bin bin) {
-    return programService.createProgram(
-        UUID.randomUUID().toString(),
-        bin.getBin(),
-        FundingType.POOLED,
-        CardType.VIRTUAL,
-        faker.number().digits(8));
-  }
-
   public Business retrieveBusiness() {
     return businessService.retrieveBusiness(businessIds.get(0));
   }
@@ -527,7 +495,6 @@ public class TestHelper {
   }
 
   public record CreateBusinessRecord(
-      Program program,
       Business business,
       BusinessOwner businessOwner,
       User user,
@@ -543,7 +510,6 @@ public class TestHelper {
   public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId) {
     String email = generateEmail();
     String password = generatePassword();
-    Program program = retrievePooledProgram();
     String legalName = faker.company().name() + " " + UUID.randomUUID(); // more unique names
     Business business =
         businessService.createBusiness(
@@ -565,7 +531,6 @@ public class TestHelper {
     log.debug("Created business {} with owner and root allocation.", businessId);
 
     return new CreateBusinessRecord(
-        program,
         business,
         businessOwner.businessOwner(),
         businessOwner.user(),
@@ -591,10 +556,17 @@ public class TestHelper {
   }
 
   public Card issueCard(
-      Business business, Allocation allocation, User user, Program program, Currency currency) {
+      Business business,
+      Allocation allocation,
+      User user,
+      Currency currency,
+      FundingType fundingType,
+      CardType cardType) {
     return cardService
         .issueCard(
-            program,
+            BinType.DEBIT,
+            fundingType,
+            cardType,
             business.getId(),
             allocation.getId(),
             user.getId(),

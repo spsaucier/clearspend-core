@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.model.enums;
+package com.clearspend.capital.data.model.enums.card;
 
 public enum CardStatusReason {
   NONE,

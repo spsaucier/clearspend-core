@@ -11,15 +11,14 @@ import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.MccGroupService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -51,10 +50,8 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final Faker faker = new Faker();
 
-  private Bin bin;
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private Program program;
   private CreateUpdateUserRecord user;
   private Cookie userCookie;
   private Card card;
@@ -62,9 +59,7 @@ public class CardControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       user = testHelper.createUser(createBusinessRecord.business());
@@ -74,8 +69,9 @@ public class CardControllerTest extends BaseCapitalTest {
               business,
               createBusinessRecord.allocationRecord().allocation(),
               user.user(),
-              program,
-              Currency.USD);
+              Currency.USD,
+              FundingType.POOLED,
+              CardType.PHYSICAL);
     }
   }
 
@@ -91,11 +87,10 @@ public class CardControllerTest extends BaseCapitalTest {
 
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
-            program.getId(),
+            Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
             allocationRecord.allocation().getId(),
             user.user().getId(),
             Currency.USD,
-            Set.of(CardType.VIRTUAL, CardType.PLASTIC),
             true,
             CurrencyLimit.ofMap(
                 Map.of(
@@ -158,8 +153,9 @@ public class CardControllerTest extends BaseCapitalTest {
             business,
             createBusinessRecord.allocationRecord().allocation(),
             testHelper.createUser(business).user(),
-            program,
-            Currency.USD);
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
 
     // when
     UpdateCardRequest updateCardRequest = new UpdateCardRequest();

@@ -12,18 +12,17 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AccountType;
-import com.clearspend.capital.data.model.enums.CardStatus;
-import com.clearspend.capital.data.model.enums.CardStatusReason;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
-import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
@@ -47,7 +46,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CardService {
 
-  private final AllocationRepository allocationRepository;
   private final CardRepository cardRepository;
 
   private final AccountService accountService;
@@ -60,7 +58,9 @@ public class CardService {
 
   @Transactional
   public CardRecord issueCard(
-      Program program,
+      BinType binType,
+      FundingType fundingType,
+      CardType cardType,
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       TypedId<UserId> userId,
@@ -94,24 +94,23 @@ public class CardService {
 
     Card card =
         new Card(
-            program.getBin(),
-            program.getId(),
             businessId,
             allocationId,
             userId,
             CardStatus.ACTIVE,
             CardStatusReason.NONE,
-            program.getFundingType(),
+            binType,
+            fundingType,
+            cardType,
             OffsetDateTime.now(),
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
-            program.getCardType(),
             StringUtils.EMPTY,
             new Address());
     card.setCardLine4(cardLine4.toString());
 
     Account account;
-    if (program.getFundingType() == FundingType.INDIVIDUAL) {
+    if (fundingType == FundingType.INDIVIDUAL) {
       account =
           accountService.createAccount(
               businessId, AccountType.CARD, allocationId, card.getId(), currency);

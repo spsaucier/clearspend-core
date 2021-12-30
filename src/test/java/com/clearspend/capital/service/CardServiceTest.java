@@ -6,11 +6,11 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -32,17 +32,13 @@ class CardServiceTest extends BaseCapitalTest {
 
   private Allocation allocation;
   private CreateBusinessRecord createBusinessRecord;
-  private Bin bin;
   private Business business;
-  private Program program;
   private CreateUpdateUserRecord userRecord;
 
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
+    if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       allocation = createBusinessRecord.allocationRecord().allocation();
@@ -53,7 +49,13 @@ class CardServiceTest extends BaseCapitalTest {
   @Test
   void issueCard() {
     Card card =
-        testHelper.issueCard(business, allocation, userRecord.user(), program, Currency.USD);
+        testHelper.issueCard(
+            business,
+            allocation,
+            userRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
     Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
@@ -62,7 +64,13 @@ class CardServiceTest extends BaseCapitalTest {
   @Test
   void getUserCards() {
     log.info("allCards: {}", cardRepository.findAll());
-    testHelper.issueCard(business, allocation, userRecord.user(), program, Currency.USD);
+    testHelper.issueCard(
+        business,
+        allocation,
+        userRecord.user(),
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL);
     log.info("allCards: {}", cardRepository.findAll());
     log.info("businessId: {}, userId: {}", business.getId(), userRecord.user().getId());
     List<CardDetailsRecord> userCardRecords =

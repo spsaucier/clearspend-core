@@ -1,17 +1,15 @@
 package com.clearspend.capital.controller.type.card;
 
 import com.clearspend.capital.common.data.model.Address;
-import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
-import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.data.model.enums.CardStatus;
-import com.clearspend.capital.data.model.enums.CardStatusReason;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -27,15 +25,6 @@ public class Card {
   @JsonProperty("cardId")
   @NonNull
   private TypedId<CardId> cardId;
-
-  @Sensitive
-  @JsonProperty("bin")
-  @NonNull
-  private String bin;
-
-  @JsonProperty("programId")
-  @NonNull
-  private TypedId<ProgramId> programId;
 
   @JsonProperty("allocationId")
   @NonNull
@@ -104,8 +93,6 @@ public class Card {
 
   public Card(com.clearspend.capital.data.model.Card card) {
     cardId = card.getId();
-    bin = card.getBin();
-    programId = card.getProgramId();
     allocationId = card.getAllocationId();
     userId = card.getUserId();
     accountId = card.getAccountId();

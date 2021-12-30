@@ -11,14 +11,14 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -28,7 +28,6 @@ import java.math.BigDecimal;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -43,17 +42,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired AccountService accountService;
   @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired NetworkMessageService networkMessageService;
-
-  private Bin bin;
-  private Program program;
-
-  @BeforeEach
-  public void setup() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
-  }
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -162,8 +150,9 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             business,
             createBusinessRecord.allocationRecord().allocation(),
             user.user(),
-            program,
-            Currency.USD);
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(100));
 
@@ -173,7 +162,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
-            program,
             amount));
 
     Page<AccountActivity> accountActivity =

@@ -12,9 +12,8 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.User;
-import com.clearspend.capital.data.model.enums.CardType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.UserRepositoryCustom;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.UserFilterCriteria;
@@ -53,10 +52,6 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .on("user.id")
             .eqExpression("card.userId")
             .end()
-            .joinOn(Program.class, "program", JoinType.LEFT)
-            .on("card.programId")
-            .eqExpression("program.id")
-            .end()
             .joinOn(Allocation.class, "allocation", JoinType.LEFT)
             .on("card.allocationId")
             .eqExpression("allocation.id")
@@ -67,13 +62,11 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     BeanUtils.setNotNull(
         criteria.getHasVirtualCard(),
-        hasVirtualCode ->
-            userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.VIRTUAL));
+        hasVirtualCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.VIRTUAL));
 
     BeanUtils.setNotNull(
         criteria.getHasPhysicalCard(),
-        hasPlasticCode ->
-            userCriteriaBuilder.where("program.cardType").eqLiteral(CardType.PLASTIC));
+        hasPlasticCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.PHYSICAL));
 
     BeanUtils.setNotNull(
         criteria.getAllocations(),

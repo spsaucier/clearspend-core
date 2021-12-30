@@ -1,13 +1,13 @@
-package com.clearspend.capital.data.model.enums;
+package com.clearspend.capital.data.model.enums.card;
 
 public enum CardType {
-  PLASTIC,
+  PHYSICAL,
   VIRTUAL,
   ;
 
   public String toStripeType() {
     return switch (this) {
-      case PLASTIC -> "physical";
+      case PHYSICAL -> "physical";
       case VIRTUAL -> "virtual";
     };
   }

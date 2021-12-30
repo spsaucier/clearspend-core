@@ -5,7 +5,7 @@ import com.clearspend.capital.client.i2c.response.AddStakeholderResponse;
 import com.clearspend.capital.client.i2c.response.CreditFundsResponse;
 import com.clearspend.capital.client.i2c.response.ShareFundsResponse;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.data.model.enums.CardType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;

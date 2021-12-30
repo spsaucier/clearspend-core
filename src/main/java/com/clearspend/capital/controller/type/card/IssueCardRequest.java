@@ -2,13 +2,14 @@ package com.clearspend.capital.controller.type.card;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.MccGroupId;
-import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
-import com.clearspend.capital.data.model.enums.CardType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -25,11 +26,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class IssueCardRequest {
 
-  @JsonProperty("programId")
+  @JsonProperty("binType")
+  @Schema(example = "DEBIT")
+  private BinType binType = BinType.DEBIT;
+
+  @JsonProperty("fundingType")
+  @Schema(example = "DEBIT")
+  private FundingType fundingType = FundingType.POOLED;
+
+  @JsonProperty("cardType")
   @NonNull
-  @NotNull(message = "programId required")
-  @Schema(example = "18104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-  private TypedId<ProgramId> programId;
+  @NotNull(message = "Card Type required")
+  @Size(max = 2)
+  private Set<CardType> cardType;
 
   @JsonProperty("allocationId")
   @NonNull
@@ -47,12 +56,6 @@ public class IssueCardRequest {
   @NonNull
   @NotNull(message = "Currency required")
   private Currency currency;
-
-  @JsonProperty("cardType")
-  @NonNull
-  @NotNull(message = "Card Type required")
-  @Size(max = 2)
-  private Set<CardType> cardType;
 
   @JsonProperty("isPersonal")
   @NonNull

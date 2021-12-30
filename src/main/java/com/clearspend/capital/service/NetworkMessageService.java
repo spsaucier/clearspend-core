@@ -3,7 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
-import com.clearspend.capital.data.model.enums.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;

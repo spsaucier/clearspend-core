@@ -17,7 +17,6 @@ public class RecordNotFoundException extends RuntimeException {
     ACCOUNT_ACTIVITY("AccountActivity"),
     ADJUSTMENT("Adjustment"),
     ALLOCATION("Allocation"),
-    BIN("Bin"),
     BUSINESS("Business"),
     BUSINESS_BANK_ACCOUNT("BusinessBankAccount"),
     BUSINESS_LIMIT("BusinessLimit"),
@@ -25,7 +24,6 @@ public class RecordNotFoundException extends RuntimeException {
     BUSINESS_PROSPECT("BusinessProspect"),
     CARD("Card"),
     LEDGER_ACCOUNT("LedgerAccount"),
-    PROGRAM("Program"),
     RECEIPT("Receipt"),
     SPEND_LIMIT("SpendLimit"),
     USER("user");

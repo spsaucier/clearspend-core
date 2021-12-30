@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.model.enums;
+package com.clearspend.capital.data.model.enums.card;
 
 import com.clearspend.capital.common.error.InvalidStateTransitionException;
 import com.google.common.collect.ImmutableSetMultimap;

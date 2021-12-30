@@ -16,12 +16,12 @@ import com.clearspend.capital.controller.type.activity.ChartDataRequest;
 import com.clearspend.capital.controller.type.activity.ChartDataResponse;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Bin;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Program;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -53,16 +53,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
 
-  private Bin bin;
-  private Program program;
-
   @SneakyThrows
   @Test
   void getChartDataFilterTypeEmployee() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -136,8 +129,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             business,
             createBusinessRecord.allocationRecord().allocation(),
             user.user(),
-            program,
-            Currency.USD);
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
     SecureRandom random = new SecureRandom();
     for (int i = 0; i < transactions; i++) {
       networkMessageService.processNetworkMessage(
@@ -146,7 +140,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
               user.user(),
               card,
               createBusinessRecord.allocationRecord().account(),
-              program,
               Amount.of(Currency.USD, new BigDecimal(random.nextInt(100)))));
     }
   }
@@ -154,10 +147,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeAllocation() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -231,7 +220,13 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         allocation.account().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(1000)));
     Card card =
-        testHelper.issueCard(business, allocation.allocation(), user.user(), program, Currency.USD);
+        testHelper.issueCard(
+            business,
+            allocation.allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
     SecureRandom random = new SecureRandom();
     for (int i = 0; i < transactions; i++) {
       networkMessageService.processNetworkMessage(
@@ -240,7 +235,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
               user.user(),
               card,
               allocation.account(),
-              program,
               Amount.of(Currency.USD, new BigDecimal(random.nextInt(100)))));
     }
   }
@@ -248,10 +242,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeMerchant() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -310,10 +300,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeMerchantCategory() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -372,10 +358,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterWhenNoTransactionsArePresent() {
-    if (bin == null) {
-      bin = testHelper.createBin();
-      program = testHelper.createProgram(bin);
-    }
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
