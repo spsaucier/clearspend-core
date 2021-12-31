@@ -44,14 +44,14 @@ public class GlobalControllerExceptionHandler {
     return new ControllerError(exception.getMostSpecificCause().getMessage());
   }
 
-  @ResponseStatus(HttpStatus.UNAUTHORIZED)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
   @ExceptionHandler(ForbiddenException.class)
   public @ResponseBody ControllerError handleForbiddenException(ForbiddenException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError("");
   }
 
-  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
   @ExceptionHandler({RecordNotFoundException.class})
   public @ResponseBody void handleRecordNotFoundException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
