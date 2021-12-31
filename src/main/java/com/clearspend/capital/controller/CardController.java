@@ -65,7 +65,9 @@ public class CardController {
                         cardService
                             .issueCard(
                                 request.getBinType() != null ? request.getBinType() : BinType.DEBIT,
-                                request.getFundingType() != null ? request.getFundingType() : FundingType.POOLED,
+                                request.getFundingType() != null
+                                    ? request.getFundingType()
+                                    : FundingType.POOLED,
                                 cardType,
                                 businessId,
                                 request.getAllocationId(),
@@ -75,7 +77,10 @@ public class CardController {
                                 businessLegalName,
                                 CurrencyLimit.toMap(request.getLimits()),
                                 request.getDisabledMccGroups(),
-                                request.getDisabledTransactionChannels())
+                                request.getDisabledTransactionChannels(),
+                                request.getShippingAddress() != null
+                                    ? request.getShippingAddress().toAddress()
+                                    : null)
                             .card()
                             .getId(),
                         null)));

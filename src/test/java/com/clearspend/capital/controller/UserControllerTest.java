@@ -431,7 +431,8 @@ public class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.business().getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptyList(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     networkMessageService.processNetworkMessage(

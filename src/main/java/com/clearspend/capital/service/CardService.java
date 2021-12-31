@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -69,7 +70,13 @@ public class CardService {
       String businessLegalName,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
-      Set<TransactionChannel> disabledTransactionChannels) {
+      Set<TransactionChannel> disabledTransactionChannels,
+      Address shippingAddress) {
+
+    if (cardType.equals(CardType.PHYSICAL) && shippingAddress == null) {
+      throw new InvalidRequestException("Shipping address required for physical cards");
+    }
+
     User user = userService.retrieveUser(userId);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
@@ -106,7 +113,7 @@ public class CardService {
             LocalDate.now().plusYears(3),
             cardLine3.toString(),
             StringUtils.EMPTY,
-            new Address());
+            cardType.equals(CardType.PHYSICAL) ? shippingAddress : new Address());
     card.setCardLine4(cardLine4.toString());
 
     Account account;
@@ -135,7 +142,7 @@ public class CardService {
     com.stripe.model.issuing.Card stripeCard =
         card.getType() == CardType.VIRTUAL
             ? stripeClient.createVirtualCard(card, user.getExternalRef())
-            : stripeClient.createPhysicalCard(card, user.getAddress(), user.getExternalRef());
+            : stripeClient.createPhysicalCard(card, shippingAddress, user.getExternalRef());
     card.setExternalRef(stripeCard.getId());
     card.setLastFour(stripeCard.getLast4());
 

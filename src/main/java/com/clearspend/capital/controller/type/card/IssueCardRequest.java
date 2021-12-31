@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -77,4 +78,8 @@ public class IssueCardRequest {
   @NotNull(message = "disabled transactions channel collection is required")
   @JsonProperty("disabledTransactionChannels")
   Set<TransactionChannel> disabledTransactionChannels;
+
+  @JsonProperty("shippingAddress")
+  @Schema(description = "the shipping address (only required for physical cards)")
+  private Address shippingAddress;
 }

@@ -10,8 +10,10 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.repository.BusinessRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import java.util.List;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UserService {
 
+  private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
 
   private final FusionAuthService fusionAuthService;
@@ -50,6 +53,11 @@ public class UserService {
       String email,
       String phone,
       @NonNull String subjectRef) {
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
     User user =
         new User(
             businessId,
@@ -65,7 +73,7 @@ public class UserService {
     user = userRepository.save(user);
     userRepository.flush();
 
-    user.setExternalRef(stripeClient.createCardholder(user).getId());
+    user.setExternalRef(stripeClient.createCardholder(user, business.getClearAddress()).getId());
 
     return user;
   }
@@ -82,6 +90,11 @@ public class UserService {
       String phone) {
     String password = PasswordUtil.generatePassword();
 
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
     User user =
         new User(
             businessId,
@@ -97,7 +110,7 @@ public class UserService {
 
     user.setSubjectRef(
         fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
-    user.setExternalRef(stripeClient.createCardholder(user).getId());
+    user.setExternalRef(stripeClient.createCardholder(user, business.getClearAddress()).getId());
 
     twilioService.sendNotificationEmail(
         user.getEmail().getEncrypted(),

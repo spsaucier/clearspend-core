@@ -229,7 +229,8 @@ public class TestDataController {
             business.getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptyList(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -261,7 +262,8 @@ public class TestDataController {
             business.getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptyList(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -296,7 +298,8 @@ public class TestDataController {
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptyList(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                business.getClearAddress().toAddress())
             .card());
     cards.add(
         cardService
@@ -312,7 +315,8 @@ public class TestDataController {
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptyList(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                business.getClearAddress().toAddress())
             .card());
 
     CreateUpdateUserRecord user3 = createUser(business);
@@ -331,7 +335,8 @@ public class TestDataController {
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptyList(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                business.getClearAddress().toAddress())
             .card());
 
     return new CreateTestDataResponse(
@@ -458,9 +463,9 @@ public class TestDataController {
     Faker faker = Faker.instance();
 
     Cardholder cardholder = new Cardholder();
-    if (card.getAddress() != null) {
+    if (card.getShippingAddress() != null) {
       Billing billing = new Billing();
-      billing.setAddress(card.getAddress().toStripeAddress());
+      billing.setAddress(card.getShippingAddress().toStripeAddress());
       cardholder.setBilling(billing);
     }
     cardholder.setCreated(user.getCreated().toEpochSecond());

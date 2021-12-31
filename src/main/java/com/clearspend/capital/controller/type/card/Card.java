@@ -89,7 +89,7 @@ public class Card {
 
   @JsonProperty("address")
   @Embedded
-  private Address address;
+  private Address shippingAddress;
 
   public Card(com.clearspend.capital.data.model.Card card) {
     cardId = card.getId();
@@ -109,6 +109,6 @@ public class Card {
     superseded = card.isSuperseded();
     cardNumber = card.getLastFour();
     lastFour = card.getLastFour();
-    address = card.getAddress();
+    shippingAddress = card.getShippingAddress();
   }
 }

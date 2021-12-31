@@ -103,7 +103,7 @@ public class Card extends TypedMutable<CardId> {
 
   @NonNull private String lastFour;
 
-  @NonNull @Embedded private Address address;
+  @NonNull @Embedded private Address shippingAddress;
 
   // this is the identifier of this card at Stripe
   private String externalRef;

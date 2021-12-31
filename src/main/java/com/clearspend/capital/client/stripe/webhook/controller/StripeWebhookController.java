@@ -7,6 +7,7 @@ import com.clearspend.capital.data.model.StripeWebhookLog;
 import com.clearspend.capital.data.repository.StripeWebhookLogRepository;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.type.NetworkCommon;
+import com.google.common.annotations.VisibleForTesting;
 import com.stripe.Stripe;
 import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,27 +52,15 @@ public class StripeWebhookController {
 
     ParseRecord parseRecord = parseRequest("connect", request, stripeProperties.getConnectSecret());
 
-    // determine the event type and handle it
-    StripeEventType stripeEventType =
-        StripeEventType.fromString(parseRecord.stripeWebhookLog.getEventType());
-    try {
-      switch (stripeEventType) {
-        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
-            stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
-        case ISSUING_TRANSACTION_CREATED -> processCompletion(
-            stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
-        case ISSUING_CARD_CREATED -> processCard(stripeEventType, parseRecord.stripeObject);
-        case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
-            stripeEventType, parseRecord.stripeObject);
-        default -> {
-          String errorMessage =
-              "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();
-          log.error(errorMessage);
-          parseRecord.stripeWebhookLog.setError(errorMessage);
-        }
+    switch (parseRecord.stripeEventType) {
+      case ACCOUNT_UPDATED -> accountUpdated(parseRecord.stripeEventType, parseRecord.stripeObject);
+      case ACCOUNT_EXTERNAL_ACCOUNT_CREATED -> externalAccountCreated(
+          parseRecord.stripeEventType, parseRecord.stripeObject);
+      default -> {
+        String errorMessage = "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();
+        log.error(errorMessage);
+        parseRecord.stripeWebhookLog.setError(errorMessage);
       }
-    } catch (StripeException e) {
-      e.printStackTrace();
     }
 
     // capture total processing time or -1 if an error occurred
@@ -82,24 +72,26 @@ public class StripeWebhookController {
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
 
+  private void accountUpdated(StripeEventType stripeEventType, StripeObject stripeObject) {}
+
+  private void externalAccountCreated(StripeEventType stripeEventType, StripeObject stripeObject) {}
+
   @PostMapping("/webhook/direct")
   private void directWebhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
     ParseRecord parseRecord = parseRequest("direct", request, stripeProperties.getDirectSecret());
 
-    // determine the event type and handle it
-    StripeEventType stripeEventType =
-        StripeEventType.fromString(parseRecord.stripeWebhookLog.getEventType());
     try {
-      switch (stripeEventType) {
+      switch (parseRecord.stripeEventType) {
         case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
-            stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
+            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
         case ISSUING_TRANSACTION_CREATED -> processCompletion(
-            stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
-        case ISSUING_CARD_CREATED -> processCard(stripeEventType, parseRecord.stripeObject);
+            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
+        case ISSUING_CARD_CREATED -> processCard(
+            parseRecord.stripeEventType, parseRecord.stripeObject);
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
-            stripeEventType, parseRecord.stripeObject);
+            parseRecord.stripeEventType, parseRecord.stripeObject);
         default -> {
           String errorMessage =
               "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();
@@ -121,8 +113,10 @@ public class StripeWebhookController {
   }
 
   private record ParseRecord(
-      StripeWebhookLog stripeWebhookLog, StripeObject stripeObject, String rawJson) {}
-  ;
+      StripeWebhookLog stripeWebhookLog,
+      StripeObject stripeObject,
+      String rawJson,
+      StripeEventType stripeEventType) {}
 
   private ParseRecord parseRequest(String requestType, HttpServletRequest request, String secret) {
     // FIXME(kuchlein): need to encrypt the payload or simply drop the table. Kept like this to make
@@ -168,10 +162,13 @@ public class StripeWebhookController {
       throw new InvalidRequestException("failed to deserialize Stripe request");
     }
 
-    return new ParseRecord(stripeWebhookLog, stripeObject, payload);
+    StripeEventType stripeEventType = StripeEventType.fromString(stripeWebhookLog.getEventType());
+
+    return new ParseRecord(stripeWebhookLog, stripeObject, payload, stripeEventType);
   }
 
-  private void processAuthorization(
+  @VisibleForTesting
+  void processAuthorization(
       StripeEventType stripeEventType, StripeObject stripeObject, String rawJson)
       throws StripeException {
     switch (stripeEventType) {
@@ -224,11 +221,9 @@ public class StripeWebhookController {
     NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
   }
 
-  private void processCard(StripeEventType stripeEventType, StripeObject stripeObject)
-      throws StripeException {}
+  private void processCard(StripeEventType stripeEventType, StripeObject stripeObject) {}
 
-  private void processCardHolder(StripeEventType stripeEventType, StripeObject stripeObject)
-      throws StripeException {}
+  private void processCardHolder(StripeEventType stripeEventType, StripeObject stripeObject) {}
 
   private Map<String, String> getMetadata(NetworkCommon common, NetworkMessage networkMessage) {
     Map<String, String> metadata = new HashMap<>();
@@ -244,6 +239,11 @@ public class StripeWebhookController {
     }
     if (common.getAllocation() != null && common.getAllocation().getId() != null) {
       metadata.put("accountId", common.getAllocation().getId().toString());
+    }
+    if (common.getDeclineReasons() != null && common.getDeclineReasons().size() > 0) {
+      metadata.put(
+          "declineReasons",
+          common.getDeclineReasons().stream().map(Enum::toString).collect(Collectors.joining(",")));
     }
 
     if (networkMessage != null) {

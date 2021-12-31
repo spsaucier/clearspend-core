@@ -104,6 +104,7 @@ public class CardControllerTest extends BaseCapitalTest {
                             BigDecimal.TEN)))),
             Collections.emptyList(),
             Set.of(TransactionChannel.MOTO));
+    issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     List<IssueCardResponse> issueCardResponse =
         mockMvcHelper.queryList(

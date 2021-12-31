@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.stripe;
 
+import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessOwner;
@@ -116,7 +117,7 @@ public class StripeClient {
         () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
   }
 
-  public Cardholder createCardholder(User user) {
+  public Cardholder createCardholder(User user, ClearAddress billingAddress) {
     CardholderCreateParams params =
         CardholderCreateParams.builder()
             .setName(
@@ -131,12 +132,12 @@ public class StripeClient {
                 CardholderCreateParams.Billing.builder()
                     .setAddress(
                         CardholderCreateParams.Billing.Address.builder()
-                            .setLine1(user.getAddress().getStreetLine1().getEncrypted())
-                            .setLine2(user.getAddress().getStreetLine2().getEncrypted())
-                            .setCity(user.getAddress().getLocality())
-                            .setState(user.getAddress().getRegion())
-                            .setPostalCode(user.getAddress().getPostalCode().getEncrypted())
-                            .setCountry(user.getAddress().getCountry().getTwoCharacterCode())
+                            .setLine1(billingAddress.getStreetLine1())
+                            .setLine2(billingAddress.getStreetLine2())
+                            .setCity(billingAddress.getLocality())
+                            .setState(billingAddress.getRegion())
+                            .setPostalCode(billingAddress.getPostalCode())
+                            .setCountry(billingAddress.getCountry().getTwoCharacterCode())
                             .build())
                     .build())
             .build();

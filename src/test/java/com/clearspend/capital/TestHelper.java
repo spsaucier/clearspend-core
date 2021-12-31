@@ -575,7 +575,8 @@ public class TestHelper {
             business.getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptyList(),
-            Collections.emptySet())
+            Collections.emptySet(),
+            business.getClearAddress().toAddress())
         .card();
   }
 
