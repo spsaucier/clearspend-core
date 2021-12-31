@@ -38,6 +38,7 @@ import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
 import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
+import io.micrometer.core.instrument.util.StringUtils;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,7 @@ public class StripeClient {
   private final ObjectMapper objectMapper;
 
   private interface StripeProducer<T extends ApiResource> {
+
     T produce() throws StripeException;
   }
 
@@ -163,7 +165,7 @@ public class StripeClient {
                     .setCity(businessOwner.getAddress().getLocality())
                     .setState(businessOwner.getAddress().getRegion())
                     .setPostalCode(businessOwner.getAddress().getPostalCode().getEncrypted())
-                    .setCountry("US")
+                    .setCountry(businessOwner.getAddress().getCountry().getTwoCharacterCode())
                     .build());
 
     if (businessOwner.getDateOfBirth() != null) {
@@ -213,6 +215,7 @@ public class StripeClient {
             .setType(CardCreateParams.Type.VIRTUAL)
             .setStatus(Status.ACTIVE)
             .build();
+    log.debug("Virtual card: cardParameters: {}", cardParameters);
 
     return callStripe(
         "createCard",
@@ -225,6 +228,17 @@ public class StripeClient {
       com.clearspend.capital.data.model.Card card,
       com.clearspend.capital.common.data.model.Address shippingAddress,
       String userExternalRef) {
+    Shipping.Address.Builder addressBuilder =
+        Shipping.Address.builder()
+            .setLine1(shippingAddress.getStreetLine1().getEncrypted())
+            .setCity(shippingAddress.getLocality())
+            .setState(shippingAddress.getRegion())
+            .setPostalCode(shippingAddress.getPostalCode().getEncrypted())
+            .setCountry(shippingAddress.getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(shippingAddress.getStreetLine2().getEncrypted())) {
+      addressBuilder.setLine2(shippingAddress.getStreetLine2().getEncrypted());
+    }
+
     CardCreateParams cardParameters =
         CardCreateParams.builder()
             .setCardholder(userExternalRef)
@@ -236,17 +250,10 @@ public class StripeClient {
                     // TODO: Should be a part of the user request when issuing a card
                     .setName("Some funny looking shipping label")
                     .setService(Service.STANDARD)
-                    .setAddress(
-                        Shipping.Address.builder()
-                            .setLine1(shippingAddress.getStreetLine1().getEncrypted())
-                            .setLine2(shippingAddress.getStreetLine2().getEncrypted())
-                            .setCity(shippingAddress.getLocality())
-                            .setState(shippingAddress.getRegion())
-                            .setPostalCode(shippingAddress.getPostalCode().getEncrypted())
-                            .setCountry("US")
-                            .build())
+                    .setAddress(addressBuilder.build())
                     .build())
             .build();
+    log.debug("Physical card: cardParameters: {}", cardParameters);
 
     return callStripe(
         "createCard",
