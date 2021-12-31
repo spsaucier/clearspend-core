@@ -38,6 +38,7 @@ import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
 import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
+import com.stripe.param.issuing.CardholderCreateParams.Billing;
 import io.micrometer.core.instrument.util.StringUtils;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +64,17 @@ public class StripeClient {
   public Account createAccount(Business business) {
     Map<String, Object> requestedCapability = Map.of("requested", "true");
 
+    Address.Builder addressBuilder =
+        Address.builder()
+            .setLine1(business.getClearAddress().getStreetLine1())
+            .setPostalCode(business.getClearAddress().getPostalCode())
+            .setCity(business.getClearAddress().getLocality())
+            .setState(business.getClearAddress().getRegion())
+            .setCountry(business.getClearAddress().getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(business.getClearAddress().getStreetLine2())) {
+      addressBuilder.setLine2(business.getClearAddress().getStreetLine2());
+    }
+
     Company company =
         Company.builder()
             .setName(business.getLegalName())
@@ -78,14 +90,7 @@ public class StripeClient {
                               default -> Structure.PRIVATE_COMPANY;
                             })
             */
-            .setAddress(
-                Address.builder()
-                    .setCity(business.getClearAddress().getLocality())
-                    .setCountry(business.getClearAddress().getCountry().getTwoCharacterCode())
-                    .setLine1(business.getClearAddress().getStreetLine1())
-                    .setLine2(business.getClearAddress().getStreetLine2())
-                    .setPostalCode(business.getClearAddress().getPostalCode())
-                    .build())
+            .setAddress(addressBuilder.build())
             .build();
 
     Capabilities capabilities =
@@ -120,6 +125,17 @@ public class StripeClient {
   }
 
   public Cardholder createCardholder(User user, ClearAddress billingAddress) {
+    Billing.Address.Builder addressBuilder =
+        Billing.Address.builder()
+            .setLine1(billingAddress.getStreetLine1())
+            .setCity(billingAddress.getLocality())
+            .setState(billingAddress.getRegion())
+            .setPostalCode(billingAddress.getPostalCode())
+            .setCountry(billingAddress.getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(billingAddress.getStreetLine2())) {
+      addressBuilder.setLine2(billingAddress.getStreetLine2());
+    }
+
     CardholderCreateParams params =
         CardholderCreateParams.builder()
             .setName(
@@ -131,17 +147,7 @@ public class StripeClient {
             .setStatus(CardholderCreateParams.Status.ACTIVE)
             .setType(CardholderCreateParams.Type.INDIVIDUAL)
             .setBilling(
-                CardholderCreateParams.Billing.builder()
-                    .setAddress(
-                        CardholderCreateParams.Billing.Address.builder()
-                            .setLine1(billingAddress.getStreetLine1())
-                            .setLine2(billingAddress.getStreetLine2())
-                            .setCity(billingAddress.getLocality())
-                            .setState(billingAddress.getRegion())
-                            .setPostalCode(billingAddress.getPostalCode())
-                            .setCountry(billingAddress.getCountry().getTwoCharacterCode())
-                            .build())
-                    .build())
+                CardholderCreateParams.Billing.builder().setAddress(addressBuilder.build()).build())
             .build();
 
     return callStripe(
@@ -151,6 +157,17 @@ public class StripeClient {
   }
 
   public Person createPerson(BusinessOwner businessOwner, String businessExternalRef) {
+    PersonCollectionCreateParams.Address.Builder addressBuilder =
+        PersonCollectionCreateParams.Address.builder()
+            .setLine1(businessOwner.getAddress().getStreetLine1().getEncrypted())
+            .setCity(businessOwner.getAddress().getLocality())
+            .setState(businessOwner.getAddress().getRegion())
+            .setPostalCode(businessOwner.getAddress().getPostalCode().getEncrypted())
+            .setCountry(businessOwner.getAddress().getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(businessOwner.getAddress().getStreetLine1().getEncrypted())) {
+      addressBuilder.setLine2(businessOwner.getAddress().getStreetLine1().getEncrypted());
+    }
+
     Builder builder =
         PersonCollectionCreateParams.builder()
             .setFirstName(businessOwner.getFirstName().getEncrypted())
@@ -158,15 +175,7 @@ public class StripeClient {
             .setEmail(businessOwner.getEmail().getEncrypted())
             .setPhone(businessOwner.getPhone().getEncrypted())
             .setRelationship(Relationship.builder().setRepresentative(true).setOwner(true).build())
-            .setAddress(
-                PersonCollectionCreateParams.Address.builder()
-                    .setLine1(businessOwner.getAddress().getStreetLine1().getEncrypted())
-                    .setLine2(businessOwner.getAddress().getStreetLine2().getEncrypted())
-                    .setCity(businessOwner.getAddress().getLocality())
-                    .setState(businessOwner.getAddress().getRegion())
-                    .setPostalCode(businessOwner.getAddress().getPostalCode().getEncrypted())
-                    .setCountry(businessOwner.getAddress().getCountry().getTwoCharacterCode())
-                    .build());
+            .setAddress(addressBuilder.build());
 
     if (businessOwner.getDateOfBirth() != null) {
       builder.setDob(

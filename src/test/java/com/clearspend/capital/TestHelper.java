@@ -10,12 +10,10 @@ import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.BinId;
 import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.BusinessProspectId;
-import com.clearspend.capital.common.typedid.data.ProgramId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.configuration.SecurityConfig;
@@ -108,11 +106,6 @@ public class TestHelper {
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>>
       DEFAULT_TRANSACTION_LIMITS = Map.of(Currency.USD, new HashMap<>());
 
-  public static final TypedId<BinId> binId = new TypedId<>("2691dad4-82f7-47ec-9cae-0686a22572fc");
-  public static final TypedId<ProgramId> pooledProgramId =
-      new TypedId<>("6faf3838-b2d7-422c-8d6f-c2294ebc73b4");
-  public static final TypedId<ProgramId> individualProgramId =
-      new TypedId<>("033955d1-f18e-497e-9905-88ba71e90208");
   /**
    * List of BusinessIds for testing. It's easy to search for these. Use {@link
    * #getNextBusinessId()} to get the first unused one from the list or to generate another one if
