@@ -178,6 +178,7 @@ public class StripeWebhookController {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
         NetworkCommon common = new NetworkCommon(auth, rawJson);
+        common.getRequestedAmount().ensureNonNegative();
         NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
 
         Map<String, String> metadata = getMetadata(common, networkMessage);

@@ -100,6 +100,11 @@ public class Amount {
   }
 
   @JsonIgnore
+  public boolean isGreaterThanOrEqualZero() {
+    return amount.compareTo(BigDecimal.ZERO) >= 0;
+  }
+
+  @JsonIgnore
   public boolean isLessThanOrEqualToZero() {
     return amount.compareTo(BigDecimal.ZERO) <= 0;
   }

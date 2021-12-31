@@ -47,7 +47,6 @@ public class NetworkMessageService {
   @Transactional
   public NetworkMessage processNetworkMessage(NetworkCommon common) {
     // update common with data we have locally
-    common.getRequestedAmount().ensureNonNegative();
     CardRecord cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
 
     // if the card isn't found, set decline bits and return to caller
@@ -196,7 +195,11 @@ public class NetworkMessageService {
   }
 
   private void processFinancialAuth(NetworkCommon common) {
-    if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+    if (common
+        .getAccount()
+        .getAvailableBalance()
+        .add(common.getRequestedAmount())
+        .isGreaterThanOrEqualZero()) {
       common.setPostDecline(true);
       return;
     }
