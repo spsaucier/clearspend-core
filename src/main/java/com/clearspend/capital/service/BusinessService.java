@@ -148,6 +148,8 @@ public class BusinessService {
     return new BusinessRecord(business, account);
   }
 
+  // TODO(kuchlein): determine if this is still a thing. I don't _believe_ it is
+  @Deprecated
   @Transactional
   public AccountReallocateFundsRecord reallocateBusinessFunds(
       TypedId<BusinessId> businessId,

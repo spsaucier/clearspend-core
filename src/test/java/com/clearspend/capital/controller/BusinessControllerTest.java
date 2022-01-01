@@ -210,7 +210,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             get("/businesses/allocations")
                 .contentType(APPLICATION_JSON_VALUE)
                 .cookie(createBusinessRecord.authCookie()))
-        .andExpect(status().isNoContent())
+        .andExpect(status().isNotFound())
         .andReturn()
         .getResponse();
   }

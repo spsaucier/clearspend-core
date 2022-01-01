@@ -10,7 +10,6 @@ import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.BusinessProspectId;
@@ -242,7 +241,11 @@ public class TestHelper {
   }
 
   public String generateBusinessName() {
-    return faker.company().name();
+    return faker.company().name() + faker.number().digits(6);
+  }
+
+  public String generateAllocationName() {
+    return "Alloc-" + faker.number().digits(8);
   }
 
   public OnboardBusinessRecord onboardBusiness() throws Exception {
@@ -438,12 +441,12 @@ public class TestHelper {
         .linkToken();
   }
 
-  public TypedId<BusinessBankAccountId> createBusinessBankAccount(TypedId<BusinessId> businessId) {
+  public BusinessBankAccount createBusinessBankAccount(TypedId<BusinessId> businessId) {
     try {
       String linkToken = plaidClient.createLinkToken(businessId);
       List<BusinessBankAccount> accounts =
           businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId);
-      return accounts.get(0).getId();
+      return accounts.get(0);
     } catch (IOException e) {
       log.info("Exception initializing with plaid", e);
       throw new RuntimeException(e);
@@ -459,12 +462,14 @@ public class TestHelper {
   }
 
   public AdjustmentAndHoldRecord transactBankAccount(
-      BankAccountTransactType bankAccountTransactType, BigDecimal amount, boolean placeHold) {
-    TypedId<BusinessId> businessId = businessIds.get(0);
-    BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount();
-    Account businessAccount = allocationService.getRootAllocation(businessId).account();
+      BusinessBankAccount businessBankAccount,
+      BankAccountTransactType bankAccountTransactType,
+      BigDecimal amount,
+      boolean placeHold) {
+    Account businessAccount =
+        allocationService.getRootAllocation(businessBankAccount.getBusinessId()).account();
     return businessBankAccountService.transactBankAccount(
-        businessId,
+        businessBankAccount.getBusinessId(),
         businessBankAccount.getId(),
         bankAccountTransactType,
         new Amount(businessAccount.getLedgerBalance().getCurrency(), amount),

@@ -51,7 +51,7 @@ public class Amount {
   }
 
   public static Amount min(Amount left, Amount right) {
-    assert left.currency.equals(right.currency);
+    assert left.currency.equals(right.currency) : "currency mismatch";
     return left.isLessThan(right) ? left : right;
   }
 
@@ -110,6 +110,11 @@ public class Amount {
   }
 
   @JsonIgnore
+  public boolean isLessThanZero() {
+    return amount.compareTo(BigDecimal.ZERO) < 0;
+  }
+
+  @JsonIgnore
   public boolean isNegative() {
     return amount.compareTo(BigDecimal.ZERO) < 0;
   }
@@ -117,6 +122,12 @@ public class Amount {
   @JsonIgnore
   public boolean isPositive() {
     return amount.compareTo(BigDecimal.ZERO) > 0;
+  }
+
+  public void ensureNegative() {
+    if (!isNegative()) {
+      throw new AmountException(AmountType.NEGATIVE, this);
+    }
   }
 
   public void ensureNonNegative() {

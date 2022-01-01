@@ -16,8 +16,8 @@ import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @UtilityClass
@@ -37,7 +37,7 @@ public class HashUtil {
   }
 
   public byte[] calculateHash(String clearText) {
-    if (!StringUtils.hasLength(clearText)) {
+    if (StringUtils.isEmpty(clearText)) {
       return null;
     }
 
@@ -85,7 +85,7 @@ public class HashUtil {
   // calculates a hash with Sha512 for the given input
   public String calculateHash512NoPrefix(String clearText, String salt) {
 
-    if (!StringUtils.hasLength(clearText)) {
+    if (StringUtils.isEmpty(clearText)) {
       // a null input results in a null output
       return null;
     }

@@ -4,8 +4,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
-import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -30,11 +29,11 @@ class AccountServiceTest extends BaseCapitalTest {
   @Test
   void reallocateFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);

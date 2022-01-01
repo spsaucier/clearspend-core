@@ -133,19 +133,18 @@ public class AccountService {
       @NonNull CreditOrDebit creditOrDebit,
       Amount amount,
       OffsetDateTime expirationDate) {
-    amount.ensureNonNegative();
-    Amount holdAmount = creditOrDebit == CreditOrDebit.DEBIT ? amount.negate() : amount;
+    amount.ensureNegative();
     Hold hold =
         holdRepository.save(
             new Hold(
                 account.getBusinessId(),
                 account.getId(),
                 HoldStatus.PLACED,
-                holdAmount,
+                amount,
                 expirationDate));
 
     account.getHolds().add(hold);
-    account.setAvailableBalance(account.getAvailableBalance().add(holdAmount));
+    account.setAvailableBalance(account.getAvailableBalance().add(amount));
 
     return new HoldRecord(account, hold);
   }

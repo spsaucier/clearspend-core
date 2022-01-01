@@ -1,12 +1,16 @@
 package com.clearspend.capital.service.type;
 
+import com.clearspend.capital.client.stripe.webhook.controller.StripeEventType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
@@ -65,6 +69,10 @@ public class NetworkCommon {
 
   private Account account;
 
+  private NetworkMessage networkMessage;
+
+  private AccountActivity accountActivity;
+
   private boolean postHold = false;
 
   private boolean postAdjustment = false;
@@ -73,20 +81,31 @@ public class NetworkCommon {
 
   private List<DeclineReason> declineReasons = new ArrayList<>();
 
-  private AccountActivity accountActivity = new AccountActivity();
+  private AccountActivityDetails accountActivityDetails = new AccountActivityDetails();
 
   // Stripe authorizations
-  public NetworkCommon(Authorization authorization, String rawJson) {
+  public NetworkCommon(
+      StripeEventType stripeEventType, Authorization authorization, String rawJson) {
     cardExternalRef = authorization.getCard().getId();
-    networkMessageType = NetworkMessageType.PRE_AUTH;
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
     if (authorization.getPendingRequest() != null) {
       allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
       amount = Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
     }
-    amount.ensureNonNegative();
-    creditOrDebit = CreditOrDebit.DEBIT; // assuming all authorizations are debits
+    // amounts from Stripe for authorization requests are always debits and positive
+    creditOrDebit = CreditOrDebit.DEBIT;
+    amount = amount.negate();
+    amount.ensureNegative();
+    networkMessageType =
+        switch (stripeEventType) {
+          case ISSUING_AUTHORIZATION_REQUEST -> NetworkMessageType.AUTH_REQUEST;
+          case ISSUING_AUTHORIZATION_CREATED -> NetworkMessageType.AUTH_CREATED;
+          case ISSUING_AUTHORIZATION_UPDATED -> NetworkMessageType.AUTH_UPDATED;
+          default -> throw new InvalidRequestException(
+              "unsupported stripeEventType " + stripeEventType);
+        };
+    // we do all our processing with positive amounts and rely on cr
     requestedAmount = amount;
     approvedAmount = Amount.of(amount.getCurrency());
 

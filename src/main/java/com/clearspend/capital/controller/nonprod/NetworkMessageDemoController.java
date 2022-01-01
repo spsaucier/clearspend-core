@@ -4,12 +4,12 @@ import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMess
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,17 +46,13 @@ public class NetworkMessageDemoController {
     Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
     User user = userRepository.findById(card.getUserId()).orElseThrow();
 
-    NetworkMessage networkMessage =
-        networkMessageService.processNetworkMessage(
-            TestDataController.generateNetworkCommon(
-                request.getNetworkMessageType(),
-                user,
-                card,
-                account,
-                request.getAmount().toAmount()));
+    NetworkCommon common =
+        TestDataController.generateNetworkCommon(
+            request.getNetworkMessageType(), user, card, account, request.getAmount().toAmount());
+    networkMessageService.processNetworkMessage(common);
 
-    log.info("networkMessage " + networkMessage);
+    log.info("networkMessage " + common.getNetworkMessage());
 
-    return new NetworkMessageResponse(networkMessage.getId());
+    return new NetworkMessageResponse(common.getNetworkMessage().getId());
   }
 }

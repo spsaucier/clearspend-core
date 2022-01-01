@@ -109,7 +109,7 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
             post("/authentication/reset-password")
                 .content(body)
                 .contentType(APPLICATION_JSON_VALUE))
-        .andExpect(status().isUnauthorized())
+        .andExpect(status().isForbidden())
         .andReturn()
         .getResponse();
   }

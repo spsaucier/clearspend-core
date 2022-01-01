@@ -6,12 +6,11 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
-import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Business;
+import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -46,11 +45,11 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         true);
@@ -97,7 +96,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void createAccountActivity() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(business.getId());
     accountService.retrieveRootAllocationAccount(
         business.getId(),
@@ -107,7 +106,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.TEN),
         true);
@@ -158,7 +157,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     networkMessageService.processNetworkMessage(
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.PRE_AUTH,
+            NetworkMessageType.AUTH_REQUEST,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -176,12 +175,12 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void retrieveAllAccountActivityFilterByAllocationType() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);

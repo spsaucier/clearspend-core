@@ -9,14 +9,13 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
-import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.type.activity.ChartDataRequest;
 import com.clearspend.capital.controller.type.activity.ChartDataResponse;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Business;
+import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -59,7 +58,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
@@ -69,7 +68,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("5000")),
         false);
@@ -150,7 +149,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
@@ -160,7 +159,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
@@ -245,7 +244,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
@@ -255,7 +254,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
@@ -303,7 +302,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
@@ -313,7 +312,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);

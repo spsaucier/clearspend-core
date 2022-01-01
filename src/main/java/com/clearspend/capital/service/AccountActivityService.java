@@ -97,22 +97,22 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordNetworkHoldAccountAccountActivity(NetworkCommon common, Hold hold) {
-    return recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
+  public void recordNetworkHoldAccountAccountActivity(NetworkCommon common, Hold hold) {
+    recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordNetworkAdjustmentAccountAccountActivity(
+  public void recordNetworkAdjustmentAccountAccountActivity(
       NetworkCommon common, Adjustment adjustment) {
-    return recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
+    recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordNetworkDeclineAccountAccountActivity(NetworkCommon common) {
-    return recordNetworkAccountActivity(common, common.getRequestedAmount(), null, null);
+  public void recordNetworkDeclineAccountAccountActivity(NetworkCommon common) {
+    recordNetworkAccountActivity(common, common.getRequestedAmount(), null, null);
   }
 
-  private AccountActivity recordNetworkAccountActivity(
+  private void recordNetworkAccountActivity(
       NetworkCommon common, Amount amount, Hold hold, Adjustment adjustment) {
 
     Allocation allocation = common.getAllocation();
@@ -123,8 +123,8 @@ public class AccountActivityService {
             allocation.getName(),
             common.getAccount().getId(),
             common.getNetworkMessageType().getAccountActivityType(),
-            common.getAccountActivity().getAccountActivityStatus(),
-            common.getAccountActivity().getActivityTime(),
+            common.getAccountActivityDetails().getAccountActivityStatus(),
+            common.getAccountActivityDetails().getActivityTime(),
             amount);
     accountActivity.setUserId(common.getCard().getUserId());
 
@@ -134,9 +134,9 @@ public class AccountActivityService {
             MerchantType.OTHERS,
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
-            common.getAccountActivity().getMerchantLogoUrl(),
-            common.getAccountActivity().getMerchantLatitude(),
-            common.getAccountActivity().getMerchantLongitude()));
+            common.getAccountActivityDetails().getMerchantLogoUrl(),
+            common.getAccountActivityDetails().getMerchantLatitude(),
+            common.getAccountActivityDetails().getMerchantLongitude()));
 
     User cardOwner = userService.retrieveUser(common.getCard().getUserId());
     accountActivity.setCard(
@@ -153,7 +153,7 @@ public class AccountActivityService {
       accountActivity.setHoldId(hold.getId());
     }
 
-    return accountActivityRepository.save(accountActivity);
+    common.setAccountActivity(accountActivityRepository.save(accountActivity));
   }
 
   public AccountActivity updateAccountActivity(

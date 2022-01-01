@@ -2,7 +2,6 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.common.error.InvalidRequestException;
-import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.StripeWebhookLog;
 import com.clearspend.capital.data.repository.StripeWebhookLogRepository;
 import com.clearspend.capital.service.NetworkMessageService;
@@ -85,7 +84,7 @@ public class StripeWebhookController {
     try {
       switch (parseRecord.stripeEventType) {
         case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
-            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
+            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson, false);
         case ISSUING_TRANSACTION_CREATED -> processCompletion(
             parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
         case ISSUING_CARD_CREATED -> processCard(
@@ -168,20 +167,20 @@ public class StripeWebhookController {
   }
 
   @VisibleForTesting
-  void processAuthorization(
-      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson)
+  NetworkCommon processAuthorization(
+      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson, boolean isTest)
       throws StripeException {
+    NetworkCommon common = null;
     switch (stripeEventType) {
       case ISSUING_AUTHORIZATION_REQUEST -> {
         Authorization auth = (Authorization) stripeObject;
         if (auth.getStatus() != "pending") {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
-        NetworkCommon common = new NetworkCommon(auth, rawJson);
-        common.getRequestedAmount().ensureNonNegative();
-        NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
+        common = new NetworkCommon(stripeEventType, auth, rawJson);
+        networkMessageService.processNetworkMessage(common);
 
-        Map<String, String> metadata = getMetadata(common, networkMessage);
+        Map<String, String> metadata = getMetadata(common);
 
         if (common.isPostDecline()) {
           AuthorizationDeclineParams authorizationDeclineParams =
@@ -190,43 +189,54 @@ public class StripeWebhookController {
               "Stripe authorization {} for {} declined in {} for {}",
               auth.getId(),
               common.getRequestedAmount(),
-              networkMessage != null ? networkMessage.getId() : "n/a",
+              common.getNetworkMessage() != null ? common.getNetworkMessage().getId() : "n/a",
               common.getRequestedAmount());
-          auth.decline(authorizationDeclineParams);
+          if (!isTest) {
+            auth.decline(authorizationDeclineParams);
+          }
         } else {
           auth.setApproved(true);
           Builder authorizationApproveParams =
               AuthorizationApproveParams.builder().setMetadata(metadata);
           if (common.isAllowPartialApproval()) {
-            authorizationApproveParams.setAmount(common.getApprovedAmount().toStripeAmount());
+            // amounts going back to Stripe for authorizations should be positive
+            authorizationApproveParams.setAmount(common.getApprovedAmount().abs().toStripeAmount());
           }
           log.debug(
               "Stripe authorization {} for {} approved in {} for {}",
               auth.getId(),
               common.getRequestedAmount(),
-              networkMessage.getId(),
-              common.getRequestedAmount());
-          auth.approve(authorizationApproveParams.build());
+              common.getNetworkMessage().getId(),
+              // amounts going back to Stripe for authorizations should be positive
+              common.getRequestedAmount().abs());
+          if (!isTest) {
+            auth.approve(authorizationApproveParams.build());
+          }
         }
       }
-      case ISSUING_AUTHORIZATION_CREATED -> {
+      case ISSUING_AUTHORIZATION_CREATED, ISSUING_AUTHORIZATION_UPDATED -> {
         Authorization auth = (Authorization) stripeObject;
+        common = new NetworkCommon(stripeEventType, auth, rawJson);
+        networkMessageService.processNetworkMessage(common);
       }
     }
+
+    return common;
   }
 
   private void processCompletion(
       StripeEventType stripeEventType, StripeObject stripeObject, String rawJson) {
     Transaction transaction = (Transaction) stripeObject;
     NetworkCommon common = new NetworkCommon(transaction, rawJson);
-    NetworkMessage networkMessage = networkMessageService.processNetworkMessage(common);
+    networkMessageService.processNetworkMessage(common);
   }
 
   private void processCard(StripeEventType stripeEventType, StripeObject stripeObject) {}
 
   private void processCardHolder(StripeEventType stripeEventType, StripeObject stripeObject) {}
 
-  private Map<String, String> getMetadata(NetworkCommon common, NetworkMessage networkMessage) {
+  @VisibleForTesting
+  Map<String, String> getMetadata(NetworkCommon common) {
     Map<String, String> metadata = new HashMap<>();
 
     if (common.getBusinessId() != null) {
@@ -247,15 +257,15 @@ public class StripeWebhookController {
           common.getDeclineReasons().stream().map(Enum::toString).collect(Collectors.joining(",")));
     }
 
-    if (networkMessage != null) {
-      if (networkMessage.getId() != null) {
-        metadata.put("networkMessageId", networkMessage.getId().toString());
+    if (common.getNetworkMessage() != null) {
+      if (common.getNetworkMessage().getId() != null) {
+        metadata.put("networkMessageId", common.getNetworkMessage().getId().toString());
       }
-      if (networkMessage.getAdjustmentId() != null) {
-        metadata.put("adjustmentId", networkMessage.getAdjustmentId().toString());
+      if (common.getNetworkMessage().getAdjustmentId() != null) {
+        metadata.put("adjustmentId", common.getNetworkMessage().getAdjustmentId().toString());
       }
-      if (networkMessage.getHoldId() != null) {
-        metadata.put("holdId", networkMessage.getHoldId().toString());
+      if (common.getNetworkMessage().getHoldId() != null) {
+        metadata.put("holdId", common.getNetworkMessage().getHoldId().toString());
       }
     }
 

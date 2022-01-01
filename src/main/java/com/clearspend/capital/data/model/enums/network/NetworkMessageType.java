@@ -3,8 +3,10 @@ package com.clearspend.capital.data.model.enums.network;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 
 public enum NetworkMessageType {
-  PRE_AUTH(AccountActivityType.NETWORK_PRE_AUTH),
-  PRE_AUTH_ADVICE(AccountActivityType.NETWORK_PRE_AUTH),
+  AUTH_REQUEST(AccountActivityType.NETWORK_AUTHORIZATION),
+  AUTH_CREATED(AccountActivityType.NETWORK_AUTHORIZATION),
+  AUTH_UPDATED(AccountActivityType.NETWORK_AUTHORIZATION),
+  PRE_AUTH_ADVICE(AccountActivityType.NETWORK_AUTHORIZATION),
   FINANCIAL_AUTH(AccountActivityType.NETWORK_FINANCIAL_AUTH),
   FINANCIAL_AUTH_ADVICE(AccountActivityType.NETWORK_FINANCIAL_AUTH), // Forced Post
   REVERSAL(AccountActivityType.NETWORK_REVERSAL),

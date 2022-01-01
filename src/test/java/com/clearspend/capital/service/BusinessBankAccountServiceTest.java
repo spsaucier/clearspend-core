@@ -49,12 +49,12 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Test
   void depositFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
-            businessBankAccountId,
+            businessBankAccount.getId(),
             BankAccountTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
@@ -64,18 +64,17 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void withdrawFunds_success() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessId);
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("700.51")),
         false);
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
-            businessBankAccountId,
+            businessBankAccount.getId(),
             BankAccountTransactType.WITHDRAW,
             Amount.of(Currency.USD, new BigDecimal("241.85")),
             true);
@@ -85,11 +84,10 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void withdrawFunds_insufficientBalance() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
-        testHelper.createBusinessBankAccount(businessId);
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
-        businessBankAccountId,
+        businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("710.51")),
         true);
@@ -100,7 +98,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             () ->
                 bankAccountService.transactBankAccount(
                     createBusinessRecord.business().getId(),
-                    businessBankAccountId,
+                    businessBankAccount.getId(),
                     BankAccountTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
                     true));
@@ -110,7 +108,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void depositFunds_insufficientFunds() {
     assumeTrue(plaidClient.isConfigured());
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    TypedId<BusinessBankAccountId> businessBankAccountId =
+    BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     InsufficientFundsException insufficientFundsException =
         assertThrows(
@@ -118,7 +116,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             () ->
                 bankAccountService.transactBankAccount(
                     createBusinessRecord.business().getId(),
-                    businessBankAccountId,
+                    businessBankAccount.getId(),
                     BankAccountTransactType.DEPOSIT,
                     Amount.of(Currency.USD, new BigDecimal("15000.00")),
                     true));

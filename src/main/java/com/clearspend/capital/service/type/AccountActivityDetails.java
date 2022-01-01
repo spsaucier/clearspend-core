@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import lombok.Data;
 
 @Data
-public class AccountActivity {
+public class AccountActivityDetails {
 
   private AccountActivityStatus accountActivityStatus;
 

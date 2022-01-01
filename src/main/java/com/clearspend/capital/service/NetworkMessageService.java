@@ -45,7 +45,7 @@ public class NetworkMessageService {
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
   @Transactional
-  public NetworkMessage processNetworkMessage(NetworkCommon common) {
+  public void processNetworkMessage(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
 
@@ -54,7 +54,7 @@ public class NetworkMessageService {
       common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
       common.setPostDecline(true);
       log.error("failed to find card with externalRef: " + common.getCardExternalRef());
-      return null;
+      return;
     }
 
     common.setBusinessId(cardRecord.card().getBusinessId());
@@ -73,7 +73,9 @@ public class NetworkMessageService {
 
     // actually process the network message from Stripe
     switch (common.getNetworkMessageType()) {
-      case PRE_AUTH, PRE_AUTH_ADVICE -> processPreAuth(common);
+      case AUTH_REQUEST -> processAuthorizationRequest(common);
+      case AUTH_CREATED -> processAuthorizationCreated(common);
+      case AUTH_UPDATED -> processAuthorizationUpdated(common);
       case FINANCIAL_AUTH, FINANCIAL_AUTH_ADVICE -> processFinancialAuth(common);
       case REVERSAL, REVERSAL_ADVICE -> processReversal(common);
       default -> throw new IllegalArgumentException(
@@ -116,8 +118,8 @@ public class NetworkMessageService {
               common.getRequestedAmount(),
               OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
-      common.getAccountActivity().setActivityTime(holdRecord.hold().getCreated());
-      common.getAccountActivity().setHideAfter(holdRecord.hold().getExpirationDate());
+      common.getAccountActivityDetails().setActivityTime(holdRecord.hold().getCreated());
+      common.getAccountActivityDetails().setHideAfter(holdRecord.hold().getExpirationDate());
       accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
       log.debug(
           "networkMessage {} hold {} (available {} / ledger {})",
@@ -132,7 +134,9 @@ public class NetworkMessageService {
           accountService.recordNetworkAdjustment(
               common.getAccount(), common.getCreditOrDebit(), common.getRequestedAmount());
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
-      common.getAccountActivity().setActivityTime(adjustmentRecord.adjustment().getCreated());
+      common
+          .getAccountActivityDetails()
+          .setActivityTime(adjustmentRecord.adjustment().getCreated());
       accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
           common, adjustmentRecord.adjustment());
       log.debug(
@@ -145,8 +149,8 @@ public class NetworkMessageService {
 
     if (common.isPostDecline()) {
       // TODO(kuchlein): do we need a separate decline table?
-      common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.DECLINED);
-      common.getAccountActivity().setActivityTime(OffsetDateTime.now());
+      common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
+      common.getAccountActivityDetails().setActivityTime(OffsetDateTime.now());
       accountActivityService.recordNetworkDeclineAccountAccountActivity(common);
       log.debug(
           "networkMessage {} declined (available {} / ledger {})",
@@ -155,12 +159,16 @@ public class NetworkMessageService {
           common.getAccount().getLedgerBalance());
     }
 
-    return networkMessageRepository.save(networkMessage);
+    common.setNetworkMessage(networkMessageRepository.save(networkMessage));
   }
 
-  private void processPreAuth(NetworkCommon common) {
-    assert common.getCreditOrDebit() == CreditOrDebit.DEBIT;
-    common.getRequestedAmount().ensureNonNegative();
+  private void processAuthorizationUpdated(NetworkCommon common) {}
+
+  private void processAuthorizationCreated(NetworkCommon common) {}
+
+  private void processAuthorizationRequest(NetworkCommon common) {
+    assert common.getCreditOrDebit() == CreditOrDebit.DEBIT : "credit/debit flag must be debit";
+    common.getRequestedAmount().ensureNegative();
 
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
@@ -177,7 +185,11 @@ public class NetworkMessageService {
 
     // account has insufficient funds and partial approval isn't an option
     if (!common.isAllowPartialApproval()) {
-      if (common.getRequestedAmount().isGreaterThan(common.getAccount().getAvailableBalance())) {
+      if (common
+          .getAccount()
+          .getAvailableBalance()
+          .add(common.getRequestedAmount())
+          .isLessThanZero()) {
         common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
         common.setPostDecline(true);
         return;
@@ -185,12 +197,10 @@ public class NetworkMessageService {
       common.setApprovedAmount(common.getRequestedAmount());
     } else {
       common.setApprovedAmount(
-          Amount.min(common.getAccount().getAvailableBalance(), common.getRequestedAmount()));
+          Amount.min(common.getAccount().getAvailableBalance(), common.getRequestedAmount().abs()));
     }
 
-    // either we have sufficient funds or we can do a partial approval
-
-    common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.PENDING);
+    common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);
   }
 
@@ -205,7 +215,7 @@ public class NetworkMessageService {
     }
     common.setApprovedAmount(common.getRequestedAmount());
 
-    common.getAccountActivity().setAccountActivityStatus(AccountActivityStatus.APPROVED);
+    common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
   }
 
