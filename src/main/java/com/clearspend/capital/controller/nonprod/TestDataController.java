@@ -1,6 +1,5 @@
 package com.clearspend.capital.controller.nonprod;
 
-import com.clearspend.capital.client.stripe.webhook.controller.StripeEventType;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -277,7 +276,7 @@ public class TestDataController {
     amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
     networkMessageService.processNetworkMessage(
         generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             cardRecord.card(),
             cardRecord.account(),
@@ -529,11 +528,11 @@ public class TestDataController {
         stripeAuthorization.setStatus("pending");
 
         yield new NetworkCommon(
-            StripeEventType.ISSUING_AUTHORIZATION_REQUEST,
+            NetworkMessageType.AUTH_REQUEST,
             stripeAuthorization,
             objectMapper.writeValueAsString(stripeAuthorization));
       }
-      case FINANCIAL_AUTH -> {
+      case TRANSACTION_CREATED -> {
         Transaction stripeTransaction = new Transaction();
         stripeTransaction.setAmount(amount.toStripeAmount());
         stripeTransaction.setCard(stripeCard.getId());

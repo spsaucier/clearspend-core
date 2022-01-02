@@ -23,6 +23,7 @@ public class RecordNotFoundException extends RuntimeException {
     BUSINESS_OWNER("BusinessOwner"),
     BUSINESS_PROSPECT("BusinessProspect"),
     CARD("Card"),
+    HOLD("Hold"),
     LEDGER_ACCOUNT("LedgerAccount"),
     RECEIPT("Receipt"),
     SPEND_LIMIT("SpendLimit"),

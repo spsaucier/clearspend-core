@@ -3,6 +3,7 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.data.model.StripeWebhookLog;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.StripeWebhookLogRepository;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -84,9 +85,8 @@ public class StripeWebhookController {
     try {
       switch (parseRecord.stripeEventType) {
         case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
-            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson, false);
-        case ISSUING_TRANSACTION_CREATED -> processCompletion(
-            parseRecord.stripeEventType, parseRecord.stripeObject, parseRecord.rawJson);
+            parseRecord, false);
+        case ISSUING_TRANSACTION_CREATED -> processCapture(parseRecord);
         case ISSUING_CARD_CREATED -> processCard(
             parseRecord.stripeEventType, parseRecord.stripeObject);
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
@@ -111,7 +111,7 @@ public class StripeWebhookController {
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
 
-  private record ParseRecord(
+  record ParseRecord(
       StripeWebhookLog stripeWebhookLog,
       StripeObject stripeObject,
       String rawJson,
@@ -131,6 +131,7 @@ public class StripeWebhookController {
       stripeWebhookLog.setRequest(payload);
       log.info("{} payload: {}", requestType, payload);
       event = Webhook.constructEvent(payload, sigHeader, secret);
+      stripeWebhookLog.setStripeEventRef(event.getId());
       stripeWebhookLog.setEventType(event.getType());
     } catch (IOException e) {
       stripeWebhookLog.setError(e.getMessage());
@@ -167,9 +168,12 @@ public class StripeWebhookController {
   }
 
   @VisibleForTesting
-  NetworkCommon processAuthorization(
-      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson, boolean isTest)
+  NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
       throws StripeException {
+    StripeEventType stripeEventType = parseRecord.stripeEventType;
+    StripeObject stripeObject = parseRecord.stripeObject;
+    String rawJson = parseRecord.rawJson;
+
     NetworkCommon common = null;
     switch (stripeEventType) {
       case ISSUING_AUTHORIZATION_REQUEST -> {
@@ -177,7 +181,7 @@ public class StripeWebhookController {
         if (auth.getStatus() != "pending") {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
-        common = new NetworkCommon(stripeEventType, auth, rawJson);
+        common = new NetworkCommon(NetworkMessageType.AUTH_REQUEST, auth, rawJson);
         networkMessageService.processNetworkMessage(common);
 
         Map<String, String> metadata = getMetadata(common);
@@ -216,19 +220,35 @@ public class StripeWebhookController {
       }
       case ISSUING_AUTHORIZATION_CREATED, ISSUING_AUTHORIZATION_UPDATED -> {
         Authorization auth = (Authorization) stripeObject;
-        common = new NetworkCommon(stripeEventType, auth, rawJson);
+        NetworkMessageType networkMessageType =
+            switch (stripeEventType) {
+              case ISSUING_AUTHORIZATION_CREATED -> NetworkMessageType.AUTH_CREATED;
+              case ISSUING_AUTHORIZATION_UPDATED -> NetworkMessageType.AUTH_UPDATED;
+              default -> throw new IllegalStateException("Unexpected value: " + stripeEventType);
+            };
+        common = new NetworkCommon(networkMessageType, auth, rawJson);
         networkMessageService.processNetworkMessage(common);
       }
+    }
+
+    if (common != null && common.getNetworkMessage() != null) {
+      parseRecord.stripeWebhookLog().setNetworkMessageId(common.getNetworkMessage().getId());
     }
 
     return common;
   }
 
-  private void processCompletion(
-      StripeEventType stripeEventType, StripeObject stripeObject, String rawJson) {
-    Transaction transaction = (Transaction) stripeObject;
-    NetworkCommon common = new NetworkCommon(transaction, rawJson);
+  @VisibleForTesting
+  NetworkCommon processCapture(ParseRecord parseRecord) {
+    Transaction transaction = (Transaction) parseRecord.stripeObject;
+    NetworkCommon common = new NetworkCommon(transaction, parseRecord.rawJson);
     networkMessageService.processNetworkMessage(common);
+
+    if (common.getNetworkMessage() != null) {
+      parseRecord.stripeWebhookLog().setNetworkMessageId(common.getNetworkMessage().getId());
+    }
+
+    return common;
   }
 
   private void processCard(StripeEventType stripeEventType, StripeObject stripeObject) {}

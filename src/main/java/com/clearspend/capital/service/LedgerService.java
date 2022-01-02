@@ -10,13 +10,11 @@ import com.clearspend.capital.data.model.LedgerAccount;
 import com.clearspend.capital.data.model.Posting;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
-import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.repository.JournalEntryRepository;
 import com.clearspend.capital.data.repository.LedgerAccountRepository;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -108,23 +106,19 @@ public class LedgerService {
 
   @Transactional(TxType.REQUIRED)
   public NetworkJournalEntry recordNetworkAdjustment(
-      TypedId<LedgerAccountId> ledgerAccountId,
-      @NonNull CreditOrDebit creditOrDebit,
-      Amount amount) {
-    amount.ensureNonNegative();
-
+      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount networkLedgerAccount =
         getOrCreateLedgerAccount(LedgerAccountType.NETWORK, amount.getCurrency());
     LedgerAccount ledgerAccount = getLedgerAccount(ledgerAccountId);
 
     JournalEntry journalEntry = new JournalEntry();
     Posting networkPosting, accountPosting;
-    if (creditOrDebit == CreditOrDebit.DEBIT) {
-      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount.negate());
-      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount);
-    } else {
+    if (amount.isNegative()) {
       networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount.negate());
       accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
+    } else {
+      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount.negate());
+      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount);
     }
 
     journalEntry.setPostings(List.of(networkPosting, accountPosting));

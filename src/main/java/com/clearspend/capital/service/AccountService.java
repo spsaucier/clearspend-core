@@ -21,7 +21,6 @@ import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.HoldStatus;
-import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
@@ -129,10 +128,7 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public HoldRecord recordNetworkHold(
-      Account account,
-      @NonNull CreditOrDebit creditOrDebit,
-      Amount amount,
-      OffsetDateTime expirationDate) {
+      Account account, Amount amount, OffsetDateTime expirationDate) {
     amount.ensureNegative();
     Hold hold =
         holdRepository.save(
@@ -150,12 +146,8 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord recordNetworkAdjustment(
-      Account account, @NonNull CreditOrDebit creditOrDebit, @NonNull Amount amount) {
-    amount.ensureNonNegative();
-
-    Adjustment adjustment =
-        adjustmentService.recordNetworkAdjustment(account, creditOrDebit, amount);
+  public AdjustmentRecord recordNetworkAdjustment(Account account, @NonNull Amount amount) {
+    Adjustment adjustment = adjustmentService.recordNetworkAdjustment(account, amount);
     account.setLedgerBalance(account.getLedgerBalance().add(adjustment.getAmount()));
     account = accountRepository.save(account);
 

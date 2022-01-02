@@ -88,7 +88,7 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @NonNull private Integer merchantCategoryCode;
 
-  private String externalRef;
+  @NonNull private String externalRef;
 
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")

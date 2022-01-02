@@ -9,7 +9,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
-import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.service.LedgerService.BankJournalEntry;
 import com.clearspend.capital.service.LedgerService.NetworkJournalEntry;
@@ -18,7 +17,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -110,12 +108,9 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment recordNetworkAdjustment(
-      Account account, @NonNull CreditOrDebit creditOrDebit, Amount amount) {
-    amount.ensureNonNegative();
-
+  public Adjustment recordNetworkAdjustment(Account account, Amount amount) {
     NetworkJournalEntry networkJournalEntry =
-        ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), creditOrDebit, amount);
+        ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
     return adjustmentRepository.save(
         new Adjustment(

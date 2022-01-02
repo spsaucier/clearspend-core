@@ -124,7 +124,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     common =
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -134,7 +134,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     common =
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -144,7 +144,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     common =
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -154,7 +154,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     common =
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),
@@ -164,7 +164,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
     common =
         TestDataController.generateNetworkCommon(
-            NetworkMessageType.FINANCIAL_AUTH,
+            NetworkMessageType.TRANSACTION_CREATED,
             user.user(),
             card,
             createBusinessRecord.allocationRecord().account(),

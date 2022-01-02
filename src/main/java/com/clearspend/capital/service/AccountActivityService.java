@@ -19,10 +19,11 @@ import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
-import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -97,18 +98,28 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkHoldAccountAccountActivity(NetworkCommon common, Hold hold) {
+  public void recordNetworkHoldAccountActivity(NetworkCommon common, Hold hold) {
     recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkAdjustmentAccountAccountActivity(
-      NetworkCommon common, Adjustment adjustment) {
+  public void recordNetworkHoldReleaseAccountActivity(Hold hold) {
+    Optional<AccountActivity> accountActivityOptional =
+        accountActivityRepository.findByHoldId(hold.getId());
+    if (accountActivityOptional.isPresent()) {
+      AccountActivity accountActivity = accountActivityOptional.get();
+      accountActivity.setHideAfter(OffsetDateTime.now());
+      accountActivityRepository.save(accountActivity);
+    }
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public void recordNetworkAdjustmentAccountActivity(NetworkCommon common, Adjustment adjustment) {
     recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkDeclineAccountAccountActivity(NetworkCommon common) {
+  public void recordNetworkDeclineAccountActivity(NetworkCommon common) {
     recordNetworkAccountActivity(common, common.getRequestedAmount(), null, null);
   }
 
@@ -131,7 +142,7 @@ public class AccountActivityService {
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
-            MerchantType.OTHERS,
+            common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
             common.getAccountActivityDetails().getMerchantLogoUrl(),

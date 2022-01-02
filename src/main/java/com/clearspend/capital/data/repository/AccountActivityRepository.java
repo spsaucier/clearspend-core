@@ -3,6 +3,7 @@ package com.clearspend.capital.data.repository;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
+import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.data.model.AccountActivity;
@@ -25,4 +26,6 @@ public interface AccountActivityRepository
 
   Optional<AccountActivity> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> id);
+
+  Optional<AccountActivity> findByHoldId(TypedId<HoldId> holdId);
 }

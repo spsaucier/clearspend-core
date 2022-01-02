@@ -1,10 +1,11 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
-import com.clearspend.capital.data.model.enums.network.CreditOrDebit;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
@@ -18,7 +19,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,8 +77,7 @@ public class NetworkMessageService {
       case AUTH_REQUEST -> processAuthorizationRequest(common);
       case AUTH_CREATED -> processAuthorizationCreated(common);
       case AUTH_UPDATED -> processAuthorizationUpdated(common);
-      case FINANCIAL_AUTH, FINANCIAL_AUTH_ADVICE -> processFinancialAuth(common);
-      case REVERSAL, REVERSAL_ADVICE -> processReversal(common);
+      case TRANSACTION_CREATED -> processTransactionCreated(common);
       default -> throw new IllegalArgumentException(
           "invalid networkMessageType " + common.getNetworkMessageType());
     }
@@ -87,13 +87,14 @@ public class NetworkMessageService {
         new NetworkMessage(
             cardRecord.card().getBusinessId(),
             cardRecord.card().getAllocationId(),
-            UUID.randomUUID(),
+            common.getNetworkMessageGroupId(),
             common.getNetworkMessageType(),
             common.getRequestedAmount(),
             common.getMerchantName(),
             common.getMerchantAddress(),
             common.getMerchantNumber(),
-            common.getMerchantCategoryCode());
+            common.getMerchantCategoryCode(),
+            common.getExternalRef());
 
     // TODO(kuchlein): determine why we can't simply use the request as the field type
     // networkMessage.setRequest(common.getRequest());
@@ -113,14 +114,12 @@ public class NetworkMessageService {
     if (common.isPostHold()) {
       HoldRecord holdRecord =
           accountService.recordNetworkHold(
-              common.getAccount(),
-              common.getCreditOrDebit(),
-              common.getRequestedAmount(),
-              OffsetDateTime.now().plusDays(2));
+              common.getAccount(), common.getRequestedAmount(), OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
+      common.setHold(holdRecord.hold());
       common.getAccountActivityDetails().setActivityTime(holdRecord.hold().getCreated());
       common.getAccountActivityDetails().setHideAfter(holdRecord.hold().getExpirationDate());
-      accountActivityService.recordNetworkHoldAccountAccountActivity(common, holdRecord.hold());
+      accountActivityService.recordNetworkHoldAccountActivity(common, holdRecord.hold());
       log.debug(
           "networkMessage {} hold {} (available {} / ledger {})",
           networkMessage.getId(),
@@ -131,13 +130,13 @@ public class NetworkMessageService {
 
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
-          accountService.recordNetworkAdjustment(
-              common.getAccount(), common.getCreditOrDebit(), common.getRequestedAmount());
+          accountService.recordNetworkAdjustment(common.getAccount(), common.getRequestedAmount());
+      common.setAdjustment(adjustmentRecord.adjustment());
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       common
           .getAccountActivityDetails()
           .setActivityTime(adjustmentRecord.adjustment().getCreated());
-      accountActivityService.recordNetworkAdjustmentAccountAccountActivity(
+      accountActivityService.recordNetworkAdjustmentAccountActivity(
           common, adjustmentRecord.adjustment());
       log.debug(
           "networkMessage {} adjustment {} (available {} / ledger {})",
@@ -151,7 +150,7 @@ public class NetworkMessageService {
       // TODO(kuchlein): do we need a separate decline table?
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
       common.getAccountActivityDetails().setActivityTime(OffsetDateTime.now());
-      accountActivityService.recordNetworkDeclineAccountAccountActivity(common);
+      accountActivityService.recordNetworkDeclineAccountActivity(common);
       log.debug(
           "networkMessage {} declined (available {} / ledger {})",
           networkMessage.getId(),
@@ -167,7 +166,6 @@ public class NetworkMessageService {
   private void processAuthorizationCreated(NetworkCommon common) {}
 
   private void processAuthorizationRequest(NetworkCommon common) {
-    assert common.getCreditOrDebit() == CreditOrDebit.DEBIT : "credit/debit flag must be debit";
     common.getRequestedAmount().ensureNegative();
 
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
@@ -204,7 +202,7 @@ public class NetworkMessageService {
     common.setPostHold(true);
   }
 
-  private void processFinancialAuth(NetworkCommon common) {
+  private void processTransactionCreated(NetworkCommon common) {
     if (common
         .getAccount()
         .getAvailableBalance()
@@ -217,10 +215,25 @@ public class NetworkMessageService {
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
-  }
 
-  private void processReversal(NetworkCommon common) {
-    common.setPostAdjustment(true);
+    // lookup authorization, release funds and update account
+    Optional<NetworkMessage> networkMessageOptional =
+        networkMessageRepository.findByExternalRef(common.getStripeAuthorizationExternalRef());
+    if (networkMessageOptional.isPresent()) { // TODO(kuchlein): determine if this is always true
+      NetworkMessage networkMessage = networkMessageOptional.get();
+      common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+      Optional<Hold> holdOptional =
+          common.getAccount().getHolds().stream()
+              .filter(hold -> hold.getId().equals(networkMessage.getHoldId()))
+              .findFirst();
+      if (holdOptional.isPresent()) {
+        Hold hold = holdOptional.get();
+        hold.setStatus(HoldStatus.RELEASED);
+        common.getUpdatedHolds().add(hold);
+        common.getAccount().recalculateAvailableBalance();
+        accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
+      }
+    }
   }
 
   private void processServiceFee(NetworkCommon common) {}

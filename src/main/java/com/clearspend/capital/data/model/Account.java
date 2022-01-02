@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.LedgerAccountId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.enums.AccountType;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.persistence.Column;
@@ -75,15 +76,22 @@ public class Account extends TypedMutable<AccountId> {
   public void setHolds(List<Hold> holds) {
     this.holds = holds;
 
-    BigDecimal holdAmount =
-        holds.stream().map(e -> e.getAmount().getAmount()).reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    availableBalance = ledgerBalance.add(new Amount(ledgerBalance.getCurrency(), holdAmount));
+    recalculateAvailableBalance();
 
     log.debug(
         "account {}, ledgerBalance: {}, availableBalance: {}",
         this.getId(),
         ledgerBalance,
         availableBalance);
+  }
+
+  public void recalculateAvailableBalance() {
+    BigDecimal holdAmount =
+        holds.stream()
+            .filter(hold -> hold.getStatus().equals(HoldStatus.PLACED))
+            .map(e -> e.getAmount().getAmount())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    availableBalance = ledgerBalance.add(new Amount(ledgerBalance.getCurrency(), holdAmount));
   }
 }
