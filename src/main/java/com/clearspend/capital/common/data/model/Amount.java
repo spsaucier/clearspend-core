@@ -25,6 +25,11 @@ import lombok.NonNull;
 @MappedSuperclass
 public class Amount {
 
+  @Override
+  public String toString() {
+    return "" + amount + currency;
+  }
+
   @Enumerated(value = EnumType.STRING)
   @JsonProperty("currency")
   private Currency currency;

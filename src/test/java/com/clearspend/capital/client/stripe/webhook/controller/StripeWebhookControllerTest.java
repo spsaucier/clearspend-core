@@ -435,13 +435,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(accountActivity.getAmount())
         .isEqualTo(Amount.fromStripeAmount(business.getCurrency(), -amount));
 
-    networkCommon.getUpdatedHolds().forEach(hold -> {
-      AccountActivity holdAccountActivity =
-          accountActivityRepository
-              .findByHoldId(hold.getId())
-              .orElseThrow();
-      log.debug("hold accountActivity: {}", holdAccountActivity);
-    });
+    networkCommon
+        .getUpdatedHolds()
+        .forEach(
+            hold -> {
+              AccountActivity holdAccountActivity =
+                  accountActivityRepository.findByHoldId(hold.getId()).orElseThrow();
+              log.debug("hold accountActivity: {}", holdAccountActivity);
+            });
 
     Adjustment adjustment =
         adjustmentRepository
