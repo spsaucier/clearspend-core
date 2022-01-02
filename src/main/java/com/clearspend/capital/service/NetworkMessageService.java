@@ -121,8 +121,9 @@ public class NetworkMessageService {
       common.getAccountActivityDetails().setHideAfter(holdRecord.hold().getExpirationDate());
       accountActivityService.recordNetworkHoldAccountActivity(common, holdRecord.hold());
       log.debug(
-          "networkMessage {} hold {} (available {} / ledger {})",
+          "networkMessage {} for {} hold {} (available {} / ledger {})",
           networkMessage.getId(),
+          common.getRequestedAmount(),
           networkMessage.getHoldId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
@@ -139,8 +140,9 @@ public class NetworkMessageService {
       accountActivityService.recordNetworkAdjustmentAccountActivity(
           common, adjustmentRecord.adjustment());
       log.debug(
-          "networkMessage {} adjustment {} (available {} / ledger {})",
+          "networkMessage {} for {} adjustment {} (available {} / ledger {})",
           networkMessage.getId(),
+          common.getRequestedAmount(),
           networkMessage.getAdjustmentId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
@@ -151,9 +153,10 @@ public class NetworkMessageService {
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
       common.getAccountActivityDetails().setActivityTime(OffsetDateTime.now());
       accountActivityService.recordNetworkDeclineAccountActivity(common);
-      log.debug(
-          "networkMessage {} declined (available {} / ledger {})",
+      log.warn(
+          "networkMessage {} for {} declined (available {} / ledger {})",
           networkMessage.getId(),
+          common.getRequestedAmount(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
     }
@@ -203,14 +206,6 @@ public class NetworkMessageService {
   }
 
   private void processTransactionCreated(NetworkCommon common) {
-    if (common
-        .getAccount()
-        .getAvailableBalance()
-        .add(common.getRequestedAmount())
-        .isGreaterThanOrEqualZero()) {
-      common.setPostDecline(true);
-      return;
-    }
     common.setApprovedAmount(common.getRequestedAmount());
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);

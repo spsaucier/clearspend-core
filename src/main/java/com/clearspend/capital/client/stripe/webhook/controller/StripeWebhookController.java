@@ -129,7 +129,7 @@ public class StripeWebhookController {
     try {
       payload = IOUtils.toString(request.getReader());
       stripeWebhookLog.setRequest(payload);
-      log.info("{} payload: {}", requestType, payload);
+      log.info("{} payload: {}", requestType, payload.replaceAll("\n", ""));
       event = Webhook.constructEvent(payload, sigHeader, secret);
       stripeWebhookLog.setStripeEventRef(event.getId());
       stripeWebhookLog.setEventType(event.getType());

@@ -425,6 +425,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(accountActivity.getHoldId()).isNull();
     assertThat(accountActivity.getType()).isEqualTo(AccountActivityType.NETWORK_CAPTURE);
     assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.APPROVED);
+    log.debug("accountActivity: {}", accountActivity);
     //    private OffsetDateTime hideAfter;
     //    private OffsetDateTime visibleAfter;
     //    @Embedded private MerchantDetails merchant;
@@ -433,6 +434,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     //    @NonNull private OffsetDateTime activityTime;
     assertThat(accountActivity.getAmount())
         .isEqualTo(Amount.fromStripeAmount(business.getCurrency(), -amount));
+
+    networkCommon.getUpdatedHolds().forEach(hold -> {
+      AccountActivity holdAccountActivity =
+          accountActivityRepository
+              .findByHoldId(hold.getId())
+              .orElseThrow();
+      log.debug("hold accountActivity: {}", holdAccountActivity);
+    });
 
     Adjustment adjustment =
         adjustmentRepository
