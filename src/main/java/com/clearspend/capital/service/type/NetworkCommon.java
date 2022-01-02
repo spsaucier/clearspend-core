@@ -9,6 +9,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.Country;
@@ -87,6 +88,7 @@ public class NetworkCommon {
   private Adjustment adjustment;
 
   private boolean postDecline = false;
+  private Decline decline;
 
   private List<DeclineReason> declineReasons = new ArrayList<>();
 

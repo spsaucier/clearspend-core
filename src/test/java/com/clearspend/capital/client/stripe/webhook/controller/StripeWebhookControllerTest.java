@@ -14,6 +14,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.StripeWebhookLog;
@@ -30,6 +31,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
+import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService;
@@ -83,6 +85,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private AccountRepository accountRepository;
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AdjustmentRepository adjustmentRepository;
+  @Autowired private DeclineRepository declineRepository;
   @Autowired private HoldRepository holdRepository;
   @Autowired private NetworkMessageRepository networkMessageRepository;
 
@@ -274,6 +277,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(networkCommon.isPostDecline()).isTrue();
     assertThat(networkCommon.isPostHold()).isFalse();
     assertBalance(allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
+    assertThat(networkCommon.getDecline()).isNotNull();
+    assertThat(networkCommon.getDecline().getId())
+        .isEqualTo(networkCommon.getNetworkMessage().getDeclineId());
+
+    Decline decline =
+        declineRepository.findById(networkCommon.getNetworkMessage().getDeclineId()).orElseThrow();
+    //    assertThat(decline.getDeclineReasons()).isSameAs(networkCommon.getDeclineReasons());
+
     AccountActivity accountActivity =
         accountActivityRepository
             .findById(networkCommon.getAccountActivity().getId())

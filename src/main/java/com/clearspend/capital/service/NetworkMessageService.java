@@ -1,12 +1,16 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
@@ -19,7 +23,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.OffsetDateTime;
-import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -149,7 +152,14 @@ public class NetworkMessageService {
     }
 
     if (common.isPostDecline()) {
-      // TODO(kuchlein): do we need a separate decline table?
+      Decline decline =
+          accountService.recordNetworkDecline(
+              common.getAccount(),
+              common.getCard(),
+              common.getRequestedAmount(),
+              common.getDeclineReasons());
+      common.setDecline(decline);
+      networkMessage.setDeclineId(decline.getId());
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
       common.getAccountActivityDetails().setActivityTime(OffsetDateTime.now());
       accountActivityService.recordNetworkDeclineAccountActivity(common);
@@ -164,9 +174,16 @@ public class NetworkMessageService {
     common.setNetworkMessage(networkMessageRepository.save(networkMessage));
   }
 
-  private void processAuthorizationUpdated(NetworkCommon common) {}
+  private void processAuthorizationUpdated(NetworkCommon common) {
+    NetworkMessage networkMessage = getPriorAuthNetworkMessage(common.getExternalRef());
+    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+    // TODO(kuchlein): handle the case when the hold amount changes
+  }
 
-  private void processAuthorizationCreated(NetworkCommon common) {}
+  private void processAuthorizationCreated(NetworkCommon common) {
+    NetworkMessage networkMessage = getPriorAuthNetworkMessage(common.getExternalRef());
+    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+  }
 
   private void processAuthorizationRequest(NetworkCommon common) {
     common.getRequestedAmount().ensureNegative();
@@ -211,25 +228,32 @@ public class NetworkMessageService {
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
 
-    // lookup authorization, release funds and update account
-    Optional<NetworkMessage> networkMessageOptional =
-        networkMessageRepository.findByExternalRef(common.getStripeAuthorizationExternalRef());
-    if (networkMessageOptional.isPresent()) { // TODO(kuchlein): determine if this is always true
-      NetworkMessage networkMessage = networkMessageOptional.get();
-      common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
-      Optional<Hold> holdOptional =
-          common.getAccount().getHolds().stream()
-              .filter(hold -> hold.getId().equals(networkMessage.getHoldId()))
-              .findFirst();
-      if (holdOptional.isPresent()) {
-        Hold hold = holdOptional.get();
-        hold.setStatus(HoldStatus.RELEASED);
-        common.getUpdatedHolds().add(hold);
-        common.getAccount().recalculateAvailableBalance();
-        accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
-      }
-    }
+    NetworkMessage networkMessage =
+        getPriorAuthNetworkMessage(common.getStripeAuthorizationExternalRef());
+    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+    Hold hold =
+        common.getAccount().getHolds().stream()
+            .filter(e -> e.getId().equals(networkMessage.getHoldId()))
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(Table.NETWORK_MESSAGE, networkMessage.getHoldId()));
+    hold.setStatus(HoldStatus.RELEASED);
+    common.getUpdatedHolds().add(hold);
+    common.getAccount().recalculateAvailableBalance();
+    accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
   }
 
-  private void processServiceFee(NetworkCommon common) {}
+  private NetworkMessage getPriorAuthNetworkMessage(String externalRef) {
+    // this should always return a network message if we received and processed the initial
+    // issuing_authorization.request
+    return networkMessageRepository
+        .findByExternalRefAndTypeOrderByCreatedDesc(externalRef, NetworkMessageType.AUTH_REQUEST)
+        .stream()
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new RecordNotFoundException(
+                    Table.NETWORK_MESSAGE, externalRef, NetworkMessageType.AUTH_REQUEST));
+  }
 }

@@ -276,7 +276,7 @@ public class TestDataController {
     amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
     networkMessageService.processNetworkMessage(
         generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
+            NetworkMessageType.AUTH_REQUEST,
             user.user(),
             cardRecord.card(),
             cardRecord.account(),

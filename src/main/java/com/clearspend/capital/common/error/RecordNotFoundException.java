@@ -25,6 +25,7 @@ public class RecordNotFoundException extends RuntimeException {
     CARD("Card"),
     HOLD("Hold"),
     LEDGER_ACCOUNT("LedgerAccount"),
+    NETWORK_MESSAGE("NetworkMessage"),
     RECEIPT("Receipt"),
     SPEND_LIMIT("SpendLimit"),
     USER("user");

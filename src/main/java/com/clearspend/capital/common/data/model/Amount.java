@@ -25,17 +25,17 @@ import lombok.NonNull;
 @MappedSuperclass
 public class Amount {
 
-  @Override
-  public String toString() {
-    return "" + amount + currency;
-  }
-
   @Enumerated(value = EnumType.STRING)
   @JsonProperty("currency")
   private Currency currency;
 
   @JsonProperty("amount")
   private BigDecimal amount;
+
+  @Override
+  public String toString() {
+    return "" + amount.setScale(currency.getDecimalScale(), RoundingMode.UNNECESSARY) + currency;
+  }
 
   public static Amount of(Currency currency, BigDecimal amount) {
     return new Amount(

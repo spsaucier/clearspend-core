@@ -135,7 +135,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     for (int i = 0; i < transactions; i++) {
       networkMessageService.processNetworkMessage(
           TestDataController.generateNetworkCommon(
-              NetworkMessageType.TRANSACTION_CREATED,
+              NetworkMessageType.AUTH_REQUEST,
               user.user(),
               card,
               createBusinessRecord.allocationRecord().account(),
@@ -230,7 +230,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     for (int i = 0; i < transactions; i++) {
       networkMessageService.processNetworkMessage(
           TestDataController.generateNetworkCommon(
-              NetworkMessageType.TRANSACTION_CREATED,
+              NetworkMessageType.AUTH_REQUEST,
               user.user(),
               card,
               allocation.account(),

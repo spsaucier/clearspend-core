@@ -15,13 +15,17 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.LedgerAccount;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.HoldStatus;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.AccountRepository;
+import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
 import java.time.OffsetDateTime;
@@ -40,6 +44,7 @@ import org.springframework.stereotype.Service;
 public class AccountService {
 
   private final AccountRepository accountRepository;
+  private final DeclineRepository declineRepository;
   private final HoldRepository holdRepository;
 
   private final AdjustmentService adjustmentService;
@@ -152,6 +157,14 @@ public class AccountService {
     account = accountRepository.save(account);
 
     return new AdjustmentRecord(account, adjustment);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public Decline recordNetworkDecline(
+      Account account, Card card, Amount amount, List<DeclineReason> declineReasons) {
+    return declineRepository.save(
+        new Decline(
+            account.getBusinessId(), account.getId(), card.getId(), amount, declineReasons));
   }
 
   private Account retrieveAccount(TypedId<AccountId> accountId, boolean fetchHolds) {

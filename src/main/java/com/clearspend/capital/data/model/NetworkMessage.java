@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.CardId;
+import com.clearspend.capital.common.typedid.data.DeclineId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.NetworkMessageId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -66,6 +67,11 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AdjustmentId> adjustmentId;
+
+  @JoinColumn(referencedColumnName = "id", table = "decline")
+  @Column(updatable = false)
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<DeclineId> declineId;
 
   // required when the card number is not known to use (this may be handled directly by issuer)
   private String cardRef;

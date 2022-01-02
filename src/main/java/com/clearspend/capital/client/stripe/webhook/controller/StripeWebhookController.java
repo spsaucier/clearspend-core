@@ -84,8 +84,9 @@ public class StripeWebhookController {
 
     try {
       switch (parseRecord.stripeEventType) {
-        case ISSUING_AUTHORIZATION_REQUEST, ISSUING_AUTHORIZATION_CREATED -> processAuthorization(
-            parseRecord, false);
+        case ISSUING_AUTHORIZATION_REQUEST,
+            ISSUING_AUTHORIZATION_CREATED,
+            ISSUING_AUTHORIZATION_UPDATED -> processAuthorization(parseRecord, false);
         case ISSUING_TRANSACTION_CREATED -> processCapture(parseRecord);
         case ISSUING_CARD_CREATED -> processCard(
             parseRecord.stripeEventType, parseRecord.stripeObject);
@@ -129,7 +130,7 @@ public class StripeWebhookController {
     try {
       payload = IOUtils.toString(request.getReader());
       stripeWebhookLog.setRequest(payload);
-      log.info("{} payload: {}", requestType, payload.replaceAll("\n", ""));
+      log.info("{} payload: {}", requestType, payload.replaceAll("\n *", " "));
       event = Webhook.constructEvent(payload, sigHeader, secret);
       stripeWebhookLog.setStripeEventRef(event.getId());
       stripeWebhookLog.setEventType(event.getType());
@@ -218,15 +219,14 @@ public class StripeWebhookController {
           }
         }
       }
-      case ISSUING_AUTHORIZATION_CREATED, ISSUING_AUTHORIZATION_UPDATED -> {
+      case ISSUING_AUTHORIZATION_CREATED -> {
         Authorization auth = (Authorization) stripeObject;
-        NetworkMessageType networkMessageType =
-            switch (stripeEventType) {
-              case ISSUING_AUTHORIZATION_CREATED -> NetworkMessageType.AUTH_CREATED;
-              case ISSUING_AUTHORIZATION_UPDATED -> NetworkMessageType.AUTH_UPDATED;
-              default -> throw new IllegalStateException("Unexpected value: " + stripeEventType);
-            };
-        common = new NetworkCommon(networkMessageType, auth, rawJson);
+        common = new NetworkCommon(NetworkMessageType.AUTH_CREATED, auth, rawJson);
+        networkMessageService.processNetworkMessage(common);
+      }
+      case ISSUING_AUTHORIZATION_UPDATED -> {
+        Authorization auth = (Authorization) stripeObject;
+        common = new NetworkCommon(NetworkMessageType.AUTH_UPDATED, auth, rawJson);
         networkMessageService.processNetworkMessage(common);
       }
     }
