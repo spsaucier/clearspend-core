@@ -64,11 +64,8 @@ public class StripeWebhookController {
     }
 
     // capture total processing time or -1 if an error occurred
-    Instant end = Instant.now();
     parseRecord.stripeWebhookLog.setProcessingTimeMs(
-        parseRecord.stripeWebhookLog.getError() != null
-            ? Duration.between(start, end).toMillis()
-            : -1);
+        Duration.between(start, Instant.now()).toMillis());
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
 
@@ -104,18 +101,14 @@ public class StripeWebhookController {
     }
 
     // capture total processing time or -1 if an error occurred
-    Instant end = Instant.now();
     parseRecord.stripeWebhookLog.setProcessingTimeMs(
-        parseRecord.stripeWebhookLog.getError() != null
-            ? Duration.between(start, end).toMillis()
-            : -1);
+        Duration.between(start, Instant.now()).toMillis());
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
 
   record ParseRecord(
       StripeWebhookLog stripeWebhookLog,
       StripeObject stripeObject,
-      String rawJson,
       StripeEventType stripeEventType) {}
 
   private ParseRecord parseRequest(String requestType, HttpServletRequest request, String secret) {
@@ -165,7 +158,7 @@ public class StripeWebhookController {
 
     StripeEventType stripeEventType = StripeEventType.fromString(stripeWebhookLog.getEventType());
 
-    return new ParseRecord(stripeWebhookLog, stripeObject, payload, stripeEventType);
+    return new ParseRecord(stripeWebhookLog, stripeObject, stripeEventType);
   }
 
   @VisibleForTesting
@@ -173,7 +166,6 @@ public class StripeWebhookController {
       throws StripeException {
     StripeEventType stripeEventType = parseRecord.stripeEventType;
     StripeObject stripeObject = parseRecord.stripeObject;
-    String rawJson = parseRecord.rawJson;
 
     NetworkCommon common = null;
     switch (stripeEventType) {
@@ -182,7 +174,7 @@ public class StripeWebhookController {
         if (auth.getStatus() != "pending") {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
-        common = new NetworkCommon(NetworkMessageType.AUTH_REQUEST, auth, rawJson);
+        common = new NetworkCommon(NetworkMessageType.AUTH_REQUEST, auth);
         networkMessageService.processNetworkMessage(common);
 
         Map<String, String> metadata = getMetadata(common);
@@ -221,12 +213,12 @@ public class StripeWebhookController {
       }
       case ISSUING_AUTHORIZATION_CREATED -> {
         Authorization auth = (Authorization) stripeObject;
-        common = new NetworkCommon(NetworkMessageType.AUTH_CREATED, auth, rawJson);
+        common = new NetworkCommon(NetworkMessageType.AUTH_CREATED, auth);
         networkMessageService.processNetworkMessage(common);
       }
       case ISSUING_AUTHORIZATION_UPDATED -> {
         Authorization auth = (Authorization) stripeObject;
-        common = new NetworkCommon(NetworkMessageType.AUTH_UPDATED, auth, rawJson);
+        common = new NetworkCommon(NetworkMessageType.AUTH_UPDATED, auth);
         networkMessageService.processNetworkMessage(common);
       }
     }
@@ -241,7 +233,7 @@ public class StripeWebhookController {
   @VisibleForTesting
   NetworkCommon processCapture(ParseRecord parseRecord) {
     Transaction transaction = (Transaction) parseRecord.stripeObject;
-    NetworkCommon common = new NetworkCommon(transaction, parseRecord.rawJson);
+    NetworkCommon common = new NetworkCommon(transaction);
     networkMessageService.processNetworkMessage(common);
 
     if (common.getNetworkMessage() != null) {

@@ -199,10 +199,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     NetworkCommon networkCommon =
         stripeWebhookController.processAuthorization(
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(),
-                authorization,
-                objectMapper.writeValueAsString(authorization),
-                stripeEventType),
+                new StripeWebhookLog(), authorization, stripeEventType),
             true);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isFalse();
@@ -268,10 +265,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     NetworkCommon networkCommon =
         stripeWebhookController.processAuthorization(
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(),
-                authorizationRequest,
-                objectMapper.writeValueAsString(authorizationRequest),
-                stripeEventType),
+                new StripeWebhookLog(), authorizationRequest, stripeEventType),
             true);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isTrue();
@@ -314,10 +308,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     networkCommon =
         stripeWebhookController.processAuthorization(
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(),
-                authorizationCreated,
-                objectMapper.writeValueAsString(authorizationCreated),
-                stripeEventType),
+                new StripeWebhookLog(), authorizationCreated, stripeEventType),
             true);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isFalse();
@@ -334,10 +325,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     networkCommon =
         stripeWebhookController.processAuthorization(
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(),
-                authorizationUpdated,
-                objectMapper.writeValueAsString(authorizationUpdated),
-                stripeEventType),
+                new StripeWebhookLog(), authorizationUpdated, stripeEventType),
             true);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isFalse();
@@ -409,10 +397,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     NetworkCommon networkCommon =
         stripeWebhookController.processCapture(
             new ParseRecord(
-                new StripeWebhookLog(),
-                transaction,
-                objectMapper.writeValueAsString(transaction),
-                StripeEventType.ISSUING_TRANSACTION_CREATED));
+                new StripeWebhookLog(), transaction, StripeEventType.ISSUING_TRANSACTION_CREATED));
 
     log.debug("adjustment: {}", networkCommon.getAdjustment());
     log.debug("account: {}", networkCommon.getAccount());

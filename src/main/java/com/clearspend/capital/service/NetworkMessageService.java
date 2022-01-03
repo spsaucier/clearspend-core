@@ -16,7 +16,6 @@ import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -68,10 +67,12 @@ public class NetworkMessageService {
         allocationService.retrieveAllocation(
             common.getBusinessId(), cardRecord.card().getAllocationId()));
 
-    // TODO(kuchlein): lookup local merchantName table to retrieve logo
+    // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
+    //    potentially in a async batch job)
     // common.getAccountActivity().setMerchantLogoUrl();
 
-    // TODO(kuchlein): lookup local merchantAddress table to retrieve lat/long
+    // TODO(kuchlein): lookup local merchantAddress table to retrieve lat/long (needs to be done
+    //    async and potentially in a async batch job)
     // common.getAccountActivity().setMerchantLatitude();
     // common.getAccountActivity().setMerchantLongitude();
 
@@ -98,14 +99,6 @@ public class NetworkMessageService {
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
             common.getExternalRef());
-
-    // TODO(kuchlein): determine why we can't simply use the request as the field type
-    // networkMessage.setRequest(common.getRequest());
-    try {
-      networkMessage.setRequest(objectMapper.writeValueAsString(common.getRequest()));
-    } catch (JsonProcessingException e) {
-      log.error("failed to serialize common.request", e);
-    }
 
     // card may be null in the case of Stripe sending us transactions for cards that we've not
     // issued
@@ -217,6 +210,14 @@ public class NetworkMessageService {
       common.setApprovedAmount(
           Amount.min(common.getAccount().getAvailableBalance(), common.getRequestedAmount().abs()));
     }
+
+    // TODO(kuchlein): assess spending limits on card
+    // if (over limit)
+    // {
+    //    common.setApprovedAmount(Amount.of(amount.getCurrency()));
+    //    common.setPostDecline(true);
+    //    return;
+    // }
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);

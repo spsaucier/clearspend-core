@@ -95,10 +95,4 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @NonNull private Integer merchantCategoryCode;
 
   @NonNull private String externalRef;
-
-  @Type(type = "json")
-  @Column(columnDefinition = "jsonb")
-  // TODO(kuchlein): determine why we can't simply use the request as the field type
-  // private EventNotificationAdvanceRequest request;
-  private String request;
 }

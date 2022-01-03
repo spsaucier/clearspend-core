@@ -95,8 +95,7 @@ public class NetworkCommon {
   private AccountActivityDetails accountActivityDetails = new AccountActivityDetails();
 
   // Stripe authorizations
-  public NetworkCommon(
-      NetworkMessageType networkMessageType, Authorization authorization, String rawJson) {
+  public NetworkCommon(NetworkMessageType networkMessageType, Authorization authorization) {
     cardExternalRef = authorization.getCard().getId();
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
@@ -124,12 +123,10 @@ public class NetworkCommon {
     transactionDate =
         OffsetDateTime.ofInstant(Instant.ofEpochMilli(authorization.getCreated()), ZoneOffset.UTC);
     externalRef = authorization.getId();
-
-    request = rawJson;
   }
 
   // Stripe completions (or more incorrect captures)
-  public NetworkCommon(Transaction transaction, String rawJson) {
+  public NetworkCommon(Transaction transaction) {
     cardExternalRef = transaction.getCard();
     networkMessageType = NetworkMessageType.TRANSACTION_CREATED;
     Currency currency = Currency.of(transaction.getCurrency());
@@ -150,8 +147,6 @@ public class NetworkCommon {
         OffsetDateTime.ofInstant(Instant.ofEpochMilli(transaction.getCreated()), ZoneOffset.UTC);
     externalRef = transaction.getId();
     stripeAuthorizationExternalRef = transaction.getAuthorization();
-
-    request = rawJson;
   }
 
   private ClearAddress getMerchantAddress(MerchantData merchantData) {

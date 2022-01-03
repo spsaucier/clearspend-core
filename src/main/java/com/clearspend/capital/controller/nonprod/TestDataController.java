@@ -527,10 +527,7 @@ public class TestDataController {
         stripeAuthorization.setPendingRequest(pendingRequest);
         stripeAuthorization.setStatus("pending");
 
-        yield new NetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            stripeAuthorization,
-            objectMapper.writeValueAsString(stripeAuthorization));
+        yield new NetworkCommon(NetworkMessageType.AUTH_REQUEST, stripeAuthorization);
       }
       case TRANSACTION_CREATED -> {
         Transaction stripeTransaction = new Transaction();
@@ -543,8 +540,7 @@ public class TestDataController {
         stripeTransaction.setMerchantAmount(amount.toStripeAmount());
         stripeTransaction.setMerchantData(merchantData);
 
-        yield new NetworkCommon(
-            stripeTransaction, objectMapper.writeValueAsString(stripeTransaction));
+        yield new NetworkCommon(stripeTransaction);
       }
       default -> throw new IllegalStateException("Unexpected value: " + networkMessageType);
     };
