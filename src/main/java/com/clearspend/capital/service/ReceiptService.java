@@ -44,17 +44,14 @@ public class ReceiptService {
   }
 
   // returns data held in GCS (Google Cloud Storage)
-  public byte[] getReceiptImage(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId) {
-    return receiptImageService.getReceiptImage(getReceipt(businessId, userId, receiptId).getPath());
+  public byte[] getReceiptImage(TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
+    return receiptImageService.getReceiptImage(getReceipt(businessId, receiptId).getPath());
   }
 
-  public Receipt getReceipt(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId) {
+  public Receipt getReceipt(TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
     return receiptRepository
-        .findReceiptByBusinessIdAndUserIdAndId(businessId, userId, receiptId)
-        .orElseThrow(
-            () -> new RecordNotFoundException(Table.RECEIPT, businessId, userId, receiptId));
+        .findReceiptByBusinessIdAndId(businessId, receiptId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.RECEIPT, businessId, receiptId));
   }
 
   private String getReceiptPath(
@@ -68,15 +65,14 @@ public class ReceiptService {
       TypedId<UserId> userId,
       TypedId<ReceiptId> receiptId,
       TypedId<AccountActivityId> accountActivityId) {
-    Receipt receipt = getReceipt(businessId, userId, receiptId);
+    Receipt receipt = getReceipt(businessId, receiptId);
 
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.getAdjustmentId() != null) {
       Receipt finalReceipt = receipt;
       AccountActivity previousAccountActivity =
           accountActivityRepository
-              .findByBusinessIdAndUserIdAndAdjustmentId(
-                  businessId, userId, receipt.getAdjustmentId())
+              .findByBusinessIdAndAdjustmentId(businessId, receipt.getAdjustmentId())
               .orElseThrow(
                   () ->
                       new RecordNotFoundException(
@@ -113,7 +109,7 @@ public class ReceiptService {
       TypedId<UserId> userId,
       TypedId<ReceiptId> receiptId,
       TypedId<AccountActivityId> accountActivityId) {
-    Receipt receipt = getReceipt(businessId, userId, receiptId);
+    Receipt receipt = getReceipt(businessId, receiptId);
 
     if (receipt.getAdjustmentId() == null) {
       throw new InvalidRequestException("Receipt not linked");

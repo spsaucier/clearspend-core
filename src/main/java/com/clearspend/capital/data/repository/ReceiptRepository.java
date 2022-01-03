@@ -10,6 +10,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReceiptRepository extends JpaRepository<Receipt, TypedId<ReceiptId>> {
 
+  Optional<Receipt> findReceiptByBusinessIdAndId(
+      TypedId<BusinessId> businessId, TypedId<ReceiptId> id);
+
   Optional<Receipt> findReceiptByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> id);
 }

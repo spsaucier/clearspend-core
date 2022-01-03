@@ -63,8 +63,7 @@ public class ImageController {
     headers.add("Expires", "0");
 
     CurrentUser currentUser = CurrentUser.get();
-    byte[] receiptImage =
-        receiptService.getReceiptImage(currentUser.businessId(), currentUser.userId(), receiptId);
+    byte[] receiptImage = receiptService.getReceiptImage(currentUser.businessId(), receiptId);
     log.info(
         "returning image: businessIid {}, userId {}, receiptId {} ({} bytes)",
         currentUser.businessId(),

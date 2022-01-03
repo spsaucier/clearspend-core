@@ -52,16 +52,14 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @Test
   void getReceiptImage_success() {
     byte[] bytes =
-        receiptService.getReceiptImage(
-            userRecord.user().getBusinessId(), userRecord.user().getId(), receipt.getId());
+        receiptService.getReceiptImage(userRecord.user().getBusinessId(), receipt.getId());
     assertThat(bytes).isEqualTo(fileContents.getBytes());
   }
 
   @Test
   void getReceipt_success() {
     Receipt foundReceipt =
-        receiptService.getReceipt(
-            userRecord.user().getBusinessId(), userRecord.user().getId(), receipt.getId());
+        receiptService.getReceipt(userRecord.user().getBusinessId(), receipt.getId());
     assertThat(foundReceipt.getPath()).isEqualTo(receipt.getPath());
   }
 }
