@@ -139,7 +139,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
               user.user(),
               card,
               createBusinessRecord.allocationRecord().account(),
-              Amount.of(Currency.USD, new BigDecimal(random.nextInt(100)))));
+              Amount.of(Currency.USD, new BigDecimal(random.nextInt(99)).add(BigDecimal.ONE))));
     }
   }
 
@@ -234,7 +234,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
               user.user(),
               card,
               allocation.account(),
-              Amount.of(Currency.USD, new BigDecimal(random.nextInt(100)))));
+              Amount.of(Currency.USD, new BigDecimal(random.nextInt(99)).add(BigDecimal.ONE))));
     }
   }
 
