@@ -7,6 +7,7 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.CardPaymentDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
@@ -189,5 +190,21 @@ public class CardControllerTest extends BaseCapitalTest {
         .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledMccGroups()));
     assertThat(cardDetailsResponse.getDisabledTransactionChannels())
         .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledTransactionChannels()));
+  }
+
+  @SneakyThrows
+  @Test
+  void revealCardPaymentDetails() {
+    CardPaymentDetailsResponse cardPaymentDetailsResponse =
+        mockMvcHelper.queryObject(
+            "/cards/" + card.getId().toString() + "/reveal",
+            HttpMethod.GET,
+            userCookie,
+            CardPaymentDetailsResponse.class);
+
+    assertThat(cardPaymentDetailsResponse.getNumber()).isNotNull();
+    assertThat(cardPaymentDetailsResponse.getExpMonth()).isNotNull();
+    assertThat(cardPaymentDetailsResponse.getExpYear()).isNotNull();
+    assertThat(cardPaymentDetailsResponse.getCvc()).isNotNull();
   }
 }

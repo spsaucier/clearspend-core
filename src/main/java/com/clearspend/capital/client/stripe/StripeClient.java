@@ -36,6 +36,7 @@ import com.stripe.param.issuing.CardCreateParams;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
 import com.stripe.param.issuing.CardCreateParams.Status;
+import com.stripe.param.issuing.CardRetrieveParams;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
@@ -292,5 +293,21 @@ public class StripeClient {
   // see https://stripe.com/docs/api/idempotent_requests
   private RequestOptions getRequestOptions(TypedId<?> idempotencyKey) {
     return RequestOptions.builder().setIdempotencyKey(idempotencyKey.toString()).build();
+  }
+
+  /**
+   * Returns an expanded Stripe card object, which also contains payment enabling details - card
+   * number and cvc. Currently, Stripe allows retrieval of such sensitive info only for Virtual
+   * cards. Note: GET requests should be sent to Stripe without Idempotency key, according to their
+   * documentation.
+   */
+  public Card getCardWithPaymentDetails(String stripeCardId) {
+    CardRetrieveParams cardRetrieveParams =
+        CardRetrieveParams.builder().addExpand("number").addExpand("cvc").build();
+    try {
+      return Card.retrieve(stripeCardId, cardRetrieveParams, null);
+    } catch (StripeException e) {
+      throw new StripeClientException(e);
+    }
   }
 }

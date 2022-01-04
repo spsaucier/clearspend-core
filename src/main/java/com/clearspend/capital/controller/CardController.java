@@ -1,22 +1,20 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.PagedData;
-import com.clearspend.capital.controller.type.card.CardDetailsResponse;
-import com.clearspend.capital.controller.type.card.IssueCardRequest;
-import com.clearspend.capital.controller.type.card.IssueCardResponse;
-import com.clearspend.capital.controller.type.card.SearchCardData;
-import com.clearspend.capital.controller.type.card.SearchCardRequest;
-import com.clearspend.capital.controller.type.card.UpdateCardRequest;
+import com.clearspend.capital.controller.type.card.*;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
+import com.stripe.model.issuing.Card;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +35,7 @@ public class CardController {
 
   private final CardService cardService;
   private final BusinessService businessService;
+  private final StripeClient stripeClient;
 
   @GetMapping("/{cardId}")
   private CardDetailsResponse getCard(
@@ -116,5 +115,26 @@ public class CardController {
     return PagedData.of(
         cardService.filterCards(new CardFilterCriteria(CurrentUser.get().businessId(), request)),
         SearchCardData::of);
+  }
+
+  @GetMapping("/{cardId}/reveal")
+  private CardPaymentDetailsResponse revealCardPaymentDetails(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "a3416a3e-dec2-4f33-b36b-6156ebff8b26")
+          TypedId<CardId> cardId) {
+
+    CardDetailsRecord cardDetailsRecord =
+        cardService.getCard(CurrentUser.get().businessId(), cardId);
+    Card stripeCard =
+        stripeClient.getCardWithPaymentDetails(cardDetailsRecord.card().getExternalRef());
+    return new CardPaymentDetailsResponse(
+        stripeCard.getNumber(),
+        stripeCard.getExpMonth(),
+        stripeCard.getExpYear(),
+        stripeCard.getCvc());
   }
 }
