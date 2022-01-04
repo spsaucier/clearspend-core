@@ -523,7 +523,6 @@ public class UserControllerTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
     AllocationService.AllocationRecord allocation =
         testHelper.createAllocation(
@@ -531,8 +530,6 @@ public class UserControllerTest extends BaseCapitalTest {
             "",
             createBusinessRecord.allocationRecord().allocation().getId(),
             createBusinessRecord.user());
-
-    Cookie authCookie = testHelper.login(email, password);
 
     CreateUpdateUserRecord user =
         userService.createUser(
@@ -585,7 +582,7 @@ public class UserControllerTest extends BaseCapitalTest {
                 post("/users/search")
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -596,7 +593,7 @@ public class UserControllerTest extends BaseCapitalTest {
             objectMapper
                 .getTypeFactory()
                 .constructParametricType(PagedData.class, UserPageData.class));
-    Assertions.assertEquals(4, userPageData.getTotalElements());
+    Assertions.assertEquals(3, userPageData.getTotalElements());
   }
 
   @SneakyThrows

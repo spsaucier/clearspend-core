@@ -94,13 +94,13 @@ client:
     environment: SANDBOX
     secret: ${PLAID_SECRET:}
   sendgrid:
-    api-key: ${SENDGRID_API_KEY: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}
-    notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:ClearSpend <notifications@em6632.clearspend.com>}
+    api-key: ${SENDGRID_API_KEY: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}
+    notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:ClearSpend <notifications@em4186.clearspend.com>}
     notifications-email-subject: ${SENDGRID_NOTIFICATIONS_EMAIL_SUBJECT:ClearSpend}
-    onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-94f93354b8674d4197d850c5a1081c1c}
-    kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-f7752da98ef540c79f872a1eae3666e5}
-    kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-651a88210bb54bbc92225150a2a211ce}
-    forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-22ff7bff6c9c4c9d8692d826ca007eeb}
+    onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-3215eacb40784ac6b6a96217196b17fe}
+    kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-d27553e5452f4e3e9f7b097acb1b9738}
+    kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-b139358de5fe4f52ab3f4d7ce3306582}
+    forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-0c078e558102456a9a492ad59a6d16f9}
   stripe:
 #    secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     connect-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
@@ -114,10 +114,10 @@ client:
     # Current value equals to clearspend domain public ip
     tos-acceptance-ip: ${STRIPE_TOS_ACCEPTANCE_IP:35.172.94.1}
   twilio:
-    account-sid: ${TWILIO_ACCOUNT_SID:AC08834a8aab6f817ea96ae7149e8befff}
-    auth-token: ${TWILIO_AUTH_TOKEN:683c37c5aab1416ce35358132e457f2b}
+    account-sid: ${TWILIO_ACCOUNT_SID:AC0a899d1f81a7443c707b2f66637b1ac3}
+    auth-token: ${TWILIO_AUTH_TOKEN:a24434d31b817cf0f3acae9eba031cc1}
     message-service-id: ${TWILIO_MESSAGE_SERVICE_ID:MGe85d68add5ac0ddb5a2526241aa0369f}
-    verify-service-id: ${TWILIO_VERIFY_SERVICE_ID:VAbaf002bd328d70c5aadf45f92d8c49ac}
+    verify-service-id: ${TWILIO_VERIFY_SERVICE_ID:VA1545a989a4a0b547da6b42b1f579c243}
   clearbit:
     api-key: ${CLEARBIT_API_KEY:sk_2f09108fb81c88e6874543afaefac99c}
 

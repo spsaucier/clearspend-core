@@ -232,7 +232,9 @@ public class BusinessProspectService {
             toAddress,
             businessProspect.getEmail().getEncrypted(),
             businessProspect.getPhone().getEncrypted(),
-            businessProspect.getSubjectRef());
+            businessProspect.getSubjectRef(),
+            false,
+            null);
 
     // delete the business prospect so that the owner of the email could register a new business
     // later

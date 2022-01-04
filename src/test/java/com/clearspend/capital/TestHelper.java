@@ -159,7 +159,10 @@ public class TestHelper {
   private volatile Cookie defaultAuthCookie;
 
   public record OnboardBusinessRecord(
-      Business business, BusinessOwner businessOwner, BusinessProspect businessProspect) {}
+      Business business,
+      BusinessOwner businessOwner,
+      BusinessProspect businessProspect,
+      Cookie cookie) {}
 
   public void init() {
     TypedId<BusinessId> businessId = businessIds.get(0);
@@ -262,9 +265,9 @@ public class TestHelper {
     validateBusinessProspectIdentifier(IdentifierType.PHONE, businessProspect.getId(), "123456");
 
     // set business owner password
-    businessProspectService.setBusinessProspectPassword(
-        businessProspect.getId(), PasswordUtil.generatePassword());
-
+    String password = PasswordUtil.generatePassword();
+    businessProspectService.setBusinessProspectPassword(businessProspect.getId(), password);
+    login(businessProspect.getEmail().getEncrypted(), password);
     // convert the prospect to a business
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
         convertBusinessProspect(businessProspect.getId());
@@ -273,7 +276,8 @@ public class TestHelper {
         businessService.retrieveBusiness(businessProspect.getBusinessId()),
         businessOwnerService.retrieveBusinessOwner(
             convertBusinessProspectResponse.getBusinessOwnerId()),
-        businessProspect);
+        businessProspect,
+        defaultAuthCookie);
   }
 
   public void testBusinessProspectState(String email, BusinessProspectStatus status) {
@@ -358,10 +362,10 @@ public class TestHelper {
   }
 
   public ConvertBusinessProspectResponse convertBusinessProspect(
-      TypedId<BusinessProspectId> businessProspectId) throws Exception {
+      String businessLegalName, TypedId<BusinessProspectId> businessProspectId) throws Exception {
     ConvertBusinessProspectRequest request =
         new ConvertBusinessProspectRequest(
-            generateBusinessName(),
+            businessLegalName,
             BusinessType.C_CORP,
             generateEmployerIdentificationNumber(),
             generatePhone(),
@@ -379,6 +383,11 @@ public class TestHelper {
             .getResponse();
 
     return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+  }
+
+  public ConvertBusinessProspectResponse convertBusinessProspect(
+      TypedId<BusinessProspectId> businessProspectId) throws Exception {
+    return convertBusinessProspect(generateBusinessName(), businessProspectId);
   }
 
   public Business retrieveBusiness() {
@@ -410,7 +419,9 @@ public class TestHelper {
         generateEntityAddress(),
         email,
         generatePhone(),
-        fusionAuthUserId.toString());
+        fusionAuthUserId.toString(),
+        false,
+        null);
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

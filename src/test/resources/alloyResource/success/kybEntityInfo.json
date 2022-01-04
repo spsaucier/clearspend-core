@@ -1,0 +1,21 @@
+{
+  "name": "TestBusines16121148Success",
+  "type": "business",
+  "entity_token": "B-pwO5qr1jyBAIylHXKcEd",
+  "archived": false,
+  "meta": null,
+  "external_entity_id": null,
+  "created": 1639734688417,
+  "identity_details": {},
+  "evaluations": [
+    {
+      "evaluation_token": "S-SJzJZgIeSWfqfzFy1Qel",
+      "timestamp": 1639734688362,
+      "status": "complete",
+      "application_name": "Business Onboarding",
+      "outcome": "Approved"
+    }
+  ],
+  "documents": [],
+  "reviews": []
+}

@@ -15,7 +15,9 @@ import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,9 +34,16 @@ public class BusinessOwnerController {
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
 
-  @PostMapping("")
+  @PostMapping(
+      value = "",
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   private CreateBusinessOwnerResponse createBusinessOwner(
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
+
+    Business business = businessService.retrieveBusiness(CurrentUser.get().businessId());
+    String alloyGroup = business.getLegalName().replaceAll(" ", "") + business.getBusinessPhone();
+
     BusinessOwnerAndUserRecord businessOwnerRecord =
         businessOwnerService.createBusinessOwner(
             null,
@@ -43,12 +52,18 @@ public class BusinessOwnerController {
             request.getLastName(),
             request.getAddress().toAddress(),
             request.getEmail(),
-            request.getPhone(),
-            null);
+            request.getPhone() == null ? "0" : request.getPhone(),
+            null,
+            request.isOnboarding(),
+            alloyGroup);
+
     return new CreateBusinessOwnerResponse(businessOwnerRecord.businessOwner().getId(), null);
   }
 
-  @PatchMapping("/{businessOwnerId}")
+  @PatchMapping(
+      value = "/{businessOwnerId}",
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   private void updateBusinessOwner(
       @PathVariable(value = "businessOwnerId")
           @Parameter(
@@ -73,27 +88,36 @@ public class BusinessOwnerController {
             request.getTaxIdentificationNumber(),
             request.getDateOfBirth(),
             request.getAddress().toAddress(),
-            alloyGroup);
+            alloyGroup,
+            request.isOnboarding());
 
-    if (businessOwner.getKnowYourCustomerStatus() == KnowYourCustomerStatus.FAIL) {
-      businessService.updateBusiness(
-          businessOwner.getBusinessId(),
-          BusinessStatus.CLOSED,
-          BusinessOnboardingStep.COMPLETE,
-          null);
-    } else if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.REVIEW
-        || businessOwner.getKnowYourCustomerStatus() == KnowYourCustomerStatus.REVIEW) {
-      businessService.updateBusiness(
-          businessOwner.getBusinessId(),
-          business.getStatus(),
-          BusinessOnboardingStep.SOFT_FAIL,
-          null);
-    } else if (request.isOnboarding()) {
-      businessService.updateBusiness(
-          businessOwner.getBusinessId(),
-          BusinessStatus.ONBOARDING,
-          BusinessOnboardingStep.LINK_ACCOUNT,
-          null);
+    if (request.isOnboarding()) {
+      List<BusinessOwner> businessOwners =
+          businessOwnerService.findBusinessOwnerByBusinessId(business.getId());
+      if (businessOwners.stream()
+          .anyMatch(
+              businessOwner1 ->
+                  businessOwner1.getKnowYourCustomerStatus() == KnowYourCustomerStatus.FAIL)) {
+        businessService.updateBusiness(
+            businessOwner.getBusinessId(), BusinessStatus.CLOSED, null, null);
+      } else if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.REVIEW
+          || businessOwners.stream()
+              .anyMatch(
+                  businessOwner1 ->
+                      businessOwner1.getKnowYourCustomerStatus()
+                          == KnowYourCustomerStatus.REVIEW)) {
+        businessService.updateBusiness(
+            businessOwner.getBusinessId(),
+            business.getStatus(),
+            BusinessOnboardingStep.SOFT_FAIL,
+            null);
+      } else {
+        businessService.updateBusiness(
+            businessOwner.getBusinessId(),
+            BusinessStatus.ONBOARDING,
+            BusinessOnboardingStep.LINK_ACCOUNT,
+            null);
+      }
     }
   }
 }

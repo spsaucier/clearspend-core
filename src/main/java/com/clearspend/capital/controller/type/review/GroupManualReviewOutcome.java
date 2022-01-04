@@ -1,5 +1,7 @@
 package com.clearspend.capital.controller.type.review;
 
+import java.util.Arrays;
+
 public enum GroupManualReviewOutcome {
   APPROVED("Approved"),
   DENIED("Denied"),
@@ -13,5 +15,12 @@ public enum GroupManualReviewOutcome {
 
   public String getValue() {
     return value;
+  }
+
+  public static GroupManualReviewOutcome getEnumByValue(String value) {
+    return Arrays.stream(GroupManualReviewOutcome.values())
+        .filter(reviewOutcome -> reviewOutcome.value.equals(value))
+        .findAny()
+        .orElseThrow();
   }
 }

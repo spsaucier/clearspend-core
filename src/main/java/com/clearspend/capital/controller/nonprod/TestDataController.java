@@ -373,6 +373,8 @@ public class TestDataController {
             generateEntityAddress(),
             faker.internet().emailAddress(),
             faker.phoneNumber().phoneNumber(),
+            null,
+            false,
             null);
 
     AllocationRecord allocationRecord =

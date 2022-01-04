@@ -65,7 +65,9 @@ public class BusinessOwnerService {
       Address address,
       String email,
       String phone,
-      String subjectRef) {
+      String subjectRef,
+      boolean isOnboarding,
+      String alloyGroup) {
     BusinessOwner businessOwner =
         new BusinessOwner(
             businessId,
@@ -82,6 +84,22 @@ public class BusinessOwnerService {
     businessOwner.setId(businessOwnerId != null ? businessOwnerId : new TypedId<>());
     businessOwner.setSubjectRef(subjectRef);
 
+    if (isOnboarding) {
+      KycEvaluationResponse kycEvaluationResponse =
+          alloyClient.onboardIndividual(businessOwner, alloyGroup);
+      businessOwner.setKnowYourCustomerStatus(kycEvaluationResponse.status());
+
+      if (kycEvaluationResponse.status() == KnowYourCustomerStatus.REVIEW) {
+        Alloy alloy =
+            new Alloy(
+                businessOwner.getBusinessId(),
+                businessOwnerId,
+                AlloyTokenType.BUSINESS_OWNER,
+                kycEvaluationResponse.entityToken());
+        alloyRepository.save(alloy);
+      }
+    }
+
     businessOwner = businessOwnerRepository.save(businessOwner);
     businessOwnerRepository.flush();
 
@@ -89,23 +107,52 @@ public class BusinessOwnerService {
         stripeClient.createPerson(
             businessOwner, businessService.retrieveBusiness(businessId).getExternalRef());
     businessOwner.setExternalRef(stripePerson.getId());
+    //
+    //    User user =
+    //        Objects.isNull(subjectRef)
+    //            ? userService
+    //                .createUser(
+    //                    businessId, UserType.BUSINESS_OWNER, firstName, lastName, address, email,
+    // phone)
+    //                .user()
+    //            : userService.createUserForFusionAuthUser(
+    //                new TypedId<>(businessOwner.getId().toUuid()),
+    //                businessId,
+    //                UserType.BUSINESS_OWNER,
+    //                firstName,
+    //                lastName,
+    //                address,
+    //                email,
+    //                phone,
+    //                subjectRef);
 
-    User user =
-        Objects.isNull(subjectRef)
-            ? userService
-                .createUser(
-                    businessId, UserType.BUSINESS_OWNER, firstName, lastName, address, email, phone)
-                .user()
-            : userService.createUserForFusionAuthUser(
-                new TypedId<>(businessOwner.getId().toUuid()),
-                businessId,
-                UserType.BUSINESS_OWNER,
-                firstName,
-                lastName,
-                address,
-                email,
-                phone,
-                subjectRef);
+    User user = null;
+    // check if this is the first business owner added.
+    // https://tranwall.atlassian.net/browse/CAP-288
+    if (businessOwnerRepository.findByBusinessId(businessId).size() == 1) {
+      user =
+          Objects.isNull(subjectRef)
+              ? userService
+                  .createUser(
+                      businessId,
+                      UserType.BUSINESS_OWNER,
+                      firstName,
+                      lastName,
+                      address,
+                      email,
+                      phone)
+                  .user()
+              : userService.createUserForFusionAuthUser(
+                  new TypedId<>(businessOwner.getId().toUuid()),
+                  businessId,
+                  UserType.BUSINESS_OWNER,
+                  firstName,
+                  lastName,
+                  address,
+                  email,
+                  phone,
+                  subjectRef);
+    }
 
     return new BusinessOwnerAndUserRecord(businessOwner, user);
   }
@@ -146,7 +193,8 @@ public class BusinessOwnerService {
       String taxIdentificationNumber,
       LocalDate dateOfBirth,
       Address address,
-      String alloyGroup) {
+      String alloyGroup,
+      boolean isOnboarding) {
 
     BusinessOwner businessOwner =
         businessOwnerRepository
@@ -173,36 +221,28 @@ public class BusinessOwnerService {
       businessOwner.setAddress(address);
     }
 
-    KycEvaluationResponse kycEvaluationResponse =
-        alloyClient.onboardIndividual(businessOwner, alloyGroup);
-    businessOwner.setKnowYourCustomerStatus(kycEvaluationResponse.status());
+    if (isOnboarding) {
+      KycEvaluationResponse kycEvaluationResponse =
+          alloyClient.onboardIndividual(businessOwner, alloyGroup);
+      businessOwner.setKnowYourCustomerStatus(kycEvaluationResponse.status());
 
-    if (kycEvaluationResponse.status() == KnowYourCustomerStatus.REVIEW) {
-      Alloy alloy =
-          new Alloy(
-              businessOwner.getBusinessId(),
-              businessOwnerId,
-              AlloyTokenType.BUSINESS_OWNER,
-              kycEvaluationResponse.entityToken());
-      alloyRepository.save(alloy);
-    }
-
-    switch (kycEvaluationResponse.status()) {
-      case FAIL -> twilioService.sendKybKycFailEmail(
-          businessOwner.getEmail().getEncrypted(),
-          businessOwner.getFirstName().getEncrypted(),
-          kycEvaluationResponse.reasons());
-      case REVIEW -> {
-        Alloy alloy =
-            new Alloy(
-                businessOwner.getBusinessId(),
-                businessOwnerId,
-                AlloyTokenType.BUSINESS_OWNER,
-                kycEvaluationResponse.entityToken());
-        alloyRepository.save(alloy);
+      switch (kycEvaluationResponse.status()) {
+        case FAIL -> twilioService.sendKybKycFailEmail(
+            businessOwner.getEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted(),
+            kycEvaluationResponse.reasons());
+        case REVIEW -> {
+          Alloy alloy =
+              new Alloy(
+                  businessOwner.getBusinessId(),
+                  businessOwnerId,
+                  AlloyTokenType.BUSINESS_OWNER,
+                  kycEvaluationResponse.entityToken());
+          alloyRepository.save(alloy);
+        }
+        case PASS -> twilioService.sendKybKycPassEmail(
+            businessOwner.getEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
       }
-      case PASS -> twilioService.sendKybKycPassEmail(
-          businessOwner.getEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
     }
 
     return businessOwnerRepository.save(businessOwner);
@@ -214,5 +254,12 @@ public class BusinessOwnerService {
 
   public List<BusinessOwner> findBusinessOwnerByBusinessId(TypedId<BusinessId> businessIdTypedId) {
     return businessOwnerRepository.findByBusinessId(businessIdTypedId);
+  }
+
+  public BusinessOwner findBusinessOwnerPrincipalByBusinessId(
+      TypedId<BusinessId> businessIdTypedId) {
+    return businessOwnerRepository
+        .findByBusinessIdAndSubjectRefIsNotNull(businessIdTypedId)
+        .orElseThrow();
   }
 }

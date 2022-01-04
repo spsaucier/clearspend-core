@@ -16,6 +16,8 @@ import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
+import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.BusinessRepository;
 import com.clearspend.capital.service.FusionAuthService;
@@ -257,5 +259,63 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     log.info("{}", business);
     Assertions.assertThat(business.getOnboardingStep())
         .isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+  }
+
+  @Test
+  void convertBusinessProspect_HardFail() throws Exception {
+    mockServerHelper.expectOtpViaEmail();
+    mockServerHelper.expectOtpViaSms();
+    mockServerHelper.expectEmailVerification("777888999");
+    mockServerHelper.expectPhoneVerification("766255906");
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.PHONE, businessProspect.getId(), "766255906");
+    mockServerHelper.verifyEmailVerificationCalled(1);
+    mockServerHelper.verifyPhoneVerificationCalled(1);
+    String password = setBusinessProspectPassword(businessProspect.getId());
+    testHelper.login(businessProspect.getEmail().getEncrypted(), password);
+
+    ConvertBusinessProspectResponse convertBusinessProspectResponse =
+        testHelper.convertBusinessProspect("BusinessDenied", businessProspect.getId());
+    log.info("{}", convertBusinessProspectResponse);
+
+    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
+    Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
+    log.info("{}", business);
+    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+    assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.FAIL);
+    assertThat(business.getStatus()).isEqualTo(BusinessStatus.CLOSED);
+  }
+
+  @Test
+  void convertBusinessProspect_SoftFail() throws Exception {
+    mockServerHelper.expectOtpViaEmail();
+    mockServerHelper.expectOtpViaSms();
+    mockServerHelper.expectEmailVerification("777888999");
+    mockServerHelper.expectPhoneVerification("766255906");
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.PHONE, businessProspect.getId(), "766255906");
+    mockServerHelper.verifyEmailVerificationCalled(1);
+    mockServerHelper.verifyPhoneVerificationCalled(1);
+    String password = setBusinessProspectPassword(businessProspect.getId());
+    testHelper.login(businessProspect.getEmail().getEncrypted(), password);
+
+    ConvertBusinessProspectResponse convertBusinessProspectResponse =
+        testHelper.convertBusinessProspect("BusinessReview", businessProspect.getId());
+    log.info("{}", convertBusinessProspectResponse);
+
+    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
+    Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
+    log.info("{}", business);
+    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+    assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.REVIEW);
+    assertThat(business.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
   }
 }

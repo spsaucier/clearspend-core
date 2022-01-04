@@ -1,11 +1,13 @@
 package com.clearspend.capital.client.alloy.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.Value;
 
 @Value
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EntityInformation {
 
   @JsonProperty("name")

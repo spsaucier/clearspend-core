@@ -7,7 +7,7 @@ public enum KybDocuments {
   BANK_STATEMENT("Bank Statement", DocumentType.contract),
   UTILITY_BILL("Utility Bill", DocumentType.utility),
   TAX_RETURN("Tax Return", DocumentType.utility),
-  PROCESSED_SS4(null, null),
+  PROCESSED_SS4("Social Security Card", DocumentType.contract),
   MANUAL_THIRD_PARTY_REVIEW(null, null),
   UNEXPIRED_GOVERNMENT_ISSUED_ID("Unexpired Government Issued Id", DocumentType.passport);
 
@@ -16,6 +16,7 @@ public enum KybDocuments {
   String documentName;
 
   KybDocuments(String documentName, DocumentType documentType) {
+    this.documentName = documentName;
     this.documentType = documentType;
   }
 

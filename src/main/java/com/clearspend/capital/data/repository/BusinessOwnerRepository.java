@@ -14,4 +14,6 @@ public interface BusinessOwnerRepository
   Optional<BusinessOwner> findBySubjectRef(String subjectRef);
 
   List<BusinessOwner> findByBusinessId(TypedId<BusinessId> businessId);
+
+  Optional<BusinessOwner> findByBusinessIdAndSubjectRefIsNotNull(TypedId<BusinessId> businessId);
 }

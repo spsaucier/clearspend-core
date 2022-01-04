@@ -1,0 +1,194 @@
+{
+  "status_code": 201,
+  "error": null,
+  "timestamp": 1639666167980,
+  "evaluation_token": "S-GJCrKqZlmbY47KnQkaY8",
+  "request_token": null,
+  "entity_token": null,
+  "parent_entity_token": null,
+  "group_token": "G-Hs0OICO4Eh8luBaurSJD",
+  "external_entity_id": "Business15121647+16465106465",
+  "application_token": "EE3h7zPppYwdEDBS4gNNT2GRrEydrbok",
+  "application_version_id": 1,
+  "champion_challenger_id": null,
+  "summary": {
+    "result": "success",
+    "score": 0,
+    "tags": [
+      "Application Manual Review"
+    ],
+    "outcome_reasons": [],
+    "outcome": "Manual Review",
+    "services": {
+      "Group Evaluations": "executed"
+    },
+    "alloy_fraud_score": null
+  },
+  "supplied": {},
+  "formatted": {
+    "age": null
+  },
+  "matching": {
+    "average_score": 0
+  },
+  "diligence": {
+    "watchlists": null,
+    "fraud": null,
+    "financial": null,
+    "identity_questions": null,
+    "device": null
+  },
+  "related_data": {},
+  "raw_responses": {
+    "Group Evaluations": [
+      {
+        "evaluations": [
+          {
+            "outcome": "Approved",
+            "outcome_reasons": null,
+            "tags": [
+              "Secretary of State Match",
+              "Business Name Matched",
+              "Address Matched",
+              "FEIN Found"
+            ],
+            "entity_id": 173636289,
+            "supplied_formatted": {
+              "age": null,
+              "business_name": "Business15121647",
+              "business_federal_ein": "992999000",
+              "business_address_city": "fsd",
+              "business_phone_number": "+16465106465",
+              "business_address_state": "CA",
+              "business_address_line_1": "dfsd",
+              "business_address_line_2": "3534",
+              "business_address_postal_code": "32421"
+            },
+            "evaluation_token": "S-LrEY7eMpvbHLpdG9L7Vg              ",
+            "application_token": "ylU99zgb9lI8EtVfHzYWmGBEWqqYHUdX"
+          },
+          {
+            "outcome": "Manual Review",
+            "outcome_reasons": [
+              "Fraud Review"
+            ],
+            "tags": [
+              "KYC DOB Match",
+              "KYC SSN Match",
+              "Phone Match",
+              "Fraud Review",
+              "KYC Name Match",
+              "Fraud Risk",
+              "Email Warning",
+              "KYC Address Match"
+            ],
+            "entity_id": 173636377,
+            "supplied_formatted": {
+              "age": "0",
+              "name_last": "Review",
+              "birth_date": "2021-11-02",
+              "name_first": "Testgb15121648",
+              "address_city": "fsd",
+              "phone_number": "+16465106465",
+              "address_state": "CA",
+              "email_address": "montell@qfhometown.com",
+              "address_line_1": "dfsd",
+              "address_postal_code": "32421",
+              "address_country_code": "US"
+            },
+            "evaluation_token": "S-BsCLAgkcc4K5J91nnhSE              ",
+            "application_token": "hyGpn2Lrdo04eLiolXSHAAsUJghQHxO4"
+          }
+        ],
+        "entities": [
+          {
+            "entity_id": 173636289,
+            "most_recent_outcome": "Approved"
+          },
+          {
+            "entity_id": 173636377,
+            "most_recent_outcome": "Manual Review"
+          }
+        ]
+      }
+    ]
+  },
+  "formatted_responses": {
+    "Group Evaluations": {
+      "matching": {},
+      "data": {
+        "applicant_count": 2,
+        "primary_applicant_application_token": "ylU99zgb9lI8EtVfHzYWmGBEWqqYHUdX",
+        "outcome": {
+          "all": [
+            "Approved",
+            "Manual Review"
+          ],
+          "primary": "Approved",
+          "secondary": [
+            "Manual Review"
+          ]
+        },
+        "most_recent_outcome": {
+          "all": [
+            "Approved",
+            "Manual Review"
+          ],
+          "primary": "Approved",
+          "secondary": [
+            "Manual Review"
+          ]
+        },
+        "tags": {
+          "all": [
+            "Secretary of State Match",
+            "Business Name Matched",
+            "Address Matched",
+            "FEIN Found",
+            "KYC DOB Match",
+            "KYC SSN Match",
+            "Phone Match",
+            "Fraud Review",
+            "KYC Name Match",
+            "Fraud Risk",
+            "Email Warning",
+            "KYC Address Match"
+          ],
+          "primary": [
+            "Secretary of State Match",
+            "Business Name Matched",
+            "Address Matched",
+            "FEIN Found"
+          ],
+          "secondary": [
+            "KYC DOB Match",
+            "KYC SSN Match",
+            "Phone Match",
+            "Fraud Review",
+            "KYC Name Match",
+            "Fraud Risk",
+            "Email Warning",
+            "KYC Address Match"
+          ]
+        },
+        "outcome_reasons": {
+          "all": [
+            "Fraud Review"
+          ],
+          "primary": [],
+          "secondary": [
+            "Fraud Review"
+          ]
+        },
+        "address_match": {
+          "street_match": "unmatched",
+          "state_match": "unmatched",
+          "postal_code_match": "unmatched"
+        },
+        "last_name_match": "unmatched",
+        "all_applicant_tags_string": ""
+      }
+    }
+  },
+  "audit_archive": null
+}

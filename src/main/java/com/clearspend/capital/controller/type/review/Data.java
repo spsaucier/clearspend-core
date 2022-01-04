@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.type.review;
 
+import com.clearspend.capital.client.alloy.response.Notes;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Value;
@@ -56,7 +57,7 @@ public class Data {
   Agent agent;
 
   @JsonProperty("notes")
-  Object notes;
+  List<Notes> notes;
 
   @JsonProperty("child_entities")
   List<ChildEntity> childEntities;

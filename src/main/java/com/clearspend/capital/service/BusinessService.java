@@ -91,13 +91,16 @@ public class BusinessService {
     KybEvaluationResponse kybEvaluationResponse = alloyClient.onboardBusiness(business);
     business.setKnowYourBusinessStatus(kybEvaluationResponse.status());
 
-    if (kybEvaluationResponse.status() == KnowYourBusinessStatus.REVIEW) {
-      Alloy alloy =
-          new Alloy(businessId, null, AlloyTokenType.BUSINESS, kybEvaluationResponse.entityToken());
-      alloyRepository.save(alloy);
-    }
-
     business = businessRepository.save(business);
+
+    if (kybEvaluationResponse.status() == KnowYourBusinessStatus.REVIEW) {
+      alloyRepository.save(
+          new Alloy(
+              business.getId(),
+              null,
+              AlloyTokenType.BUSINESS,
+              kybEvaluationResponse.entityToken()));
+    }
 
     if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.FAIL) {
       business.setStatus(BusinessStatus.CLOSED);
