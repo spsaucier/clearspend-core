@@ -4,6 +4,7 @@ create or replace view stripe_webhook_log_view as
 select id, created, updated, version, event_type, error, processing_time_ms
 from stripe_webhook_log;
 
+DROP FUNCTION IF EXISTS accountBalances(accountId uuid);
 create or replace function accountBalances(accountId uuid) returns table(ledger_balance numeric, available_balance numeric, hold_count int)
 as $$
 select account.ledger_balance_amount,
