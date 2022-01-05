@@ -163,6 +163,7 @@ public class AccountActivityService {
     }
     if (hold != null) {
       accountActivity.setHoldId(hold.getId());
+      accountActivity.setHideAfter(hold.getExpirationDate());
     }
 
     common.setAccountActivity(accountActivityRepository.save(accountActivity));

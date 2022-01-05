@@ -128,7 +128,7 @@ public class NetworkMessageService {
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
           accountService.recordNetworkAdjustment(common.getAccount(), common.getRequestedAmount());
-      common.setAdjustment(adjustmentRecord.adjustment());
+      common.setAdjustmentRecord(adjustmentRecord);
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       common
           .getAccountActivityDetails()

@@ -75,16 +75,20 @@ public class StripeWebhookController {
 
   @PostMapping("/webhook/direct")
   private void directWebhook(HttpServletRequest request) {
-    Instant start = Instant.now();
+    handleDirectRequest(
+        Instant.now(), parseRequest("direct", request, stripeProperties.getDirectSecret()), false);
+  }
 
-    ParseRecord parseRecord = parseRequest("direct", request, stripeProperties.getDirectSecret());
-
+  @VisibleForTesting
+  NetworkCommon handleDirectRequest(Instant start, ParseRecord parseRecord, boolean isTest) {
+    NetworkCommon networkCommon = null;
     try {
       switch (parseRecord.stripeEventType) {
         case ISSUING_AUTHORIZATION_REQUEST,
             ISSUING_AUTHORIZATION_CREATED,
-            ISSUING_AUTHORIZATION_UPDATED -> processAuthorization(parseRecord, false);
-        case ISSUING_TRANSACTION_CREATED -> processCapture(parseRecord);
+            ISSUING_AUTHORIZATION_UPDATED -> networkCommon =
+            processAuthorization(parseRecord, isTest);
+        case ISSUING_TRANSACTION_CREATED -> networkCommon = processCapture(parseRecord);
         case ISSUING_CARD_CREATED -> processCard(
             parseRecord.stripeEventType, parseRecord.stripeObject);
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> processCardHolder(
@@ -104,6 +108,8 @@ public class StripeWebhookController {
     parseRecord.stripeWebhookLog.setProcessingTimeMs(
         Duration.between(start, Instant.now()).toMillis());
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
+
+    return networkCommon;
   }
 
   record ParseRecord(
@@ -161,8 +167,7 @@ public class StripeWebhookController {
     return new ParseRecord(stripeWebhookLog, stripeObject, stripeEventType);
   }
 
-  @VisibleForTesting
-  NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
+  private NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
       throws StripeException {
     StripeEventType stripeEventType = parseRecord.stripeEventType;
     StripeObject stripeObject = parseRecord.stripeObject;
@@ -174,7 +179,8 @@ public class StripeWebhookController {
         if (auth.getStatus() != "pending") {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
-        common = new NetworkCommon(NetworkMessageType.AUTH_REQUEST, auth);
+        common =
+            new NetworkCommon(NetworkMessageType.AUTH_REQUEST, auth, parseRecord.stripeWebhookLog);
         networkMessageService.processNetworkMessage(common);
 
         Map<String, String> metadata = getMetadata(common);
@@ -213,12 +219,14 @@ public class StripeWebhookController {
       }
       case ISSUING_AUTHORIZATION_CREATED -> {
         Authorization auth = (Authorization) stripeObject;
-        common = new NetworkCommon(NetworkMessageType.AUTH_CREATED, auth);
+        common =
+            new NetworkCommon(NetworkMessageType.AUTH_CREATED, auth, parseRecord.stripeWebhookLog);
         networkMessageService.processNetworkMessage(common);
       }
       case ISSUING_AUTHORIZATION_UPDATED -> {
         Authorization auth = (Authorization) stripeObject;
-        common = new NetworkCommon(NetworkMessageType.AUTH_UPDATED, auth);
+        common =
+            new NetworkCommon(NetworkMessageType.AUTH_UPDATED, auth, parseRecord.stripeWebhookLog);
         networkMessageService.processNetworkMessage(common);
       }
     }
@@ -230,10 +238,9 @@ public class StripeWebhookController {
     return common;
   }
 
-  @VisibleForTesting
-  NetworkCommon processCapture(ParseRecord parseRecord) {
+  private NetworkCommon processCapture(ParseRecord parseRecord) {
     Transaction transaction = (Transaction) parseRecord.stripeObject;
-    NetworkCommon common = new NetworkCommon(transaction);
+    NetworkCommon common = new NetworkCommon(transaction, parseRecord.stripeWebhookLog);
     networkMessageService.processNetworkMessage(common);
 
     if (common.getNetworkMessage() != null) {

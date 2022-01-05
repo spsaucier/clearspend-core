@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.JournalEntry;
 import com.clearspend.capital.data.model.LedgerAccount;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
@@ -52,7 +53,8 @@ public class AccountService {
   private final LedgerService ledgerService;
   private final I2Client i2Client;
 
-  public record AdjustmentRecord(Account account, Adjustment adjustment) {}
+  public record AdjustmentRecord(
+      Account account, Adjustment adjustment, JournalEntry journalEntry) {}
 
   public record AdjustmentAndHoldRecord(Account account, Adjustment adjustment, Hold hold) {}
 
@@ -152,11 +154,14 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public AdjustmentRecord recordNetworkAdjustment(Account account, @NonNull Amount amount) {
-    Adjustment adjustment = adjustmentService.recordNetworkAdjustment(account, amount);
-    account.setLedgerBalance(account.getLedgerBalance().add(adjustment.getAmount()));
+    AdjustmentService.AdjustmentRecord adjustmentRecord =
+        adjustmentService.recordNetworkAdjustment(account, amount);
+    account.setLedgerBalance(
+        account.getLedgerBalance().add(adjustmentRecord.adjustment().getAmount()));
     account = accountRepository.save(account);
 
-    return new AdjustmentRecord(account, adjustment);
+    return new AdjustmentRecord(
+        account, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());
   }
 
   @Transactional(TxType.REQUIRED)

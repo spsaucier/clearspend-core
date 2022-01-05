@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
+import com.clearspend.capital.data.model.JournalEntry;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.service.LedgerService.BankJournalEntry;
@@ -34,6 +35,8 @@ public class AdjustmentService {
       ReallocationJournalEntry bankJournalEntry,
       Adjustment fromAdjustment,
       Adjustment toAdjustment) {}
+
+  public record AdjustmentRecord(JournalEntry journalEntry, Adjustment adjustment) {}
 
   @Transactional(TxType.REQUIRED)
   public Adjustment recordDepositFunds(Account account, Amount amount) {
@@ -108,21 +111,24 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment recordNetworkAdjustment(Account account, Amount amount) {
+  public AdjustmentRecord recordNetworkAdjustment(Account account, Amount amount) {
     NetworkJournalEntry networkJournalEntry =
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
-        new Adjustment(
-            account.getBusinessId(),
-            account.getAllocationId(),
-            account.getId(),
-            account.getLedgerAccountId(),
-            networkJournalEntry.journalEntry().getId(),
-            networkJournalEntry.accountPosting().getId(),
-            AdjustmentType.NETWORK,
-            OffsetDateTime.now(),
-            networkJournalEntry.accountPosting().getAmount()));
+    Adjustment adjustment =
+        adjustmentRepository.save(
+            new Adjustment(
+                account.getBusinessId(),
+                account.getAllocationId(),
+                account.getId(),
+                account.getLedgerAccountId(),
+                networkJournalEntry.journalEntry().getId(),
+                networkJournalEntry.accountPosting().getId(),
+                AdjustmentType.NETWORK,
+                OffsetDateTime.now(),
+                networkJournalEntry.accountPosting().getAmount()));
+
+    return new AdjustmentRecord(networkJournalEntry.journalEntry(), adjustment);
   }
 
   public Adjustment retrieveAdjustment(TypedId<AdjustmentId> id) {

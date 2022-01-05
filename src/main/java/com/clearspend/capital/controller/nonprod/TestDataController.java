@@ -15,6 +15,7 @@ import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.BusinessOwner;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.StripeWebhookLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -45,7 +46,6 @@ import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -460,8 +460,7 @@ public class TestDataController {
   }
 
   public static NetworkCommon generateNetworkCommon(
-      NetworkMessageType networkMessageType, User user, Card card, Account account, Amount amount)
-      throws JsonProcessingException {
+      NetworkMessageType networkMessageType, User user, Card card, Account account, Amount amount) {
     Faker faker = Faker.instance();
 
     Cardholder cardholder = new Cardholder();
@@ -529,7 +528,8 @@ public class TestDataController {
         stripeAuthorization.setPendingRequest(pendingRequest);
         stripeAuthorization.setStatus("pending");
 
-        yield new NetworkCommon(NetworkMessageType.AUTH_REQUEST, stripeAuthorization);
+        yield new NetworkCommon(
+            NetworkMessageType.AUTH_REQUEST, stripeAuthorization, new StripeWebhookLog());
       }
       case TRANSACTION_CREATED -> {
         Transaction stripeTransaction = new Transaction();
@@ -542,7 +542,7 @@ public class TestDataController {
         stripeTransaction.setMerchantAmount(amount.toStripeAmount());
         stripeTransaction.setMerchantData(merchantData);
 
-        yield new NetworkCommon(stripeTransaction);
+        yield new NetworkCommon(stripeTransaction, new StripeWebhookLog());
       }
       default -> throw new IllegalStateException("Unexpected value: " + networkMessageType);
     };
