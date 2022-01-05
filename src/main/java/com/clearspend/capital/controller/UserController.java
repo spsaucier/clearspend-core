@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.controller.type.receipt.Receipt;
 import com.clearspend.capital.controller.type.user.CreateUserRequest;
 import com.clearspend.capital.controller.type.user.CreateUserResponse;
 import com.clearspend.capital.controller.type.user.SearchUserRequest;
@@ -46,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -289,7 +291,7 @@ public class UserController {
           @Parameter(
               required = true,
               name = "accountActivityId",
-              description = "ID of the card record.",
+              description = "ID of the account activity record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId) {
     CurrentUser currentUser = CurrentUser.get();
@@ -305,7 +307,7 @@ public class UserController {
           @Parameter(
               required = true,
               name = "accountActivityId",
-              description = "ID of the card record.",
+              description = "ID of the account activity record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId,
       @Validated @RequestBody UpdateAccountActivityRequest request) {
@@ -322,14 +324,14 @@ public class UserController {
           @Parameter(
               required = true,
               name = "accountActivityId",
-              description = "ID of the card record.",
+              description = "ID of the account activity record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId,
       @PathVariable(value = "receiptId")
           @Parameter(
               required = true,
               name = "receiptId",
-              description = "ID of the card record.",
+              description = "ID of the receipt record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<ReceiptId> receiptId) {
     CurrentUser currentUser = CurrentUser.get();
@@ -344,20 +346,43 @@ public class UserController {
           @Parameter(
               required = true,
               name = "accountActivityId",
-              description = "ID of the card record.",
+              description = "ID of the account activity record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId,
       @PathVariable(value = "receiptId")
           @Parameter(
               required = true,
               name = "receiptId",
-              description = "ID of the card record.",
+              description = "ID of the receipt record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<ReceiptId> receiptId) {
     CurrentUser currentUser = CurrentUser.get();
 
     receiptService.unlinkReceipt(
         currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
+  }
+
+  @GetMapping("/receipts")
+  private List<Receipt> getReceipts() {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return receiptService.getReceipts(currentUser.businessId(), currentUser.userId()).stream()
+        .map(Receipt::of)
+        .collect(Collectors.toList());
+  }
+
+  @DeleteMapping("/receipts/{receiptId}/delete")
+  private void deleteReceipt(
+      @PathVariable(value = "receiptId")
+          @Parameter(
+              required = true,
+              name = "receiptId",
+              description = "ID of the receipt record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<ReceiptId> receiptId) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    receiptService.deleteReceipt(currentUser.businessId(), currentUser.userId(), receiptId);
   }
 
   @PatchMapping("/{userId}/archive")

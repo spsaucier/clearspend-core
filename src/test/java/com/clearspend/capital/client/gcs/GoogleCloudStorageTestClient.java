@@ -36,6 +36,11 @@ public class GoogleCloudStorageTestClient {
         log.info("(test) read: {} ({} bytes)", path, bytes.length);
         return bytes;
       }
+
+      @Override
+      public boolean deleteFile(String path) {
+        return !path.contains("false");
+      }
     };
   }
 }

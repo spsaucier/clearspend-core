@@ -64,4 +64,12 @@ public class GoogleCloudStorageClient {
 
     return bytes;
   }
+
+  public boolean deleteFile(String path) {
+    Blob blob = bucket.get(path);
+    boolean deleted = blob.delete();
+    log.info("deleted: {} ({} bytes)", blob.getName(), blob.getSize());
+
+    return deleted;
+  }
 }

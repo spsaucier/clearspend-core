@@ -466,6 +466,8 @@ public class UserControllerTest extends BaseCapitalTest {
 
   void unlinkReceipt() {}
 
+  void deleteReceipt() {}
+
   @SneakyThrows
   @Test
   void getUsersForBusinessIdByUserName() {

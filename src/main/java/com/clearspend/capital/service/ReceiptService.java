@@ -14,6 +14,7 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import java.io.IOException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,11 @@ public class ReceiptService {
     return receiptRepository
         .findReceiptByBusinessIdAndId(businessId, receiptId)
         .orElseThrow(() -> new RecordNotFoundException(Table.RECEIPT, businessId, receiptId));
+  }
+
+  public List<Receipt> getReceipts(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
+    return receiptRepository.findReceiptByBusinessIdAndUserIdAndAdjustmentIdIsNull(
+        businessId, userId);
   }
 
   private String getReceiptPath(
@@ -129,5 +135,28 @@ public class ReceiptService {
         receipt.getId(),
         accountActivity.getId(),
         accountActivity.getReceipt());
+  }
+
+  @Transactional
+  public void deleteReceipt(
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId) {
+    Receipt receipt = getReceipt(businessId, receiptId);
+
+    if (receipt.getAdjustmentId() != null) {
+      AccountActivity accountActivity =
+          accountActivityService.getUserAccountActivity(businessId, receipt.getAdjustmentId());
+      accountActivity.setReceipt(null);
+      accountActivityRepository.save(accountActivity);
+
+      log.debug(
+          "unlinked (delete) receipt {} from accountActivity {} ({})",
+          receipt.getId(),
+          accountActivity.getId(),
+          accountActivity.getReceipt());
+    }
+
+    receiptRepository.delete(receipt);
+    receiptImageService.deleteReceiptImage(receipt.getPath());
+    log.debug("deleted receipt {} {}", receipt.getId(), receipt.getPath());
   }
 }
