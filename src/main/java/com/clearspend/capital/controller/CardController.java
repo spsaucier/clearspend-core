@@ -14,7 +14,6 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
-import com.stripe.model.issuing.Card;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,24 +116,12 @@ public class CardController {
         SearchCardData::of);
   }
 
-  @GetMapping("/{cardId}/reveal")
-  private CardPaymentDetailsResponse revealCardPaymentDetails(
-      @PathVariable(value = "cardId")
-          @Parameter(
-              required = true,
-              name = "cardId",
-              description = "ID of the card record.",
-              example = "a3416a3e-dec2-4f33-b36b-6156ebff8b26")
-          TypedId<CardId> cardId) {
-
+  @PostMapping("/reveal")
+  private RevealCardResponse reveal(@RequestBody @Validated RevealCardRequest request) {
     CardDetailsRecord cardDetailsRecord =
-        cardService.getCard(CurrentUser.get().businessId(), cardId);
-    Card stripeCard =
-        stripeClient.getCardWithPaymentDetails(cardDetailsRecord.card().getExternalRef());
-    return new CardPaymentDetailsResponse(
-        stripeCard.getNumber(),
-        stripeCard.getExpMonth(),
-        stripeCard.getExpYear(),
-        stripeCard.getCvc());
+        cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
+    String ephemeralKey =
+        stripeClient.getEphemeralKey(cardDetailsRecord.card().getExternalRef(), request.getNonce());
+    return new RevealCardResponse(cardDetailsRecord.card().getExternalRef(), ephemeralKey);
   }
 }

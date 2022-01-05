@@ -73,12 +73,7 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Card getCardWithPaymentDetails(String cardId) {
-    Card result = generateEntityWithId(Card.class);
-    result.setNumber(faker.numerify("####"));
-    result.setExpYear(2999L);
-    result.setExpMonth(12L);
-    result.setCvc(faker.numerify("###"));
-    return result;
+  public String getEphemeralKey(String cardId, String nonce) {
+    return "dummy_ephemeral_key";
   }
 }

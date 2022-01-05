@@ -36,10 +36,10 @@ import com.stripe.param.issuing.CardCreateParams;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
 import com.stripe.param.issuing.CardCreateParams.Status;
-import com.stripe.param.issuing.CardRetrieveParams;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -296,16 +296,22 @@ public class StripeClient {
   }
 
   /**
-   * Returns an expanded Stripe card object, which also contains payment enabling details - card
-   * number and cvc. Currently, Stripe allows retrieval of such sensitive info only for Virtual
-   * cards. Note: GET requests should be sent to Stripe without Idempotency key, according to their
-   * documentation.
+   * Returns an ephemeral key which frontend can use to reveal the Virtual card details in the
+   * PCI-compliant way
    */
-  public Card getCardWithPaymentDetails(String stripeCardId) {
-    CardRetrieveParams cardRetrieveParams =
-        CardRetrieveParams.builder().addExpand("number").addExpand("cvc").build();
+  public String getEphemeralKey(String cardId, String nonce) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("issuing_card", cardId);
+    params.put("nonce", nonce);
     try {
-      return Card.retrieve(stripeCardId, cardRetrieveParams, null);
+      var res =
+          com.stripe.model.EphemeralKey.create(
+              params,
+              RequestOptions.builder()
+                  .setIdempotencyKey(cardId + nonce)
+                  .setStripeVersionOverride("2020-03-02")
+                  .build());
+      return res.getSecret();
     } catch (StripeException e) {
       throw new StripeClientException(e);
     }

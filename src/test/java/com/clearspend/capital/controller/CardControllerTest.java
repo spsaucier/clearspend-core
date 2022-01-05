@@ -6,11 +6,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
-import com.clearspend.capital.controller.type.card.CardDetailsResponse;
-import com.clearspend.capital.controller.type.card.CardPaymentDetailsResponse;
-import com.clearspend.capital.controller.type.card.IssueCardRequest;
-import com.clearspend.capital.controller.type.card.IssueCardResponse;
-import com.clearspend.capital.controller.type.card.UpdateCardRequest;
+import com.clearspend.capital.controller.type.card.*;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Card;
@@ -194,17 +190,16 @@ public class CardControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void revealCardPaymentDetails() {
-    CardPaymentDetailsResponse cardPaymentDetailsResponse =
+  void revealCard() {
+    RevealCardRequest revealCardRequest = new RevealCardRequest(card.getId(), "test-nonce");
+    RevealCardResponse revealCardResponse =
         mockMvcHelper.queryObject(
-            "/cards/" + card.getId().toString() + "/reveal",
-            HttpMethod.GET,
+            "/cards/reveal",
+            HttpMethod.POST,
             userCookie,
-            CardPaymentDetailsResponse.class);
-
-    assertThat(cardPaymentDetailsResponse.getNumber()).isNotNull();
-    assertThat(cardPaymentDetailsResponse.getExpMonth()).isNotNull();
-    assertThat(cardPaymentDetailsResponse.getExpYear()).isNotNull();
-    assertThat(cardPaymentDetailsResponse.getCvc()).isNotNull();
+            revealCardRequest,
+            RevealCardResponse.class);
+    assertThat(revealCardResponse.getExternalRef()).isNotNull();
+    assertThat(revealCardResponse.getEphemeralKey()).isNotNull();
   }
 }

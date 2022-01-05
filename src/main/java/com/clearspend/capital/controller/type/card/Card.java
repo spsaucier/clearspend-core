@@ -91,6 +91,9 @@ public class Card {
   @Embedded
   private Address shippingAddress;
 
+  @JsonProperty("externalRef")
+  private String externalRef;
+
   public Card(com.clearspend.capital.data.model.Card card) {
     cardId = card.getId();
     allocationId = card.getAllocationId();
@@ -110,5 +113,6 @@ public class Card {
     cardNumber = card.getLastFour();
     lastFour = card.getLastFour();
     shippingAddress = card.getShippingAddress();
+    externalRef = card.getExternalRef();
   }
 }
