@@ -29,6 +29,10 @@ public class AdviceLoggingUtil {
       HttpServletResponse httpServletResponse,
       Object responseBody) {
 
+    if ("/actuator/health".equals(httpServletRequest.getRequestURI())) {
+      return;
+    }
+
     StringBuilder stringBuilder =
         new StringBuilder(prefix)
             .append(" >>>>>>>>>>>>>>>>>>>> [Operation: ")
