@@ -6,9 +6,9 @@ import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
-import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.CardId;
+import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.data.model.AccountActivity;
@@ -220,11 +220,11 @@ public class AccountActivityService {
   }
 
   public AccountActivity getUserAccountActivity(
-      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId) {
+      TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
 
     return accountActivityRepository
-        .findByBusinessIdAndAdjustmentId(businessId, adjustmentId)
+        .findByBusinessIdAndReceiptId(businessId, receiptId)
         .orElseThrow(
-            () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
+            () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, receiptId));
   }
 }

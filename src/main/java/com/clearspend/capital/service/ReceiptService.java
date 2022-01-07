@@ -78,7 +78,7 @@ public class ReceiptService {
       Receipt finalReceipt = receipt;
       AccountActivity previousAccountActivity =
           accountActivityRepository
-              .findByBusinessIdAndAdjustmentId(businessId, receipt.getAdjustmentId())
+              .findByBusinessIdAndReceiptId(businessId, receipt.getId())
               .orElseThrow(
                   () ->
                       new RecordNotFoundException(
@@ -89,13 +89,16 @@ public class ReceiptService {
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
       receipt.setAdjustmentId(null);
-      previousAccountActivity.setReceipt(null);
+      previousAccountActivity.getReceipt().getReceiptIds().remove(receiptId);
       accountActivityRepository.save(previousAccountActivity);
     }
 
     AccountActivity accountActivity =
         accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
-    accountActivity.setReceipt(new ReceiptDetails(receipt.getId()));
+    ReceiptDetails receiptDetails =
+        accountActivity.getReceipt() != null ? accountActivity.getReceipt() : new ReceiptDetails();
+    receiptDetails.getReceiptIds().add(receipt.getId());
+    accountActivity.setReceipt(receiptDetails);
     receipt.setAllocationId(accountActivity.getAllocationId());
     receipt.setAccountId(accountActivity.getAccountId());
     receipt.setAdjustmentId(accountActivity.getAdjustmentId());
@@ -123,7 +126,7 @@ public class ReceiptService {
 
     AccountActivity accountActivity =
         accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
-    accountActivity.setReceipt(null);
+    accountActivity.getReceipt().getReceiptIds().remove(receiptId);
     accountActivityRepository.save(accountActivity);
 
     receipt.setAllocationId(null);
@@ -144,8 +147,8 @@ public class ReceiptService {
 
     if (receipt.getAdjustmentId() != null) {
       AccountActivity accountActivity =
-          accountActivityService.getUserAccountActivity(businessId, receipt.getAdjustmentId());
-      accountActivity.setReceipt(null);
+          accountActivityService.getUserAccountActivity(businessId, receipt.getId());
+      accountActivity.getReceipt().getReceiptIds().remove(receiptId);
       accountActivityRepository.save(accountActivity);
 
       log.debug(
