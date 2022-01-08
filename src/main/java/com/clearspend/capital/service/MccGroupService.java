@@ -1,7 +1,7 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.MccGroup;
 import com.clearspend.capital.data.model.enums.I2CMccGroup;
 import com.clearspend.capital.data.repository.MccGroupRepository;

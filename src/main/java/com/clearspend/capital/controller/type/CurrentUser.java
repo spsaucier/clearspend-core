@@ -4,9 +4,9 @@ import static com.clearspend.capital.controller.Common.BUSINESS_ID;
 import static com.clearspend.capital.controller.Common.CAPITAL_USER_ID;
 import static com.clearspend.capital.controller.Common.USER_TYPE;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;

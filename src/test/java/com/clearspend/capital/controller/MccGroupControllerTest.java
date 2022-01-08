@@ -6,7 +6,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.type.mcc.MccGroup;
-import com.clearspend.capital.data.model.Business;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.I2CMccGroup;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;

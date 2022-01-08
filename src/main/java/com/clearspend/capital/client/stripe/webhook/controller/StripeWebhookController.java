@@ -2,9 +2,9 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.common.error.InvalidRequestException;
-import com.clearspend.capital.data.model.StripeWebhookLog;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
-import com.clearspend.capital.data.repository.StripeWebhookLogRepository;
+import com.clearspend.capital.data.model.network.StripeWebhookLog;
+import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;

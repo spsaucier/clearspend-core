@@ -2,9 +2,9 @@ package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.data.model.Business;
-import com.clearspend.capital.data.model.BusinessOwner;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;

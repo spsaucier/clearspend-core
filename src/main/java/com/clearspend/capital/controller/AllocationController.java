@@ -1,8 +1,8 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.account.Account;

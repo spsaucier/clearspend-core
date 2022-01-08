@@ -2,8 +2,8 @@ package com.clearspend.capital.data.repository;
 
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.Currency;

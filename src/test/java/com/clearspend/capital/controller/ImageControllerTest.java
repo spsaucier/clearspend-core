@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.type.receipt.CreateReceiptResponse;
-import com.clearspend.capital.data.model.Business;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;

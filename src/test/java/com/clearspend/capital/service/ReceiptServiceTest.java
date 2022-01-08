@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
-import com.clearspend.capital.data.model.Business;
 import com.clearspend.capital.data.model.Receipt;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;

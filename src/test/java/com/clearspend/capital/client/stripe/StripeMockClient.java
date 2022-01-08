@@ -2,9 +2,9 @@ package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.ClearAddress;
-import com.clearspend.capital.data.model.Business;
-import com.clearspend.capital.data.model.BusinessOwner;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Account;

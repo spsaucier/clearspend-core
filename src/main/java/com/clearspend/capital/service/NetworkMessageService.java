@@ -5,13 +5,15 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
-import com.clearspend.capital.data.model.NetworkMessage;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
-import com.clearspend.capital.data.repository.NetworkMessageRepository;
+import com.clearspend.capital.data.model.network.NetworkMerchant;
+import com.clearspend.capital.data.model.network.NetworkMessage;
+import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
+import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Service;
 public class NetworkMessageService {
 
   private final NetworkMessageRepository networkMessageRepository;
+  private final NetworkMerchantRepository networkMerchantRepository;
 
   private final AccountService accountService;
   private final AccountActivityService accountActivityService;
@@ -66,6 +69,8 @@ public class NetworkMessageService {
     common.setAllocation(
         allocationService.retrieveAllocation(
             common.getBusinessId(), cardRecord.card().getAllocationId()));
+
+    storeMerchant(common);
 
     // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
     //    potentially in a async batch job)
@@ -256,5 +261,34 @@ public class NetworkMessageService {
             () ->
                 new RecordNotFoundException(
                     Table.NETWORK_MESSAGE, externalRef, NetworkMessageType.AUTH_REQUEST));
+  }
+
+  private void storeMerchant(NetworkCommon common) {
+    // asynchronously store the merchant details so that they can be used to define limits
+    new Thread(
+            () -> {
+              try {
+                networkMerchantRepository.save(
+                    new NetworkMerchant(
+                        common.getMerchantName(),
+                        common.getMerchantCategoryCode(),
+                        common.getMerchantType()));
+              } catch (org.springframework.dao.DataIntegrityViolationException
+                  | org.hibernate.exception.ConstraintViolationException e) {
+                log.warn(
+                    "NetworkMerchant already present: {} {} {}",
+                    common.getMerchantName(),
+                    common.getMerchantCategoryCode(),
+                    common.getMerchantType());
+              } catch (Exception e) {
+                log.error(
+                    "Unexpected failure to create NetworkMessage record ({} {} {})",
+                    common.getMerchantName(),
+                    common.getMerchantCategoryCode(),
+                    common.getMerchantType(),
+                    e);
+              }
+            })
+        .start();
   }
 }

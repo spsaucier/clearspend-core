@@ -1,7 +1,7 @@
 package com.clearspend.capital.client.plaid;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.PlaidLogEntry;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;

@@ -1,7 +1,7 @@
 package com.clearspend.capital.data.repository;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.repository.impl.UserRepositoryImpl.CardAndAllocationName;
 import com.clearspend.capital.service.UserFilterCriteria;

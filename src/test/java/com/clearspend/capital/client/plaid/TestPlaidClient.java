@@ -1,8 +1,8 @@
 package com.clearspend.capital.client.plaid;
 
 import com.clearspend.capital.TestHelper;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.AccountBase;

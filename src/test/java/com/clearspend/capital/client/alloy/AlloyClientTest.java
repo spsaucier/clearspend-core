@@ -2,8 +2,8 @@ package com.clearspend.capital.client.alloy;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
-import com.clearspend.capital.data.model.Business;
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,11 @@
 package com.clearspend.capital.controller.type.user;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
-import com.clearspend.capital.data.model.BusinessOwner;
-import com.clearspend.capital.data.model.BusinessProspect;
+import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

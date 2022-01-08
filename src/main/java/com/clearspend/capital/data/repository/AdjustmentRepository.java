@@ -1,8 +1,8 @@
 package com.clearspend.capital.data.repository;
 
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import java.time.OffsetDateTime;

@@ -1,10 +1,10 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.gcs.GoogleCloudStorageClient;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;

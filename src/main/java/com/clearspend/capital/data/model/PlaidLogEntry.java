@@ -2,9 +2,9 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedImmutable;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.PlaidLogEntryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
 import javax.persistence.Column;

@@ -1,9 +1,9 @@
 package com.clearspend.capital.controller.nonprod;
 
 import com.clearspend.capital.crypto.HashUtil;
-import com.clearspend.capital.data.repository.BusinessOwnerRepository;
-import com.clearspend.capital.data.repository.BusinessProspectRepository;
-import com.clearspend.capital.data.repository.BusinessRepository;
+import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
+import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;

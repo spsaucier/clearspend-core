@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Country;
 import com.plaid.client.model.Address;
 import com.plaid.client.model.AddressData;

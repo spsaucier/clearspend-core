@@ -2,8 +2,8 @@ package com.clearspend.capital.client.alloy;
 
 import com.clearspend.capital.client.alloy.response.EntityInformation;
 import com.clearspend.capital.client.alloy.response.OnboardResponse;
-import com.clearspend.capital.data.model.Business;
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;

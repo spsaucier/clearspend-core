@@ -16,10 +16,10 @@ import com.clearspend.capital.controller.type.allocation.UpdateAllocationRequest
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.card.limits.Limit;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Business;
-import com.clearspend.capital.data.model.BusinessBankAccount;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.MccGroup;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;

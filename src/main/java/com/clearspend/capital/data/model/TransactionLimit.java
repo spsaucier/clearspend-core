@@ -2,10 +2,10 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.data.type.TypedIdArrayType;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TransactionLimitId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;

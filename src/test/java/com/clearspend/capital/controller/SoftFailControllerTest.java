@@ -6,13 +6,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
-import com.clearspend.capital.common.typedid.data.BusinessProspectId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.clearspend.capital.controller.type.review.SoftFailRequiredDocumentsResponse;
 import com.clearspend.capital.crypto.PasswordUtil;
-import com.clearspend.capital.data.repository.BusinessProspectRepository;
-import com.clearspend.capital.data.repository.BusinessRepository;
+import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import java.nio.charset.StandardCharsets;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

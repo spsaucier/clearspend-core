@@ -1,8 +1,8 @@
 package com.clearspend.capital.controller.nonprod.type.fusionauth;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Value;
 

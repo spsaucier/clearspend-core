@@ -1,7 +1,7 @@
 package com.clearspend.capital.controller.type.business.prospect;
 
-import com.clearspend.capital.common.typedid.data.BusinessProspectId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;

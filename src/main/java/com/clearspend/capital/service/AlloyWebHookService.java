@@ -1,14 +1,14 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.review.ChildEntity;
 import com.clearspend.capital.controller.type.review.Data;
 import com.clearspend.capital.controller.type.review.GroupManualReviewOutcome;
 import com.clearspend.capital.controller.type.review.KybDocuments;
 import com.clearspend.capital.controller.type.review.KycDocuments;
 import com.clearspend.capital.data.model.Alloy;
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AlloyTokenType;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;

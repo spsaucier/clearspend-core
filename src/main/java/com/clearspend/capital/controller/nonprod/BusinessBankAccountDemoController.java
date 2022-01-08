@@ -1,7 +1,7 @@
 package com.clearspend.capital.controller.nonprod;
 
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;

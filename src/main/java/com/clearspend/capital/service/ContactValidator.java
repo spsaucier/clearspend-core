@@ -1,6 +1,6 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.plaid.client.model.Owner;
 import java.util.Arrays;
 import java.util.Collection;

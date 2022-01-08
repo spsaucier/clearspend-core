@@ -2,9 +2,9 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.AlloyId;
-import com.clearspend.capital.common.typedid.data.BusinessId;
-import com.clearspend.capital.common.typedid.data.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.data.model.enums.AlloyTokenType;
 import javax.persistence.Column;
 import javax.persistence.Entity;

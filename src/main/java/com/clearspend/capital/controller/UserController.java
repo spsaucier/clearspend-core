@@ -1,11 +1,11 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
@@ -23,7 +23,7 @@ import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;

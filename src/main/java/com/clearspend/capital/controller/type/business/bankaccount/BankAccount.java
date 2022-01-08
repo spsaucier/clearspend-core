@@ -1,8 +1,8 @@
 package com.clearspend.capital.controller.type.business.bankaccount;
 
 import com.clearspend.capital.common.masking.annotation.Sensitive;
-import com.clearspend.capital.common.typedid.data.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;

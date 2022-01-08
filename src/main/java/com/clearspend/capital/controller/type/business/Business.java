@@ -1,7 +1,7 @@
 package com.clearspend.capital.controller.type.business;
 
-import com.clearspend.capital.common.typedid.data.BusinessId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
@@ -59,7 +59,7 @@ public class Business {
   @Enumerated(EnumType.STRING)
   private BusinessStatus status;
 
-  public Business(@NonNull com.clearspend.capital.data.model.Business business) {
+  public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
         business.getLegalName(),

@@ -2,7 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
 import com.clearspend.capital.client.twilio.TwilioProperties;
-import com.clearspend.capital.data.model.BusinessProspect;
+import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.SendGrid;
