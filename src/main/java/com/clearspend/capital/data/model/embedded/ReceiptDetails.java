@@ -1,6 +1,6 @@
 package com.clearspend.capital.data.model.embedded;
 
-import com.clearspend.capital.common.data.type.TypedIdArrayType;
+import com.clearspend.capital.common.data.type.TypedIdSetType;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import java.util.HashSet;
@@ -20,10 +20,10 @@ import org.hibernate.annotations.TypeDefs;
 @NoArgsConstructor
 @AllArgsConstructor
 @MappedSuperclass
-@TypeDefs({@TypeDef(name = "uuid-array", typeClass = TypedIdArrayType.class)})
+@TypeDefs({@TypeDef(name = "uuid-set", typeClass = TypedIdSetType.class)})
 public class ReceiptDetails {
 
   @Column(columnDefinition = "uuid[]")
-  @Type(type = "uuid-array")
+  @Type(type = "uuid-set")
   private Set<TypedId<ReceiptId>> receiptIds = new HashSet<>();
 }

@@ -30,6 +30,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.BusinessRepository;
 import com.clearspend.capital.data.repository.CardRepository;
@@ -109,6 +110,7 @@ public class TestDataController {
   private final UserService userService;
 
   private final AllocationRepository allocationRepository;
+  private final AccountActivityRepository accountActivityRepository;
   private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
@@ -389,12 +391,13 @@ public class TestDataController {
   }
 
   public Address generateEntityAddress() {
+    com.github.javafaker.Address fakedAddress = faker.address();
     return new Address(
-        new EncryptedString(faker.address().streetAddress()),
-        new EncryptedString(faker.address().secondaryAddress()),
-        faker.address().city(),
-        faker.address().state(),
-        new EncryptedString(faker.address().zipCode()),
+        new EncryptedString(fakedAddress.streetAddress()),
+        new EncryptedString(fakedAddress.secondaryAddress()),
+        fakedAddress.cityName(),
+        fakedAddress.state(),
+        new EncryptedString(fakedAddress.zipCode()),
         Country.USA);
   }
 

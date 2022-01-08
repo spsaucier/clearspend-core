@@ -274,17 +274,20 @@ public class StripeClient {
 
   private <T extends ApiResource> T callStripe(
       String methodName, ApiRequestParams params, StripeProducer<T> function) {
-    T result;
+    T result = null;
+    String request = null;
 
     try {
+      request = objectMapper.writeValueAsString(params);
       result = function.produce();
-      log.info(
-          "Calling stripe [%s] method. \n Request: %s, \n Response: %s"
-              .formatted(methodName, objectMapper.writeValueAsString(params), result));
     } catch (StripeException e) {
       throw new StripeClientException(e);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to convert java object to json", e);
+    } finally {
+      log.info(
+          "Calling stripe [%s] method. \n Request: %s, \n Response: %s"
+              .formatted(methodName, request, result));
     }
 
     return result;
