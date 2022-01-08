@@ -153,7 +153,7 @@ public class NetworkCommon {
     }
 
     transactionDate =
-        OffsetDateTime.ofInstant(Instant.ofEpochMilli(authorization.getCreated()), ZoneOffset.UTC);
+        OffsetDateTime.ofInstant(Instant.ofEpochSecond(authorization.getCreated()), ZoneOffset.UTC);
     externalRef = authorization.getId();
 
     this.stripeWebhookLog = stripeWebhookLog;
@@ -178,7 +178,7 @@ public class NetworkCommon {
     }
 
     transactionDate =
-        OffsetDateTime.ofInstant(Instant.ofEpochMilli(transaction.getCreated()), ZoneOffset.UTC);
+        OffsetDateTime.ofInstant(Instant.ofEpochSecond(transaction.getCreated()), ZoneOffset.UTC);
     externalRef = transaction.getId();
     stripeAuthorizationExternalRef = transaction.getAuthorization();
 
