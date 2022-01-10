@@ -17,11 +17,11 @@ import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -129,23 +129,29 @@ public class TwilioService {
     send(mail);
   }
 
-  @SneakyThrows
   private void send(Mail mail) {
     Request request = new Request();
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");
-    request.setBody(mail.build());
 
-    log.debug(
-        "Sending Email with subject {} and templateID {} via Sendgrid",
-        mail.subject,
-        mail.templateId);
-    Response response = sendGrid.api(request);
-    if (response.getStatusCode() != 200) {
-      log.error(
-          "Sendgrid failed to send {} email with code {}",
-          objectMapper.writeValueAsString(request),
-          response.getStatusCode());
+    try {
+      request.setBody(mail.build());
+
+      log.debug(
+          "Sending Email with subject {} and templateID {} via Sendgrid",
+          mail.subject,
+          mail.templateId);
+
+      Response response = sendGrid.api(request);
+
+      if (response != null && response.getStatusCode() != 200) {
+        log.error(
+            "Sendgrid failed to send {} email with code {}",
+            objectMapper.writeValueAsString(request),
+            response.getStatusCode());
+      }
+    } catch (IOException e) {
+      log.error("failed to call Sendgrid (" + mail.subject + " [" + mail.templateId + "])", e);
     }
   }
 
