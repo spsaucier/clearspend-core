@@ -50,6 +50,9 @@ public class AccountActivityResponse {
   @JsonProperty("receipt")
   private ReceiptDetails receipt;
 
+  @JsonProperty("notes")
+  private String notes;
+
   public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
@@ -60,5 +63,6 @@ public class AccountActivityResponse {
     this.type = accountActivity.getType();
     this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
+    this.notes = accountActivity.getNotes();
   }
 }
