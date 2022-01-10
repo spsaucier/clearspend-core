@@ -142,10 +142,10 @@ public class FusionAuthService {
     fusionAuthRequest.loginId = request.getEmail();
     fusionAuthRequest.sendForgotPasswordEmail = false;
     fusionAuthRequest.applicationId = UUID.fromString(fusionAuthProperties.getApplicationId());
-    log.debug("FusionAuthRequest for forgot password {} ",fusionAuthRequest);
+    log.debug("FusionAuthRequest for forgot password {} ", fusionAuthRequest);
     ClientResponse<ForgotPasswordResponse, Errors> forgotPasswordResponse =
         client.forgotPassword(fusionAuthRequest);
-    log.debug("FusionAuthResponse for forgot password {} ",forgotPasswordResponse);
+    log.debug("FusionAuthResponse for forgot password {} ", forgotPasswordResponse);
     // here are the response statuses:
     // https://fusionauth.io/docs/v1/tech/apis/users/#start-forgot-password-workflow
     switch (forgotPasswordResponse.status) {
