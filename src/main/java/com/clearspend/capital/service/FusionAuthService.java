@@ -142,10 +142,9 @@ public class FusionAuthService {
     fusionAuthRequest.loginId = request.getEmail();
     fusionAuthRequest.sendForgotPasswordEmail = false;
     fusionAuthRequest.applicationId = UUID.fromString(fusionAuthProperties.getApplicationId());
-    log.debug("FusionAuthRequest for forgot password {} ", fusionAuthRequest);
     ClientResponse<ForgotPasswordResponse, Errors> forgotPasswordResponse =
         client.forgotPassword(fusionAuthRequest);
-    log.debug("FusionAuthResponse for forgot password {} ", forgotPasswordResponse);
+
     // here are the response statuses:
     // https://fusionauth.io/docs/v1/tech/apis/users/#start-forgot-password-workflow
     switch (forgotPasswordResponse.status) {
@@ -158,6 +157,8 @@ public class FusionAuthService {
       case 404 -> {
         // user cannot be found
       }
+      case 422 -> throw new RuntimeException(
+          "Email for this user is not set: " + forgotPasswordResponse.status);
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", forgotPasswordResponse.exception);
       default -> throw new RuntimeException(

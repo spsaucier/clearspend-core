@@ -3,8 +3,10 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
 import com.clearspend.capital.client.twilio.TwilioProperties;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
+import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
@@ -32,6 +34,8 @@ public class TwilioService {
   private final String FIRST_NAME_KEY = "first_name";
   private final String REASONS_KEY = "reasons";
   private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "changePasswordId";
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private final TwilioProperties twilioProperties;
   private final SendGridProperties sendGridProperties;
@@ -131,7 +135,18 @@ public class TwilioService {
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");
     request.setBody(mail.build());
-    sendGrid.api(request);
+
+    log.debug(
+        "Sending Email with subject {} and templateID {} via Sendgrid",
+        mail.subject,
+        mail.templateId);
+    Response response = sendGrid.api(request);
+    if (response.getStatusCode() != 200) {
+      log.error(
+          "Sendgrid failed to send {} email with code {}",
+          objectMapper.writeValueAsString(request),
+          response.getStatusCode());
+    }
   }
 
   public Verification sendVerificationSms(String to) {
