@@ -1,7 +1,9 @@
 package com.clearspend.capital.client.stripe;
 
+import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
@@ -42,20 +44,40 @@ import com.stripe.param.issuing.CardholderCreateParams.Billing;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
 @Profile("!test")
-@RequiredArgsConstructor
 public class StripeClient {
+
+  private static final Map<String, Object> REQUESTED_CAPABILITY = Map.of("requested", "true");
 
   private final StripeProperties stripeProperties;
   private final ObjectMapper objectMapper;
+  private final WebClient stripeTreasuryWebClient;
+  private final boolean testMode;
+
+  public StripeClient(
+      StripeProperties stripeProperties,
+      ObjectMapper objectMapper,
+      @Qualifier("stripeTreasuryWebClient") WebClient stripeTreasuryWebClient) {
+    this.stripeProperties = stripeProperties;
+    this.objectMapper = objectMapper;
+    this.stripeTreasuryWebClient = stripeTreasuryWebClient;
+
+    testMode = StringUtils.startsWith(stripeProperties.getApiKey(), "sk_test");
+  }
 
   private interface StripeProducer<T extends ApiResource> {
 
@@ -63,8 +85,6 @@ public class StripeClient {
   }
 
   public Account createAccount(Business business) {
-    Map<String, Object> requestedCapability = Map.of("requested", "true");
-
     Address.Builder addressBuilder =
         Address.builder()
             .setLine1(business.getClearAddress().getStreetLine1())
@@ -99,8 +119,8 @@ public class StripeClient {
             .setTransfers(Transfers.builder().setRequested(true).build())
             .setCardPayments(CardPayments.builder().setRequested(true).build())
             .setCardIssuing(CardIssuing.builder().setRequested(true).build())
-            .putExtraParam("treasury", requestedCapability)
-            .putExtraParam("us_bank_account_ach_payments", requestedCapability)
+            .putExtraParam("treasury", REQUESTED_CAPABILITY)
+            .putExtraParam("us_bank_account_ach_payments", REQUESTED_CAPABILITY)
             .build();
 
     AccountCreateParams accountCreateParams =
@@ -119,10 +139,15 @@ public class StripeClient {
                     .build())
             .build();
 
-    return callStripe(
-        "createAccount",
-        accountCreateParams,
-        () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
+    Account account =
+        callStripe(
+            "createAccount",
+            accountCreateParams,
+            () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
+
+    createFinancialAccount(business.getId(), account.getId());
+
+    return account;
   }
 
   public Cardholder createCardholder(User user, ClearAddress billingAddress) {
@@ -270,6 +295,50 @@ public class StripeClient {
         cardParameters,
         () ->
             com.stripe.model.issuing.Card.create(cardParameters, getRequestOptions(card.getId())));
+  }
+
+  public FinancialAccount createFinancialAccount(
+      TypedId<BusinessId> businessId, String accountExternalRef) {
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("supported_currencies[]", "usd");
+    formData.add("features[card_issuing][requested]", "true");
+    formData.add("features[deposit_insurance][requested]", "true");
+    formData.add("features[financial_addresses][aba][requested]", "true");
+    formData.add("features[inbound_transfers][ach][requested]", "true");
+    formData.add("features[intra_stripe_flows][requested]", "true");
+    formData.add("features[outbound_payments][ach][requested]", "true");
+    formData.add("features[outbound_payments][us_domestic_wire][requested]", "true");
+    formData.add("features[outbound_transfers][ach][requested]", "true");
+    formData.add("features[outbound_transfers][us_domestic_wire][requested]", "true");
+    if (testMode) {
+      formData.add("testmode_bypass_requirements", "true");
+    }
+
+    FinancialAccount financialAccount =
+        stripeTreasuryWebClient
+            .post()
+            .uri("/financial_accounts")
+            .headers(
+                httpHeaders -> {
+                  httpHeaders.add("Stripe-Account", accountExternalRef);
+                  httpHeaders.add("Idempotency-Key", "fa_" + businessId);
+                })
+            .body(BodyInserters.fromFormData(formData))
+            .exchangeToMono(
+                response -> {
+                  if (response.statusCode().equals(HttpStatus.OK)) {
+                    return response.bodyToMono(FinancialAccount.class);
+                  } else {
+                    return response.createException().flatMap(Mono::error);
+                  }
+                })
+            .block();
+
+    log.info(
+        "Calling stripe createFinancialAccount method. \n Response: %s"
+            .formatted(financialAccount));
+
+    return financialAccount;
   }
 
   private <T extends ApiResource> T callStripe(

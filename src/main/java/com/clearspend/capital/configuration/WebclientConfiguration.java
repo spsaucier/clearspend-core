@@ -1,5 +1,6 @@
 package com.clearspend.capital.configuration;
 
+import com.clearspend.capital.client.stripe.StripeProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -148,6 +149,20 @@ public class WebclientConfiguration {
               headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             })
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+  }
+
+  @Bean
+  WebClient stripeTreasuryWebClient(StripeProperties stripeProperties) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl("https://api.stripe.com/v1")
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(stripeProperties.getApiKey(), StringUtils.EMPTY);
+              headers.add("Stripe-Version", "2020-08-27;financial_accounts_beta=v3");
+            })
         .build();
   }
 
