@@ -31,8 +31,8 @@ public interface AccountActivityRepository
           """
       select *
       from account_activity
-      where account_activity.businessId = :businessId
-        and :receiptId = any(account_activity.receipt_receipt_ids::uuid)
+      where account_activity.business_id = :businessId
+        and :receiptId = any (account_activity.receipt_receipt_ids)
       """,
       nativeQuery = true)
   Optional<AccountActivity> findByBusinessIdAndReceiptId(
