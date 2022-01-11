@@ -107,8 +107,8 @@ client:
     direct-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
     enable-telemetry: false
-    connect-timeout: 2000
-    read-timeout: 7000
+    connect-timeout: 30000
+    read-timeout: 30000
     max-network-retries: 2
     # Terms of service acceptance ip address needed during stripe account creation.
     # Current value equals to clearspend domain public ip
