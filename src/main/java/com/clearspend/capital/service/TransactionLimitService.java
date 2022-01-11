@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.i2c.I2Client;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.RecordNotFoundException.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -34,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionLimitService {
 
   private final TransactionLimitRepository transactionLimitRepository;
-  private final I2Client i2Client;
 
   @Transactional
   public TransactionLimit initializeAllocationSpendLimit(

@@ -111,16 +111,6 @@ public class WebclientConfiguration {
   }
 
   @Bean
-  WebClient i2CWebClient(@Value("${client.i2c.url}") String url) {
-    return WebClient.builder()
-        .exchangeStrategies(exchangeStrategies())
-        .clientConnector(new ReactorClientHttpConnector(httpClient()))
-        .baseUrl(url)
-        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        .build();
-  }
-
-  @Bean
   WebClient fusionAuthWebClient(
       @Value("${client.fusionauth.base-url}") String url,
       @Value("${spring.security.oauth2.client.clientId}") String clientId,

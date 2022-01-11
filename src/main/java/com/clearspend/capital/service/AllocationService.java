@@ -1,7 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.i2c.I2Client;
-import com.clearspend.capital.client.i2c.response.AddStakeholderResponse;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.IdMismatchException;
@@ -59,7 +57,6 @@ public class AllocationService {
   private final CardService cardService;
   private final UserService userService;
   private final TransactionLimitService transactionLimitService;
-  private final I2Client i2Client;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -80,16 +77,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, Currency.USD);
 
-    // create new allocation and set its ID to that which was used for the Account record
-    AddStakeholderResponse i2cStakeholder = i2Client.addStakeholder(name);
-    Allocation allocation =
-        new Allocation(
-            businessId,
-            account.getId(),
-            user.getId(),
-            name,
-            i2cStakeholder.getI2cStakeholderRef(),
-            i2cStakeholder.getI2cAccountRef());
+    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -139,18 +127,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, amount.getCurrency());
 
-    // create new allocation and set its ID to that which was used for the Account record
-    AddStakeholderResponse i2cStakeholder =
-        i2Client.addStakeholder(name, parent.getI2cStakeholderRef());
-
-    Allocation allocation =
-        new Allocation(
-            businessId,
-            account.getId(),
-            user.getId(),
-            name,
-            i2cStakeholder.getI2cStakeholderRef(),
-            i2cStakeholder.getI2cAccountRef());
+    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(

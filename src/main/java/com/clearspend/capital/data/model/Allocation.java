@@ -59,8 +59,4 @@ public class Allocation extends TypedMutable<AllocationId> {
   private TypedId<UserId> ownerId;
 
   @NonNull private String name;
-
-  @NonNull private String i2cStakeholderRef;
-
-  @NonNull private String i2cAccountRef;
 }

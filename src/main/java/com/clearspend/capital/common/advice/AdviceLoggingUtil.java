@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 public class AdviceLoggingUtil {
 
   private final ObjectMapper objectMapper;
+  private static final Map<String, Boolean> noisyEndpoints =
+      Map.of("/actuator/health", false, "/actuator/prometheus", false);
 
   void logRequestResponse(
       String prefix,
@@ -29,7 +31,7 @@ public class AdviceLoggingUtil {
       HttpServletResponse httpServletResponse,
       Object responseBody) {
 
-    if ("/actuator/health".equals(httpServletRequest.getRequestURI())) {
+    if (noisyEndpoints.containsKey(httpServletRequest.getRequestURI())) {
       return;
     }
 

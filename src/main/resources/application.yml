@@ -73,22 +73,7 @@ client:
       receiptBucketName: dev-images-receipts
       createBucket: true
       enabled: true
-  i2c:
-    url: https://ws2.mycardplace.com:6443/MCPWebServicesRestful/services/MCPWSHandler/
-    acquirerId: TW0001
-    userId: TWTest
-    password: "{TWTest_Temp@/110}"
-    stakeholder-program:
-      id: tranwall_virtual_SDK
-      bin: 601999
-    virtual-program:
-      id: tranwall_virtual
-      bin: 601999
-      starting-numbers: 6019990022
-    plastic-program:
-      id: transwall_test
-      bin: 601999
-      starting-numbers: 601999002
+
   plaid:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX

@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.i2c.I2Client;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
@@ -51,7 +50,6 @@ public class AccountService {
   private final AdjustmentService adjustmentService;
   private final BusinessLimitService businessLimitService;
   private final LedgerService ledgerService;
-  private final I2Client i2Client;
 
   public record AdjustmentRecord(
       Account account, Adjustment adjustment, JournalEntry journalEntry) {}
@@ -108,8 +106,6 @@ public class AccountService {
 
     // flush everything to the db before trying to call i2c
     holdRepository.flush();
-
-    i2Client.creditFunds(rootAllocation.getI2cAccountRef(), amount.getAmount());
 
     return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, hold);
   }
