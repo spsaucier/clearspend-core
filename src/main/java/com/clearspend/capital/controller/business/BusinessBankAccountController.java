@@ -16,6 +16,7 @@ import com.clearspend.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -92,8 +93,22 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
-      @RequestBody @Validated TransactBankAccountRequest request) {
+      @RequestBody @Validated TransactBankAccountRequest request,
+      HttpServletRequest httpServletRequest)
+      throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+
+    // TODO: we are working with frontend team to split this endpoint into 2 separate endpoints
+    // Once new endpoint will be used, some of the code below which is related to onboarding will be
+    // removed
+    if (request.isOnboarding()) {
+      businessBankAccountService.registerExternalBank(
+          businessId,
+          businessBankAccountId,
+          httpServletRequest.getRemoteAddr(),
+          httpServletRequest.getHeader("User-Agent"));
+    }
+
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
             businessId,
@@ -106,6 +121,50 @@ public class BusinessBankAccountController {
       businessService.updateBusiness(
           businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
     }
+
+    return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
+  }
+
+  /**
+   * New endpoint for frontend to be used for initial onboarding transaction. It will create and
+   * link bank account, execute transaction itself, and will mark the business as fully active Once
+   * this will be used, old endpoint will be cleaned-up and onboarding related code will be removed
+   */
+  @PostMapping(
+      value = "/{businessBankAccountId}/onboard",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  private CreateAdjustmentResponse onboardingTransaction(
+      @PathVariable(value = "businessBankAccountId")
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessBankAccountId> businessBankAccountId,
+      @RequestBody @Validated TransactBankAccountRequest request,
+      HttpServletRequest httpServletRequest)
+      throws IOException {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+
+    // TODO: 3 calls below will have to be moved to either a dedicated "onboarding service"
+    // or to one of existing services, care should be taken then to not introduce circular
+    // dependencies
+    businessBankAccountService.registerExternalBank(
+        businessId,
+        businessBankAccountId,
+        httpServletRequest.getRemoteAddr(),
+        httpServletRequest.getHeader("User-Agent"));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        businessBankAccountService.transactBankAccount(
+            businessId,
+            businessBankAccountId,
+            request.getBankAccountTransactType(),
+            request.getAmount().toAmount(),
+            true);
+
+    businessService.updateBusiness(
+        businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
 
     return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }

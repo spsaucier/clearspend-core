@@ -3,6 +3,8 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
+import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
@@ -13,6 +15,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.business.BusinessOwner;
@@ -28,6 +31,9 @@ import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Owner;
+import com.stripe.model.Account;
+import com.stripe.model.ExternalAccount;
+import com.stripe.model.SetupIntent;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +61,8 @@ public class BusinessBankAccountService {
   private final ContactValidator contactValidator;
 
   private final PlaidClient plaidClient;
+  private final StripeClient stripeClient;
+  private final BusinessService businessService;
 
   public record BusinessBankAccountRecord(
       RequiredEncryptedStringWithHash routingNumber,
@@ -198,8 +206,6 @@ public class BusinessBankAccountService {
           IdType.BUSINESS_ID, businessId, businessBankAccount.getBusinessId());
     }
 
-    // TODO(kuchlein): Need to call someone to actually move the money
-
     final AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         switch (bankAccountTransactType) {
@@ -225,6 +231,35 @@ public class BusinessBankAccountService {
         type,
         adjustmentAndHoldRecord.adjustment(),
         adjustmentAndHoldRecord.hold());
+
+    businessBankAccountRepository.flush();
+
+    // Execute actual transfer with Stripe
+    if (bankAccountTransactType == BankAccountTransactType.DEPOSIT) {
+      // Create inbound ACH transfer
+      // Waiting for final decision about the internal description of transaction
+      // assuming it will change in final version.
+      String transactionDescription = "clearspend.com";
+      String statementDescriptor = "clearspend.com";
+      Business business = businessService.retrieveBusiness(businessId);
+      InboundTransfer inboundTransfer =
+          stripeClient.execInboundTransfer(
+              adjustmentAndHoldRecord.adjustment().getId(),
+              business,
+              businessBankAccount,
+              amount.toStripeAmount(),
+              transactionDescription,
+              statementDescriptor);
+
+      /*
+      TODO: understand how to use status
+      possible states: "status": "processing" | "succeeded" | "failed",
+      do we need to support "succeeded" here?
+      */
+      if (!inboundTransfer.getStatus().equals("processing")) {
+        throw new RuntimeException("Unexpected inbound transfer status");
+      }
+    }
 
     return adjustmentAndHoldRecord;
   }
@@ -258,5 +293,55 @@ public class BusinessBankAccountService {
     } catch (IOException e) {
       log.warn("Skipping balance check", e);
     }
+  }
+
+  @Transactional
+  public void registerExternalBank(
+      TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
+      String customerAcceptanceIpAddress,
+      String customerAcceptanceUserAgent)
+      throws IOException {
+
+    BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
+
+    Business business = businessService.retrieveBusiness(businessId);
+    String stripeAccountId = business.getExternalRef();
+
+    // Get a Stripe "Bank Account Token" (btok) via Plaid
+    // Attach the already-verified bank account to the connected account
+    Account account =
+        stripeClient.setExternalAccount(
+            stripeAccountId,
+            plaidClient.getStripeBankAccountToken(businessBankAccount, businessId));
+
+    // Assuming we are expecting strictly 1 verified bank account;
+    // future obtained knowledge may challenge this early assumption
+    List<ExternalAccount> extAccountsData = account.getExternalAccounts().getData();
+    if (extAccountsData.size() != 1) {
+      throw new RuntimeException(
+          "Unexpected number of elements in external accounts list for bank account id "
+              + businessBankAccountId);
+    }
+
+    String stripeBankAccountRef = extAccountsData.get(0).getId();
+
+    // Create setup intent, which will activate bank account as a successful payment method
+    SetupIntent setupIntent =
+        stripeClient.createSetupIntent(
+            stripeAccountId,
+            stripeBankAccountRef,
+            customerAcceptanceIpAddress,
+            customerAcceptanceUserAgent);
+
+    if (!setupIntent.getStatus().equals("succeeded")) {
+      throw new RuntimeException(
+          "Error creating setup intent for bank account id " + businessBankAccountId);
+    }
+
+    businessBankAccount.setStripeBankAccountRef(stripeBankAccountRef);
+    businessBankAccount.setStripeSetupIntentRef(setupIntent.getId());
+
+    businessBankAccountRepository.save(businessBankAccount);
   }
 }

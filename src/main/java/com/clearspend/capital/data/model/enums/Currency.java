@@ -27,6 +27,6 @@ public enum Currency {
   }
 
   public String toStripeCurrency() {
-    return this.name().toUpperCase();
+    return this.name().toLowerCase();
   }
 }

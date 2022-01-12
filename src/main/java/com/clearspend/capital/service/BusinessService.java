@@ -106,6 +106,12 @@ public class BusinessService {
       business.setStatus(BusinessStatus.CLOSED);
     } else {
       business.setExternalRef(stripeClient.createAccount(business).getId());
+
+      // TODO: The step below probably should be moved to a later phase, after KYB/KYC,
+      // to be finalized after KYB/KYC part will be ready
+      business.setStripeFinancialAccountRef(
+          stripeClient.createFinancialAccount(business.getId(), business.getExternalRef()).getId());
+
       businessLimitService.initializeBusinessSpendLimit(business.getId());
       mccGroupService.initializeMccGroups(business.getId());
     }

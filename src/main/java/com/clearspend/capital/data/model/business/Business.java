@@ -83,4 +83,7 @@ public class Business extends TypedMutable<BusinessId> {
 
   // identifier of this business (account in stripe terms) at Stripe
   private String externalRef;
+
+  // identifier of the treasury (financial) bank account at Stripe
+  private String stripeFinancialAccountRef;
 }

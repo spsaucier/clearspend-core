@@ -1,11 +1,14 @@
 package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
+import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -15,6 +18,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.Person;
 import com.stripe.model.PersonCollection;
+import com.stripe.model.SetupIntent;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
 import com.stripe.net.ApiRequestParams;
@@ -30,10 +34,12 @@ import com.stripe.param.AccountCreateParams.Company;
 import com.stripe.param.AccountCreateParams.Company.Address;
 import com.stripe.param.AccountCreateParams.TosAcceptance;
 import com.stripe.param.AccountCreateParams.Type;
+import com.stripe.param.AccountUpdateParams;
 import com.stripe.param.PersonCollectionCreateParams;
 import com.stripe.param.PersonCollectionCreateParams.Builder;
 import com.stripe.param.PersonCollectionCreateParams.Dob;
 import com.stripe.param.PersonCollectionCreateParams.Relationship;
+import com.stripe.param.SetupIntentCreateParams;
 import com.stripe.param.issuing.CardCreateParams;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
@@ -62,6 +68,14 @@ import reactor.core.publisher.Mono;
 public class StripeClient {
 
   private static final Map<String, Object> REQUESTED_CAPABILITY = Map.of("requested", "true");
+
+  // Treasury related API calls requires Stripe-treasury beta capabilities,
+  // which can be enabled using a special version string
+  // passed in 'Stripe-Version' header or in 'StripeVersionOverride' parameter
+  // Assumption is that in 03/2022, once the GA version will be available, we will remove or update
+  // this indicator further
+  private static final String STRIPE_BETA_HEADER =
+      "2020-08-27;treasury_beta=v1;financial_accounts_beta=v3;money_flows_beta=v2;transactions_beta=v3;us_bank_account_beta=v2";
 
   private final StripeProperties stripeProperties;
   private final ObjectMapper objectMapper;
@@ -139,15 +153,10 @@ public class StripeClient {
                     .build())
             .build();
 
-    Account account =
-        callStripe(
-            "createAccount",
-            accountCreateParams,
-            () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
-
-    createFinancialAccount(business.getId(), account.getId());
-
-    return account;
+    return callStripe(
+        "createAccount",
+        accountCreateParams,
+        () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
   }
 
   public Cardholder createCardholder(User user, ClearAddress billingAddress) {
@@ -387,5 +396,107 @@ public class StripeClient {
     } catch (StripeException e) {
       throw new StripeClientException(e);
     }
+  }
+
+  public Account setExternalAccount(String accountId, String btok) {
+    Account account = new Account();
+    account.setId(accountId);
+    AccountUpdateParams params = AccountUpdateParams.builder().setExternalAccount(btok).build();
+
+    return callStripe(
+        "updateAccount",
+        params,
+        () ->
+            account.update(
+                params, RequestOptions.builder().setIdempotencyKey(accountId + btok).build()));
+  }
+
+  public SetupIntent createSetupIntent(
+      String stripeAccountId,
+      String bankAccountId,
+      String customerAcceptanceIpAddress,
+      String customerAcceptanceUserAgent) {
+
+    SetupIntentCreateParams.MandateData.CustomerAcceptance.Online online =
+        SetupIntentCreateParams.MandateData.CustomerAcceptance.Online.builder()
+            .setIpAddress(customerAcceptanceIpAddress)
+            .setUserAgent(customerAcceptanceUserAgent)
+            .build();
+
+    com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance customerAcceptance =
+        com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance.builder()
+            .setType(SetupIntentCreateParams.MandateData.CustomerAcceptance.Type.ONLINE)
+            .setOnline(online)
+            .build();
+
+    SetupIntentCreateParams.MandateData mandateData =
+        SetupIntentCreateParams.MandateData.builder()
+            .setCustomerAcceptance(customerAcceptance)
+            .build();
+
+    SetupIntentCreateParams params =
+        SetupIntentCreateParams.builder()
+            .setMandateData(mandateData)
+            .setPaymentMethod(bankAccountId)
+            .setConfirm(true)
+            .addPaymentMethodType("us_bank_account")
+            .putExtraParam("attach_to_self", true)
+            .build();
+
+    try {
+      return com.stripe.model.SetupIntent.create(
+          params,
+          RequestOptions.builder()
+              .setStripeAccount(stripeAccountId)
+              .setIdempotencyKey(bankAccountId)
+              .setStripeVersionOverride(STRIPE_BETA_HEADER)
+              .build());
+
+    } catch (StripeException e) {
+      throw new StripeClientException(e);
+    }
+  }
+
+  public InboundTransfer execInboundTransfer(
+      TypedId<AdjustmentId> adjustmentId,
+      Business business,
+      BusinessBankAccount businessBankAccount,
+      long amount,
+      String description,
+      String statementDescriptor) {
+
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("origin_payment_method", businessBankAccount.getStripeBankAccountRef());
+    formData.add("financial_account", business.getStripeFinancialAccountRef());
+    formData.add("amount", String.valueOf(amount));
+    formData.add("description", description);
+    formData.add("statement_descriptor", statementDescriptor);
+    formData.add("currency", business.getCurrency().toStripeCurrency());
+
+    InboundTransfer inboundTransfer =
+        stripeTreasuryWebClient
+            .post()
+            .uri("/inbound_transfers")
+            .headers(
+                httpHeaders -> {
+                  httpHeaders.add("Stripe-Account", business.getExternalRef());
+                  httpHeaders.add("Stripe-Version", STRIPE_BETA_HEADER);
+                  httpHeaders.add("Idempotency-Key", adjustmentId.toString());
+                })
+            .body(BodyInserters.fromFormData(formData))
+            .exchangeToMono(
+                response -> {
+                  if (response.statusCode().equals(HttpStatus.OK)) {
+                    return response.bodyToMono(InboundTransfer.class);
+                  } else {
+                    return response.createException().flatMap(Mono::error);
+                  }
+                })
+            .block();
+
+    log.info(
+        "Calling stripe createFinancialAccount method. \n Response: %s".formatted(inboundTransfer));
+
+    return inboundTransfer;
   }
 }

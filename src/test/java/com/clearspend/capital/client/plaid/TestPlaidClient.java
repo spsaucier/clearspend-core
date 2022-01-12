@@ -3,6 +3,7 @@ package com.clearspend.capital.client.plaid;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.AccountBase;
@@ -211,5 +212,11 @@ public class TestPlaidClient extends PlaidClient {
     System.out.println(writer.toString());
 
     return t;
+  }
+
+  @Override
+  public String getStripeBankAccountToken(
+      @NonNull BusinessBankAccount businessBankAccount, @NonNull TypedId<BusinessId> businessId) {
+    return "dummy_btok";
   }
 }

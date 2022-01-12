@@ -1,18 +1,22 @@
 package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
+import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Account;
 import com.stripe.model.Person;
+import com.stripe.model.SetupIntent;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
 import lombok.SneakyThrows;
@@ -96,5 +100,41 @@ public class StripeMockClient extends StripeClient {
   @Override
   public String getEphemeralKey(String cardId, String nonce) {
     return "dummy_ephemeral_key";
+  }
+
+  @Override
+  public Account setExternalAccount(String accountId, String btok) {
+    return generateEntityWithId(Account.class);
+  }
+
+  @Override
+  public SetupIntent createSetupIntent(
+      String stripeAccountId,
+      String bankAccountId,
+      String customerAcceptanceIpAddress,
+      String customerAcceptanceUserAgent) {
+    return generateEntityWithId(SetupIntent.class);
+  }
+
+  @SneakyThrows
+  @SuppressWarnings("unchecked")
+  private <T> T generateEntityWithIdAndStatus(Class<T> entityClass, String status) {
+    T entity = (T) entityClass.getDeclaredConstructors()[0].newInstance();
+    ReflectionUtils.findMethod(entityClass, "setId", String.class)
+        .invoke(entity, faker.letterify(fakerRandom32SymbolsPattern));
+    ReflectionUtils.findMethod(entityClass, "setStatus", String.class).invoke(entity, status);
+
+    return entity;
+  }
+
+  @Override
+  public InboundTransfer execInboundTransfer(
+      TypedId<AdjustmentId> adjustmentId,
+      Business business,
+      BusinessBankAccount businessBankAccount,
+      long amount,
+      String description,
+      String statementDescriptor) {
+    return generateEntityWithIdAndStatus(InboundTransfer.class, "processing");
   }
 }

@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.PlaidLogEntry;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +23,8 @@ import com.plaid.client.model.LinkTokenCreateRequest;
 import com.plaid.client.model.LinkTokenCreateRequestUser;
 import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.NumbersACH;
+import com.plaid.client.model.ProcessorStripeBankAccountTokenCreateRequest;
+import com.plaid.client.model.ProcessorStripeBankAccountTokenCreateResponse;
 import com.plaid.client.model.Products;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
@@ -189,5 +192,17 @@ public class PlaidClient {
         plaidApi.itemPublicTokenExchange(itemPublicTokenCreateRequest).execute();
 
     return validBody(businessId, response).getAccessToken();
+  }
+
+  public String getStripeBankAccountToken(
+      @NonNull BusinessBankAccount businessBankAccount, @NonNull TypedId<BusinessId> businessId)
+      throws IOException {
+    ProcessorStripeBankAccountTokenCreateRequest request =
+        new ProcessorStripeBankAccountTokenCreateRequest()
+            .accessToken(businessBankAccount.getAccessToken().getEncrypted())
+            .accountId(businessBankAccount.getPlaidAccountRef().getEncrypted());
+    Response<ProcessorStripeBankAccountTokenCreateResponse> response =
+        plaidApi.processorStripeBankAccountTokenCreate(request).execute();
+    return validBody(businessId, response).getStripeBankAccountToken();
   }
 }
