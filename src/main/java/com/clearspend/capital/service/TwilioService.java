@@ -33,6 +33,7 @@ public class TwilioService {
 
   private final String FIRST_NAME_KEY = "first_name";
   private final String REASONS_KEY = "reasons";
+  private final String ENV_URL = "env-url";
   private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "changePasswordId";
 
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -82,6 +83,7 @@ public class TwilioService {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(
         FIRST_NAME_KEY, businessProspect.getFirstName().getEncrypted());
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     personalization.addTo(new Email(to));
     mail.addPersonalization(personalization);
 
@@ -95,6 +97,7 @@ public class TwilioService {
 
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     personalization.addTo(new Email(to));
     mail.addPersonalization(personalization);
 
@@ -109,6 +112,7 @@ public class TwilioService {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(REASONS_KEY, reasons);
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     personalization.addTo(new Email(to));
     mail.addPersonalization(personalization);
 
@@ -124,6 +128,7 @@ public class TwilioService {
     personalization.addDynamicTemplateData(
         FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY, changePasswordId);
     personalization.addTo(new Email(to));
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     mail.addPersonalization(personalization);
 
     send(mail);
@@ -144,7 +149,7 @@ public class TwilioService {
 
       Response response = sendGrid.api(request);
 
-      if (response != null && response.getStatusCode() != 200) {
+      if (response != null && response.getStatusCode() != 202) {
         log.error(
             "Sendgrid failed to send {} email with code {}",
             objectMapper.writeValueAsString(request),

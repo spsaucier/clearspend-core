@@ -16,6 +16,8 @@ public class SendGridProperties {
 
   @NotBlank private String apiKey;
 
+  @NotBlank private String envURL;
+
   @NotBlank private String notificationsSenderEmail;
 
   @NotBlank private String notificationsEmailSubject;

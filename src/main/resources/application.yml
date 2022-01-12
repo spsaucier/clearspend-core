@@ -86,6 +86,7 @@ client:
     kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-d27553e5452f4e3e9f7b097acb1b9738}
     kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-b139358de5fe4f52ab3f4d7ce3306582}
     forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-0c078e558102456a9a492ad59a6d16f9}
+    env-url: ${SENDGRID_ENV_URL:https://capital.dev.clearspend.com}
   stripe:
 #    secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     connect-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
