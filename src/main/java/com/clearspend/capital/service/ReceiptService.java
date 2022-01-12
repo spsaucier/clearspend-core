@@ -78,7 +78,7 @@ public class ReceiptService {
       Receipt finalReceipt = receipt;
       AccountActivity previousAccountActivity =
           accountActivityRepository
-              .findByBusinessIdAndReceiptId(businessId, receipt.getId())
+              .findByBusinessIdAndReceiptId(businessId.toUuid(), receipt.getId().toUuid())
               .orElseThrow(
                   () ->
                       new RecordNotFoundException(

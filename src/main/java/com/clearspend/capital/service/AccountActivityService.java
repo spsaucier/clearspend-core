@@ -223,7 +223,7 @@ public class AccountActivityService {
       TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
 
     return accountActivityRepository
-        .findByBusinessIdAndReceiptId(businessId, receiptId)
+        .findByBusinessIdAndReceiptId(businessId.toUuid(), receiptId.toUuid())
         .orElseThrow(
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, receiptId));
   }

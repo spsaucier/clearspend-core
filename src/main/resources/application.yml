@@ -32,7 +32,11 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${client.fusionauth.base-url}
+
 clearspend:
+  ach:
+   hold:
+     place: false
   encryption:
     key:
       aes:
@@ -88,7 +92,7 @@ client:
     forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-0c078e558102456a9a492ad59a6d16f9}
     env-url: ${SENDGRID_ENV_URL:https://capital.dev.clearspend.com}
   stripe:
-#    secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
+    # secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     connect-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
     direct-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}

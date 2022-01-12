@@ -3,12 +3,12 @@ package com.clearspend.capital.data.repository;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
-import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -35,8 +35,11 @@ public interface AccountActivityRepository
         and :receiptId = any (account_activity.receipt_receipt_ids)
       """,
       nativeQuery = true)
-  Optional<AccountActivity> findByBusinessIdAndReceiptId(
-      TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId);
+  // note that we're using UUID here explicitly as I get an error that uuid != bytea in the query
+  // above. This happens because :businessId is treated as byte[] rather than UUID. Rather than work
+  // out why, I changed the types to UUID to unblock folks. This seems to be an issue only for
+  // native queries
+  Optional<AccountActivity> findByBusinessIdAndReceiptId(UUID businessId, UUID receiptId);
 
   Optional<AccountActivity> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> id);

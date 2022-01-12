@@ -19,6 +19,7 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessBankAccountController {
+
+  @Value("${clearspend.ach.hold.place:true}")
+  private boolean placeHold;
 
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
@@ -115,7 +119,7 @@ public class BusinessBankAccountController {
             businessBankAccountId,
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
-            true);
+            placeHold);
 
     if (request.isOnboarding()) {
       businessService.updateBusiness(
