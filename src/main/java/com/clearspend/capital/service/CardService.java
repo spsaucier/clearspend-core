@@ -140,9 +140,18 @@ public class CardService {
     cardRepository.flush();
 
     com.stripe.model.issuing.Card stripeCard =
-        card.getType() == CardType.VIRTUAL
-            ? stripeClient.createVirtualCard(card, user.getExternalRef())
-            : stripeClient.createPhysicalCard(card, shippingAddress, user.getExternalRef());
+        switch (card.getType()) {
+          case PHYSICAL -> {
+            card.setStatus(card.getStatus().validTransition(CardStatus.INACTIVE));
+            yield stripeClient.createPhysicalCard(card, shippingAddress, user.getExternalRef());
+          }
+          case VIRTUAL -> {
+            card.setActivated(true);
+            card.setActivationDate(OffsetDateTime.now());
+            yield stripeClient.createVirtualCard(card, user.getExternalRef());
+          }
+        };
+
     card.setExternalRef(stripeCard.getId());
     card.setLastFour(stripeCard.getLast4());
 
@@ -193,60 +202,60 @@ public class CardService {
   }
 
   @Transactional
-  public Card blockCard(
+  public Card activateCard(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<CardId> cardId,
+      String lastFour,
       CardStatusReason statusReason) {
+
     Card card =
         cardRepository
-            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+            .findByBusinessIdAndUserIdAndIdAndLastFour(businessId, userId, cardId, lastFour)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(Table.CARD, businessId, userId, cardId, lastFour));
+    if (card.isActivated()) {
+      throw new InvalidRequestException("Card is already activated");
+    }
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.INACTIVE));
-    card.setStatusReason(statusReason);
+    if (card.getStatus() == CardStatus.CANCELLED) {
+      throw new InvalidRequestException("Retired card cannot be activated");
+    }
 
-    // TODO(kuchlein): call i2c to block the card
+    card.setActivated(true);
+    card.setActivationDate(OffsetDateTime.now());
 
-    return cardRepository.save(card);
+    return updateCardStatus(businessId, userId, cardId, CardStatus.ACTIVE, statusReason);
   }
 
   @Transactional
-  public Card unblockCard(
+  public Card updateCardStatus(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<CardId> cardId,
+      CardStatus cardStatus,
       CardStatusReason statusReason) {
     Card card =
         cardRepository
             .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.ACTIVE));
-    card.setStatusReason(statusReason);
-
-    // TODO(kuchlein): call i2c to unblock the card
-
-    return cardRepository.save(card);
+    return updateCardStatus(cardStatus, statusReason, card);
   }
 
-  @Transactional
-  public Card retireCard(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      TypedId<CardId> cardId,
-      CardStatusReason statusReason) {
-    Card card =
-        cardRepository
-            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+  private Card updateCardStatus(CardStatus cardStatus, CardStatusReason statusReason, Card card) {
+    if (!card.isActivated()) {
+      throw new InvalidRequestException("Cannot update status for non activated cards");
+    }
 
-    card.setStatus(card.getStatus().validTransition(CardStatus.CANCELLED));
+    card.setStatus(card.getStatus().validTransition(cardStatus));
     card.setStatusReason(statusReason);
 
-    // TODO(kuchlein): call i2c to retire/close the card
+    cardRepository.flush();
+    stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
-    return cardRepository.save(card);
+    return card;
   }
 
   @Transactional

@@ -15,5 +15,8 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
   Optional<Card> findByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> id);
 
+  Optional<Card> findByBusinessIdAndUserIdAndIdAndLastFour(
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> id, String lastFour);
+
   Optional<Card> findByExternalRef(String externalRef);
 }

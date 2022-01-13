@@ -10,6 +10,7 @@ import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
+import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
@@ -26,6 +27,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
@@ -220,8 +222,33 @@ public class UserController {
     CurrentUser currentUser = CurrentUser.get();
 
     return new Card(
-        cardService.blockCard(
-            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+        cardService.updateCardStatus(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            CardStatus.INACTIVE,
+            request.getStatusReason()));
+  }
+
+  @PatchMapping("/cards/{cardId}/activate")
+  private Card activateCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody ActivateCardRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.activateCard(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            request.getLastFour(),
+            request.getStatusReason()));
   }
 
   @PatchMapping("/cards/{cardId}/unblock")
@@ -237,8 +264,12 @@ public class UserController {
     CurrentUser currentUser = CurrentUser.get();
 
     return new Card(
-        cardService.unblockCard(
-            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+        cardService.updateCardStatus(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            CardStatus.ACTIVE,
+            request.getStatusReason()));
   }
 
   @PatchMapping("/cards/{cardId}/retire")
@@ -254,8 +285,12 @@ public class UserController {
     CurrentUser currentUser = CurrentUser.get();
 
     return new Card(
-        cardService.retireCard(
-            currentUser.businessId(), currentUser.userId(), cardId, request.getStatusReason()));
+        cardService.updateCardStatus(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            CardStatus.CANCELLED,
+            request.getStatusReason()));
   }
 
   @GetMapping("/cards/{cardId}/account-activity")

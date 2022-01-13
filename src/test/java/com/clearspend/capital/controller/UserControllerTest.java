@@ -7,13 +7,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.user.CreateUserRequest;
@@ -29,6 +32,8 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AllocationService;
@@ -53,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -62,6 +68,7 @@ import org.springframework.test.web.servlet.MockMvc;
 public class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
+  private final MockMvcHelper mockMvcHelper;
   private final TestHelper testHelper;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
@@ -99,7 +106,7 @@ public class UserControllerTest extends BaseCapitalTest {
               user.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.VIRTUAL);
     }
   }
 
@@ -356,6 +363,24 @@ public class UserControllerTest extends BaseCapitalTest {
       assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
       assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
     }
+
+    assertThat(userCardListResponse)
+        .filteredOn(
+            cardDetailsResponse ->
+                cardDetailsResponse.getCard().getCardId().equals(card.getId())
+                    && !cardDetailsResponse.getCard().isActivated()
+                    && cardDetailsResponse.getCard().getActivationDate() == null
+                    && cardDetailsResponse.getCard().getStatus() == CardStatus.INACTIVE)
+        .hasSize(1);
+
+    assertThat(userCardListResponse)
+        .filteredOn(
+            cardDetailsResponse ->
+                cardDetailsResponse.getCard().getCardId().equals(card2.getId())
+                    && cardDetailsResponse.getCard().isActivated()
+                    && cardDetailsResponse.getCard().getActivationDate() != null
+                    && cardDetailsResponse.getCard().getStatus() == CardStatus.ACTIVE)
+        .hasSize(1);
   }
 
   @SneakyThrows
@@ -394,11 +419,119 @@ public class UserControllerTest extends BaseCapitalTest {
     assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
   }
 
-  void blockCard() {}
+  @Test
+  void blockCard() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL);
 
-  void unblockCard() {}
+    // when
+    com.clearspend.capital.controller.type.card.Card blockedCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/block".formatted(card.getId()),
+            HttpMethod.PATCH,
+            userCookie,
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
 
-  void retireCard() {}
+    // then
+    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
+    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.INACTIVE);
+    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void unblockCard() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL);
+    cardService.updateCardStatus(
+        card.getBusinessId(),
+        card.getUserId(),
+        card.getId(),
+        CardStatus.INACTIVE,
+        CardStatusReason.CARDHOLDER_REQUESTED);
+
+    // when
+    com.clearspend.capital.controller.type.card.Card blockedCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/unblock".formatted(card.getId()),
+            HttpMethod.PATCH,
+            userCookie,
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    // then
+    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
+    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.ACTIVE);
+    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void retireCard() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL);
+
+    // when
+    com.clearspend.capital.controller.type.card.Card blockedCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/retire".formatted(card.getId()),
+            HttpMethod.PATCH,
+            userCookie,
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    // then
+    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
+    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.CANCELLED);
+    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void activateCard() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL);
+
+    // when
+    com.clearspend.capital.controller.type.card.Card blockedCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/activate".formatted(card.getId()),
+            HttpMethod.PATCH,
+            userCookie,
+            new ActivateCardRequest(card.getLastFour(), CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    // then
+    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
+    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.ACTIVE);
+    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+  }
 
   @SneakyThrows
   @Test
