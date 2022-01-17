@@ -5,7 +5,7 @@ import com.clearspend.capital.client.alloy.AlloyClient.KycEvaluationResponse;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;

@@ -3,7 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;

@@ -2,7 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -77,15 +77,7 @@ public class ReceiptService {
     if (receipt.getAdjustmentId() != null) {
       Receipt finalReceipt = receipt;
       AccountActivity previousAccountActivity =
-          accountActivityRepository
-              .findByBusinessIdAndReceiptId(businessId.toUuid(), receipt.getId().toUuid())
-              .orElseThrow(
-                  () ->
-                      new RecordNotFoundException(
-                          Table.ACCOUNT_ACTIVITY,
-                          businessId,
-                          userId,
-                          finalReceipt.getAdjustmentId()));
+          accountActivityService.findByReceiptId(businessId, receipt.getId());
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
       receipt.setAdjustmentId(null);
@@ -147,7 +139,7 @@ public class ReceiptService {
 
     if (receipt.getAdjustmentId() != null) {
       AccountActivity accountActivity =
-          accountActivityService.getUserAccountActivity(businessId, receipt.getId());
+          accountActivityService.findByReceiptId(businessId, receipt.getId());
       accountActivity.getReceipt().getReceiptIds().remove(receiptId);
       accountActivityRepository.save(accountActivity);
 

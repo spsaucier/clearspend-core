@@ -4,7 +4,7 @@ import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;

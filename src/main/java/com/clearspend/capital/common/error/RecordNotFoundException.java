@@ -11,33 +11,4 @@ public class RecordNotFoundException extends RuntimeException {
   public RecordNotFoundException(Table table, Object... id) {
     super(String.format("%s record not found by keys: %s", table, Arrays.asList(id)));
   }
-
-  public enum Table {
-    ACCOUNT("Account"),
-    ACCOUNT_ACTIVITY("AccountActivity"),
-    ADJUSTMENT("Adjustment"),
-    ALLOCATION("Allocation"),
-    BUSINESS("Business"),
-    BUSINESS_BANK_ACCOUNT("BusinessBankAccount"),
-    BUSINESS_LIMIT("BusinessLimit"),
-    BUSINESS_OWNER("BusinessOwner"),
-    BUSINESS_PROSPECT("BusinessProspect"),
-    CARD("Card"),
-    HOLD("Hold"),
-    LEDGER_ACCOUNT("LedgerAccount"),
-    NETWORK_MESSAGE("NetworkMessage"),
-    RECEIPT("Receipt"),
-    SPEND_LIMIT("SpendLimit"),
-    USER("user");
-
-    private final String name;
-
-    Table(String name) {
-      this.name = name;
-    }
-
-    public String getName() {
-      return name;
-    }
-  }
 }

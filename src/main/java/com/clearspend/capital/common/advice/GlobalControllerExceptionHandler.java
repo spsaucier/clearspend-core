@@ -2,10 +2,12 @@ package com.clearspend.capital.common.advice;
 
 import com.clearspend.capital.common.error.AmountException;
 import com.clearspend.capital.common.error.CurrencyMismatchException;
+import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.TypeMismatchException;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +39,7 @@ public class GlobalControllerExceptionHandler {
   }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
-  @ExceptionHandler(DataIntegrityViolationException.class)
+  @ExceptionHandler({DataIntegrityViolationException.class, InvalidStateException.class})
   public @ResponseBody ControllerError handleDataIntegrityViolationException(
       DataIntegrityViolationException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
@@ -45,7 +47,7 @@ public class GlobalControllerExceptionHandler {
   }
 
   @ResponseStatus(HttpStatus.FORBIDDEN)
-  @ExceptionHandler(ForbiddenException.class)
+  @ExceptionHandler({DataAccessViolationException.class, ForbiddenException.class})
   public @ResponseBody ControllerError handleForbiddenException(ForbiddenException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError("");

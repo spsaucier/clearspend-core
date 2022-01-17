@@ -63,7 +63,7 @@ public class TypedIdSetType implements UserType {
           ((Set<TypedId>) value).stream().map(TypedId::toString).toArray(String[]::new);
       st.setArray(index, session.connection().createArrayOf("uuid", values));
     } else {
-      st.setArray(index, session.connection().createArrayOf("uuid", new String[0]));
+      st.setArray(index, null);
     }
   }
 

@@ -1,10 +1,12 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
+import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.RecordNotFoundException.Table;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
@@ -24,6 +26,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
@@ -219,12 +222,24 @@ public class AccountActivityService {
                     Table.ACCOUNT_ACTIVITY, businessId, userId, accountActivityId));
   }
 
-  public AccountActivity getUserAccountActivity(
+  public AccountActivity findByReceiptId(
       TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
 
-    return accountActivityRepository
-        .findByBusinessIdAndReceiptId(businessId.toUuid(), receiptId.toUuid())
-        .orElseThrow(
-            () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, receiptId));
+    List<AccountActivity> accountActivities =
+        accountActivityRepository.findByReceiptId(receiptId.toUuid());
+    if (accountActivities.isEmpty()) {
+      throw new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, receiptId);
+    }
+    if (accountActivities.size() > 1) {
+      throw new InvalidStateException(Table.ACCOUNT_ACTIVITY, "Unexpected multiple records");
+    }
+
+    AccountActivity accountActivity = accountActivities.get(0);
+    if (!accountActivity.getBusinessId().equals(businessId)) {
+      throw new DataAccessViolationException(
+          Table.ACCOUNT_ACTIVITY, receiptId, businessId, accountActivity.getBusinessId());
+    }
+
+    return accountActivity;
   }
 }

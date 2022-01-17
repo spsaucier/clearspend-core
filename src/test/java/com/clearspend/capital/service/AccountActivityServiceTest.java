@@ -1,11 +1,14 @@
 package com.clearspend.capital.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
@@ -35,12 +38,14 @@ import org.springframework.data.domain.Page;
 @Transactional
 public class AccountActivityServiceTest extends BaseCapitalTest {
 
-  @Autowired TestHelper testHelper;
+  @Autowired AccountService accountService;
+  @Autowired AccountActivityService accountActivityService;
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired BusinessService businessService;
-  @Autowired AccountService accountService;
-  @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired NetworkMessageService networkMessageService;
+
+  @Autowired TestHelper testHelper;
+  @Autowired AccountActivityRepository accountActivityRepository;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -236,5 +241,12 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 new PageToken(0, 10, null)));
 
     assertThat(depositFilteredAccountActivity).hasSize(1);
+  }
+
+  @Test
+  void getUserAccountActivity() {
+    assertThrows(
+        RecordNotFoundException.class,
+        () -> accountActivityService.findByReceiptId(new TypedId<>(), new TypedId<>()));
   }
 }
