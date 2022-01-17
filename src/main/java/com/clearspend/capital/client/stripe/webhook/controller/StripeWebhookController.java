@@ -46,16 +46,49 @@ public class StripeWebhookController {
 
   private final NetworkMessageService networkMessageService;
 
+  private final StripeConnectHandler stripeConnectHandler;
+
   @PostMapping("/webhook/connect")
   private void connectWebhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
     ParseRecord parseRecord = parseRequest("connect", request, stripeProperties.getConnectSecret());
+    StripeObject stripeObject = parseRecord.stripeObject();
 
     switch (parseRecord.stripeEventType) {
-      case ACCOUNT_UPDATED -> accountUpdated(parseRecord.stripeEventType, parseRecord.stripeObject);
-      case ACCOUNT_EXTERNAL_ACCOUNT_CREATED -> externalAccountCreated(
-          parseRecord.stripeEventType, parseRecord.stripeObject);
+        // inbound transfers
+      case INBOUND_TRANSFER_CREATED -> stripeConnectHandler.inboundTransferCreated(stripeObject);
+      case INBOUND_TRANSFER_SUCCEEDED -> stripeConnectHandler.inboundTransferSucceeded(
+          stripeObject);
+      case INBOUND_TRANSFER_FAILED -> stripeConnectHandler.inboundTransferFailed(stripeObject);
+
+        // outbound transfers
+      case OUTBOUND_TRANSFER_CREATED -> stripeConnectHandler.outboundTransferCreated(stripeObject);
+      case OUTBOUND_TRANSFER_RETURNED -> stripeConnectHandler.outboundTransferReturned(
+          stripeObject);
+      case OUTBOUND_TRANSFER_FAILED -> stripeConnectHandler.outboundTransferFailed(stripeObject);
+      case OUTBOUND_TRANSFER_CANCELED -> stripeConnectHandler.outboundTransferCancelled(
+          stripeObject);
+      case OUTBOUND_TRANSFER_EXPECTED_ARRIVAL_DATE_UPDATED -> stripeConnectHandler
+          .outboundTransferExpectedArrivalDateUpdated(stripeObject);
+      case OUTBOUND_TRANSFER_POSTED -> stripeConnectHandler.outboundTransferPosted(stripeObject);
+
+        // outbound payments
+      case OUTBOUND_PAYMENT_CREATED -> stripeConnectHandler.outboundPaymentCreated(stripeObject);
+      case OUTBOUND_PAYMENT_PROCESSING -> stripeConnectHandler.outboundPaymentProccessing(
+          stripeObject);
+      case OUTBOUND_PAYMENT_CANCELED -> stripeConnectHandler.outboundPaymentCancelled(stripeObject);
+      case OUTBOUND_PAYMENT_FAILED -> stripeConnectHandler.outboundPaymentFailed(stripeObject);
+      case OUTBOUND_PAYMENT_EXPECTED_ARRIVAL_DATE_UPDATED -> stripeConnectHandler
+          .outboundPaymentExpectedArrivalDateUpdated(stripeObject);
+      case OUTBOUND_PAYMENT_POSTED -> stripeConnectHandler.outboundPaymentPosted(stripeObject);
+      case OUTBOUND_PAYMENT_RETURNED -> stripeConnectHandler.outboundPaymentReturned(stripeObject);
+
+        // connected accounts
+      case ACCOUNT_UPDATED -> stripeConnectHandler.accountUpdated(stripeObject);
+      case ACCOUNT_EXTERNAL_ACCOUNT_CREATED -> stripeConnectHandler.externalAccountCreated(
+          stripeObject);
+
       default -> {
         String errorMessage = "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();
         log.error(errorMessage);
@@ -68,10 +101,6 @@ public class StripeWebhookController {
         Duration.between(start, Instant.now()).toMillis());
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
-
-  private void accountUpdated(StripeEventType stripeEventType, StripeObject stripeObject) {}
-
-  private void externalAccountCreated(StripeEventType stripeEventType, StripeObject stripeObject) {}
 
   @PostMapping("/webhook/direct")
   private void directWebhook(HttpServletRequest request) {
