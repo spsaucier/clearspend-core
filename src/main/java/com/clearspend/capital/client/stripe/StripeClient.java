@@ -363,9 +363,17 @@ public class StripeClient {
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to convert java object to json", e);
     } finally {
-      log.info(
-          "Calling stripe [%s] method. \n Request: %s, \n Response: %s"
-              .formatted(methodName, request, result));
+      if (log.isInfoEnabled()) {
+        String resultStr = null;
+        try {
+          resultStr = objectMapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+          // do nothing
+        }
+        log.info(
+            "Calling stripe [%s] method. \n Request: %s, \n Response: %s"
+                .formatted(methodName, request, resultStr != null ? resultStr : result));
+      }
     }
 
     return result;

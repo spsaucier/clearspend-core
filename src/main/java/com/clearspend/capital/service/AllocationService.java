@@ -263,14 +263,12 @@ public class AllocationService {
   }
 
   public List<AllocationRecord> searchBusinessAllocations(Business business, String name) {
-    log.info("all allocations: {}", allocationRepository.findAll());
     List<Allocation> allocations =
         StringUtils.isEmpty(name)
             ? allocationRepository.findByBusinessId(business.getId())
             : allocationRepository.findByBusinessIdAndNameIgnoreCaseContaining(
                 business.getId(), name);
 
-    log.info("allocations {} {}: {}", business.getId(), name, allocations);
     // if none, return empty list
     if (allocations.size() == 0) {
       return Collections.emptyList();
