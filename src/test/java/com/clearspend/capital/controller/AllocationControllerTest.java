@@ -16,6 +16,7 @@ import com.clearspend.capital.controller.type.allocation.UpdateAllocationRequest
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.card.limits.Limit;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.MccGroup;
 import com.clearspend.capital.data.model.business.Business;
@@ -64,24 +65,20 @@ class AllocationControllerTest extends BaseCapitalTest {
 
   private final Faker faker = new Faker();
 
-  private Cookie authCookie;
-
   @BeforeEach
   void init() {
     testHelper.init();
-    this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
   }
 
   @SneakyThrows
   @Test
   void createAllocation_success() {
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             testHelper.generateFullName(),
-            allocationService
-                .getRootAllocation(testHelper.retrieveBusiness().getId())
-                .allocation()
-                .getId(),
+            rootAllocation.getId(),
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
@@ -89,6 +86,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
+
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -106,15 +105,12 @@ class AllocationControllerTest extends BaseCapitalTest {
   @Test
   void getAllocation_success() {
     Business business = testHelper.retrieveBusiness();
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            allocationService
-                .getRootAllocation(testHelper.retrieveBusiness().getId())
-                .allocation()
-                .getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -131,21 +127,19 @@ class AllocationControllerTest extends BaseCapitalTest {
   @Test
   void getAllocationChildren_success() {
     Business business = testHelper.retrieveBusiness();
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            allocationService
-                .getRootAllocation(testHelper.retrieveBusiness().getId())
-                .allocation()
-                .getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(),
             "",
             parentAllocationRecord.allocation().getId(),
             testHelper.createUser(business).user());
+
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -170,15 +164,11 @@ class AllocationControllerTest extends BaseCapitalTest {
     AdjustmentAndHoldRecord deposit =
         testHelper.transactBankAccount(
             businessBankAccount, BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            allocationService
-                .getRootAllocation(testHelper.retrieveBusiness().getId())
-                .allocation()
-                .getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
     Card card =
         testHelper.issueCard(
             business,
@@ -200,6 +190,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             Amount.of(amount));
 
     String body = objectMapper.writeValueAsString(request);
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -223,10 +214,12 @@ class AllocationControllerTest extends BaseCapitalTest {
             business.getCurrency(), BigDecimal.valueOf(100));
     testHelper.transactBankAccount(
         businessBankAccount, BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(business.getId()).allocation();
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             testHelper.generateFullName(),
-            allocationService.getRootAllocation(business.getId()).allocation().getId(),
+            rootAllocation.getId(),
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.valueOf(10)),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
@@ -234,6 +227,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -252,14 +246,13 @@ class AllocationControllerTest extends BaseCapitalTest {
   void updateAllocation_success() {
     // given
     Business business = testHelper.retrieveBusiness();
+    final Allocation rootAllocation =
+        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(),
             faker.name().name(),
-            allocationService
-                .getRootAllocation(testHelper.retrieveBusiness().getId())
-                .allocation()
-                .getId(),
+            rootAllocation.getId(),
             testHelper.createUser(business).user());
 
     UpdateAllocationRequest updateAllocationRequest = new UpdateAllocationRequest();
@@ -278,6 +271,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             .collect(Collectors.toList()));
     updateAllocationRequest.setDisabledTransactionChannels(
         Collections.singleton(TransactionChannel.MOTO));
+
+    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
 
     // when
     MockHttpServletResponse response =

@@ -6,6 +6,8 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
@@ -14,6 +16,7 @@ import com.clearspend.capital.controller.type.card.RevealCardResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -21,9 +24,7 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.MccGroupService;
-import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -54,7 +55,7 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private CreateUpdateUserRecord user;
+  private User user;
   private Cookie userCookie;
   private Card card;
 
@@ -64,13 +65,13 @@ public class CardControllerTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
-      user = testHelper.createUser(createBusinessRecord.business());
-      userCookie = testHelper.login(user.user().getEmail().getEncrypted(), user.password());
+      user = createBusinessRecord.allocationRecord().allocation().getOwner();
+      userCookie = testHelper.login(user.getId());
       card =
           testHelper.issueCard(
               business,
               createBusinessRecord.allocationRecord().allocation(),
-              user.user(),
+              user,
               Currency.USD,
               FundingType.POOLED,
               CardType.PHYSICAL);
@@ -80,9 +81,9 @@ public class CardControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createCard() {
-    AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            business.getId(),
+    TypedId<AllocationId> allocationId =
+        testHelper.createAllocationMvc(
+            createBusinessRecord.allocationRecord().allocation().getOwner(),
             faker.name().name(),
             createBusinessRecord.allocationRecord().allocation().getId(),
             testHelper.createUser(business).user());
@@ -90,8 +91,8 @@ public class CardControllerTest extends BaseCapitalTest {
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
-            allocationRecord.allocation().getId(),
-            user.user().getId(),
+            allocationId,
+            user.getId(),
             Currency.USD,
             true,
             CurrencyLimit.ofMap(

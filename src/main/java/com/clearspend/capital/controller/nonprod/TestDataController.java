@@ -1,5 +1,7 @@
 package com.clearspend.capital.controller.nonprod;
 
+import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
+
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -114,7 +116,6 @@ public class TestDataController {
   private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
-
   private final Faker faker = new Faker();
 
   public record BusinessRecord(
@@ -152,6 +153,7 @@ public class TestDataController {
     BusinessRecord businessRecord = createBusiness(new TypedId<>());
     Business business = businessRecord.business();
     createUser(business);
+    setCurrentUser(businessRecord.user());
 
     // create bankAccount, deposit $10,000 and withdraw $267.34
     BusinessBankAccount businessBankAccount =

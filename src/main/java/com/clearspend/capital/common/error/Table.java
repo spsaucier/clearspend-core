@@ -16,7 +16,8 @@ public enum Table {
   NETWORK_MESSAGE("NetworkMessage"),
   RECEIPT("Receipt"),
   SPEND_LIMIT("SpendLimit"),
-  USER("user");
+  USER("user"),
+  USER_ALLOCATION_ROLE("user_allocation_role");
 
   private final String name;
 

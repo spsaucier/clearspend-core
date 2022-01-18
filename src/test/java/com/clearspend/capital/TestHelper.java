@@ -17,6 +17,8 @@ import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.business.BusinessBankAccountController.LinkTokenResponse;
+import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
+import com.clearspend.capital.controller.type.allocation.CreateAllocationResponse;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
@@ -25,9 +27,11 @@ import com.clearspend.capital.controller.type.business.prospect.CreateBusinessPr
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -88,7 +92,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.persistence.EntityManager;
 import javax.servlet.http.Cookie;
+import javax.validation.constraints.NotNull;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -144,8 +151,10 @@ public class TestHelper {
   private final FusionAuthService fusionAuthService;
   private final UserService userService;
   private final PlaidClient plaidClient;
+  private final EntityManager entityManager;
 
   private final Faker faker = new Faker(new SecureRandom(new byte[] {0}));
+  private final Map<TypedId<?>, String> passwords = new HashMap<>();
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -267,6 +276,8 @@ public class TestHelper {
     // set business owner password
     String password = PasswordUtil.generatePassword();
     businessProspectService.setBusinessProspectPassword(businessProspect.getId(), password);
+    passwords.put(businessProspect.getId(), password);
+
     login(businessProspect.getEmail().getEncrypted(), password);
     // convert the prospect to a business
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
@@ -287,6 +298,48 @@ public class TestHelper {
     assertThat(record.businessProspectStatus()).isEqualTo(status);
   }
 
+  /**
+   * Get a fresh cookie for the given user to perform subsequent operations through {@link #mvc}.
+   * Uses the cached password from when the test user was created with this class's facilities.
+   *
+   * <p>The cookie remains available at {@link #getDefaultAuthCookie()}.
+   *
+   * <p>For tests accessing services directly, see {@link CurrentUserSwitcher}
+   *
+   * @param userId whose cookie to retrieve
+   * @return cookie for authorizing this user
+   */
+  public Cookie login(@NonNull TypedId<UserId> userId) {
+    return login(userService.retrieveUser(userId));
+  }
+
+  /**
+   * Get a fresh cookie for the given user to perform subsequent operations through {@link #mvc}.
+   * Uses the cached password from when the test user was created with this class's facilities.
+   *
+   * <p>The cookie remains available at {@link #getDefaultAuthCookie()}.
+   *
+   * <p>For tests accessing services directly, see {@link CurrentUserSwitcher}.
+   *
+   * @param user whose cookie to retrieve
+   * @return cookie for authorizing this user
+   */
+  public Cookie login(@NonNull User user) {
+    return login(user.getEmail().getEncrypted(), passwords.get(user.getId()));
+  }
+
+  /**
+   * Get a fresh cookie for the given user to perform subsequent operations through {@link #mvc}.
+   * Uses the cached password from when the test user was created with this class's facilities.
+   *
+   * <p>The cookie remains available at {@link #getDefaultAuthCookie()}.
+   *
+   * <p>For tests accessing services directly, see {@link CurrentUserSwitcher}.
+   *
+   * @param email of the user whose cookie to retrieve
+   * @param password the user's password
+   * @return cookie for authorizing this user
+   */
   @SneakyThrows
   public Cookie login(String email, String password) {
     LoginRequest request = new LoginRequest(email, password);
@@ -411,6 +464,7 @@ public class TestHelper {
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
+    passwords.put(businessOwnerId, password);
     return businessOwnerService.createBusinessOwner(
         businessOwnerId,
         businessId,
@@ -492,6 +546,9 @@ public class TestHelper {
       String name,
       TypedId<AllocationId> parentAllocationId,
       User user) {
+    CurrentUserSwitcher.setCurrentUser(
+        allocationService.getRootAllocation(businessId).allocation().getOwner());
+    entityManager.flush();
     return allocationService.createAllocation(
         businessId,
         parentAllocationId,
@@ -501,6 +558,39 @@ public class TestHelper {
         DEFAULT_TRANSACTION_LIMITS,
         Collections.emptyList(),
         Collections.emptySet());
+  }
+
+  @SneakyThrows
+  public @NonNull @NotNull(message = "allocationId required") TypedId<AllocationId>
+      createAllocationMvc(
+          User actor, String allocationName, TypedId<AllocationId> parentAllocationId, User owner) {
+    CreateAllocationRequest request =
+        new CreateAllocationRequest(
+            allocationName,
+            parentAllocationId,
+            owner.getId(),
+            new com.clearspend.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
+            Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
+            Collections.emptyList(),
+            Collections.emptySet());
+
+    String body = objectMapper.writeValueAsString(request);
+
+    Cookie authCookie = login(actor);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/allocations")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    CreateAllocationResponse createAllocationResponse =
+        objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    return createAllocationResponse.getAllocationId();
   }
 
   public record CreateBusinessRecord(
@@ -532,13 +622,14 @@ public class TestHelper {
             Currency.USD);
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);
-
+    passwords.put(businessOwner.user().getId(), password);
     AllocationRecord rootAllocation =
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName() + " - root");
 
     log.debug("Created business {} with owner and root allocation.", businessId);
 
+    CurrentUserSwitcher.setCurrentUser(businessOwner.user());
     return new CreateBusinessRecord(
         business,
         businessOwner.businessOwner(),
@@ -548,20 +639,27 @@ public class TestHelper {
         login(email, password));
   }
 
+  public Cookie getDefaultAuthCookie() {
+    return defaultAuthCookie;
+  }
+
   @Transactional
   public void deleteAllocation(TypedId<BusinessId> businessId) {
     allocationRepository.deleteByBusinessId(businessId);
   }
 
   public CreateUpdateUserRecord createUser(Business business) {
-    return userService.createUser(
-        business.getId(),
-        UserType.EMPLOYEE,
-        faker.name().firstName(),
-        faker.name().lastName(),
-        generateEntityAddress(),
-        faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber());
+    CreateUpdateUserRecord record =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            faker.name().firstName(),
+            faker.name().lastName(),
+            generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+    passwords.put(record.user().getId(), record.password());
+    return record;
   }
 
   public Card issueCard(

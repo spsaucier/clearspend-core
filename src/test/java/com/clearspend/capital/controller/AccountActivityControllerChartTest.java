@@ -13,6 +13,7 @@ import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.type.activity.ChartDataRequest;
 import com.clearspend.capital.controller.type.activity.ChartDataResponse;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
@@ -149,6 +150,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();

@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.IdMismatchException;
@@ -21,8 +22,10 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
+import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
@@ -32,6 +35,7 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,8 +59,8 @@ public class AllocationService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
-  private final UserService userService;
   private final TransactionLimitService transactionLimitService;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -77,7 +81,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, Currency.USD);
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
+    Allocation allocation = new Allocation(businessId, account.getId(), user, name);
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -98,6 +102,11 @@ public class AllocationService {
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
+    rolesAndPermissionsService.assertUserHasPermission(
+        parentAllocationId,
+        EnumSet.of(AllocationPermission.MANAGE_FUNDS),
+        EnumSet.noneOf(GlobalUserPermission.class));
+
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
     Account parentAccount = null;
@@ -127,7 +136,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, amount.getCurrency());
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
+    Allocation allocation = new Allocation(businessId, account.getId(), user, name);
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(
@@ -165,10 +174,13 @@ public class AllocationService {
         accountService.retrieveAllocationAccount(
             business.getId(), business.getCurrency(), allocationId);
 
+    Map<TypedId<UserId>, UserRolesAndPermissions> currentUserRoles =
+        rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(allocationId);
+
     return new AllocationDetailsRecord(
         allocation,
         account,
-        userService.retrieveUser(allocation.getOwnerId()),
+        allocation.getOwner(),
         transactionLimitService.retrieveSpendLimit(
             business.getId(), TransactionLimitType.ALLOCATION, allocationId.toUuid()));
   }
@@ -179,7 +191,7 @@ public class AllocationService {
       TypedId<AllocationId> allocationId,
       String name,
       TypedId<AllocationId> parentAllocationId,
-      TypedId<UserId> ownerId,
+      User owner,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
@@ -188,7 +200,7 @@ public class AllocationService {
 
     BeanUtils.setNotEmpty(name, allocation::setName);
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
-    BeanUtils.setNotNull(ownerId, allocation::setOwnerId);
+    BeanUtils.setNotNull(owner, allocation::setOwner);
 
     transactionLimitService.updateAllocationSpendLimit(
         businessId,

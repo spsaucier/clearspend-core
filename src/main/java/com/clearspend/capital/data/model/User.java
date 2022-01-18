@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.vladmihalcea.hibernate.type.array.EnumArrayType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -24,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+import org.hibernate.annotations.TypeDefs;
 
 @Entity
 @Data
@@ -32,6 +35,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Table(name = "users")
+@TypeDefs({@TypeDef(name = "enum-array", typeClass = EnumArrayType.class)})
 @Slf4j
 public class User extends TypedMutable<UserId> {
 

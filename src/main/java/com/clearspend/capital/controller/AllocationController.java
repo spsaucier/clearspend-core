@@ -92,7 +92,7 @@ public class AllocationController {
         allocationId,
         request.getName(),
         request.getParentAllocationId(),
-        request.getOwnerId(),
+        userService.retrieveUser(request.getOwnerId()),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
         request.getDisabledTransactionChannels());
@@ -121,7 +121,7 @@ public class AllocationController {
                 new Allocation(
                     e.allocation().getId(),
                     e.allocation().getName(),
-                    e.allocation().getOwnerId(),
+                    e.allocation().getOwner().getId(),
                     Account.of(e.account())))
         .collect(Collectors.toList());
   }
