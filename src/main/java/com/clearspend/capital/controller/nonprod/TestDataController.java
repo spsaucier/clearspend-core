@@ -20,7 +20,6 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
-import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -192,9 +191,8 @@ public class TestDataController {
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
+        parentAllocation.getId(),
         childAllocation.allocation().getId(),
-        childAllocation.allocation().getAccountId(),
-        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(1326.86)));
 
     // create grandchild allocation and load $1926.27
@@ -210,9 +208,8 @@ public class TestDataController {
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
+        parentAllocation.getId(),
         grandchildAllocation.allocation().getId(),
-        grandchildAllocation.allocation().getAccountId(),
-        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(1926.27)));
 
     List<CreateUpdateUserRecord> users = new ArrayList<>();

@@ -17,7 +17,6 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
-import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -87,9 +86,8 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
-        allocation.account().getId(),
-        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     CreateUpdateUserRecord user = testHelper.createUser(business);

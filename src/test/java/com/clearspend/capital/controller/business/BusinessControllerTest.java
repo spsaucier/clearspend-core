@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.business;
 
+import static java.math.BigDecimal.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -16,6 +17,8 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
+import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
+import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -95,6 +98,88 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .isEqualTo(business.getKnowYourBusinessStatus());
     org.assertj.core.api.Assertions.assertThat(jsonBusiness.getStatus())
         .isEqualTo(business.getStatus());
+  }
+
+  @SneakyThrows
+  @Test
+  public void reallocateBusinessFunds_success() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    AllocationRecord allocationRecord =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            testHelper.generateAllocationName(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    accountService.depositFunds(
+        createBusinessRecord.business().getId(),
+        createBusinessRecord.allocationRecord().account(),
+        Amount.of(Currency.USD, new BigDecimal("1000")),
+        false);
+
+    // move $100 from root allocation (balance $1000) to newly created allocation (balance $0)
+    BusinessReallocationRequest request =
+        new BusinessReallocationRequest(
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            allocationRecord.allocation().getId(),
+            com.clearspend.capital.controller.type.Amount.of(
+                new Amount(Currency.USD, valueOf(100))));
+
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse mockHttpServletResponse =
+        mvc.perform(
+                post("/businesses/transactions")
+                    .content(body)
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    BusinessFundAllocationResponse response =
+        objectMapper.readValue(
+            mockHttpServletResponse.getContentAsString(), BusinessFundAllocationResponse.class);
+    assertEquals(
+        900.00,
+        response.getLedgerBalanceFrom().getAmount().doubleValue(),
+        "The businessLedgerBalance result is not as expected");
+    assertEquals(
+        100.00,
+        response.getLedgerBalanceTo().getAmount().doubleValue(),
+        "The allocationLedgerBalance result is not as expected");
+
+    // move $90 from new allocation (balance $100) to root allocation (balance $900)
+    request =
+        new BusinessReallocationRequest(
+            allocationRecord.allocation().getId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            com.clearspend.capital.controller.type.Amount.of(
+                new Amount(Currency.USD, valueOf(90))));
+
+    body = objectMapper.writeValueAsString(request);
+
+    mockHttpServletResponse =
+        mvc.perform(
+                post("/businesses/transactions")
+                    .content(body)
+                    .contentType(APPLICATION_JSON_VALUE)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    response =
+        objectMapper.readValue(
+            mockHttpServletResponse.getContentAsString(), BusinessFundAllocationResponse.class);
+    assertEquals(
+        10.00,
+        response.getLedgerBalanceFrom().getAmount().doubleValue(),
+        "The businessLedgerBalance result is not as expected");
+    assertEquals(
+        990.00,
+        response.getLedgerBalanceTo().getAmount().doubleValue(),
+        "The allocationLedgerBalance result is not as expected");
   }
 
   @SneakyThrows
@@ -248,7 +333,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         allocationService.getRootAllocation(business.getId()).account(),
-        allocationService.getRootAllocation(business.getId()).allocation(),
         Amount.of(Currency.USD, new BigDecimal(200)),
         true);
     MockHttpServletResponse response =

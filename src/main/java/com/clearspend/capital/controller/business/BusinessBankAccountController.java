@@ -16,6 +16,7 @@ import com.clearspend.capital.service.BusinessService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.List;
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,11 @@ public class BusinessBankAccountController {
   private final BusinessBankAccountService businessBankAccountService;
 
   public record LinkTokenResponse(String linkToken) {}
+
+  @PostConstruct
+  private void init() {
+    log.info("configValue: clearspend.ach.hold.place: {}", placeHold);
+  }
 
   @GetMapping("/link-token")
   private LinkTokenResponse linkToken() throws IOException {

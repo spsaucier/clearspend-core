@@ -17,7 +17,6 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
-import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -71,7 +70,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
-        createBusinessRecord.allocationRecord().allocation(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
@@ -88,9 +86,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
-        parentAllocationRecord.account().getId(),
-        BusinessReallocationType.ALLOCATION_TO_BUSINESS,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     int count = accountActivityRepository.countByBusinessId(business.getId());
@@ -127,7 +124,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
-        createBusinessRecord.allocationRecord().allocation(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
@@ -143,9 +139,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
-        parentAllocationRecord.account().getId(),
-        BusinessReallocationType.ALLOCATION_TO_BUSINESS,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     UserService.CreateUpdateUserRecord user = testHelper.createUser(business);
@@ -207,9 +202,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
-        parentAllocationRecord.account().getId(),
-        BusinessReallocationType.BUSINESS_TO_ALLOCATION,
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     Page<AccountActivity> withdrawalFilteredAccountActivity =

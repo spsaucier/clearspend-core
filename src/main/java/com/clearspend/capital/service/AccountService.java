@@ -13,7 +13,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
-import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
@@ -82,7 +81,6 @@ public class AccountService {
   public AdjustmentAndHoldRecord depositFunds(
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
-      Allocation rootAllocation,
       Amount amount,
       boolean placeHold) {
     amount.ensureNonNegative();
@@ -102,6 +100,7 @@ public class AccountService {
                   HoldStatus.PLACED,
                   amount.negate(),
                   OffsetDateTime.now().plusDays(5)));
+      log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
     }
 
     // flush everything to the db before trying to call i2c
@@ -116,8 +115,7 @@ public class AccountService {
     amount.ensureNonNegative();
 
     if (rootAllocationAccount.getAvailableBalance().isLessThan(amount)) {
-      throw new InsufficientFundsException(
-          "Account", rootAllocationAccount.getId(), AdjustmentType.WITHDRAW, amount);
+      throw new InsufficientFundsException(rootAllocationAccount, AdjustmentType.WITHDRAW, amount);
     }
 
     businessLimitService.ensureWithinWithdrawLimit(businessId, amount);
@@ -258,8 +256,7 @@ public class AccountService {
           IdType.BUSINESS_ID, fromAccount.getBusinessId(), toAccount.getBusinessId());
     }
     if (fromAccount.getAvailableBalance().isLessThan(amount)) {
-      throw new InsufficientFundsException(
-          "Account", fromAccountId, AdjustmentType.REALLOCATE, amount);
+      throw new InsufficientFundsException(fromAccount, AdjustmentType.REALLOCATE, amount);
     }
 
     ReallocateFundsRecord reallocateFundsRecord =

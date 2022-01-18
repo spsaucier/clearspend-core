@@ -106,6 +106,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private AllocationService allocationService;
 
   @Autowired StripeWebhookController stripeWebhookController;
+  @Autowired StripeDirectHandler stripeDirectHandler;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -333,7 +334,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_CREATED;
     Authorization authorizationCreated = getAuthorization(user, card, amount, 0L, stripeId);
     authorizationCreated.setApproved(false);
-    authorizationCreated.setMetadata(stripeWebhookController.getMetadata(networkCommon));
+    authorizationCreated.setMetadata(stripeDirectHandler.getMetadata(networkCommon));
     ArrayList<RequestHistory> requestHistoryArrayList = new ArrayList<>();
     RequestHistory requestHistory = new RequestHistory();
     requestHistory.setAmount(authorizationRequest.getPendingRequest().getAmount());

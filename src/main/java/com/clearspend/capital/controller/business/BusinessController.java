@@ -2,11 +2,15 @@ package com.clearspend.capital.controller.business;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.business.Business;
+import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
+import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
+import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessService;
 import java.util.ArrayList;
@@ -30,6 +34,24 @@ public class BusinessController {
 
   private final AllocationService allocationService;
   private final BusinessService businessService;
+
+  @PostMapping("/transactions")
+  private BusinessFundAllocationResponse reallocateBusinessFunds(
+      @RequestBody @Validated BusinessReallocationRequest request) {
+
+    AccountReallocateFundsRecord reallocateFundsRecord =
+        businessService.reallocateBusinessFunds(
+            CurrentUser.get().businessId(),
+            request.getAllocationIdFrom(),
+            request.getAllocationIdTo(),
+            request.getAmount().toAmount());
+
+    return new BusinessFundAllocationResponse(
+        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment().getId(),
+        Amount.of(reallocateFundsRecord.fromAccount().getLedgerBalance()),
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment().getId(),
+        Amount.of(reallocateFundsRecord.toAccount().getLedgerBalance()));
+  }
 
   @GetMapping("/accounts")
   private Account getRootAllocationAccount() {

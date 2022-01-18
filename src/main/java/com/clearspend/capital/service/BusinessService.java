@@ -6,11 +6,8 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
-import com.clearspend.capital.common.error.IdMismatchException;
-import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -20,7 +17,6 @@ import com.clearspend.capital.data.model.Alloy;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AlloyTokenType;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
-import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
 import com.clearspend.capital.data.model.enums.BusinessType;
@@ -157,40 +153,29 @@ public class BusinessService {
     return new BusinessRecord(business, account);
   }
 
-  // TODO(kuchlein): determine if this is still a thing. I don't _believe_ it is
-  @Deprecated
   @Transactional
   public AccountReallocateFundsRecord reallocateBusinessFunds(
       TypedId<BusinessId> businessId,
-      @NonNull TypedId<AllocationId> allocationId,
-      @NonNull TypedId<AccountId> accountId,
-      @NonNull BusinessReallocationType businessReallocationType,
+      @NonNull TypedId<AllocationId> allocationIdFrom,
+      @NonNull TypedId<AllocationId> allocationIdTo,
       Amount amount) {
+    amount.ensureNonNegative();
+
     BusinessRecord businessRecord = getBusiness(businessId);
-    AllocationDetailsRecord allocationRecord =
-        allocationService.getAllocation(businessRecord.business, allocationId);
-    if (!allocationRecord.account().getId().equals(accountId)) {
-      throw new IdMismatchException(
-          IdType.ACCOUNT_ID, accountId, allocationRecord.account().getId());
-    }
-    if (allocationRecord.allocation().getParentAllocationId() == null) {
-      throw new IllegalArgumentException(
-          String.format("Allocation must be a child allocation: %s", allocationId));
-    }
+    AllocationDetailsRecord allocationFromRecord =
+        allocationService.getAllocation(businessRecord.business, allocationIdFrom);
+    AllocationDetailsRecord allocationToRecord =
+        allocationService.getAllocation(businessRecord.business, allocationIdTo);
 
     AccountReallocateFundsRecord reallocateFundsRecord =
-        switch (businessReallocationType) {
-          case ALLOCATION_TO_BUSINESS -> accountService.reallocateFunds(
-              allocationRecord.account().getId(), businessRecord.businessAccount.getId(), amount);
-          case BUSINESS_TO_ALLOCATION -> accountService.reallocateFunds(
-              businessRecord.businessAccount.getId(), allocationRecord.account().getId(), amount);
-        };
+        accountService.reallocateFunds(
+            allocationFromRecord.account().getId(), allocationToRecord.account().getId(), amount);
 
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation(),
+        allocationFromRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
     accountActivityService.recordReallocationAccountActivity(
-        allocationRecord.allocation(),
+        allocationToRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;

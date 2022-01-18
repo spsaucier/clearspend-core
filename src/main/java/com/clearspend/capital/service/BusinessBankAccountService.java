@@ -212,11 +212,7 @@ public class BusinessBankAccountService {
           case DEPOSIT -> {
             checkBalance(amount, businessBankAccount);
             yield accountService.depositFunds(
-                businessId,
-                allocationRecord.account(),
-                allocationRecord.allocation(),
-                amount,
-                placeHold);
+                businessId, allocationRecord.account(), amount, placeHold);
           }
           case WITHDRAW -> accountService.withdrawFunds(
               businessId, allocationRecord.account(), amount);

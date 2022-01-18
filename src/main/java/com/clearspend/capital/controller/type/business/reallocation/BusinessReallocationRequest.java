@@ -1,10 +1,8 @@
 package com.clearspend.capital.controller.type.business.reallocation;
 
-import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
-import com.clearspend.capital.data.model.enums.BusinessReallocationType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NonNull;
@@ -12,19 +10,15 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class BusinessFundAllocationRequest {
+public class BusinessReallocationRequest {
 
-  @JsonProperty("allocationId")
+  @JsonProperty("allocationIdFrom")
   @NonNull
-  private TypedId<AllocationId> allocationId;
+  private TypedId<AllocationId> allocationIdFrom;
 
-  @JsonProperty("accountId")
+  @JsonProperty("allocationIdTo")
   @NonNull
-  private TypedId<AccountId> accountId;
-
-  @JsonProperty("fundsTransactType")
-  @NonNull
-  private BusinessReallocationType businessReallocationType;
+  private TypedId<AllocationId> allocationIdTo;
 
   @JsonProperty("amount")
   @NonNull

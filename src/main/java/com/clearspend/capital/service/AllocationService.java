@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
+import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
@@ -126,8 +127,7 @@ public class AllocationService {
               businessId, amount.getCurrency(), parentAllocationId);
 
       if (parentAccount.getLedgerBalance().isLessThan(amount)) {
-        throw new InsufficientFundsException(
-            "Account", parentAccount.getId(), AdjustmentType.REALLOCATE, amount);
+        throw new InsufficientFundsException(parentAccount, AdjustmentType.REALLOCATE, amount);
       }
     }
 
@@ -160,9 +160,18 @@ public class AllocationService {
 
   public Allocation retrieveAllocation(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
-    return allocationRepository
-        .findByBusinessIdAndId(businessId, allocationId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
+    Allocation allocation =
+        allocationRepository
+            .findById(allocationId)
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
+
+    if (!allocation.getBusinessId().equals(businessId)) {
+      throw new DataAccessViolationException(
+          Table.ALLOCATION, allocationId, businessId, allocation.getBusinessId());
+    }
+
+    return allocation;
   }
 
   // TODO: improve entity retrieval to make a single db call
@@ -311,10 +320,7 @@ public class AllocationService {
       case ALLOCATION_TO_CARD -> {
         if (allocationDetailsRecord.account.getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
-              "Account",
-              allocationDetailsRecord.account.getId(),
-              AdjustmentType.REALLOCATE,
-              amount);
+              allocationDetailsRecord.account, AdjustmentType.REALLOCATE, amount);
         }
 
         reallocateFundsRecord =
@@ -326,10 +332,7 @@ public class AllocationService {
       case CARD_TO_ALLOCATION -> {
         if (cardDetailsRecord.account().getLedgerBalance().isLessThan(amount)) {
           throw new InsufficientFundsException(
-              "Account",
-              allocationDetailsRecord.account.getId(),
-              AdjustmentType.REALLOCATE,
-              amount);
+              allocationDetailsRecord.account, AdjustmentType.REALLOCATE, amount);
         }
 
         reallocateFundsRecord =

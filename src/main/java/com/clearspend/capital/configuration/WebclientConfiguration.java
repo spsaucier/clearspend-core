@@ -8,6 +8,7 @@ import io.netty.handler.timeout.WriteTimeoutHandler;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +24,7 @@ import reactor.netty.http.client.HttpClient;
 
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class WebclientConfiguration {
 
   private final ObjectMapper mapper;
@@ -47,6 +49,7 @@ public class WebclientConfiguration {
       @Value("${client.alloy.url}") String url,
       @Value("${client.alloy.individual.token}") String token,
       @Value("${client.alloy.individual.secret}") String secret) {
+    log.info("configValue: client.alloy.url: {}", url);
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())
         .clientConnector(new ReactorClientHttpConnector(httpClient()))
@@ -115,6 +118,7 @@ public class WebclientConfiguration {
       @Value("${client.fusionauth.base-url}") String url,
       @Value("${spring.security.oauth2.client.clientId}") String clientId,
       @Value("${spring.security.oauth2.client.secret}") String secret) {
+    log.info("configValue: client.fusionauth.base-url: {}", url);
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())
         .clientConnector(new ReactorClientHttpConnector(httpClient()))

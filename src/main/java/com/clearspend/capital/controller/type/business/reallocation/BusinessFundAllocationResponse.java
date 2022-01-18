@@ -12,19 +12,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BusinessFundAllocationResponse {
 
-  @JsonProperty("businessAdjustmentId")
+  @JsonProperty("adjustmentIdFrom")
   @NonNull
-  private TypedId<AdjustmentId> businessAdjustmentId;
+  private TypedId<AdjustmentId> adjustmentIdFrom;
 
-  @JsonProperty("businessLedgerBalance")
+  @JsonProperty("ledgerBalanceFrom")
   @NonNull
-  private Amount businessLedgerBalance;
+  private Amount ledgerBalanceFrom;
 
-  @JsonProperty("allocationAdjustmentId")
+  @JsonProperty("adjustmentIdTo")
   @NonNull
-  private TypedId<AdjustmentId> allocationAdjustmentId;
+  private TypedId<AdjustmentId> adjustmentIdTo;
 
-  @JsonProperty("allocationLedgerBalance")
+  @JsonProperty("ledgerBalanceTo")
   @NonNull
-  private Amount allocationLedgerBalance;
+  private Amount ledgerBalanceTo;
 }
