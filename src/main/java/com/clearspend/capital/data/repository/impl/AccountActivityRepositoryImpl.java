@@ -19,6 +19,9 @@ import com.clearspend.capital.data.repository.AccountActivityRepositoryCustom;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.type.AllocationChartData;
+import com.clearspend.capital.service.type.CardStatementActivity;
+import com.clearspend.capital.service.type.CardStatementData;
+import com.clearspend.capital.service.type.CardStatementFilterCriteria;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.DashboardData;
@@ -391,5 +394,43 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
               .collect(Collectors.toList()),
           null);
     };
+  }
+
+  @Override
+  public CardStatementData findDataForCardStatement(
+      @NonNull TypedId<BusinessId> businessId, CardStatementFilterCriteria criteria) {
+
+    CriteriaBuilder<Tuple> query =
+        criteriaBuilderFactory
+            .create(entityManager, Tuple.class)
+            .from(AccountActivity.class, "accountActivity");
+
+    query.where("accountActivity.businessId").eq(businessId);
+    query.where("accountActivity.activityTime").between(criteria.getFrom()).and(criteria.getTo());
+    query.where("accountActivity.card.cardId").eq(criteria.getCardId());
+
+    query
+        .select("accountActivity.activityTime")
+        .select("accountActivity.merchant.name")
+        .select("accountActivity.amount.amount");
+
+    List<Tuple> resultList = query.getResultList();
+
+    List<CardStatementActivity> activities =
+        resultList.stream()
+            .map(
+                tuple ->
+                    new CardStatementActivity(
+                        (OffsetDateTime) tuple.get(0),
+                        tuple.get(1) != null ? tuple.get(1).toString() : "-",
+                        ((BigDecimal) tuple.get(2)).negate()))
+            .collect(Collectors.toList());
+
+    BigDecimal totalAmount =
+        activities.stream()
+            .map(CardStatementActivity::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    return new CardStatementData(activities, totalAmount);
   }
 }

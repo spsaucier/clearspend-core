@@ -90,6 +90,7 @@ dependencies {
     implementation("com.google.cloud:google-cloud-nio:0.123.17")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
     implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java
+    implementation("com.github.librepdf:openpdf:1.3.26")
 
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
