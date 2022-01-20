@@ -1,11 +1,11 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.type.CardStatementData;
 import com.clearspend.capital.service.type.CardStatementFilterCriteria;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
@@ -47,6 +47,7 @@ public class CardStatementService {
       DateTimeFormatter.ofPattern("MM_dd_yyyy");
 
   private class PdfPCellLeft extends PdfPCell {
+
     public PdfPCellLeft(Paragraph paragraph) {
       super(paragraph);
       this.setBorder(0);
@@ -55,6 +56,7 @@ public class CardStatementService {
   }
 
   private class PDFCellActivitiesLeft extends PdfPCell {
+
     public PDFCellActivitiesLeft(Paragraph paragraph) {
       super(paragraph);
       this.setBorderColor(Color.white);
@@ -66,6 +68,7 @@ public class CardStatementService {
   }
 
   private class PdfCellActivitiesRight extends PdfPCell {
+
     public PdfCellActivitiesRight(Paragraph paragraph) {
       super(paragraph);
       this.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -78,6 +81,7 @@ public class CardStatementService {
   }
 
   private class PdfPCellRight extends PdfPCell {
+
     public PdfPCellRight(Paragraph paragraph) {
       super(paragraph);
       this.setBorder(0);
