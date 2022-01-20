@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller;
+package com.clearspend.capital.controller.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -11,8 +11,8 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.userAllocationRole.UserAllocationRoleRecord;
-import com.clearspend.capital.controller.type.userAllocationRole.UserAllocationRolesResponse;
+import com.clearspend.capital.controller.type.security.UserAllocationRoleRecord;
+import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.AllocationService;
@@ -46,14 +46,15 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
     testHelper.init();
     final Allocation rootAllocation =
         allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
-    final User rootAllocationOwner = rootAllocation.getOwner();
+    final User rootAllocationOwner =
+        entityManager.getReference(User.class, rootAllocation.getOwnerId());
     User manager = testHelper.createUser(testHelper.retrieveBusiness()).user();
 
     entityManager.flush();
     testHelper.login(rootAllocationOwner); // Has Admin permissions by default
     // Set a permission on the manager
     mvc.perform(
-            post("/user-allocation-roles/%s/%s"
+            post("/user-allocation-roles/allocation/%s/user/%s"
                     .formatted(
                         rootAllocation.getId().toUuid().toString(),
                         manager.getId().toUuid().toString()))
@@ -74,7 +75,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
 
     // Now edit the permission - give the second user only read permission
     mvc.perform(
-            put("/user-allocation-roles/%s/%s"
+            put("/user-allocation-roles/allocation/%s/user/%s"
                     .formatted(
                         rootAllocation.getId().toUuid().toString(),
                         manager.getId().toUuid().toString()))
@@ -95,7 +96,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
     // Then delete the manager user's permission
     mvc.perform(
             delete(
-                    "/user-allocation-roles/%s/%s"
+                    "/user-allocation-roles/allocation/%s/user/%s"
                         .formatted(
                             rootAllocation.getId().toUuid().toString(),
                             manager.getId().toUuid().toString()))
@@ -108,7 +109,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
 
     // And check it
     permissions = getPermissions(rootAllocation);
-    assertEquals("Admin", permissions.get(rootAllocation.getOwner().getId()).getRole());
+    assertEquals("Admin", permissions.get(rootAllocation.getOwnerId()).getRole());
     assertEquals(1, permissions.size());
   }
 
@@ -117,7 +118,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
       throws Exception {
     MockHttpServletResponse response =
         mvc.perform(
-                get("/user-allocation-roles/%s"
+                get("/user-allocation-roles/allocation/%s"
                         .formatted(rootAllocation.getId().toUuid().toString()))
                     .contentType("application/json")
                     .cookie(testHelper.getDefaultAuthCookie()))

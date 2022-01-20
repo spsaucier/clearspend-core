@@ -1,10 +1,10 @@
-package com.clearspend.capital.controller;
+package com.clearspend.capital.controller.security;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.userAllocationRole.UserAllocationRoleRecord;
-import com.clearspend.capital.controller.type.userAllocationRole.UserAllocationRolesResponse;
+import com.clearspend.capital.controller.type.security.UserAllocationRoleRecord;
+import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.RolesAndPermissionsService;
@@ -33,7 +33,7 @@ public class UserAllocationRoleController {
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final EntityManager entityManager;
 
-  @GetMapping("/{allocationId}")
+  @GetMapping("/allocation/{allocationId}")
   private UserAllocationRolesResponse getUsersWithAllocationPermissions(
       @PathVariable(value = "allocationId")
           @Parameter(
@@ -51,7 +51,7 @@ public class UserAllocationRoleController {
             .collect(Collectors.toList()));
   }
 
-  @PostMapping("/{allocationId}/{granteeId}")
+  @PostMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
   private void createUserAllocationPermission(
       @PathVariable(value = "allocationId")
@@ -75,7 +75,7 @@ public class UserAllocationRoleController {
         newRole);
   }
 
-  @PutMapping("/{allocationId}/{granteeId}")
+  @PutMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
   private void updateUserAllocationPermission(
       @PathVariable(value = "allocationId")
@@ -99,7 +99,7 @@ public class UserAllocationRoleController {
         newRole);
   }
 
-  @DeleteMapping("/{allocationId}/{granteeId}")
+  @DeleteMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
   private void deleteUserAllocationPermission(
       @PathVariable(value = "allocationId")

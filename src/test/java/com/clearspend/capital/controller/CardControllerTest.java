@@ -8,6 +8,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.persistence.EntityManager;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -50,12 +52,13 @@ public class CardControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
   private final MccGroupService mccGroupService;
+  private final EntityManager entityManager;
 
   private final Faker faker = new Faker();
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private User user;
+  private TypedId<UserId> userId;
   private Cookie userCookie;
   private Card card;
 
@@ -65,13 +68,13 @@ public class CardControllerTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
-      user = createBusinessRecord.allocationRecord().allocation().getOwner();
-      userCookie = testHelper.login(user.getId());
+      userId = createBusinessRecord.allocationRecord().allocation().getOwnerId();
+      userCookie = testHelper.login(userId);
       card =
           testHelper.issueCard(
               business,
               createBusinessRecord.allocationRecord().allocation(),
-              user,
+              entityManager.getReference(User.class, userId),
               Currency.USD,
               FundingType.POOLED,
               CardType.PHYSICAL);
@@ -83,16 +86,16 @@ public class CardControllerTest extends BaseCapitalTest {
   void createCard() {
     TypedId<AllocationId> allocationId =
         testHelper.createAllocationMvc(
-            createBusinessRecord.allocationRecord().allocation().getOwner(),
+            createBusinessRecord.allocationRecord().allocation().getOwnerId(),
             faker.name().name(),
             createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
+            testHelper.createUser(business).user().getId());
 
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
             allocationId,
-            user.getId(),
+            userId,
             Currency.USD,
             true,
             CurrencyLimit.ofMap(

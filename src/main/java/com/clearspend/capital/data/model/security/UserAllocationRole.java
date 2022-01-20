@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.model;
+package com.clearspend.capital.data.model.security;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.AllocationId;

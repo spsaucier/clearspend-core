@@ -3,7 +3,6 @@ package com.clearspend.capital.controller.business;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
@@ -13,6 +12,7 @@ import com.clearspend.capital.controller.type.business.reallocation.BusinessReal
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

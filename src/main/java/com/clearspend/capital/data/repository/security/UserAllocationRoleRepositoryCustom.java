@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.repository;
+package com.clearspend.capital.data.repository.security;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -43,6 +43,7 @@ public interface UserAllocationRoleRepositoryCustom {
    *
    * @param businessId The business to match with the allocation
    * @param userId The user whose permission is being interrogated
+   * @param userGlobalRoles User roles from CurrentUser
    * @return The effective user permissions at the given level
    */
   UserRolesAndPermissions getUserPermissionAtBusiness(

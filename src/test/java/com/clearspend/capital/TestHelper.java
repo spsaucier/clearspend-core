@@ -547,7 +547,8 @@ public class TestHelper {
       TypedId<AllocationId> parentAllocationId,
       User user) {
     CurrentUserSwitcher.setCurrentUser(
-        allocationService.getRootAllocation(businessId).allocation().getOwner());
+        entityManager.getReference(
+            User.class, allocationService.getRootAllocation(businessId).allocation().getOwnerId()));
     entityManager.flush();
     return allocationService.createAllocation(
         businessId,
@@ -563,12 +564,15 @@ public class TestHelper {
   @SneakyThrows
   public @NonNull @NotNull(message = "allocationId required") TypedId<AllocationId>
       createAllocationMvc(
-          User actor, String allocationName, TypedId<AllocationId> parentAllocationId, User owner) {
+          TypedId<UserId> actor,
+          String allocationName,
+          TypedId<AllocationId> parentAllocationId,
+          TypedId<UserId> owner) {
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             allocationName,
             parentAllocationId,
-            owner.getId(),
+            owner,
             new com.clearspend.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptyList(),

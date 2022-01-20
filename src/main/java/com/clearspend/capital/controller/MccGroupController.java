@@ -1,8 +1,8 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.mcc.MccGroup;
 import com.clearspend.capital.service.MccGroupService;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;

@@ -17,7 +17,7 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
-import com.clearspend.capital.data.repository.UserAllocationRoleRepository;
+import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -52,7 +52,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
   void init() {
     createBusinessRecord = testHelper.createBusiness();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
-    rootAllocationOwner = rootAllocation.getOwner();
+    rootAllocationOwner = entityManager.getReference(User.class, rootAllocation.getOwnerId());
 
     // Give the root allocation some money
     TypedId<BusinessBankAccountId> businessBankAccountId =

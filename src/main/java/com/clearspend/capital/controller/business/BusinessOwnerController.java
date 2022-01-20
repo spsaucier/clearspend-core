@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.business;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
 import com.clearspend.capital.data.model.business.Business;
@@ -14,6 +13,7 @@ import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

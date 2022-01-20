@@ -2,7 +2,6 @@ package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.activity.AccountActivityRequest;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
@@ -17,6 +16,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;

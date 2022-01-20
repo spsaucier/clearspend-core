@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller.type.userAllocationRole;
+package com.clearspend.capital.controller.type.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
@@ -14,5 +14,5 @@ public class UserAllocationRolesResponse {
   @JsonProperty("userAllocationRoleList")
   @NonNull
   @NotNull(message = "userAllocationRoles required")
-  List<UserAllocationRoleRecord> userAllocationRoleRecordList;
+  private List<UserAllocationRoleRecord> userAllocationRoleRecordList;
 }

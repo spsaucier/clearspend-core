@@ -4,7 +4,6 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.AllocationDetailsResponse;
@@ -20,6 +19,7 @@ import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.UserService;
+import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -92,7 +92,7 @@ public class AllocationController {
         allocationId,
         request.getName(),
         request.getParentAllocationId(),
-        userService.retrieveUser(request.getOwnerId()),
+        request.getOwnerId(),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
         request.getDisabledTransactionChannels());
@@ -121,7 +121,7 @@ public class AllocationController {
                 new Allocation(
                     e.allocation().getId(),
                     e.allocation().getName(),
-                    e.allocation().getOwner().getId(),
+                    e.allocation().getOwnerId(),
                     Account.of(e.account())))
         .collect(Collectors.toList());
   }

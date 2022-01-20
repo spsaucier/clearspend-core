@@ -4,7 +4,6 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
@@ -21,6 +20,7 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;

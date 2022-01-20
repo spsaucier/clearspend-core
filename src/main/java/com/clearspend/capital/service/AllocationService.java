@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.DataAccessViolationException;
@@ -43,6 +42,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +62,7 @@ public class AllocationService {
   private final CardService cardService;
   private final TransactionLimitService transactionLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final EntityManager entityManager;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -82,7 +83,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, Currency.USD);
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user, name);
+    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -136,7 +137,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, amount.getCurrency());
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user, name);
+    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(
@@ -183,13 +184,10 @@ public class AllocationService {
         accountService.retrieveAllocationAccount(
             business.getId(), business.getCurrency(), allocationId);
 
-    Map<TypedId<UserId>, UserRolesAndPermissions> currentUserRoles =
-        rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(allocationId);
-
     return new AllocationDetailsRecord(
         allocation,
         account,
-        allocation.getOwner(),
+        entityManager.getReference(User.class, allocation.getOwnerId()),
         transactionLimitService.retrieveSpendLimit(
             business.getId(), TransactionLimitType.ALLOCATION, allocationId.toUuid()));
   }
@@ -200,7 +198,7 @@ public class AllocationService {
       TypedId<AllocationId> allocationId,
       String name,
       TypedId<AllocationId> parentAllocationId,
-      User owner,
+      TypedId<UserId> ownerId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
@@ -209,7 +207,7 @@ public class AllocationService {
 
     BeanUtils.setNotEmpty(name, allocation::setName);
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
-    BeanUtils.setNotNull(owner, allocation::setOwner);
+    BeanUtils.setNotNull(ownerId, allocation::setOwnerId);
 
     transactionLimitService.updateAllocationSpendLimit(
         businessId,

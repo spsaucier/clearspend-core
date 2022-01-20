@@ -2,11 +2,11 @@ package com.clearspend.capital.controller.nonprod;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
+import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;

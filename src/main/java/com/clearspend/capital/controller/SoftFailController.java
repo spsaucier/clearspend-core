@@ -1,9 +1,9 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.review.SoftFailRequiredDocumentsResponse;
 import com.clearspend.capital.service.SoftFailService;
 import com.clearspend.capital.service.SoftFailService.RequiredDocumentsForManualReview;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

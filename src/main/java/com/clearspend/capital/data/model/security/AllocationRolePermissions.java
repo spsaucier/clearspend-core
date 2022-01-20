@@ -1,10 +1,10 @@
-package com.clearspend.capital.data.model;
+package com.clearspend.capital.data.model.security;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.AllocationRolePermissionsId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import com.clearspend.capital.data.model.enums.AllocationPermission;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
@@ -35,13 +35,13 @@ public class AllocationRolePermissions extends TypedMutable<AllocationRolePermis
 
   @Column @NonNull private String roleName;
 
-  @Column(columnDefinition = "GlobalUserPermission[]")
+  @Column(columnDefinition = "AllocationPermission[]")
   @Type(
       type = "enum-array",
       parameters =
           @org.hibernate.annotations.Parameter(
               name = "sql_array_type",
-              value = "GlobalUserPermission"))
+              value = "AllocationPermission"))
   @NonNull
-  private GlobalUserPermission[] permissions;
+  private AllocationPermission[] permissions;
 }

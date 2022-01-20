@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller.type;
+package com.clearspend.capital.service.type;
 
 import static com.clearspend.capital.controller.Common.BUSINESS_ID;
 import static com.clearspend.capital.controller.Common.CAPITAL_USER_ID;

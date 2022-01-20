@@ -11,9 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -56,13 +54,9 @@ public class Allocation extends TypedMutable<AllocationId> {
   private TypedId<AccountId> accountId;
 
   @NonNull
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "owner_id")
-  private User owner;
+  @JoinColumn(referencedColumnName = "id", table = "user")
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<UserId> ownerId;
 
   @NonNull private String name;
-
-  public TypedId<UserId> getOwnerId() {
-    return getOwner().getId();
-  }
 }

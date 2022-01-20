@@ -1,10 +1,10 @@
-package com.clearspend.capital.data.repository;
+package com.clearspend.capital.data.repository.security;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserAllocationRoleId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.data.model.UserAllocationRole;
+import com.clearspend.capital.data.model.security.UserAllocationRole;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

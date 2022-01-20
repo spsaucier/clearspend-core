@@ -2,10 +2,10 @@ package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.controller.type.receipt.CreateReceiptResponse;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.service.ReceiptService;
+import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.annotations.ApiParam;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller.type.userAllocationRole;
+package com.clearspend.capital.controller.type.security;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.typedid.data.AllocationId;

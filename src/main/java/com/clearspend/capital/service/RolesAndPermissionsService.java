@@ -8,15 +8,15 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.GlobalRole;
 import com.clearspend.capital.data.model.User;
-import com.clearspend.capital.data.model.UserAllocationRole;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
-import com.clearspend.capital.data.repository.GlobalRoleRepository;
-import com.clearspend.capital.data.repository.UserAllocationRoleRepository;
+import com.clearspend.capital.data.model.security.GlobalRole;
+import com.clearspend.capital.data.model.security.UserAllocationRole;
+import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
+import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +144,8 @@ public class RolesAndPermissionsService {
           throw new ForbiddenException();
         }
     */
-    if (allocation.getOwner().equals(grantee) && allocation.getParentAllocationId() == null) {
+    if (allocation.getOwnerId().equals(grantee.getId())
+        && allocation.getParentAllocationId() == null) {
       // The return value confirms the standard
       return Optional.of(new UserAllocationRole(allocation.getId(), grantee.getId(), "Owner"));
     }
@@ -195,7 +196,7 @@ public class RolesAndPermissionsService {
             () ->
                 new RecordNotFoundException(
                     Table.USER_ALLOCATION_ROLE,
-                    Map.of("granteeId", grantee.getId(), "allocationId", allocation.getId())));
+                    Map.of("granteeUserId", grantee.getId(), "allocationId", allocation.getId())));
   }
 
   /**

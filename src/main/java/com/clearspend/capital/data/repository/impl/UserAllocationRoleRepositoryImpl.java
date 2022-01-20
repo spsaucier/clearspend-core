@@ -1,6 +1,7 @@
 package com.clearspend.capital.data.repository.impl;
 
 import static com.clearspend.capital.data.model.enums.GlobalUserPermission.CROSS_BUSINESS_BOUNDARY;
+import static com.clearspend.capital.data.repository.impl.JDBCUtils.getTypedId;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
@@ -12,13 +13,10 @@ import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.repository.UserAllocationRoleRepositoryCustom;
+import com.clearspend.capital.data.repository.security.UserAllocationRoleRepositoryCustom;
 import java.nio.charset.StandardCharsets;
-import java.sql.Array;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -41,14 +39,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepositoryCustom {
 
-  private static final UUID NULL_UUID = new UUID(0L, 0L);
   private final Crypto crypto;
 
   private final String userPermissionsQuery;
   private final String allocationRoles;
   private final EntityManager entityManager;
 
-  // TODO fetch user names for display
   @SneakyThrows
   public UserAllocationRoleRepositoryImpl(
       Crypto crypto,
@@ -143,7 +139,7 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   }
 
   private UUID safeUUID(TypedId<?> u) {
-    return u == null ? NULL_UUID : u.toUuid();
+    return u == null ? JDBCUtils.NULL_UUID : u.toUuid();
   }
 
   @Override
@@ -179,24 +175,11 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   }
 
   @SneakyThrows
-  private <T extends Enum<T>> EnumSet<T> safeEnumSet(Array global_permissions, Class<T> enumClass) {
-    if (global_permissions == null) {
-      return null;
-    }
-    List<T> list =
-        Arrays.stream((String[]) global_permissions.getArray())
-            .map(str -> Enum.valueOf(enumClass, str))
-            .collect(Collectors.toList());
-
-    return list.isEmpty() ? EnumSet.noneOf(enumClass) : EnumSet.copyOf(list);
-  }
-
-  @SneakyThrows
   UserRolesAndPermissions rolesAndPermissionsRowMapper(ResultSet resultSet, int rowNum) {
     EnumSet<GlobalUserPermission> roles =
-        safeEnumSet(resultSet.getArray("global_permissions"), GlobalUserPermission.class);
+        JDBCUtils.getEnumSet(resultSet, "global_permissions", GlobalUserPermission.class);
     EnumSet<AllocationPermission> permissions =
-        safeEnumSet(resultSet.getArray("permissions"), AllocationPermission.class);
+        JDBCUtils.getEnumSet(resultSet, "permissions", AllocationPermission.class);
 
     return new UserRolesAndPermissions(
         getTypedId(resultSet, "user_allocation_role_id"),
@@ -211,12 +194,6 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         resultSet.getString("allocation_role"),
         permissions,
         roles);
-  }
-
-  private <T> TypedId<T> getTypedId(@NonNull ResultSet resultSet, @NonNull final String field)
-      throws SQLException {
-    UUID uuid = resultSet.getObject(field, UUID.class);
-    return uuid == null || uuid.equals(NULL_UUID) ? null : new TypedId<T>(uuid);
   }
 
   /**

@@ -87,7 +87,7 @@ class AllocationControllerTest extends BaseCapitalTest {
 
     String body = objectMapper.writeValueAsString(request);
 
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -110,7 +110,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -139,7 +139,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             parentAllocationRecord.allocation().getId(),
             testHelper.createUser(business).user());
 
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -190,7 +190,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             Amount.of(amount));
 
     String body = objectMapper.writeValueAsString(request);
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -227,7 +227,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -272,7 +272,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     updateAllocationRequest.setDisabledTransactionChannels(
         Collections.singleton(TransactionChannel.MOTO));
 
-    Cookie authCookie = testHelper.login(rootAllocation.getOwner().getId());
+    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
 
     // when
     MockHttpServletResponse response =

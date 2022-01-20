@@ -4,7 +4,6 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.User;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +30,4 @@ public interface AllocationRepository
 
   // for deleting businesses in tests only
   void deleteByBusinessId(TypedId<BusinessId> businessId);
-
-  Optional<Allocation> findByIdAndOwner(TypedId<AllocationId> allocationId, User userId);
 }

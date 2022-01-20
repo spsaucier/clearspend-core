@@ -5,8 +5,8 @@ import static com.clearspend.capital.controller.Common.CAPITAL_USER_ID;
 import static com.clearspend.capital.controller.Common.ROLES;
 import static com.clearspend.capital.controller.Common.USER_TYPE;
 
-import com.clearspend.capital.controller.type.CurrentUser;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import io.fusionauth.jwt.Signer;
 import io.fusionauth.jwt.domain.JWT;
@@ -26,7 +26,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 
 /**
  * Set the current user for tests that call services directly. For tests using MockMvc, see {@link
- * TestHelper.login(...)}
+ * TestHelper#login(...)}
  *
  * <p>This class is in /src/main instead of /src/test because {@link
  * TestDataControllerTest#createTestData} needs to be able to set the current user this way.
