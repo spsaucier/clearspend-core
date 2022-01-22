@@ -7,8 +7,9 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
-@EnableWebSecurity
+@EnableWebSecurity()
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
   public static final String ACCESS_TOKEN_COOKIE_NAME = "X-Auth-Token";
   public static final String REFRESH_TOKEN_COOKIE_NAME = "X-Refresh-Token";
 
@@ -22,7 +23,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/business-prospects/*/password",
             "/business-prospects/*/phone",
             "/business-prospects/*/validate-identifier",
-            "/i2c/push/**",
             "/alloy/webhook",
             "/non-production/**",
             "/stripe/webhook/**",

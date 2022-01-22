@@ -22,10 +22,8 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
-import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
@@ -35,7 +33,6 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,6 +44,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,6 +93,7 @@ public class AllocationService {
   }
 
   @Transactional
+  @PreAuthorize("hasPermission(#parentAllocationId, 'MANAGE_FUNDS')")
   public AllocationRecord createAllocation(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> parentAllocationId,
@@ -104,10 +103,6 @@ public class AllocationService {
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       List<TypedId<MccGroupId>> disabledMccGroups,
       Set<TransactionChannel> disabledTransactionChannels) {
-    rolesAndPermissionsService.assertUserHasPermission(
-        parentAllocationId,
-        EnumSet.of(AllocationPermission.MANAGE_FUNDS),
-        EnumSet.noneOf(GlobalUserPermission.class));
 
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();

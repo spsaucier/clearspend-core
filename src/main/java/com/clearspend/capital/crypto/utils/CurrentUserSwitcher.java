@@ -17,10 +17,14 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Component;
 
 // https://github.com/FusionAuth/fusionauth-example-java-jwt/blob/12ab95e98724d6080bf77ab47fb7e58b861b84fb/src/main/java/io/fusionauth/example/jwt/Rsa.java
 
@@ -31,7 +35,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
  * <p>This class is in /src/main instead of /src/test because {@link
  * TestDataControllerTest#createTestData} needs to be able to set the current user this way.
  */
-public class CurrentUserSwitcher {
+@Component
+@Profile("test")
+public class CurrentUserSwitcher implements AuthenticationProvider {
 
   // Typically you'd pull the private and public keys from some secrets manager.
   private static String privateKey =
@@ -79,6 +85,10 @@ public class CurrentUserSwitcher {
           "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
       allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
   public static void setToken(CurrentUser user) {
+    SecurityContextHolder.getContext().setAuthentication(mockAuthentication(user));
+  }
+
+  private static Authentication mockAuthentication(CurrentUser user) {
     Signer signer = RSASigner.newSHA256Signer(privateKey);
 
     // Build a new JWT with an issuer(iss), issued at(iat), subject(sub) and expiration(exp)
@@ -109,7 +119,7 @@ public class CurrentUserSwitcher {
                 .header("typ", "JWT")
                 .header("alg", "SHA256")
                 .build());
-    SecurityContextHolder.getContext().setAuthentication(authentication);
+    return authentication;
   }
 
   @RestrictedApi(
@@ -128,5 +138,15 @@ public class CurrentUserSwitcher {
       allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
   public static void setCurrentUser(User user, Set<String> globalRoles) {
     setToken(new CurrentUser(user.getType(), user.getId(), user.getBusinessId(), globalRoles));
+  }
+
+  @Override
+  public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+    return mockAuthentication(CurrentUser.get());
+  }
+
+  @Override
+  public boolean supports(Class<?> authentication) {
+    return JwtAuthenticationToken.class.isAssignableFrom(authentication);
   }
 }

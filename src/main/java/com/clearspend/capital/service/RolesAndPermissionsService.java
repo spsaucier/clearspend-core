@@ -235,10 +235,6 @@ public class RolesAndPermissionsService {
   public UserRolesAndPermissions getUserRolesAndPermissionsForAllocation(
       TypedId<AllocationId> allocationId) {
     CurrentUser currentUser = CurrentUser.get();
-    assertUserHasPermission(
-        allocationId,
-        EnumSet.of(com.clearspend.capital.data.model.enums.AllocationPermission.MANAGE_PERMISSIONS),
-        GlobalUserPermission.ALL_CUSTOMER_SERVICE);
     return userAllocationRoleRepository.getUserPermissionAtAllocation(
         currentUser.businessId(), allocationId, currentUser.userId(), currentUser.roles());
   }
