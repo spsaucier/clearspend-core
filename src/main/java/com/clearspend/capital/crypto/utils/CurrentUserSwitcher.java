@@ -84,7 +84,7 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
       link =
           "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
       allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
-  public static void setToken(CurrentUser user) {
+  public static void setCurrentUser(CurrentUser user) {
     SecurityContextHolder.getContext().setAuthentication(mockAuthentication(user));
   }
 
@@ -127,8 +127,9 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
       link =
           "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
       allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
-  public static void setCurrentUser(User user) {
-    setCurrentUser(user, Collections.emptySet());
+  public static void setCurrentUser(User user, Set<String> globalRoles) {
+    setCurrentUser(
+        new CurrentUser(user.getType(), user.getId(), user.getBusinessId(), globalRoles));
   }
 
   @RestrictedApi(
@@ -136,8 +137,8 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
       link =
           "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
       allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
-  public static void setCurrentUser(User user, Set<String> globalRoles) {
-    setToken(new CurrentUser(user.getType(), user.getId(), user.getBusinessId(), globalRoles));
+  public static void setCurrentUser(User user) {
+    setCurrentUser(user, Collections.emptySet());
   }
 
   @Override

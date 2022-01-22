@@ -21,11 +21,11 @@ import org.hibernate.annotations.Type;
 @NoArgsConstructor
 @AllArgsConstructor
 @DynamicUpdate
-@Table(name = "global_role")
+@Table(name = "global_roles")
 @Slf4j
 public class GlobalRole extends TypedMutable<GlobalRoleId> {
 
-  @Column @NonNull private String role;
+  @Column @NonNull private String roleName;
 
   @Column(columnDefinition = "GlobalUserPermission[]")
   @Type(

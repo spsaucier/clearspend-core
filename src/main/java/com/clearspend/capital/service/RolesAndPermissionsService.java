@@ -16,12 +16,14 @@ import com.clearspend.capital.data.model.security.GlobalRole;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
@@ -52,6 +54,7 @@ public class RolesAndPermissionsService {
 
   private final UserAllocationRoleRepository userAllocationRoleRepository;
   private final GlobalRoleRepository globalRoleRepository;
+  private final FusionAuthService fusionAuthService;
   private final EntityManager entityManager;
 
   /**
@@ -64,6 +67,12 @@ public class RolesAndPermissionsService {
    */
   public UserAllocationRole createUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
+    if (!grantee.getBusinessId().equals(allocation.getBusinessId())
+        && !fusionAuthService
+            .getUserRoles(UUID.fromString(grantee.getSubjectRef()))
+            .contains("bookkeeper")) {
+      throw new ForbiddenException("Only bookkeepers can cross business boundaries");
+    }
     prepareUserAllocationRoleChange(grantee, allocation, newRole)
         .map(
             r -> {
@@ -108,9 +117,9 @@ public class RolesAndPermissionsService {
     EnumSet<AllocationPermission> oldPerms =
         oldRole
             .map(
-                aur ->
+                uar ->
                     userAllocationRoleRepository.getRolePermissions(
-                        allocation.getBusinessId(), aur.getRole()))
+                        allocation.getBusinessId(), uar.getRole()))
             .orElse(EnumSet.noneOf(AllocationPermission.class));
 
     EnumSet<AllocationPermission> newPerms =
@@ -159,15 +168,16 @@ public class RolesAndPermissionsService {
    * @param globalRoles Roles under consideration
    * @return EnumSet of the permissions granted by those globalUserPermissions
    */
-  public EnumSet<GlobalUserPermission> getPermissions(Set<String> globalRoles) {
+  public EnumSet<GlobalUserPermission> getGlobalPermissions(Set<String> globalRoles) {
     if (globalRoles == null || globalRoles.isEmpty()) {
       return EnumSet.noneOf(GlobalUserPermission.class);
     }
 
     return EnumSet.copyOf(
         globalRoleRepository.findAll().stream()
-            .filter(gr -> globalRoles.contains(gr.getRole()))
+            .filter(gr -> globalRoles.contains(gr.getRoleName()))
             .map(GlobalRole::getPermissions)
+            .filter(perms -> perms.length > 0)
             .flatMap(Stream::of)
             .collect(Collectors.toSet()));
   }
@@ -221,12 +231,18 @@ public class RolesAndPermissionsService {
         allocationPermission,
         globalUserPermissions)) {
       throw new ForbiddenException(
-          List.of(
+          Map.of(
+                  "businessId",
                   user.businessId(),
+                  "allocationId",
                   allocationId,
+                  "userId",
                   user.userId(),
+                  "userRoles",
                   user.roles(),
+                  "allocationPermissions",
                   allocationPermission,
+                  "globalUserPermissions",
                   globalUserPermissions)
               .toString());
     }
@@ -250,7 +266,7 @@ public class RolesAndPermissionsService {
             .get(currentUser.userId())
             .allocationPermissions()
             .contains(AllocationPermission.READ)
-        || getPermissions(currentUser.roles()).contains(GlobalUserPermission.GLOBAL_READ)) {
+        || getGlobalPermissions(currentUser.roles()).contains(GlobalUserPermission.GLOBAL_READ)) {
       return permissionsMap;
     }
 
@@ -267,5 +283,45 @@ public class RolesAndPermissionsService {
     userAllocationRoleRepository.save(new UserAllocationRole(allocationId, grantee, role));
   }
 
-  // TODO accessible businesses for a user (bookkeeper, customer service)
+  public boolean grantGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
+    return grantGlobalRole(entityManager.getReference(User.class, grantee), role);
+  }
+
+  public boolean grantGlobalRole(@NonNull User grantee, @NonNull String role) {
+    authorizeGlobalRoleChange(role);
+    return fusionAuthService.changeUserRole(RoleChange.GRANT, grantee.getSubjectRef(), role);
+  }
+
+  public boolean revokeGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
+    authorizeGlobalRoleChange(role);
+    return fusionAuthService.changeUserRole(
+        RoleChange.REVOKE, entityManager.getReference(User.class, grantee).getSubjectRef(), role);
+  }
+
+  private void authorizeGlobalRoleChange(@NonNull String role) {
+    List<GlobalRole> globalRoles = globalRoleRepository.findAll();
+    if (globalRoles.stream().noneMatch(r -> r.getRoleName().equals(role))) {
+      throw new IllegalArgumentException("role=%s".formatted(role));
+    }
+    Set<String> grantorRoles = CurrentUser.get().roles();
+    EnumSet<GlobalUserPermission> grantorPermissions = getGlobalPermissions(grantorRoles);
+    EnumSet<GlobalUserPermission> grantorNeedsPermissions = getGlobalPermissions(Set.of(role));
+    grantorNeedsPermissions.add(GlobalUserPermission.CUSTOMER_SERVICE);
+    grantorNeedsPermissions.removeAll(
+        EnumSet.of(
+            GlobalUserPermission.BATCH_ONBOARD, GlobalUserPermission.CROSS_BUSINESS_BOUNDARY));
+    if (!grantorPermissions.containsAll(grantorNeedsPermissions)) {
+      throw new ForbiddenException("Grantor does not have sufficient permission.");
+    }
+  }
+
+  public Set<String> getGlobalRoles(@NonNull TypedId<UserId> userId) {
+    return getGlobalRoles(entityManager.getReference(User.class, userId));
+  }
+
+  public Set<String> getGlobalRoles(@NonNull User user) {
+    return fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef()));
+  }
+
+  // TODO list businesses available to a user (bookkeeper, customer service)
 }

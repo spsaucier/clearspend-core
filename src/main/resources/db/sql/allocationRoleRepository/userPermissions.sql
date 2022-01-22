@@ -49,6 +49,8 @@
              OR business_id IS NULL
           ORDER BY role_name ASC, business_id DESC NULLS LAST
       )
+      -- end of temp table definitions
+      -- start of main query
      (SELECT *
       FROM (SELECT DISTINCT ON (roles.user_id) -- only the closest record to the leaf for the user
                                                roles.user_allocation_role_id,

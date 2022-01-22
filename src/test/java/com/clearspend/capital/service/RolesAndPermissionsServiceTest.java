@@ -1,14 +1,20 @@
 package com.clearspend.capital.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.Allocation;
@@ -18,9 +24,13 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.FusionAuthService.RoleChange;
+import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +53,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
   @Autowired UserService userService;
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired EntityManager entityManager;
+  @Autowired FusionAuthService fusionAuthService;
 
   private CreateBusinessRecord createBusinessRecord;
   private Allocation rootAllocation;
@@ -298,115 +309,138 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
       }
   */
 
-  /*
   @Test
   void testNoMixingAndMatchingBusinessesExceptBookkeepers() {
     // Bootstrap an admin user for this test
-    User admin = userService.retrieveUser(rootAllocation.getOwner().getId());
-    rolesAndPermissionsService.grantPermission(admin,
-        GlobalUserPermission.CUSTOMER_SERVICE_MANAGER);
+    User admin = userService.retrieveUser(rootAllocation.getOwnerId());
+    // go under the radar using test privilege to call fusionAuthService for bootstrapping CSM role
+    fusionAuthService.changeUserRole(
+        RoleChange.GRANT, admin.getSubjectRef(), "customer_service_manager");
+
+    Runnable makeAdminUser =
+        () ->
+            CurrentUserSwitcher.setCurrentUser(
+                admin, rolesAndPermissionsService.getGlobalRoles(admin));
+    makeAdminUser.run();
 
     // Second business to cross boundaries
     CreateBusinessRecord business2 = testHelper.createBusiness();
     Allocation rootAllocation2 = business2.allocationRecord().allocation();
-    final User bookkeeper = rootAllocation2.getOwner();
+    final User bookkeeper = entityManager.getReference(User.class, rootAllocation2.getOwnerId());
 
     // Bookkeeper doesn't have the bookkeeper role yet, so should not get read permission
+    makeAdminUser.run();
     entityManager.flush();
     assertThrows(
         ForbiddenException.class,
         () ->
-            rolesAndPermissionsService.createUpdateAllocationUserRole(
-                admin, bookkeeper, rootAllocation, EnumSet.of(AllocationPermission.READ)));
+            rolesAndPermissionsService.createUserAllocationRole(
+                bookkeeper, rootAllocation, "View only"));
 
     // Now grant the role and permit crossing businesses
-    rolesAndPermissionsService.grantPermission(
-        admin, bookkeeper, GlobalUserPermission.CROSS_BUSINESS_BOUNDARY);
-    entityManager.flush();
+    makeAdminUser.run();
+    assertTrue(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper"));
+    // Granting the second time doesn't actually make a change
+    assertFalse(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper"));
+
     assertDoesNotThrow(
         () ->
-            rolesAndPermissionsService.createUpdateAllocationUserRole(
-                admin, bookkeeper, rootAllocation, EnumSet.of(AllocationPermission.READ)));
+            rolesAndPermissionsService.setUserAllocationRole(
+                rootAllocation.getId(), bookkeeper.getId(), "View only"));
     entityManager.flush();
+    Runnable makeBookkeeperBusinessUser =
+        () ->
+            CurrentUserSwitcher.setCurrentUser(
+                new CurrentUser(
+                    bookkeeper.getType(),
+                    bookkeeper.getId(),
+                    rootAllocation.getBusinessId(),
+                    rolesAndPermissionsService.getGlobalRoles(bookkeeper)));
+    makeBookkeeperBusinessUser.run();
+
     assertDoesNotThrow(
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
-                rootAllocation.getBusinessId(),
-                bookkeeper.getId(),
                 rootAllocation.getId(),
-                EnumSet.of(AllocationPermission.READ)));
+                EnumSet.of(AllocationPermission.READ),
+                EnumSet.noneOf(GlobalUserPermission.class)));
 
     // Revoking bookkeeper permission effectively revokes the cross-business permissions
-    rolesAndPermissionsService.revokeRole(admin, bookkeeper,
-        GlobalUserPermission.CROSS_BUSINESS_BOUNDARY);
+    makeAdminUser.run();
+    rolesAndPermissionsService.revokeGlobalRole(bookkeeper.getId(), "bookkeeper");
     entityManager.flush();
+    makeBookkeeperBusinessUser.run();
     assertThrows(
         ForbiddenException.class,
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
-                rootAllocation.getBusinessId(),
-                bookkeeper.getId(),
                 rootAllocation.getId(),
-                EnumSet.of(AllocationPermission.READ)));
+                EnumSet.of(AllocationPermission.READ),
+                EnumSet.noneOf(GlobalUserPermission.class)));
 
     // Re-grant the role and see that it works again
-    rolesAndPermissionsService.grantPermission(
-        admin, bookkeeper, GlobalUserPermission.CROSS_BUSINESS_BOUNDARY);
+    makeAdminUser.run();
+    rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper");
     entityManager.flush();
+    makeBookkeeperBusinessUser.run();
     assertDoesNotThrow(
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
-                rootAllocation.getBusinessId(),
-                bookkeeper.getId(),
                 rootAllocation.getId(),
-                EnumSet.of(AllocationPermission.READ)));
+                EnumSet.of(AllocationPermission.READ),
+                EnumSet.noneOf(GlobalUserPermission.class)));
 
     // archive the user and see that they can do nothing
+    makeAdminUser.run();
     bookkeeper.setArchived(true);
     entityManager.flush();
+    makeBookkeeperBusinessUser.run();
     assertThrows(
         ForbiddenException.class,
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
-                rootAllocation.getBusinessId(),
-                bookkeeper.getId(),
                 rootAllocation.getId(),
-                EnumSet.of(AllocationPermission.READ)));
+                EnumSet.of(AllocationPermission.READ),
+                EnumSet.noneOf(GlobalUserPermission.class)));
   }
 
-   */
+  @Test
+  void getUserRolesForAllocation() {
+    CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
+    User allocationOwner = userService.retrieveUser(rootAllocation.getOwnerId());
+    User otherUser = newUser.user();
 
-  /*
-    @Test
-    void getUserRolesForAllocation() {
-      CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
-      User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
-      User otherUser = newUser.user();
+    // The allocation owner gives someone else some permissions
+    CurrentUserSwitcher.setCurrentUser(allocationOwner);
+    rolesAndPermissionsService.createUserAllocationRole(otherUser, rootAllocation, "Manager");
+    entityManager.flush();
 
-      // The allocation owner gives someone else some permissions
-      rolesAndPermissionsService.createUpdateAllocationUserRole(
-          allocationOwner, otherUser, rootAllocation, "Owner");
-      entityManager.flush();
-      assertUserHasPermission(otherUser, rootAllocation, AllocationPermission.ALLOCATION_OWNER_ROLE);
-      // but not all permissions
-      assertUserLacksPermission(
-          otherUser,
-          rootAllocation,
-          EnumSet.complementOf(AllocationPermission.ALLOCATION_OWNER_ROLE));
+    // Check what permissions the user has
+    CurrentUserSwitcher.setCurrentUser(otherUser);
+    UserRolesAndPermissions queriedPermissions =
+        rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId());
 
-      Map<TypedId<UserId>, PermissionDTO> users =
-          rolesAndPermissionsService.getUsersWithPermissionForAllocation(
-              allocationOwner.getId(), rootAllocation.getBusinessId(), rootAllocation.getId());
-      assertEquals(2, users.size());
-      assertEquals(
-          AllocationPermission.ROOT_ALLOCATION_OWNER_ROLE,
-          users.get(allocationOwner.getId()).allocationPermissions());
-      assertFalse(users.get(allocationOwner.getId()).inherited());
-      assertEquals(
-          AllocationPermission.ALLOCATION_OWNER_ROLE, users.get(otherUser.getId()).allocationPermissions());
-      assertFalse(users.get(otherUser.getId()).inherited());
-    }
-  */
+    // The next 2 lines will have to be updated if the default manager permissions change in the DB
+    EnumSet<AllocationPermission> managerPermissions = EnumSet.allOf(AllocationPermission.class);
+    managerPermissions.remove(AllocationPermission.MANAGE_USERS);
+
+    assertEquals(managerPermissions, queriedPermissions.allocationPermissions());
+    assertEquals(
+        EnumSet.noneOf(GlobalUserPermission.class), queriedPermissions.globalUserPermissions());
+
+    // Then check all the users of this allocation
+    Map<TypedId<UserId>, UserRolesAndPermissions> users =
+        rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(rootAllocation.getId());
+
+    assertEquals(2, users.size());
+    assertEquals(
+        EnumSet.allOf(AllocationPermission.class),
+        users.get(allocationOwner.getId()).allocationPermissions());
+    assertFalse(users.get(allocationOwner.getId()).inherited());
+    assertEquals(managerPermissions, users.get(otherUser.getId()).allocationPermissions());
+    assertFalse(users.get(otherUser.getId()).inherited());
+  }
+
   // TODO test getUsersWithPermissionForAllocation - with child allocation returns parent owners,
   // TODO test get businesses an owner has permission to see
   // TODO test allocation owner always has at least Manager role

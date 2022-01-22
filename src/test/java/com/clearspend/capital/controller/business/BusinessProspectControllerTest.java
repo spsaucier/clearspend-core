@@ -190,8 +190,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     setBusinessProspectPassword(businessProspect.getId());
 
     // then
-    User user =
-        fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted()).user;
+    User user = fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted());
     log.info("user: {}", user);
     assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
@@ -237,8 +236,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     String password = setBusinessProspectPassword(businessProspect.getId());
 
     // then
-    User user =
-        fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted()).user;
+    User user = fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted());
     log.info("user: {}", user);
     assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
