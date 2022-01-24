@@ -6,10 +6,12 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.Item;
 import com.clearspend.capital.controller.type.user.UserData;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
@@ -22,7 +24,6 @@ public class SearchCardData {
   @JsonProperty("cardId")
   private TypedId<CardId> cardId;
 
-  @NonNull
   @JsonProperty("cardNumber")
   private String cardNumber;
 
@@ -46,14 +47,23 @@ public class SearchCardData {
   @JsonProperty("cardType")
   private CardType cardType;
 
+  @JsonProperty("activated")
+  private boolean activated;
+
+  @JsonProperty("activationDate")
+  private OffsetDateTime activationDate;
+
   public static SearchCardData of(FilteredCardRecord record) {
+    Card card = record.card();
     return new SearchCardData(
-        record.card().getId(),
-        record.card().getLastFour(),
+        card.getId(),
+        card.isActivated() ? card.getLastFour() : null,
         new UserData(record.user()),
         new Item<>(record.allocation().getId(), record.allocation().getName()),
         Amount.of(record.account().getLedgerBalance()),
-        record.card().getStatus(),
-        record.card().getType());
+        card.getStatus(),
+        card.getType(),
+        card.isActivated(),
+        card.getActivationDate());
   }
 }

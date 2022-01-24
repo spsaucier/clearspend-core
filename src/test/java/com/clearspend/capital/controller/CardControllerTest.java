@@ -130,7 +130,8 @@ public class CardControllerTest extends BaseCapitalTest {
             CardDetailsResponse.class);
 
     assertThat(cardDetailsResponse.getCard()).isNotNull();
-    assertThat(cardDetailsResponse.getCard().getCardNumber()).isEqualTo(card.getLastFour());
+    assertThat(cardDetailsResponse.getCard().isActivated()).isFalse();
+    assertThat(cardDetailsResponse.getCard().getCardNumber()).isNull();
 
     assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
     assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())

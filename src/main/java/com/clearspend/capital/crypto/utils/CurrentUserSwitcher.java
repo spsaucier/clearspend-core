@@ -11,7 +11,8 @@ import com.google.errorprone.annotations.RestrictedApi;
 import io.fusionauth.jwt.Signer;
 import io.fusionauth.jwt.domain.JWT;
 import io.fusionauth.jwt.rsa.RSASigner;
-import java.time.Instant;
+import io.fusionauth.pem.domain.PEM;
+import java.security.interfaces.RSAPublicKey;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
@@ -90,6 +91,8 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
 
   private static Authentication mockAuthentication(CurrentUser user) {
     Signer signer = RSASigner.newSHA256Signer(privateKey);
+    NimbusJwtDecoder jwtDecoder =
+        NimbusJwtDecoder.withPublicKey((RSAPublicKey) PEM.decode(publicKey).publicKey).build();
 
     // Build a new JWT with an issuer(iss), issued at(iat), subject(sub) and expiration(exp)
     JWT jwt =
@@ -108,18 +111,8 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
 
     // Sign and encode the JWT to a JSON string representation
     String encodedJWT = JWT.getEncoder().encode(jwt, signer);
-    Authentication authentication =
-        new JwtAuthenticationToken(
-            Jwt.withTokenValue(encodedJWT)
-                .issuedAt(Instant.from(jwt.issuedAt))
-                .expiresAt(Instant.from(jwt.expiration))
-                .audience(Set.of((String) jwt.audience))
-                .subject(jwt.subject)
-                .issuer(jwt.issuer)
-                .header("typ", "JWT")
-                .header("alg", "SHA256")
-                .build());
-    return authentication;
+
+    return new JwtAuthenticationToken(jwtDecoder.decode(encodedJWT));
   }
 
   @RestrictedApi(

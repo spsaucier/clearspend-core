@@ -106,12 +106,14 @@ public class Card {
     expirationDate = card.getExpirationDate();
     activated = card.isActivated();
     activationDate = card.getActivationDate();
+    if (activated) {
+      cardNumber = card.getLastFour();
+      lastFour = card.getLastFour();
+    }
     cardLine3 = card.getCardLine3();
     cardLine4 = card.getCardLine4();
     type = card.getType();
     superseded = card.isSuperseded();
-    cardNumber = card.getLastFour();
-    lastFour = card.getLastFour();
     shippingAddress = card.getShippingAddress();
     externalRef = card.getExternalRef();
   }

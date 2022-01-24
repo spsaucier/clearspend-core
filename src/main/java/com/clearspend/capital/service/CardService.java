@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -210,11 +211,15 @@ public class CardService {
       CardStatusReason statusReason) {
 
     Card card =
-        cardRepository
-            .findByBusinessIdAndUserIdAndIdAndLastFour(businessId, userId, cardId, lastFour)
+        (switch (CurrentUser.getUserType()) {
+              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
+              case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndIdAndLastFour(
+                  businessId, userId, cardId, lastFour);
+            })
             .orElseThrow(
                 () ->
                     new RecordNotFoundException(Table.CARD, businessId, userId, cardId, lastFour));
+
     if (card.isActivated()) {
       throw new InvalidRequestException("Card is already activated");
     }
@@ -236,9 +241,13 @@ public class CardService {
       TypedId<CardId> cardId,
       CardStatus cardStatus,
       CardStatusReason statusReason) {
+
     Card card =
-        cardRepository
-            .findByBusinessIdAndUserIdAndId(businessId, userId, cardId)
+        (switch (CurrentUser.getUserType()) {
+              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
+              case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndId(
+                  businessId, userId, cardId);
+            })
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
     return updateCardStatus(cardStatus, statusReason, card);

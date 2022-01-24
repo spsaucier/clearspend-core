@@ -9,15 +9,11 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.nimbusds.jwt.JWT;
-import com.nimbusds.jwt.JWTParser;
-import com.nimbusds.jwt.SignedJWT;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.SneakyThrows;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,25 +23,42 @@ public record CurrentUser(
     UserType userType, TypedId<UserId> userId, TypedId<BusinessId> businessId, Set<String> roles) {
 
   @SneakyThrows
+  @SuppressWarnings("unchecked")
   public static CurrentUser get() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    JWT jwt = JWTParser.parse(((JwtAuthenticationToken) authentication).getToken().getTokenValue());
-    Map<String, Object> jsonObject = ((SignedJWT) jwt).getPayload().toJSONObject();
-    UserType userType = UserType.valueOf((String) jsonObject.get(USER_TYPE));
-    String userId = (String) jsonObject.get(CAPITAL_USER_ID);
-    String businessId = (String) jsonObject.get(BUSINESS_ID);
-
     // TODO verify CurrentUser.globalUserPermissions works.
     // From the JWT example
     // https://fusionauth.io/docs/v1/tech/core-concepts/authentication-authorization/ it looks right
-    @SuppressWarnings("unchecked")
-    List<Object> roleList = (List<Object>) jsonObject.get(ROLES);
-    Set<String> roles =
-        roleList == null
-            ? Collections.emptySet()
-            : roleList.stream().map(Object::toString).collect(Collectors.toUnmodifiableSet());
 
     return new CurrentUser(
-        userType, new TypedId<>(userId), new TypedId<>(UUID.fromString(businessId)), roles);
+        getUserType(),
+        getUserId(),
+        getBusinessId(),
+        StreamSupport.stream(
+                ((Iterable<Object>) getClaims().getOrDefault(ROLES, Collections.emptyList()))
+                    .spliterator(),
+                false)
+            .map(Object::toString)
+            .collect(Collectors.toUnmodifiableSet()));
+  }
+
+  public static TypedId<BusinessId> getBusinessId() {
+    return new TypedId<>(getClaim(BUSINESS_ID).toString());
+  }
+
+  public static TypedId<UserId> getUserId() {
+    return new TypedId<>(getClaim(CAPITAL_USER_ID).toString());
+  }
+
+  public static UserType getUserType() {
+    return UserType.valueOf(getClaim(USER_TYPE).toString());
+  }
+
+  private static Object getClaim(String name) {
+    return getClaims().get(name);
+  }
+
+  private static Map<String, Object> getClaims() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    return (((JwtAuthenticationToken) authentication).getToken().getClaims());
   }
 }

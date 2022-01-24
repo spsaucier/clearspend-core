@@ -36,6 +36,7 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -73,6 +74,7 @@ public class UserControllerTest extends BaseCapitalTest {
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
+  private final CardRepository cardRepository;
 
   private final Faker faker = new Faker();
 
@@ -346,8 +348,7 @@ public class UserControllerTest extends BaseCapitalTest {
 
     for (CardDetailsResponse cardDetailsResponse : userCardListResponse) {
       assertThat(cardDetailsResponse.getCard()).isNotNull();
-      assertThat(cardDetailsResponse.getCard().getCardNumber())
-          .isIn(card.getLastFour(), card2.getLastFour());
+      assertThat(cardDetailsResponse.getCard().getCardNumber()).isIn(null, card2.getLastFour());
 
       assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
       assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())
@@ -402,7 +403,8 @@ public class UserControllerTest extends BaseCapitalTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(cardDetailsResponse));
 
     assertThat(cardDetailsResponse.getCard()).isNotNull();
-    assertThat(cardDetailsResponse.getCard().getCardNumber()).isEqualTo(card.getLastFour());
+    assertThat(cardDetailsResponse.getCard().getCardNumber()).isNull();
+    assertThat(cardDetailsResponse.getCard().isActivated()).isFalse();
 
     assertThat(cardDetailsResponse.getAvailableBalance()).isNotNull();
     assertThat(cardDetailsResponse.getAvailableBalance().getCurrency())
@@ -457,12 +459,9 @@ public class UserControllerTest extends BaseCapitalTest {
             Currency.USD,
             FundingType.POOLED,
             CardType.VIRTUAL);
-    cardService.updateCardStatus(
-        card.getBusinessId(),
-        card.getUserId(),
-        card.getId(),
-        CardStatus.INACTIVE,
-        CardStatusReason.CARDHOLDER_REQUESTED);
+
+    card.setStatus(CardStatus.INACTIVE);
+    cardRepository.saveAndFlush(card);
 
     // when
     com.clearspend.capital.controller.type.card.Card blockedCard =

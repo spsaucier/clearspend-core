@@ -148,13 +148,6 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         builder, Account.class, Hold.class, "accountId", JoinType.LEFT);
 
     builder
-        // hold status
-        .whereOr()
-        .where("hold.status")
-        .eqLiteral(HoldStatus.PLACED)
-        .where("hold.status")
-        .isNull()
-        .endOr()
         // hold expirationDate
         .whereOr()
         .where("expirationDate")
@@ -169,7 +162,9 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         .select("account")
         .select("user")
         .select("transactionLimit")
-        .select("SUM(hold.amount.amount)");
+        .select(
+            "SUM(CASE hold.status WHEN '%s' THEN hold.amount.amount ELSE 0 END)"
+                .formatted(HoldStatus.PLACED));
 
     return builder;
   }
