@@ -47,6 +47,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -79,10 +80,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
+import com.stripe.model.issuing.Authorization;
+import com.stripe.model.issuing.Authorization.AmountDetails;
+import com.stripe.model.issuing.Authorization.MerchantData;
+import com.stripe.model.issuing.Authorization.PendingRequest;
+import com.stripe.model.issuing.Authorization.VerificationData;
+import com.stripe.model.issuing.Card.Shipping;
+import com.stripe.model.issuing.Card.SpendingControls;
+import com.stripe.model.issuing.Card.SpendingControls.SpendingLimit;
+import com.stripe.model.issuing.Card.Wallets;
+import com.stripe.model.issuing.Card.Wallets.ApplePay;
+import com.stripe.model.issuing.Card.Wallets.GooglePay;
+import com.stripe.model.issuing.Cardholder;
+import com.stripe.model.issuing.Cardholder.Billing;
+import com.stripe.model.issuing.Cardholder.Requirements;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -99,6 +116,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
@@ -709,5 +727,173 @@ public class TestHelper {
         faker.address().state(),
         faker.address().zipCode(),
         Country.USA);
+  }
+
+  @NotNull
+  public Authorization getAuthorization(
+      Business business,
+      User user,
+      Card card,
+      MerchantType merchantType,
+      long authorizationAmount,
+      long pendingAmount,
+      String stripeId) {
+    Authorization authorization = new Authorization();
+    authorization.setId(stripeId);
+    authorization.setLivemode(false);
+    authorization.setAmount(authorizationAmount);
+    AmountDetails amountDetails = new AmountDetails();
+    amountDetails.setAtmFee(null);
+    authorization.setAmountDetails(amountDetails);
+    authorization.setApproved(false);
+    authorization.setAuthorizationMethod("online");
+    authorization.setBalanceTransactions(new ArrayList<>());
+    authorization.setCard(getStripeCard(business, user, card));
+    authorization.setCardholder(user.getExternalRef());
+    authorization.setCreated(OffsetDateTime.now().toEpochSecond());
+    authorization.setCurrency(business.getCurrency().toStripeCurrency());
+    authorization.setMerchantAmount(0L);
+    authorization.setMerchantCurrency(business.getCurrency().toStripeCurrency());
+    MerchantData merchantData = new MerchantData();
+    merchantData.setCategory(merchantType.getStripeMerchantType());
+    merchantData.setCategoryCode(String.valueOf(merchantType.getMcc()));
+    merchantData.setCity("San Francisco");
+    merchantData.setCountry("US");
+    merchantData.setName("Tim's Balance");
+    merchantData.setNetworkId("1234567890");
+    merchantData.setPostalCode("94103");
+    merchantData.setState("CA");
+    authorization.setMerchantData(merchantData);
+    authorization.setMetadata(new HashMap<>());
+    authorization.setObject("issuing.authorization");
+    if (pendingAmount != 0) {
+      PendingRequest pendingRequest = new PendingRequest();
+      pendingRequest.setAmount(pendingAmount);
+      AmountDetails pendingRequestAmountDetails = new AmountDetails();
+      pendingRequestAmountDetails.setAtmFee(null);
+      pendingRequest.setAmountDetails(pendingRequestAmountDetails);
+      pendingRequest.setCurrency(business.getCurrency().toStripeCurrency());
+      pendingRequest.setIsAmountControllable(false);
+      pendingRequest.setMerchantAmount(pendingAmount);
+      pendingRequest.setMerchantCurrency(business.getCurrency().toStripeCurrency());
+      authorization.setPendingRequest(pendingRequest);
+    }
+    authorization.setRequestHistory(new ArrayList<>());
+    authorization.setStatus("pending");
+    authorization.setTransactions(new ArrayList<>());
+    VerificationData verificationData = new VerificationData();
+    verificationData.setAddressLine1Check("not_provided");
+    verificationData.setAddressPostalCodeCheck("not_provided");
+    verificationData.setCvcCheck("not_provided");
+    verificationData.setExpiryCheck("match");
+    authorization.setWallet(null);
+    return authorization;
+  }
+
+  private com.stripe.model.issuing.Card getStripeCard(Business business, User user, Card card) {
+    log.info("business: {}", business);
+    log.info("user: {}", user);
+    log.info("card: {}", card);
+    com.stripe.model.issuing.Card out = new com.stripe.model.issuing.Card();
+    out.setId(card.getExternalRef());
+    out.setLivemode(false);
+    out.setBrand("Visa");
+    out.setCancellationReason(null);
+    out.setCardholder(getStripeCardholder(business, user));
+    out.setCreated(card.getCreated().toEpochSecond());
+    out.setCurrency(business.getCurrency().toStripeCurrency());
+    //    String cvc;
+    out.setExpMonth((long) card.getExpirationDate().getMonthValue());
+    out.setExpYear((long) card.getExpirationDate().getYear());
+    out.setLast4(card.getLastFour());
+    out.setMetadata(new HashMap<>());
+    //    String number;
+    out.setObject("issuing.card");
+    out.setReplacedBy(null);
+    out.setReplacementFor(null);
+    out.setReplacementReason(null);
+    if (card.getType() == CardType.PHYSICAL) {
+      Shipping shipping = new Shipping();
+      com.stripe.model.Address address = new com.stripe.model.Address();
+      address.setLine1(card.getShippingAddress().getStreetLine1().getEncrypted());
+      if (card.getShippingAddress().getStreetLine2() != null
+          && StringUtils.isNotBlank(card.getShippingAddress().getStreetLine2().getEncrypted())) {
+        address.setLine2(card.getShippingAddress().getStreetLine2().getEncrypted());
+      }
+      address.setCity(card.getShippingAddress().getLocality());
+      address.setState(card.getShippingAddress().getRegion());
+      address.setPostalCode(card.getShippingAddress().getPostalCode().getEncrypted());
+      address.setCountry(card.getShippingAddress().getCountry().getTwoCharacterCode());
+      shipping.setAddress(address);
+      out.setShipping(shipping);
+    }
+    SpendingControls spendingControls = new SpendingControls();
+    spendingControls.setAllowedCategories(null);
+    spendingControls.setBlockedCategories(null);
+    List<SpendingLimit> spendingLimits = new ArrayList<>();
+    SpendingLimit spendingLimit = new SpendingLimit();
+    spendingLimit.setAmount(50000L);
+    spendingLimit.setCategories(new ArrayList<>());
+    spendingLimit.setInterval("daily");
+    spendingLimits.add(spendingLimit);
+    spendingControls.setSpendingLimits(spendingLimits);
+    spendingControls.setSpendingLimitsCurrency(business.getCurrency().toStripeCurrency());
+    out.setSpendingControls(spendingControls);
+    out.setStatus("active");
+    out.setType(card.getType().toStripeType());
+    Wallets wallets = new Wallets();
+    ApplePay applePay = new ApplePay();
+    applePay.setEligible(true);
+    applePay.setIneligibleReason(null);
+    wallets.setApplePay(applePay);
+    GooglePay googlePay = new GooglePay();
+    googlePay.setEligible(true);
+    googlePay.setIneligibleReason(null);
+    wallets.setGooglePay(googlePay);
+    wallets.setPrimaryAccountIdentifier(null);
+    out.setWallets(wallets);
+
+    return out;
+  }
+
+  private Cardholder getStripeCardholder(Business business, User user) {
+    Cardholder out = new Cardholder();
+
+    out.setId(user.getExternalRef());
+    out.setLivemode(false);
+    Billing billing = new Billing();
+    com.stripe.model.Address address = new com.stripe.model.Address();
+    address.setLine1(business.getClearAddress().getStreetLine1());
+    if (StringUtils.isNotBlank(business.getClearAddress().getStreetLine2())) {
+      address.setLine2(business.getClearAddress().getStreetLine2());
+    }
+    address.setCity(business.getClearAddress().getLocality());
+    address.setState(business.getClearAddress().getRegion());
+    address.setPostalCode(business.getClearAddress().getPostalCode());
+    address.setCountry(business.getClearAddress().getCountry().getTwoCharacterCode());
+    billing.setAddress(address);
+    out.setBilling(billing);
+    out.setCompany(null);
+    out.setCreated(user.getCreated().toEpochSecond());
+    out.setEmail(user.getEmail().getEncrypted());
+    out.setIndividual(null);
+    out.setMetadata(new HashMap<>());
+    out.setName(user.getFirstName().getEncrypted() + " " + user.getLastName().getEncrypted());
+    out.setObject("issuing.cardholder");
+    out.setPhoneNumber(user.getPhone().getEncrypted());
+    Requirements requirements = new Requirements();
+    requirements.setDisabledReason(null);
+    requirements.setPastDue(new ArrayList<>());
+    out.setRequirements(requirements);
+    Cardholder.SpendingControls spendingControls = new Cardholder.SpendingControls();
+    spendingControls.setAllowedCategories(Collections.emptyList());
+    spendingControls.setBlockedCategories(Collections.emptyList());
+    spendingControls.setSpendingLimits(Collections.emptyList());
+    spendingControls.setSpendingLimitsCurrency(null);
+    out.setSpendingControls(spendingControls);
+    out.setStatus("active");
+    out.setType("individual");
+
+    return out;
   }
 }

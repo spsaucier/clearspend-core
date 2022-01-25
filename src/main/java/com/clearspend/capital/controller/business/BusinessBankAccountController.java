@@ -171,7 +171,7 @@ public class BusinessBankAccountController {
             businessBankAccountId,
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
-            true);
+            placeHold);
 
     businessService.updateBusiness(
         businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);

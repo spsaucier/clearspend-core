@@ -91,6 +91,12 @@ public class Amount {
     return of(currency, amount.negate());
   }
 
+  public Amount mul(BigDecimal amount) {
+    return of(
+        currency,
+        this.amount.multiply(amount).setScale(currency.getDecimalScale(), RoundingMode.HALF_UP));
+  }
+
   public boolean isLessThan(@NonNull Amount that) {
     return amount.compareTo(that.amount) < 0;
   }

@@ -4,7 +4,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.Getter;
 
+@Getter
 public enum MerchantType {
   UNKNOWN("unkown", "Placeholder for any new merchant type we don't support", 0),
   AC_REFRIGERATION_REPAIR("ac_refrigeration_repair", "A/C, Refrigeration Repair", 7623),
@@ -462,8 +464,8 @@ public enum MerchantType {
   WRECKING_AND_SALVAGE_YARDS("wrecking_and_salvage_yards", "Wrecking and Salvage Yards", 5935),
   ;
 
-  private String stripeMerchantType;
-  private String description;
+  private final String stripeMerchantType;
+  private final String description;
   private int mcc;
 
   private static Map<String, MerchantType> map = initializeMap();

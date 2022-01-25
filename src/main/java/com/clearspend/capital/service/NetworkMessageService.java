@@ -23,8 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.annotations.VisibleForTesting;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import javax.transaction.Transactional;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -72,6 +75,8 @@ public class NetworkMessageService {
 
     storeMerchant(common);
 
+    common.setPaddedAmount(determinePaddedAmount(common));
+
     // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
     //    potentially in a async batch job)
     // common.getAccountActivity().setMerchantLogoUrl();
@@ -98,7 +103,7 @@ public class NetworkMessageService {
             cardRecord.card().getAllocationId(),
             common.getNetworkMessageGroupId(),
             common.getNetworkMessageType(),
-            common.getRequestedAmount(),
+            common.getPaddedAmount(),
             common.getMerchantName(),
             common.getMerchantAddress(),
             common.getMerchantNumber(),
@@ -115,7 +120,7 @@ public class NetworkMessageService {
     if (common.isPostHold()) {
       HoldRecord holdRecord =
           accountService.recordNetworkHold(
-              common.getAccount(), common.getRequestedAmount(), OffsetDateTime.now().plusDays(2));
+              common.getAccount(), common.getPaddedAmount(), OffsetDateTime.now().plusDays(2));
       networkMessage.setHoldId(holdRecord.hold().getId());
       common.setHold(holdRecord.hold());
       common.getAccountActivityDetails().setActivityTime(holdRecord.hold().getCreated());
@@ -124,7 +129,7 @@ public class NetworkMessageService {
       log.debug(
           "networkMessage {} for {} hold {} (available {} / ledger {})",
           networkMessage.getId(),
-          common.getRequestedAmount(),
+          common.getPaddedAmount(),
           networkMessage.getHoldId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
@@ -154,7 +159,7 @@ public class NetworkMessageService {
           accountService.recordNetworkDecline(
               common.getAccount(),
               common.getCard(),
-              common.getRequestedAmount(),
+              common.getPaddedAmount(),
               common.getDeclineReasons());
       common.setDecline(decline);
       networkMessage.setDeclineId(decline.getId());
@@ -164,12 +169,36 @@ public class NetworkMessageService {
       log.warn(
           "networkMessage {} for {} declined (available {} / ledger {})",
           networkMessage.getId(),
-          common.getRequestedAmount(),
+          common.getPaddedAmount(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
     }
 
     common.setNetworkMessage(networkMessageRepository.save(networkMessage));
+  }
+
+  @VisibleForTesting
+  Amount determinePaddedAmount(@NonNull NetworkCommon common) {
+    return switch (common.getMerchantType()) {
+      case AUTOMATED_FUEL_DISPENSERS -> Amount.of(
+          common.getRequestedAmount().getCurrency(), BigDecimal.valueOf(-100));
+      case AIRLINES_AIR_CARRIERS,
+          CAR_RENTAL_AGENCIES,
+          CRUISE_LINES,
+          HOTELS_MOTELS_AND_RESORTS,
+          DIRECT_MARKETING_TRAVEL,
+          DIRECT_MARKETING_OUTBOUND_TELEMARKETING,
+          DIRECT_MARKETING_INBOUND_TELEMARKETING,
+          DIRECT_MARKETING_SUBSCRIPTION -> common
+          .getRequestedAmount()
+          .mul(BigDecimal.valueOf(1.15));
+      case DRINKING_PLACES,
+          HEALTH_AND_BEAUTY_SPAS,
+          EATING_PLACES_RESTAURANTS,
+          FAST_FOOD_RESTAURANTS,
+          TAXICABS_LIMOUSINES -> common.getRequestedAmount().mul(BigDecimal.valueOf(1.20));
+      default -> common.getRequestedAmount();
+    };
   }
 
   private void processAuthorizationUpdated(NetworkCommon common) {
@@ -184,7 +213,7 @@ public class NetworkMessageService {
   }
 
   private void processAuthorizationRequest(NetworkCommon common) {
-    common.getRequestedAmount().ensureNegative();
+    common.getPaddedAmount().ensureNegative();
 
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
@@ -204,16 +233,16 @@ public class NetworkMessageService {
       if (common
           .getAccount()
           .getAvailableBalance()
-          .add(common.getRequestedAmount())
+          .add(common.getPaddedAmount())
           .isLessThanZero()) {
         common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
         common.setPostDecline(true);
         return;
       }
-      common.setApprovedAmount(common.getRequestedAmount());
+      common.setApprovedAmount(common.getPaddedAmount());
     } else {
       common.setApprovedAmount(
-          Amount.min(common.getAccount().getAvailableBalance(), common.getRequestedAmount().abs()));
+          Amount.min(common.getAccount().getAvailableBalance(), common.getPaddedAmount().abs()));
     }
 
     // TODO(kuchlein): assess spending limits on card

@@ -61,6 +61,9 @@ public class NetworkCommon {
   // the amount that the merchant is asking for
   @NonNull private Amount requestedAmount;
 
+  // the amount that the merchant asked for including padding
+  private Amount paddedAmount;
+
   // a.k.a. MID or merchant ID
   @NonNull private String merchantNumber;
 
