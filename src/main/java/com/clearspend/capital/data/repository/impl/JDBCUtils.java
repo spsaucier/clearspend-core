@@ -13,6 +13,7 @@ import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.hibernate.Session;
+import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -45,6 +46,19 @@ public class JDBCUtils {
                     .query(sql, paramSource, rowMapper));
   }
 
+  public static <R> R execute(
+      EntityManager entityManager,
+      String sql,
+      SqlParameterSource paramSource,
+      PreparedStatementCallback<R> action) {
+    return entityManager
+        .unwrap(Session.class)
+        .doReturningWork(
+            connection ->
+                new NamedParameterJdbcTemplate(new SingleConnectionDataSource(connection, true))
+                    .execute(sql, paramSource, action));
+  }
+
   /**
    * Read a TypedId off a ResultSet
    *
@@ -53,7 +67,7 @@ public class JDBCUtils {
    * @param <T> The sentinel interface for TypedId
    * @return null if the DB had a null or the special value {@link #NULL_UUID}, the TypedId
    *     otherwise.
-   * @throws SQLException
+   * @throws SQLException if the DB goes sideways reading from the resultset
    */
   public static <T> TypedId<T> getTypedId(@NonNull ResultSet resultSet, @NonNull final String field)
       throws SQLException {
@@ -81,5 +95,15 @@ public class JDBCUtils {
             .collect(Collectors.toList());
 
     return list.isEmpty() ? EnumSet.noneOf(enumClass) : EnumSet.copyOf(list);
+  }
+
+  /**
+   * Convert the given TypedId into a UUID using the NULL_UUID constant
+   *
+   * @param id some TypedId
+   * @return the UUID from the given TypedId or NULL_UUID
+   */
+  public static UUID safeUUID(TypedId<?> id) {
+    return id == null ? NULL_UUID : id.toUuid();
   }
 }

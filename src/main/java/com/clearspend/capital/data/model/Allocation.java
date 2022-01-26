@@ -43,6 +43,7 @@ public class Allocation extends TypedMutable<AllocationId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> parentAllocationId;
 
+  /** Sorted root to parent */
   @Column(columnDefinition = "uuid[]")
   @Type(type = "uuid-array")
   private List<TypedId<AllocationId>> ancestorAllocationIds = new ArrayList<>();

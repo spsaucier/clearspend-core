@@ -11,10 +11,11 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.security.UserAllocationRoleRecord;
+import com.clearspend.capital.controller.type.security.UserAllocationRole;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.AllocationService;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
-public class UserAllocationRoleControllerTest extends BaseCapitalTest {
+public class UserAllocationRoleControllerTest extends BaseCapitalTest implements DefaultRoles {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
@@ -59,7 +60,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
                         rootAllocation.getId().toUuid().toString(),
                         manager.getId().toUuid().toString()))
                 .contentType(MediaType.TEXT_PLAIN)
-                .content("Manager")
+                .content(ALLOCATION_MANAGER)
                 .cookie(testHelper.getDefaultAuthCookie()))
         .andExpect(status().is2xxSuccessful())
         .andReturn()
@@ -67,10 +68,10 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
 
     // Get back 2 permissions, one default for the owner and the other for the manager
     entityManager.flush();
-    Map<TypedId<UserId>, UserAllocationRoleRecord> permissions = getPermissions(rootAllocation);
+    Map<TypedId<UserId>, UserAllocationRole> permissions = getPermissions(rootAllocation);
 
-    assertEquals("Manager", permissions.get(manager.getId()).getRole());
-    assertEquals("Admin", permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(ALLOCATION_MANAGER, permissions.get(manager.getId()).getRole());
+    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
     assertEquals(2, permissions.size());
 
     // Now edit the permission - give the second user only read permission
@@ -80,7 +81,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
                         rootAllocation.getId().toUuid().toString(),
                         manager.getId().toUuid().toString()))
                 .contentType(MediaType.TEXT_PLAIN)
-                .content("View only")
+                .content(ALLOCATION_VIEW_ONLY)
                 .cookie(testHelper.getDefaultAuthCookie()))
         .andExpect(status().is2xxSuccessful())
         .andReturn()
@@ -89,8 +90,8 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
 
     // And check it
     permissions = getPermissions(rootAllocation);
-    assertEquals("View only", permissions.get(manager.getId()).getRole());
-    assertEquals("Admin", permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(ALLOCATION_VIEW_ONLY, permissions.get(manager.getId()).getRole());
+    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
     assertEquals(2, permissions.size());
 
     // Then delete the manager user's permission
@@ -109,12 +110,12 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest {
 
     // And check it
     permissions = getPermissions(rootAllocation);
-    assertEquals("Admin", permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
     assertEquals(1, permissions.size());
   }
 
   @NotNull
-  private Map<TypedId<UserId>, UserAllocationRoleRecord> getPermissions(Allocation rootAllocation)
+  private Map<TypedId<UserId>, UserAllocationRole> getPermissions(Allocation rootAllocation)
       throws Exception {
     MockHttpServletResponse response =
         mvc.perform(

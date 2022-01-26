@@ -13,6 +13,7 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.ForbiddenException;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
@@ -23,6 +24,7 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -31,6 +33,9 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
-public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
+public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements DefaultRoles {
 
   private static final BigDecimal TWO = new BigDecimal(2);
 
@@ -182,27 +187,178 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
   }
   */
 
+  // test for an error lowering permission of an allocation owner below Manager
+  @Test
+  void testNoLoweringAllocationOwnerPermission() {
+    CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
+
+    // Default user (business owner) has Admin permission
+    setCurrentUser(rootAllocationOwner);
+    assertEquals(
+        ALLOCATION_ADMIN,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(rootAllocation.getId())
+            .allocationRole());
+
+    // The allocation owner gives someone else manage permission
+    User otherUser = newUser.user();
+    setCurrentUser(rootAllocationOwner);
+    rolesAndPermissionsService.createUserAllocationRole(
+        otherUser, rootAllocation, ALLOCATION_MANAGER);
+
+    // Then someone else may not take manage away from allocation owner by deleting
+    tryToDemoteExpectingExceptions(otherUser, rootAllocationOwner, rootAllocation);
+
+    // otherUser can own an allocation, too
+    Amount amt = new Amount(Currency.USD, new BigDecimal(0));
+    Allocation secondAllocation =
+        allocationService
+            .createAllocation(
+                rootAllocation.getBusinessId(),
+                rootAllocation.getId(),
+                "Second Allocation",
+                otherUser,
+                amt,
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                Collections.emptySet())
+            .allocation();
+
+    // otherUser gets Manage permission by default
+    setCurrentUser(otherUser);
+    assertEquals(
+        ALLOCATION_MANAGER,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(secondAllocation.getId())
+            .allocationRole());
+
+    // rootAllocationOwner inherits owner permissions
+    setCurrentUser(rootAllocationOwner);
+    assertEquals(
+        ALLOCATION_ADMIN,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(secondAllocation.getId())
+            .allocationRole());
+
+    // Owner can't go below manager permission
+    tryToDemoteExpectingExceptions(rootAllocationOwner, otherUser, secondAllocation);
+
+    // Root Allocation owner makes a thirdAllocation under secondAllocation
+    setCurrentUser(rootAllocationOwner);
+    Allocation thirdAllocation =
+        allocationService
+            .createAllocation(
+                rootAllocation.getBusinessId(),
+                secondAllocation.getId(),
+                "Third Allocation",
+                rootAllocationOwner,
+                amt,
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                Collections.emptySet())
+            .allocation();
+
+    // otherUser inherits Manager permission by default
+    setCurrentUser(otherUser);
+    assertEquals(
+        ALLOCATION_MANAGER,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(secondAllocation.getId())
+            .allocationRole());
+    setCurrentUser(rootAllocationOwner);
+    assertEquals(
+        ALLOCATION_ADMIN,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(secondAllocation.getId())
+            .allocationRole());
+
+    // otherUser's Manager permission cannot be taken away
+    tryToDemoteExpectingExceptions(rootAllocationOwner, otherUser, thirdAllocation);
+
+    // otherUser automatically gets Manager by virtue of being an allocation owner
+    setCurrentUser(otherUser);
+    assertEquals(
+        ALLOCATION_MANAGER,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(secondAllocation.getId())
+            .allocationRole());
+
+    // Make OtherUser an admin at root
+    setCurrentUser(rootAllocationOwner);
+    rolesAndPermissionsService.updateUserAllocationRole(
+        otherUser, rootAllocation, DefaultRoles.ALLOCATION_ADMIN);
+
+    // Admin permission propagates down (lambda because it happens again in a moment)
+    Consumer<String> assertAllocationOwnerRole =
+        role ->
+            Stream.of(secondAllocation, thirdAllocation)
+                .forEach(
+                    a -> {
+                      setCurrentUser(otherUser);
+                      assertEquals(
+                          role,
+                          rolesAndPermissionsService
+                              .getUserRolesAndPermissionsForAllocation(a.getId())
+                              .allocationRole(),
+                          a.getName());
+                      tryToDemoteExpectingExceptions(rootAllocationOwner, otherUser, a);
+                    });
+    assertAllocationOwnerRole.accept(ALLOCATION_ADMIN);
+
+    // Switch otherUser Owner permission back to Manager, and it goes everywhere
+    setCurrentUser(rootAllocationOwner);
+    rolesAndPermissionsService.updateUserAllocationRole(
+        otherUser, rootAllocation, ALLOCATION_MANAGER);
+
+    assertAllocationOwnerRole.accept(ALLOCATION_MANAGER);
+
+    // Switch back to admin for secondUser
+    setCurrentUser(rootAllocationOwner);
+    rolesAndPermissionsService.updateUserAllocationRole(
+        otherUser, rootAllocation, DefaultRoles.ALLOCATION_ADMIN);
+
+    // Root Allocation owner makes a fourthAllocation under thirdAllocation
+    setCurrentUser(rootAllocationOwner);
+    Allocation fourthAllocation =
+        allocationService
+            .createAllocation(
+                rootAllocation.getBusinessId(),
+                thirdAllocation.getId(),
+                "Third Allocation",
+                rootAllocationOwner,
+                amt,
+                Collections.emptyMap(),
+                Collections.emptyList(),
+                Collections.emptySet())
+            .allocation();
+
+    setCurrentUser(otherUser);
+    assertEquals(
+        ALLOCATION_ADMIN,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(fourthAllocation.getId())
+            .allocationRole());
+  }
+
+  private void tryToDemoteExpectingExceptions(User actor, User grantee, Allocation allocation) {
+    setCurrentUser(actor);
+
+    Supplier<String> msg =
+        () -> String.valueOf(Map.of("actor", actor, "grantee", grantee, "allocation", allocation));
+    assertThrows(
+        Exception.class,
+        () -> rolesAndPermissionsService.deleteUserAllocationRole(allocation, grantee),
+        msg);
+
+    // ... or by lowering
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            rolesAndPermissionsService.updateUserAllocationRole(
+                grantee, allocation, ALLOCATION_VIEW_ONLY),
+        msg);
+  }
   /*
-      // test for an error lowering permission of an allocation owner below manager
-      @Test
-      void testNoLoweringAllocationOwnerPermission() {
-        CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
-        User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
-        User otherUser = newUser.user();
-
-        // The allocation owner gives someone else manage permission
-        roleService.grantAllocationPermission(
-            allocationOwner, otherUser, rootAllocation, AllocationPermission.MANAGE);
-        assertUserHasPermission(otherUser, rootAllocation, AllocationPermission.MANAGE);
-
-        // Then someone else tries to take manage away from allocation owner
-        assertThrows(
-            ForbiddenException.class,
-            () ->
-                roleService.grantAllocationPermission(
-                    otherUser, allocationOwner, rootAllocation, AllocationPermission.NONE));
-      }
-
       // test if a user has permission on a parent allocation rather than the given allocation
       @Test
       void testInheritingPermissionFromParent() {
@@ -315,13 +471,9 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
     User admin = userService.retrieveUser(rootAllocation.getOwnerId());
     // go under the radar using test privilege to call fusionAuthService for bootstrapping CSM role
     fusionAuthService.changeUserRole(
-        RoleChange.GRANT, admin.getSubjectRef(), "customer_service_manager");
+        RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
 
-    Runnable makeAdminUser =
-        () ->
-            CurrentUserSwitcher.setCurrentUser(
-                admin, rolesAndPermissionsService.getGlobalRoles(admin));
-    makeAdminUser.run();
+    setCurrentUser(admin);
 
     // Second business to cross boundaries
     CreateBusinessRecord business2 = testHelper.createBusiness();
@@ -329,33 +481,36 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
     final User bookkeeper = entityManager.getReference(User.class, rootAllocation2.getOwnerId());
 
     // Bookkeeper doesn't have the bookkeeper role yet, so should not get read permission
-    makeAdminUser.run();
-    entityManager.flush();
+    setCurrentUser(admin);
     assertThrows(
-        ForbiddenException.class,
+        InvalidRequestException.class,
         () ->
             rolesAndPermissionsService.createUserAllocationRole(
-                bookkeeper, rootAllocation, "View only"));
+                bookkeeper, rootAllocation, ALLOCATION_VIEW_ONLY));
 
     // Now grant the role and permit crossing businesses
-    makeAdminUser.run();
-    assertTrue(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper"));
+    setCurrentUser(admin);
+    assertTrue(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), GLOBAL_BOOKKEEPER));
     // Granting the second time doesn't actually make a change
-    assertFalse(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper"));
+    assertFalse(rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), GLOBAL_BOOKKEEPER));
+
+    assertTrue(rolesAndPermissionsService.getGlobalRoles(bookkeeper).contains(GLOBAL_BOOKKEEPER));
 
     assertDoesNotThrow(
         () ->
-            rolesAndPermissionsService.setUserAllocationRole(
-                rootAllocation.getId(), bookkeeper.getId(), "View only"));
+            rolesAndPermissionsService.createUserAllocationRole(
+                bookkeeper, rootAllocation, ALLOCATION_VIEW_ONLY));
     entityManager.flush();
     Runnable makeBookkeeperBusinessUser =
-        () ->
-            CurrentUserSwitcher.setCurrentUser(
-                new CurrentUser(
-                    bookkeeper.getType(),
-                    bookkeeper.getId(),
-                    rootAllocation.getBusinessId(),
-                    rolesAndPermissionsService.getGlobalRoles(bookkeeper)));
+        () -> {
+          entityManager.flush();
+          CurrentUserSwitcher.setCurrentUser(
+              new CurrentUser(
+                  bookkeeper.getType(),
+                  bookkeeper.getId(),
+                  rootAllocation.getBusinessId(),
+                  rolesAndPermissionsService.getGlobalRoles(bookkeeper)));
+        };
     makeBookkeeperBusinessUser.run();
 
     assertDoesNotThrow(
@@ -366,8 +521,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
                 EnumSet.noneOf(GlobalUserPermission.class)));
 
     // Revoking bookkeeper permission effectively revokes the cross-business permissions
-    makeAdminUser.run();
-    rolesAndPermissionsService.revokeGlobalRole(bookkeeper.getId(), "bookkeeper");
+    setCurrentUser(admin);
+    rolesAndPermissionsService.revokeGlobalRole(bookkeeper.getId(), GLOBAL_BOOKKEEPER);
     entityManager.flush();
     makeBookkeeperBusinessUser.run();
     assertThrows(
@@ -379,8 +534,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
                 EnumSet.noneOf(GlobalUserPermission.class)));
 
     // Re-grant the role and see that it works again
-    makeAdminUser.run();
-    rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), "bookkeeper");
+    setCurrentUser(admin);
+    rolesAndPermissionsService.grantGlobalRole(bookkeeper.getId(), GLOBAL_BOOKKEEPER);
     entityManager.flush();
     makeBookkeeperBusinessUser.run();
     assertDoesNotThrow(
@@ -391,7 +546,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
                 EnumSet.noneOf(GlobalUserPermission.class)));
 
     // archive the user and see that they can do nothing
-    makeAdminUser.run();
+    setCurrentUser(admin);
     bookkeeper.setArchived(true);
     entityManager.flush();
     makeBookkeeperBusinessUser.run();
@@ -408,15 +563,23 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
   void getUserRolesForAllocation() {
     CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
     User allocationOwner = userService.retrieveUser(rootAllocation.getOwnerId());
-    User otherUser = newUser.user();
+
+    // The root allocation owner is a BUSINESS_OWNER so has Admin permission by default
+    setCurrentUser(rootAllocationOwner);
+    assertEquals(
+        ALLOCATION_ADMIN,
+        rolesAndPermissionsService
+            .getUserRolesAndPermissionsForAllocation(rootAllocation.getId())
+            .allocationRole());
 
     // The allocation owner gives someone else some permissions
-    CurrentUserSwitcher.setCurrentUser(allocationOwner);
+    User otherUser = newUser.user();
+    setCurrentUser(allocationOwner);
     rolesAndPermissionsService.createUserAllocationRole(otherUser, rootAllocation, "Manager");
     entityManager.flush();
 
     // Check what permissions the user has
-    CurrentUserSwitcher.setCurrentUser(otherUser);
+    setCurrentUser(otherUser);
     UserRolesAndPermissions queriedPermissions =
         rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId());
 
@@ -449,7 +612,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
   public void rootAllocationOwnerHasAdminPermission() {
     setCurrentUser(rootAllocationOwner);
     assertUserRolesAndPermissions(
-        "Admin",
+        DefaultRoles.ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         false,
@@ -473,7 +636,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
     flush();
     // Also admin on a child allocation
     assertUserRolesAndPermissions(
-        "Admin",
+        ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
@@ -485,8 +648,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
 
     // Also admin on a child allocation created by someone else
     User manager = testHelper.createUser(createBusinessRecord.business()).user();
-    rolesAndPermissionsService.setUserAllocationRole(
-        rootAllocation.getId(), manager.getId(), "Manager");
+    rolesAndPermissionsService.createUserAllocationRole(
+        manager, rootAllocation, ALLOCATION_MANAGER);
 
     // Manager makes a child allocation
     setCurrentUser(manager);
@@ -506,7 +669,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
 
     setCurrentUser(rootAllocationOwner);
     assertUserRolesAndPermissions(
-        "Admin",
+        ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
@@ -518,7 +681,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
 
     // It's not necessary to name the allocation to get root allocation permission
     assertUserRolesAndPermissions(
-        "Admin",
+        ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
@@ -528,7 +691,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
     // Manager also has admin permission because she has that permission at the root
     setCurrentUser(manager);
     assertUserRolesAndPermissions(
-        "Admin",
+        ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
@@ -538,7 +701,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest {
 
   private void setCurrentUser(User user) {
     flush();
-    CurrentUserSwitcher.setCurrentUser(user);
+    CurrentUserSwitcher.setCurrentUser(user, rolesAndPermissionsService.getGlobalRoles(user));
   }
 
   private void flush() {

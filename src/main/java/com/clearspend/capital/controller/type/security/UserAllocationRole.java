@@ -13,7 +13,7 @@ import lombok.NonNull;
 
 @Data
 @AllArgsConstructor
-public class UserAllocationRoleRecord {
+public class UserAllocationRole {
 
   /** Null for new or root allocation owner / business owner */
   @JsonProperty("userAllocationRoleId")
@@ -37,7 +37,7 @@ public class UserAllocationRoleRecord {
   @JsonProperty("inherited")
   private boolean inherited;
 
-  public UserAllocationRoleRecord(UserRolesAndPermissions permissions) {
+  public UserAllocationRole(UserRolesAndPermissions permissions) {
     userAllocationRoleId = permissions.userAllocationRoleId();
     role = permissions.allocationRole();
     allocationId = permissions.allocationId();

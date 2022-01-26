@@ -97,10 +97,13 @@
                               INNER JOIN
                           business_roles
                           ON user_allocation_role.role = business_roles.role_name
-                     WHERE NOT users.archived
+                     WHERE (:userId = '00000000-0000-0000-0000-000000000000'
+                         OR :userId = users.id
+                         )
+                       AND NOT users.archived
                        AND allocation.business_id = :businessId
-                       AND users.id NOT IN
-                           (SELECT owner_id from ordered_lineage where rownum = 1)
+                       AND (users.type <> 'BUSINESS_OWNER'
+                         OR users.business_id <> allocation.business_id)
                      UNION
                      SELECT -- this clause fetches implicit allocationPermissions for root allocation owners
                             '00000000-0000-0000-0000-000000000000' AS user_allocation_role_id,
@@ -121,8 +124,12 @@
                           ordered_lineage
                           on ordered_lineage.allocation_id = allocation.id
                               INNER JOIN
-                          users ON users.id = allocation.owner_id
-                     WHERE NOT users.archived
+                          users ON (users.business_id = allocation.business_id
+                              AND users.type = 'BUSINESS_OWNER')
+                     WHERE (:userId = '00000000-0000-0000-0000-000000000000'
+                         OR :userId = users.id
+                         )
+                       AND NOT users.archived
                        AND allocation.business_id = users.business_id
                        AND rownum = 1
                  ) AS "roles"
@@ -133,8 +140,8 @@
                          roles0.user_id = :userId
                      AND (
                                      roles0.user_business_id = roles0.allocation_business_id
-                                 OR global_permissions &&
-                                    ARRAY [ :crossBusinessBoundaryPermission ]::GlobalUserPermission[]
+                                 OR (global_permissions &&
+                                     ARRAY [ :crossBusinessBoundaryPermission ]::GlobalUserPermission[])
                              )
                  )
                 )

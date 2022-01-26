@@ -1,5 +1,7 @@
 package com.clearspend.capital.controller.security;
 
+import static com.clearspend.capital.data.model.security.DefaultRoles.ALLOCATION_ADMIN;
+import static com.clearspend.capital.data.model.security.DefaultRoles.ALL_ALLOCATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,7 +17,6 @@ import com.clearspend.capital.service.AllocationService;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
@@ -66,14 +67,15 @@ public class AllocationRolePermissionsControllerTest extends BaseCapitalTest {
 
     Map<String, AllocationRolePermissionRecord> permissions =
         permissionsResponse.getAllocationRolePermissionRecords().stream()
-            .collect(Collectors.toMap(perms -> perms.getRole_name(), perms -> perms));
+            .collect(
+                Collectors.toMap(AllocationRolePermissionRecord::getRole_name, perms -> perms));
 
     assertEquals(
         permissionsResponse.getAllocationRolePermissionRecords().size(), permissions.size());
     assertEquals(3, permissions.size());
-    assertEquals(Set.of("Admin", "Manager", "View only"), permissions.keySet());
+    assertEquals(ALL_ALLOCATION, permissions.keySet());
     assertEquals(
         EnumSet.allOf(AllocationPermission.class),
-        EnumSet.copyOf(Arrays.asList(permissions.get("Admin").getPermissions())));
+        EnumSet.copyOf(Arrays.asList(permissions.get(ALLOCATION_ADMIN).getPermissions())));
   }
 }

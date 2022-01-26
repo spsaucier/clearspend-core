@@ -3,7 +3,7 @@ package com.clearspend.capital.controller.security;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.security.UserAllocationRoleRecord;
+import com.clearspend.capital.controller.type.security.UserAllocationRole;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
@@ -47,7 +47,7 @@ public class UserAllocationRoleController {
             .getAllRolesAndPermissionsForAllocation(allocationId)
             .values()
             .stream()
-            .map(UserAllocationRoleRecord::new)
+            .map(UserAllocationRole::new)
             .collect(Collectors.toList()));
   }
 
@@ -117,7 +117,7 @@ public class UserAllocationRoleController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> granteeId) {
     rolesAndPermissionsService.deleteUserAllocationRole(
-        entityManager.getReference(User.class, granteeId),
-        entityManager.getReference(Allocation.class, allocationId));
+        entityManager.getReference(Allocation.class, allocationId),
+        entityManager.getReference(User.class, granteeId));
   }
 }

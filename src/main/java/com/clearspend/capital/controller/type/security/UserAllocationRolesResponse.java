@@ -14,5 +14,5 @@ public class UserAllocationRolesResponse {
   @JsonProperty("userAllocationRoleList")
   @NonNull
   @NotNull(message = "userAllocationRoles required")
-  private List<UserAllocationRoleRecord> userAllocationRoleRecordList;
+  private List<UserAllocationRole> userAllocationRoleRecordList;
 }

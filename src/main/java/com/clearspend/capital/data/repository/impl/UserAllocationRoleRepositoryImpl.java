@@ -1,8 +1,11 @@
 package com.clearspend.capital.data.repository.impl;
 
 import static com.clearspend.capital.data.model.enums.GlobalUserPermission.CROSS_BUSINESS_BOUNDARY;
+import static com.clearspend.capital.data.repository.impl.JDBCUtils.getEnumSet;
 import static com.clearspend.capital.data.repository.impl.JDBCUtils.getTypedId;
+import static com.clearspend.capital.data.repository.impl.JDBCUtils.safeUUID;
 
+import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -15,6 +18,7 @@ import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepositoryCustom;
 import java.nio.charset.StandardCharsets;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.Collections;
@@ -22,18 +26,15 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -42,8 +43,10 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   private final Crypto crypto;
 
   private final String userPermissionsQuery;
-  private final String allocationRoles;
+  private final String allocationRolesQuery;
+  private final String deleteLesserAndEqualRolesBelow;
   private final EntityManager entityManager;
+  private final CriteriaBuilderFactory criteriaBuilderFactory;
 
   @SneakyThrows
   public UserAllocationRoleRepositoryImpl(
@@ -52,11 +55,16 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
       @Value("classpath:db/sql/allocationRoleRepository/userPermissions.sql")
           Resource userPermissionsQuery,
       @Value("classpath:db/sql/allocationRoleRepository/allocationRoles.sql")
-          Resource allocationRoles) {
+          Resource allocationRolesQuery,
+      @Value("classpath:db/sql/allocationRoleRepository/deleteLesserAndEqualRolesBelow.sql")
+          Resource deleteLesserAndEqualRolesBelow,
+      CriteriaBuilderFactory criteriaBuilderFactory) {
     this.crypto = crypto;
     this.entityManager = entityManager;
     this.userPermissionsQuery = SqlResourceLoader.load(userPermissionsQuery);
-    this.allocationRoles = SqlResourceLoader.load(allocationRoles);
+    this.allocationRolesQuery = SqlResourceLoader.load(allocationRolesQuery);
+    this.deleteLesserAndEqualRolesBelow = SqlResourceLoader.load(deleteLesserAndEqualRolesBelow);
+    this.criteriaBuilderFactory = criteriaBuilderFactory;
   }
 
   @Override
@@ -133,13 +141,19 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         .addValue("userGlobalRoles", globalRoles, Types.ARRAY)
         .addValue("crossBusinessBoundaryPermission", CROSS_BUSINESS_BOUNDARY.name(), Types.VARCHAR);
 
-    return execute(
-        jdbcTemplate ->
-            jdbcTemplate.query(userPermissionsQuery, params, this::rolesAndPermissionsRowMapper));
+    return query(userPermissionsQuery, params, this::rolesAndPermissionsRowMapper);
   }
 
-  private UUID safeUUID(TypedId<?> u) {
-    return u == null ? JDBCUtils.NULL_UUID : u.toUuid();
+  @Override
+  public void deleteAllForGranteeByAllocationId(
+      TypedId<UserId> grantee, List<TypedId<AllocationId>> allocations) {
+    criteriaBuilderFactory
+        .delete(entityManager, UserRolesAndPermissions.class, "role")
+        .where("role.user_id")
+        .eq(grantee)
+        .where("role.allocation_id")
+        .in(allocations)
+        .executeUpdate();
   }
 
   @Override
@@ -161,25 +175,36 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         .addValue("businessId", businessId.toUuid())
         .addValue("userGlobalRoles", roles.toArray(String[]::new), Types.ARRAY);
     List<AllocationPermission> permissions =
-        execute(
-            jdbcTemplate ->
-                jdbcTemplate.query(
-                    allocationRoles,
-                    params,
-                    (resultSet, rownum) ->
-                        AllocationPermission.valueOf(resultSet.getString("permission"))));
+        query(
+            allocationRolesQuery,
+            params,
+            (resultSet, rownum) -> AllocationPermission.valueOf(resultSet.getString("permission")));
 
     return permissions.isEmpty()
         ? EnumSet.noneOf(AllocationPermission.class)
         : EnumSet.copyOf(permissions);
   }
 
+  @Override
+  public void deleteLesserAndEqualRolesBelow(
+      @NonNull TypedId<UserId> granteeUserId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull String referenceRole) {
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    params
+        .addValue("userId", safeUUID(granteeUserId))
+        .addValue("allocationId", safeUUID(allocationId))
+        .addValue("referenceRole", referenceRole);
+    JDBCUtils.execute(
+        entityManager, deleteLesserAndEqualRolesBelow, params, PreparedStatement::executeUpdate);
+  }
+
   @SneakyThrows
   UserRolesAndPermissions rolesAndPermissionsRowMapper(ResultSet resultSet, int rowNum) {
     EnumSet<GlobalUserPermission> roles =
-        JDBCUtils.getEnumSet(resultSet, "global_permissions", GlobalUserPermission.class);
+        getEnumSet(resultSet, "global_permissions", GlobalUserPermission.class);
     EnumSet<AllocationPermission> permissions =
-        JDBCUtils.getEnumSet(resultSet, "permissions", AllocationPermission.class);
+        getEnumSet(resultSet, "permissions", AllocationPermission.class);
 
     return new UserRolesAndPermissions(
         getTypedId(resultSet, "user_allocation_role_id"),
@@ -196,21 +221,7 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         roles);
   }
 
-  /**
-   * Get the connection off of the EntityManager so that it is in the same transaction context, and
-   * use JdbcTemplate to generate the final SQL.
-   *
-   * @param function operating on NamedParameterJdbcTemplate
-   * @param <R> the return type of the function
-   * @return pass-through from the function execution
-   */
-  private <R> R execute(Function<NamedParameterJdbcTemplate, R> function) {
-    return entityManager
-        .unwrap(Session.class)
-        .doReturningWork(
-            connection ->
-                function.apply(
-                    new NamedParameterJdbcTemplate(
-                        new SingleConnectionDataSource(connection, true))));
+  private <T> List<T> query(String sql, SqlParameterSource params, RowMapper<T> rowMapper) {
+    return JDBCUtils.query(entityManager, sql, params, rowMapper);
   }
 }

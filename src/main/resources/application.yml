@@ -35,8 +35,8 @@ spring:
 
 clearspend:
   ach:
-   hold:
-     place: false
+    hold:
+      place: false
   encryption:
     key:
       aes:

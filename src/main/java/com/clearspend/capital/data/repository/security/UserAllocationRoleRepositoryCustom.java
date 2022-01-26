@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,6 +50,9 @@ public interface UserAllocationRoleRepositoryCustom {
   UserRolesAndPermissions getUserPermissionAtBusiness(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, Set<String> userGlobalRoles);
 
+  void deleteAllForGranteeByAllocationId(
+      TypedId<UserId> grantee, List<TypedId<AllocationId>> allocations);
+
   /**
    * Return the user's permission for a particular allocation, with allocationRoles and permissions
    * both global and allocation-lavel
@@ -71,4 +75,16 @@ public interface UserAllocationRoleRepositoryCustom {
 
   EnumSet<AllocationPermission> getRolePermissions(
       TypedId<BusinessId> businessId, Set<String> roles);
+
+  /**
+   * Delete roles on descendants of the given allocation which have less than all the permissions
+   * that the given role has, for use in enforcing no lowered permissions below the current
+   * allocation.
+   *
+   * @param granteeUserId the userId whose roles will be modified
+   * @param allocationId the allocation under scrutiny
+   * @param referenceRole the role to match
+   */
+  void deleteLesserAndEqualRolesBelow(
+      TypedId<UserId> granteeUserId, TypedId<AllocationId> allocationId, String referenceRole);
 }

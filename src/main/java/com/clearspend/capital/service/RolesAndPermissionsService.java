@@ -1,5 +1,7 @@
 package com.clearspend.capital.service;
 
+import static com.clearspend.capital.data.model.security.DefaultRoles.GLOBAL_BOOKKEEPER;
+
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.InvalidRequestException;
@@ -12,12 +14,16 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.GlobalRole;
-import com.clearspend.capital.data.model.security.UserAllocationRole;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.CurrentUser;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +61,7 @@ public class RolesAndPermissionsService {
   private final UserAllocationRoleRepository userAllocationRoleRepository;
   private final GlobalRoleRepository globalRoleRepository;
   private final FusionAuthService fusionAuthService;
+  private final AllocationRepository allocationRepository;
   private final EntityManager entityManager;
 
   /**
@@ -65,23 +72,19 @@ public class RolesAndPermissionsService {
    * @param newRole The new role to set
    * @throws ForbiddenException when the current user's permissions are insufficient
    */
-  public UserAllocationRole createUserAllocationRole(
+  public com.clearspend.capital.data.model.security.UserAllocationRole createUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
-    if (!grantee.getBusinessId().equals(allocation.getBusinessId())
-        && !fusionAuthService
-            .getUserRoles(UUID.fromString(grantee.getSubjectRef()))
-            .contains("bookkeeper")) {
-      throw new ForbiddenException("Only bookkeepers can cross business boundaries");
-    }
+
     prepareUserAllocationRoleChange(grantee, allocation, newRole)
         .map(
             r -> {
               throw new InvalidRequestException("Already created");
             });
 
-    UserAllocationRole role =
+    com.clearspend.capital.data.model.security.UserAllocationRole role =
         userAllocationRoleRepository.save(
-            new UserAllocationRole(allocation.getId(), grantee.getId(), newRole));
+            new com.clearspend.capital.data.model.security.UserAllocationRole(
+                allocation.getId(), grantee.getId(), newRole));
     entityManager.flush(); // this needs to take effect immediately
 
     return role;
@@ -95,37 +98,106 @@ public class RolesAndPermissionsService {
    * @param newRole The new role to set
    * @throws ForbiddenException when the current user's permissions are insufficient
    */
-  public UserAllocationRole updateUserAllocationRole(
+  public com.clearspend.capital.data.model.security.UserAllocationRole updateUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
     return prepareUserAllocationRoleChange(grantee, allocation, newRole)
         .map(
             r -> {
               r.setRole(newRole);
-              UserAllocationRole role = userAllocationRoleRepository.save(r);
+              com.clearspend.capital.data.model.security.UserAllocationRole role =
+                  userAllocationRoleRepository.save(r);
               entityManager.flush(); // this needs to take effect immediately
               return role;
             })
         .orElseThrow(() -> new InvalidRequestException("Does not exist."));
   }
 
-  private Optional<UserAllocationRole> prepareUserAllocationRoleChange(
-      User grantee, Allocation allocation, String newRole) {
+  private Optional<com.clearspend.capital.data.model.security.UserAllocationRole>
+      prepareUserAllocationRoleChange(User grantee, Allocation allocation, String newRole) {
     entityManager.flush();
-    Optional<UserAllocationRole> oldRole =
-        userAllocationRoleRepository.findByUserIdAndAllocationId(
-            grantee.getId(), allocation.getId());
-    EnumSet<AllocationPermission> oldPerms =
-        oldRole
-            .map(
-                uar ->
-                    userAllocationRoleRepository.getRolePermissions(
-                        allocation.getBusinessId(), uar.getRole()))
-            .orElse(EnumSet.noneOf(AllocationPermission.class));
+
+    if (grantee.getBusinessId().equals(allocation.getBusinessId())
+        && grantee.getType().equals(UserType.BUSINESS_OWNER)) {
+      // The return value confirms the standard
+      throw new InvalidRequestException("Business owners are always admins");
+    }
+
+    final Set<String> granteeGlobalRoles =
+        fusionAuthService.getUserRoles(UUID.fromString(grantee.getSubjectRef()));
+    if (!grantee.getBusinessId().equals(allocation.getBusinessId())
+        && !granteeGlobalRoles.contains(GLOBAL_BOOKKEEPER)) {
+      throw new InvalidRequestException("Only bookkeepers can cross business boundaries");
+    }
+
+    UserRolesAndPermissions oldEffectivePermissions =
+        userAllocationRoleRepository.getUserPermissionAtAllocation(
+            grantee.getBusinessId(), allocation.getId(), grantee.getId(), granteeGlobalRoles);
 
     EnumSet<AllocationPermission> newPerms =
         newRole == null
             ? EnumSet.noneOf(AllocationPermission.class)
             : userAllocationRoleRepository.getRolePermissions(allocation.getBusinessId(), newRole);
+
+    // Establish the minimum permission applicable
+    //
+    // Some rules:
+    // - Every allocation owner who is not a business owner has explicit permission
+    //     of Manager or Admin at the top allocation they own.
+    // - Allocation owners do not have explicit permissions on child allocations.
+    // - Whenever allocation owner permissions are set (or owners changed), check for
+    //     descendant allocations with permissions and update according to the above
+    // - Permissions cannot be taken away lower in the tree
+    if (oldEffectivePermissions != null) {
+      // See where they got the existing role from
+      TypedId<AllocationId> foundRoleAllocationId = oldEffectivePermissions.allocationId();
+
+      List<TypedId<AllocationId>> allocationIds =
+          new ArrayList<>(allocation.getAncestorAllocationIds());
+      allocationIds.add(allocation.getId());
+      Collections.reverse(allocationIds); // sort leaf to root
+      // TODO see that this check is working its way up the tree,
+
+      // See if they own any of the allocations with the role
+      List<TypedId<AllocationId>> maybeOwnedAllocationIds =
+          allocationIds.subList(allocationIds.indexOf(foundRoleAllocationId), allocationIds.size());
+      Map<TypedId<AllocationId>, Allocation> ancestorAllocations =
+          allocationRepository.findAllById(maybeOwnedAllocationIds).stream()
+              .collect(Collectors.toMap(Allocation::getId, a -> a));
+      Optional<Allocation> ownedAllocationOptional =
+          maybeOwnedAllocationIds.stream()
+              .map(ancestorAllocations::get)
+              .filter(a -> a.getOwnerId().equals(grantee.getId()))
+              .findFirst();
+
+      boolean isAllocationOwner = ownedAllocationOptional.isPresent();
+      EnumSet<AllocationPermission> requiredPermissions =
+          EnumSet.noneOf(AllocationPermission.class);
+      if (isAllocationOwner) {
+        requiredPermissions.addAll(
+            userAllocationRoleRepository.getRolePermissions(
+                allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER));
+      }
+      if (allocation.getParentAllocationId() != null) {
+        requiredPermissions.addAll(
+            userAllocationRoleRepository
+                .getUserPermissionAtAllocation(
+                    grantee.getBusinessId(),
+                    allocation.getParentAllocationId(),
+                    grantee.getId(),
+                    granteeGlobalRoles)
+                .allocationPermissions());
+      }
+
+      // Enforce the minimum
+      if (!newPerms.containsAll(requiredPermissions)) {
+        throw new InvalidRequestException("Cannot reduce permissions");
+      }
+    }
+
+    EnumSet<AllocationPermission> oldPerms =
+        oldEffectivePermissions == null
+            ? EnumSet.noneOf(AllocationPermission.class)
+            : oldEffectivePermissions.allocationPermissions();
     EnumSet<AllocationPermission> unchangedPerms = EnumSet.copyOf(oldPerms);
     unchangedPerms.retainAll(newPerms);
     EnumSet<AllocationPermission> allPerms = EnumSet.copyOf(oldPerms);
@@ -143,23 +215,17 @@ public class RolesAndPermissionsService {
       throw new InvalidRequestException("Grantee is archived");
     }
 
-    // TODO forbid decreasing permissions
-    // TODO figure out how to get the grantee's role to check if they can cross business boundary
+    // Permission granted ====================================================
 
-    /*
-        // allow for grantee is a bookkeeper
-        if (!allocation.getBusinessId().equals(grantee.getBusinessId())
-            && !userHasAnyRole(grantee, GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)) {
-          throw new ForbiddenException();
-        }
-    */
-    if (allocation.getOwnerId().equals(grantee.getId())
-        && allocation.getParentAllocationId() == null) {
-      // The return value confirms the standard
-      return Optional.of(new UserAllocationRole(allocation.getId(), grantee.getId(), "Owner"));
+    // TODO forbid decreasing inherited permissions
+    // remove any lower permissions
+    if (newRole != null) {
+      userAllocationRoleRepository.deleteLesserAndEqualRolesBelow(
+          grantee.getId(), allocation.getId(), newRole);
     }
 
-    return oldRole;
+    return userAllocationRoleRepository.findByUserIdAndAllocationId(
+        grantee.getId(), allocation.getId());
   }
 
   /**
@@ -186,14 +252,14 @@ public class RolesAndPermissionsService {
    * Creates or updates a permission record, adding the given permission to any existing set,
    * creating the permission set if necessary.
    *
-   * @param grantee The ID of the user whose permission is to change
    * @param allocation The allocation ID
+   * @param grantee The ID of the user whose permission is to change
    * @throws ForbiddenException when the current user's permissions are insufficient
    * @throws RecordNotFoundException if there is nothing to delete, with the exception's id
    *     consisting of a Map of the grantee Id and allocation Id
    */
-  public void deleteUserAllocationRole(@NonNull User grantee, Allocation allocation) {
-    Optional<UserAllocationRole> doomedRecord =
+  public void deleteUserAllocationRole(Allocation allocation, @NonNull User grantee) {
+    Optional<com.clearspend.capital.data.model.security.UserAllocationRole> doomedRecord =
         prepareUserAllocationRoleChange(grantee, allocation, null);
     doomedRecord
         .map(
@@ -271,16 +337,6 @@ public class RolesAndPermissionsService {
     }
 
     throw new ForbiddenException();
-  }
-
-  void setUserAllocationRole(
-      TypedId<AllocationId> allocationId, TypedId<UserId> grantee, String role) {
-    assertUserHasPermission(
-        allocationId,
-        EnumSet.of(AllocationPermission.MANAGE_PERMISSIONS),
-        EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE));
-    // TODO assert that permissions are not lowered
-    userAllocationRoleRepository.save(new UserAllocationRole(allocationId, grantee, role));
   }
 
   public boolean grantGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {

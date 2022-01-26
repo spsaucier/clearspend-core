@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.DataAccessViolationException;
@@ -22,17 +23,21 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
+import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
+import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,6 +66,7 @@ public class AllocationService {
   private final TransactionLimitService transactionLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final EntityManager entityManager;
+  private final AllocationRolePermissionsService allocationRolePermissionsService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -151,6 +157,19 @@ public class AllocationService {
         disabledMccGroups,
         disabledTransactionChannels);
 
+    if (user.getType().equals(UserType.EMPLOYEE)) {
+      UserRolesAndPermissions parentRole =
+          rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(parentAllocationId);
+      EnumSet<AllocationPermission> managerPermissions =
+          allocationRolePermissionsService.getAllocationRolePermissions(
+              businessId, DefaultRoles.ALLOCATION_MANAGER);
+      rolesAndPermissionsService.createUserAllocationRole(
+          user,
+          allocation,
+          parentRole.allocationPermissions().containsAll(managerPermissions)
+              ? parentRole.allocationRole()
+              : DefaultRoles.ALLOCATION_MANAGER);
+    }
     return new AllocationRecord(allocation, account);
   }
 
