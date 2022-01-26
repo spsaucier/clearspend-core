@@ -22,9 +22,13 @@ import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -130,5 +134,17 @@ public class CardController {
     String ephemeralKey =
         stripeClient.getEphemeralKey(cardDetailsRecord.card().getExternalRef(), request.getNonce());
     return new RevealCardResponse(cardDetailsRecord.card().getExternalRef(), ephemeralKey);
+  }
+
+  @PostMapping("/export-csv")
+  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request)
+      throws IOException {
+    byte[] csvFile =
+        cardService.createCSVFile(new CardFilterCriteria(CurrentUser.get().businessId(), request));
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=cards.csv");
+    headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
+    headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
+    return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
   }
 }

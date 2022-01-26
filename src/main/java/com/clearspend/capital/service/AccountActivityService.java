@@ -24,14 +24,22 @@ import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.NetworkCommon;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -241,5 +249,55 @@ public class AccountActivityService {
     }
 
     return accountActivity;
+  }
+
+  public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) throws IOException {
+
+    Page<AccountActivity> accountActivityPage =
+        accountActivityRepository.find(CurrentUser.get().businessId(), filterCriteria);
+
+    List<String> headerFields =
+        Arrays.asList("Date & Time", "Card", "Merchant", "Amount", "Receipt");
+
+    ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+      csvPrinter.printRecord(headerFields);
+      DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+      accountActivityPage
+          .getContent()
+          .forEach(
+              record -> {
+                try {
+                  csvPrinter.printRecord(
+                      Arrays.asList(
+                          dateFormatter.format(record.getActivityTime()),
+                          (record.getCard() != null && record.getCard().getLastFour() != null)
+                              ? "**** "
+                                  + record.getCard().getLastFour()
+                                  + " "
+                                  + record.getCard().getOwnerFirstName()
+                                  + " "
+                                  + record.getCard().getOwnerLastName()
+                              : "",
+                          (record.getMerchant() != null && record.getMerchant().getName() != null)
+                              ? record.getMerchant().getName()
+                                  + " "
+                                  + record.getMerchant().getType()
+                              : "",
+                          record.getAmount().getCurrency()
+                              + " "
+                              + String.format("%.2f", record.getAmount().getAmount())
+                              + " "
+                              + record.getStatus(),
+                          ""));
+                } catch (IOException e) {
+                  throw new RuntimeException(e.getMessage());
+                }
+              });
+      csvPrinter.flush();
+    } catch (IOException e) {
+      throw new RuntimeException(e.getMessage());
+    }
+    return csvFile.toByteArray();
   }
 }

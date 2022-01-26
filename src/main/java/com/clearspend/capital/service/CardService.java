@@ -28,9 +28,13 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.service.type.CurrentUser;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +43,8 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -288,5 +294,41 @@ public class CardService {
 
   public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {
     return cardRepository.filter(filterCriteria);
+  }
+
+  public byte[] createCSVFile(CardFilterCriteria filterCriteria) throws IOException {
+
+    Page<FilteredCardRecord> cardsPage = cardRepository.filter(filterCriteria);
+
+    List<String> headerFields =
+        Arrays.asList("Card Number", "Employee", "Allocation", "Balance", "Status");
+
+    ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+      csvPrinter.printRecord(headerFields);
+      cardsPage
+          .getContent()
+          .forEach(
+              record -> {
+                try {
+                  csvPrinter.printRecord(
+                      Arrays.asList(
+                          "****" + record.card().getLastFour() + " " + record.card().getType(),
+                          record.user().getFirstName() + " " + record.user().getLastName(),
+                          record.allocation().getName(),
+                          record.account().getLedgerBalance().getCurrency()
+                              + " "
+                              + record.account().getLedgerBalance().getAmount()
+                              + " [Limit]",
+                          record.card().getStatus()));
+                } catch (IOException e) {
+                  throw new RuntimeException(e.getMessage());
+                }
+              });
+      csvPrinter.flush();
+    } catch (IOException e) {
+      throw new RuntimeException(e.getMessage());
+    }
+    return csvFile.toByteArray();
   }
 }

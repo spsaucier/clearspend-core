@@ -16,6 +16,10 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -23,6 +27,8 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -200,5 +206,42 @@ public class UserService {
             .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
     user.setArchived(true);
     return userRepository.save(user).isArchived();
+  }
+
+  public byte[] createCSVFile(TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria)
+      throws IOException {
+
+    Page<FilteredUserWithCardListRecord> userPage =
+        userRepository.find(businessId, userFilterCriteria);
+
+    List<String> headerFields = Arrays.asList("Employee", "Card Info", "Email Address");
+    ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+      csvPrinter.printRecord(headerFields);
+      userPage
+          .getContent()
+          .forEach(
+              record -> {
+                User user = record.user();
+                String employee = user.getFirstName() + " " + user.getLastName();
+                String emailAddress = user.getEmail().getEncrypted();
+                record
+                    .card()
+                    .forEach(
+                        card -> {
+                          String cardInfo =
+                              "**** " + card.card().getLastFour() + " " + card.allocationName();
+                          try {
+                            csvPrinter.printRecord(Arrays.asList(employee, cardInfo, emailAddress));
+                          } catch (IOException e) {
+                            throw new RuntimeException(e.getMessage());
+                          }
+                        });
+              });
+      csvPrinter.flush();
+    } catch (IOException e) {
+      throw new RuntimeException(e.getMessage());
+    }
+    return csvFile.toByteArray();
   }
 }

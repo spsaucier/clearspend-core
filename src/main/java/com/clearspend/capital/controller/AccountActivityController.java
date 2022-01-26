@@ -20,6 +20,7 @@ import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
@@ -27,6 +28,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -120,5 +124,26 @@ public class AccountActivityController {
         accountActivityRepository.findDataForChart(
             CurrentUser.get().businessId(), new ChartFilterCriteria(request)),
         request.getChartFilter());
+  }
+
+  @PostMapping("/export-csv")
+  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request)
+      throws IOException {
+    byte[] csvFile =
+        accountActivityService.createCSVFile(
+            new AccountActivityFilterCriteria(
+                request.getAllocationId(),
+                request.getUserId(),
+                request.getCardId(),
+                request.getType(),
+                request.getSearchText(),
+                request.getFrom(),
+                request.getTo(),
+                PageRequest.toPageToken(request.getPageRequest())));
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transactions.csv");
+    headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
+    headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
+    return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
   }
 }

@@ -39,6 +39,7 @@ import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -431,5 +435,17 @@ public class UserController {
           TypedId<UserId> userId) {
 
     return userService.archiveUser(CurrentUser.get().businessId(), userId);
+  }
+
+  @PostMapping(value = "/export-csv")
+  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchUserRequest request)
+      throws IOException {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    byte[] csvFile = userService.createCSVFile(businessId, new UserFilterCriteria(request));
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=employees.csv");
+    headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
+    headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
+    return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
   }
 }
