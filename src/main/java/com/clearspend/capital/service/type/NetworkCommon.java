@@ -102,12 +102,16 @@ public class NetworkCommon {
   private Account account;
 
   private NetworkMessage networkMessage;
+  public NetworkMessage earliestNetworkMessage;
+  private List<NetworkMessage> priorNetworkMessages;
   private UUID networkMessageGroupId = UUID.randomUUID();
 
   private AccountActivity accountActivity;
 
   private boolean postHold = false;
+  private OffsetDateTime holdExpiration;
   private Hold hold;
+  private Hold priorHold;
   // list of holds that we need to update (typically to change the status)
   private List<Hold> updatedHolds = new ArrayList<>();
 
@@ -158,6 +162,7 @@ public class NetworkCommon {
     transactionDate =
         OffsetDateTime.ofInstant(Instant.ofEpochSecond(authorization.getCreated()), ZoneOffset.UTC);
     externalRef = authorization.getId();
+    stripeAuthorizationExternalRef = authorization.getId();
 
     this.stripeWebhookLog = stripeWebhookLog;
   }
@@ -196,5 +201,21 @@ public class NetworkCommon {
         merchantData.getState(),
         merchantData.getPostalCode(),
         Country.of(merchantData.getCountry()));
+  }
+
+  public NetworkMessage toNetworkMessage() {
+    return new NetworkMessage(
+        businessId,
+        allocation.getId(),
+        account.getId(),
+        networkMessageGroupId,
+        networkMessageType,
+        requestedAmount,
+        paddedAmount,
+        merchantName,
+        merchantAddress,
+        merchantNumber,
+        merchantCategoryCode,
+        externalRef);
   }
 }

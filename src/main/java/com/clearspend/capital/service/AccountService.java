@@ -220,7 +220,7 @@ public class AccountService {
     return account;
   }
 
-  public Account retrieveCardAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
+  public Account retrieveAccountById(TypedId<AccountId> accountId, boolean fetchHolds) {
     return retrieveAccount(accountId, fetchHolds);
   }
 

@@ -47,7 +47,6 @@ public class Card extends TypedMutable<CardId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
-  @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> allocationId;
 
@@ -58,7 +57,6 @@ public class Card extends TypedMutable<CardId> {
   private TypedId<UserId> userId;
 
   @JoinColumn(referencedColumnName = "id", table = "accountId")
-  @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
 

@@ -3,6 +3,7 @@ package com.clearspend.capital.data.model.network;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.data.model.TypedMutable;
+import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -52,9 +53,13 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
-  @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> allocationId;
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "account")
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<AccountId> accountId;
 
   @JoinColumn(referencedColumnName = "id", table = "card")
   @Column(updatable = false)
@@ -88,6 +93,8 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private NetworkMessageType type;
+
+  @Embedded @NonNull private Amount requestedAmount;
 
   @Embedded @NonNull private Amount amount;
 

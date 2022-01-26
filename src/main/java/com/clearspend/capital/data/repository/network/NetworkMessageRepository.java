@@ -14,6 +14,8 @@ public interface NetworkMessageRepository
   // method used in testing only
   int countByNetworkMessageGroupId(UUID networkMessageGroupId);
 
+  List<NetworkMessage> findByNetworkMessageGroupId(UUID networkMessageGroupId);
+
   List<NetworkMessage> findByExternalRefAndTypeOrderByCreatedDesc(
       String externalRef, NetworkMessageType type);
 }

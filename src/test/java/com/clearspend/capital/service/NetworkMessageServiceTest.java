@@ -83,8 +83,8 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
 
     assertThat(networkCommon.getRequestedAmount().getAmount())
         .isEqualByComparingTo(amount.negate());
-    BigDecimal paddedAmount =
-        networkMessageService.determinePaddedAmount(networkCommon).getAmount();
+    networkMessageService.setPaddedAmountAndHoldPeriod(networkCommon);
+    BigDecimal paddedAmount = networkCommon.getPaddedAmount().getAmount();
 
     log.debug("{} - {} - {} - {}", merchantType, amount, expectedPaddedAmount, paddedAmount);
     assertThat(paddedAmount).isEqualByComparingTo(expectedPaddedAmount);

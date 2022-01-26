@@ -55,27 +55,11 @@ public class NetworkMessageService {
 
   @Transactional
   public void processNetworkMessage(NetworkCommon common) {
-    // update common with data we have locally
-    CardRecord cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
+    retrieveCard(common);
 
-    // if the card isn't found, set decline bits and return to caller
-    if (cardRecord == null) {
-      common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
-      common.setPostDecline(true);
-      log.error("failed to find card with externalRef: " + common.getCardExternalRef());
-      return;
-    }
+    storeMerchantAsync(common);
 
-    common.setBusinessId(cardRecord.card().getBusinessId());
-    common.setCard(cardRecord.card());
-    common.setAccount(cardRecord.account());
-    common.setAllocation(
-        allocationService.retrieveAllocation(
-            common.getBusinessId(), cardRecord.card().getAllocationId()));
-
-    storeMerchant(common);
-
-    common.setPaddedAmount(determinePaddedAmount(common));
+    setPaddedAmountAndHoldPeriod(common);
 
     // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
     //    potentially in a async batch job)
@@ -97,18 +81,7 @@ public class NetworkMessageService {
     }
 
     // store any data that resulted from processing the network message from Stripe
-    NetworkMessage networkMessage =
-        new NetworkMessage(
-            cardRecord.card().getBusinessId(),
-            cardRecord.card().getAllocationId(),
-            common.getNetworkMessageGroupId(),
-            common.getNetworkMessageType(),
-            common.getPaddedAmount(),
-            common.getMerchantName(),
-            common.getMerchantAddress(),
-            common.getMerchantNumber(),
-            common.getMerchantCategoryCode(),
-            common.getExternalRef());
+    NetworkMessage networkMessage = common.toNetworkMessage();
 
     // card may be null in the case of Stripe sending us transactions for cards that we've not
     // issued
@@ -117,10 +90,58 @@ public class NetworkMessageService {
       networkMessage.setCardId(common.getCard().getId());
     }
 
+    postHold(common, networkMessage);
+    postAdjustment(common, networkMessage);
+    postDecline(common, networkMessage);
+
+    common.setNetworkMessage(networkMessageRepository.save(networkMessage));
+  }
+
+  private void retrieveCard(NetworkCommon common) {
+    // update common with data we have locally
+    CardRecord cardRecord;
+    try {
+      cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
+    } catch (RecordNotFoundException e) {
+      // if the card isn't found, set decline bits and return to caller
+      common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
+      common.setPostDecline(true);
+      log.error("failed to find card with externalRef: " + common.getCardExternalRef());
+      // TODO(kuchlein): sort out how we want to handle errors since we always want to write at
+      //   at least StripWebhookLog
+      return;
+    }
+
+    common.setBusinessId(cardRecord.card().getBusinessId());
+    common.setCard(cardRecord.card());
+
+    // get any prior network messages as we'll need to pull the allocationId and accountId from them
+    // as the one of the card record may have been updated
+    common.earliestNetworkMessage =
+        getPriorAuthNetworkMessage(common.getStripeAuthorizationExternalRef());
+    if (common.earliestNetworkMessage != null) {
+      common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
+      common.setPriorNetworkMessages(
+          networkMessageRepository.findByNetworkMessageGroupId(common.getNetworkMessageGroupId()));
+
+      common.setAccount(
+          accountService.retrieveAccountById(common.earliestNetworkMessage.getAccountId(), true));
+      common.setAllocation(
+          allocationService.retrieveAllocation(
+              common.getBusinessId(), common.earliestNetworkMessage.getAllocationId()));
+    } else {
+      common.setAccount(cardRecord.account());
+      common.setAllocation(
+          allocationService.retrieveAllocation(
+              common.getBusinessId(), cardRecord.card().getAllocationId()));
+    }
+  }
+
+  private void postHold(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostHold()) {
       HoldRecord holdRecord =
           accountService.recordNetworkHold(
-              common.getAccount(), common.getPaddedAmount(), OffsetDateTime.now().plusDays(2));
+              common.getAccount(), common.getPaddedAmount(), common.getHoldExpiration());
       networkMessage.setHoldId(holdRecord.hold().getId());
       common.setHold(holdRecord.hold());
       common.getAccountActivityDetails().setActivityTime(holdRecord.hold().getCreated());
@@ -134,7 +155,9 @@ public class NetworkMessageService {
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
     }
+  }
 
+  private void postAdjustment(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
           accountService.recordNetworkAdjustment(common.getAccount(), common.getRequestedAmount());
@@ -153,7 +176,9 @@ public class NetworkMessageService {
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
     }
+  }
 
+  private void postDecline(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostDecline()) {
       Decline decline =
           accountService.recordNetworkDecline(
@@ -173,15 +198,16 @@ public class NetworkMessageService {
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
     }
-
-    common.setNetworkMessage(networkMessageRepository.save(networkMessage));
   }
 
   @VisibleForTesting
-  Amount determinePaddedAmount(@NonNull NetworkCommon common) {
-    return switch (common.getMerchantType()) {
-      case AUTOMATED_FUEL_DISPENSERS -> Amount.of(
-          common.getRequestedAmount().getCurrency(), BigDecimal.valueOf(-100));
+  void setPaddedAmountAndHoldPeriod(@NonNull NetworkCommon common) {
+    switch (common.getMerchantType()) {
+      case AUTOMATED_FUEL_DISPENSERS -> {
+        common.setHoldExpiration(OffsetDateTime.now().plusHours(2));
+        common.setPaddedAmount(
+            Amount.of(common.getRequestedAmount().getCurrency(), BigDecimal.valueOf(-100)));
+      }
       case AIRLINES_AIR_CARRIERS,
           CAR_RENTAL_AGENCIES,
           CRUISE_LINES,
@@ -189,27 +215,33 @@ public class NetworkMessageService {
           DIRECT_MARKETING_TRAVEL,
           DIRECT_MARKETING_OUTBOUND_TELEMARKETING,
           DIRECT_MARKETING_INBOUND_TELEMARKETING,
-          DIRECT_MARKETING_SUBSCRIPTION -> common
-          .getRequestedAmount()
-          .mul(BigDecimal.valueOf(1.15));
+          DIRECT_MARKETING_SUBSCRIPTION -> {
+        common.setHoldExpiration(OffsetDateTime.now().plusWeeks(1));
+        common.setPaddedAmount(common.getRequestedAmount().mul(BigDecimal.valueOf(1.15)));
+      }
       case DRINKING_PLACES,
           HEALTH_AND_BEAUTY_SPAS,
           EATING_PLACES_RESTAURANTS,
           FAST_FOOD_RESTAURANTS,
-          TAXICABS_LIMOUSINES -> common.getRequestedAmount().mul(BigDecimal.valueOf(1.20));
-      default -> common.getRequestedAmount();
-    };
+          TAXICABS_LIMOUSINES -> {
+        common.setHoldExpiration(OffsetDateTime.now().plusDays(3));
+        common.setPaddedAmount(common.getRequestedAmount().mul(BigDecimal.valueOf(1.20)));
+      }
+      default -> {
+        common.setHoldExpiration(OffsetDateTime.now().plusDays(5));
+        common.setPaddedAmount(common.getRequestedAmount());
+      }
+    }
+    ;
   }
 
   private void processAuthorizationUpdated(NetworkCommon common) {
-    NetworkMessage networkMessage = getPriorAuthNetworkMessage(common.getExternalRef());
-    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
     // TODO(kuchlein): handle the case when the hold amount changes
   }
 
   private void processAuthorizationCreated(NetworkCommon common) {
-    NetworkMessage networkMessage = getPriorAuthNetworkMessage(common.getExternalRef());
-    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
   }
 
   private void processAuthorizationRequest(NetworkCommon common) {
@@ -263,16 +295,15 @@ public class NetworkMessageService {
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
 
-    NetworkMessage networkMessage =
-        getPriorAuthNetworkMessage(common.getStripeAuthorizationExternalRef());
-    common.setNetworkMessageGroupId(networkMessage.getNetworkMessageGroupId());
+    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
     Hold hold =
         common.getAccount().getHolds().stream()
-            .filter(e -> e.getId().equals(networkMessage.getHoldId()))
+            .filter(e -> e.getId().equals(common.earliestNetworkMessage.getHoldId()))
             .findFirst()
             .orElseThrow(
                 () ->
-                    new RecordNotFoundException(Table.NETWORK_MESSAGE, networkMessage.getHoldId()));
+                    new RecordNotFoundException(
+                        Table.NETWORK_MESSAGE, common.earliestNetworkMessage.getHoldId()));
     hold.setStatus(HoldStatus.RELEASED);
     common.getUpdatedHolds().add(hold);
     common.getAccount().recalculateAvailableBalance();
@@ -286,22 +317,25 @@ public class NetworkMessageService {
         .findByExternalRefAndTypeOrderByCreatedDesc(externalRef, NetworkMessageType.AUTH_REQUEST)
         .stream()
         .findFirst()
-        .orElseThrow(
-            () ->
-                new RecordNotFoundException(
-                    Table.NETWORK_MESSAGE, externalRef, NetworkMessageType.AUTH_REQUEST));
+        .orElse(null);
   }
 
-  private void storeMerchant(NetworkCommon common) {
+  private void storeMerchantAsync(NetworkCommon common) {
     // asynchronously store the merchant details so that they can be used to define limits
     new Thread(
             () -> {
               try {
-                networkMerchantRepository.save(
-                    new NetworkMerchant(
+                if (!networkMerchantRepository
+                    .existsByMerchantNameAndMerchantCategoryCodeAndMerchantType(
                         common.getMerchantName(),
                         common.getMerchantCategoryCode(),
-                        common.getMerchantType()));
+                        common.getMerchantType())) {
+                  networkMerchantRepository.save(
+                      new NetworkMerchant(
+                          common.getMerchantName(),
+                          common.getMerchantCategoryCode(),
+                          common.getMerchantType()));
+                }
               } catch (org.springframework.dao.DataIntegrityViolationException
                   | org.hibernate.exception.ConstraintViolationException e) {
                 log.warn(
