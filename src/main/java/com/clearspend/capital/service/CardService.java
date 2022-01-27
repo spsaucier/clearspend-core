@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
@@ -27,7 +28,6 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
-import com.clearspend.capital.service.type.CurrentUser;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -110,7 +110,7 @@ public class CardService {
             businessId,
             allocationId,
             userId,
-            CardStatus.ACTIVE,
+            cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
             CardStatusReason.NONE,
             binType,
             fundingType,
@@ -147,10 +147,8 @@ public class CardService {
 
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {
-          case PHYSICAL -> {
-            card.setStatus(card.getStatus().validTransition(CardStatus.INACTIVE));
-            yield stripeClient.createPhysicalCard(card, shippingAddress, user.getExternalRef());
-          }
+          case PHYSICAL -> stripeClient.createPhysicalCard(
+              card, shippingAddress, user.getExternalRef());
           case VIRTUAL -> {
             card.setActivated(true);
             card.setActivationDate(OffsetDateTime.now());
@@ -160,6 +158,8 @@ public class CardService {
 
     card.setExternalRef(stripeCard.getId());
     card.setLastFour(stripeCard.getLast4());
+
+    card = cardRepository.save(card);
 
     return new CardRecord(card, account);
   }
@@ -205,12 +205,13 @@ public class CardService {
   public Card activateCard(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
+      UserType userType,
       TypedId<CardId> cardId,
       String lastFour,
       CardStatusReason statusReason) {
 
     Card card =
-        (switch (CurrentUser.getUserType()) {
+        (switch (userType) {
               case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
               case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndIdAndLastFour(
                   businessId, userId, cardId, lastFour);
@@ -230,19 +231,20 @@ public class CardService {
     card.setActivated(true);
     card.setActivationDate(OffsetDateTime.now());
 
-    return updateCardStatus(businessId, userId, cardId, CardStatus.ACTIVE, statusReason);
+    return updateCardStatus(businessId, userId, userType, cardId, CardStatus.ACTIVE, statusReason);
   }
 
   @Transactional
   public Card updateCardStatus(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
+      UserType userType,
       TypedId<CardId> cardId,
       CardStatus cardStatus,
       CardStatusReason statusReason) {
 
     Card card =
-        (switch (CurrentUser.getUserType()) {
+        (switch (userType) {
               case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
               case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndId(
                   businessId, userId, cardId);

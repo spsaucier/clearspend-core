@@ -10,32 +10,25 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.activity.DashboardGraphData;
 import com.clearspend.capital.controller.type.activity.GraphDataRequest;
-import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.business.BusinessBankAccount;
-import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
-import com.clearspend.capital.service.AccountService;
-import com.clearspend.capital.service.AllocationService.AllocationRecord;
-import com.clearspend.capital.service.BusinessBankAccountService;
-import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.util.List;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -48,47 +41,13 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
-  private final BusinessBankAccountService businessBankAccountService;
-  private final BusinessService businessService;
-  private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
 
   @SneakyThrows
   @Test
-  @Disabled
   void getGraphData() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    BusinessBankAccount businessBankAccount =
-        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
-
-    businessBankAccountService.transactBankAccount(
-        business.getId(),
-        businessBankAccount.getId(),
-        BankAccountTransactType.DEPOSIT,
-        Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
-    Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
-    AllocationRecord allocation =
-        testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
-    accountService.reallocateFunds(
-        account.getId(),
-        allocation.account().getId(),
-        new Amount(Currency.USD, BigDecimal.valueOf(300)));
-    businessService.reallocateBusinessFunds(
-        business.getId(),
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        allocation.allocation().getId(),
-        new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
     CreateUpdateUserRecord user = testHelper.createUser(business);
     Card card =
@@ -98,77 +57,33 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            true);
 
-    NetworkCommon common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(10)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getHoldId()).isNotNull();
+    List<Integer> integers = List.of(10, 2, 8, 20, 9);
+    for (int amount : integers) {
+      NetworkCommonAuthorization networkCommonAuthorization =
+          TestDataController.generateAuthorizationNetworkCommon(
+              user.user(),
+              card,
+              createBusinessRecord.allocationRecord().account(),
+              Amount.of(Currency.USD, BigDecimal.valueOf(amount)));
+      NetworkCommon common = networkCommonAuthorization.networkCommon();
+      networkMessageService.processNetworkMessage(common);
+      assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+      assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+      assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+      assertThat(common.getNetworkMessage().getHoldId()).isNotNull();
 
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(10)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getHoldId()).isNotNull();
-
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(-2)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
-
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(-4)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
-
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(-8)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
-
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(-20)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
-
-    common =
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.TRANSACTION_CREATED,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, BigDecimal.valueOf(9)));
-    networkMessageService.processNetworkMessage(common);
-    assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
+      common =
+          TestDataController.generateCaptureNetworkCommon(
+              business, networkCommonAuthorization.authorization());
+      networkMessageService.processNetworkMessage(common);
+      assertThat(common.isPostAdjustment()).isTrue();
+      assertThat(common.isPostDecline()).isFalse();
+      assertThat(common.isPostHold()).isFalse();
+      assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
+    }
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();
     graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
@@ -191,7 +106,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
         objectMapper.readValue(response.getContentAsString(), DashboardGraphData.class);
     assertEquals(7, dashboardGraphData.getGraphData().size());
     assertEquals(
-        BigDecimal.valueOf(9 + 20 + 8 + 4 + 2 + 10 + 10, 0).negate(),
+        BigDecimal.valueOf(integers.stream().mapToInt(Integer::intValue).sum(), 0).negate(),
         dashboardGraphData.getTotalSpend().setScale(0, RoundingMode.DOWN));
     assertEquals(
         dashboardGraphData.getTotalSpend().divide(new BigDecimal(7), 2, RoundingMode.DOWN),

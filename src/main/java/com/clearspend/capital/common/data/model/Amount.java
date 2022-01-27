@@ -42,6 +42,11 @@ public class Amount {
         currency, amount.setScale(currency.getDecimalScale(), RoundingMode.UNNECESSARY));
   }
 
+  // convenience method so we're not having to do BigDecimal.value() everywhere
+  public static Amount of(Currency currency, long amount) {
+    return of(currency, BigDecimal.valueOf(amount));
+  }
+
   public static Amount of(Currency currency) {
     return new Amount(currency, BigDecimal.ZERO);
   }

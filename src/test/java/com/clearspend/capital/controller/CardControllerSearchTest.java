@@ -78,7 +78,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               userA.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
       rootCardB =
           testHelper.issueCard(
               business,
@@ -86,7 +87,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               userB.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
       childCardA =
           testHelper.issueCard(
               business,
@@ -94,7 +96,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               userA.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
     }
   }
 

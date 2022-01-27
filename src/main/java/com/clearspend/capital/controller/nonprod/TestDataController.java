@@ -55,6 +55,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
 import com.stripe.model.issuing.Authorization;
+import com.stripe.model.issuing.Authorization.AmountDetails;
 import com.stripe.model.issuing.Authorization.MerchantData;
 import com.stripe.model.issuing.Authorization.PendingRequest;
 import com.stripe.model.issuing.Cardholder;
@@ -64,6 +65,7 @@ import com.stripe.model.issuing.Transaction;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,6 +75,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -104,8 +107,8 @@ public class TestDataController {
 
   private final AllocationService allocationService;
   private final BusinessBankAccountService businessBankAccountService;
-  private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
+  private final BusinessService businessService;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
@@ -243,12 +246,9 @@ public class TestDataController {
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.TEN);
     networkMessageService.processNetworkMessage(
-        generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            user.user(),
-            cardRecord.card(),
-            cardRecord.account(),
-            amount));
+        generateAuthorizationNetworkCommon(
+                user.user(), cardRecord.card(), cardRecord.account(), amount)
+            .networkCommon);
 
     cardRecord =
         cardService.issueCard(
@@ -276,12 +276,9 @@ public class TestDataController {
 
     amount = Amount.of(Currency.USD, BigDecimal.valueOf(26.27));
     networkMessageService.processNetworkMessage(
-        generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            user.user(),
-            cardRecord.card(),
-            cardRecord.account(),
-            amount));
+        generateAuthorizationNetworkCommon(
+                user.user(), cardRecord.card(), cardRecord.account(), amount)
+            .networkCommon);
 
     CreateUpdateUserRecord user2 = createUser(business);
     users.add(user2);
@@ -461,8 +458,15 @@ public class TestDataController {
             .collect(Collectors.toList()));
   }
 
-  public static NetworkCommon generateNetworkCommon(
-      NetworkMessageType networkMessageType, User user, Card card, Account account, Amount amount) {
+  private static String generateStripeId(String prefix) {
+    return prefix + RandomStringUtils.randomAlphanumeric(24);
+  }
+
+  public record NetworkCommonAuthorization(
+      NetworkCommon networkCommon, Authorization authorization) {}
+
+  public static NetworkCommonAuthorization generateAuthorizationNetworkCommon(
+      User user, Card card, Account account, Amount amount) {
     Faker faker = Faker.instance();
 
     Cardholder cardholder = new Cardholder();
@@ -507,46 +511,62 @@ public class TestDataController {
     merchantData.setName("Tuscon Bakery");
     merchantData.setNetworkId(faker.number().digits(10));
 
-    return switch (networkMessageType) {
-      case AUTH_REQUEST -> {
-        PendingRequest pendingRequest = new PendingRequest();
-        pendingRequest.setAmount(amount.toStripeAmount());
-        pendingRequest.setCurrency(amount.getCurrency().name());
-        pendingRequest.setIsAmountControllable(false);
-        pendingRequest.setMerchantAmount(amount.toStripeAmount());
-        pendingRequest.setMerchantCurrency(amount.getCurrency().name());
+    PendingRequest pendingRequest = new PendingRequest();
+    pendingRequest.setAmount(amount.toStripeAmount());
+    pendingRequest.setCurrency(amount.getCurrency().name());
+    pendingRequest.setIsAmountControllable(false);
+    pendingRequest.setMerchantAmount(amount.toStripeAmount());
+    pendingRequest.setMerchantCurrency(amount.getCurrency().name());
+    AmountDetails amountDetails = new AmountDetails();
+    amountDetails.setAtmFee(0L);
+    pendingRequest.setAmountDetails(amountDetails);
 
-        Authorization stripeAuthorization = new Authorization();
-        stripeAuthorization.setAmount(0L);
-        stripeAuthorization.setApproved(false);
-        stripeAuthorization.setAuthorizationMethod("online");
-        stripeAuthorization.setCard(stripeCard);
-        stripeAuthorization.setCardholder(cardholder.getId());
-        stripeAuthorization.setCreated(System.currentTimeMillis());
-        stripeAuthorization.setCurrency(amount.getCurrency().name());
-        stripeAuthorization.setId("stripe_" + UUID.randomUUID());
-        stripeAuthorization.setMerchantAmount(amount.toStripeAmount());
-        stripeAuthorization.setMerchantData(merchantData);
-        stripeAuthorization.setPendingRequest(pendingRequest);
-        stripeAuthorization.setStatus("pending");
+    Authorization stripeAuthorization = new Authorization();
+    stripeAuthorization.setAmount(0L);
+    stripeAuthorization.setApproved(false);
+    stripeAuthorization.setAuthorizationMethod("online");
+    stripeAuthorization.setCard(stripeCard);
+    stripeAuthorization.setCardholder(cardholder.getId());
+    stripeAuthorization.setCreated(System.currentTimeMillis());
+    stripeAuthorization.setCurrency(amount.getCurrency().name());
+    stripeAuthorization.setId("stripe_" + UUID.randomUUID());
+    stripeAuthorization.setMerchantAmount(amount.toStripeAmount());
+    stripeAuthorization.setMerchantData(merchantData);
+    stripeAuthorization.setPendingRequest(pendingRequest);
+    stripeAuthorization.setStatus("pending");
 
-        yield new NetworkCommon(
-            NetworkMessageType.AUTH_REQUEST, stripeAuthorization, new StripeWebhookLog());
-      }
-      case TRANSACTION_CREATED -> {
-        Transaction stripeTransaction = new Transaction();
-        stripeTransaction.setAmount(amount.toStripeAmount());
-        stripeTransaction.setCard(stripeCard.getId());
-        stripeTransaction.setCardholder(cardholder.getId());
-        stripeTransaction.setCreated(System.currentTimeMillis());
-        stripeTransaction.setCurrency(amount.getCurrency().name());
-        stripeTransaction.setId("stripe_" + UUID.randomUUID());
-        stripeTransaction.setMerchantAmount(amount.toStripeAmount());
-        stripeTransaction.setMerchantData(merchantData);
+    return new NetworkCommonAuthorization(
+        new NetworkCommon(
+            NetworkMessageType.AUTH_REQUEST, stripeAuthorization, new StripeWebhookLog()),
+        stripeAuthorization);
+  }
 
-        yield new NetworkCommon(stripeTransaction, new StripeWebhookLog());
-      }
-      default -> throw new IllegalStateException("Unexpected value: " + networkMessageType);
-    };
+  public static NetworkCommon generateCaptureNetworkCommon(
+      Business business, Authorization authorization) {
+
+    Transaction transaction = new Transaction();
+    transaction.setId(generateStripeId("ipi_"));
+    transaction.setLivemode(false);
+    transaction.setAmount(-authorization.getPendingRequest().getAmount());
+    Transaction.AmountDetails amountDetails = new Transaction.AmountDetails();
+    amountDetails.setAtmFee(authorization.getPendingRequest().getAmountDetails().getAtmFee());
+    transaction.setAmountDetails(amountDetails);
+    transaction.setAuthorization(authorization.getId());
+    transaction.setBalanceTransaction(generateStripeId("txn_"));
+    transaction.setCard(authorization.getCard().getId());
+    transaction.setCardholder(authorization.getCard().getCardholder().getId());
+    transaction.setCreated(OffsetDateTime.now().toEpochSecond());
+    transaction.setCurrency(business.getCurrency().toStripeCurrency());
+    transaction.setDispute(null);
+    transaction.setMerchantAmount(-authorization.getPendingRequest().getAmount());
+    transaction.setMerchantCurrency(business.getCurrency().toStripeCurrency());
+    transaction.setMerchantData(authorization.getMerchantData());
+    transaction.setMetadata(new HashMap<>());
+    transaction.setObject("issuing.transaction");
+    //    PurchaseDetails purchaseDetails;
+    transaction.setType("capture");
+    transaction.setWallet(null);
+
+    return new NetworkCommon(transaction, new StripeWebhookLog());
   }
 }

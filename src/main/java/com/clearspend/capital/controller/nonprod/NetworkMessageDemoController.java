@@ -1,13 +1,16 @@
 package com.clearspend.capital.controller.nonprod;
 
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class NetworkMessageDemoController {
 
   private final AccountRepository accountRepository;
+  private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
 
@@ -45,10 +49,20 @@ public class NetworkMessageDemoController {
     Card card = cardRepository.findById(request.getCardId()).orElseThrow();
     Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
     User user = userRepository.findById(card.getUserId()).orElseThrow();
+    Business business = businessRepository.findById(card.getBusinessId()).orElseThrow();
 
     NetworkCommon common =
-        TestDataController.generateNetworkCommon(
-            request.getNetworkMessageType(), user, card, account, request.getAmount().toAmount());
+        switch (request.getNetworkMessageType()) {
+          case AUTH_REQUEST -> TestDataController.generateAuthorizationNetworkCommon(
+                  user, card, account, request.getAmount().toAmount())
+              .networkCommon();
+            // case TRANSACTION_CREATED -> {
+            //   yield TestDataController.generateCaptureNetworkCommon(
+            //       business, user, account, request.getAmount().toAmount());
+            // }
+          default -> throw new InvalidRequestException(
+              request.getNetworkMessageType().name() + " not supported");
+        };
     networkMessageService.processNetworkMessage(common);
 
     log.info("networkMessage " + common.getNetworkMessage());

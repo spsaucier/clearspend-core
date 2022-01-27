@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -8,6 +9,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.activity.AccountActivityRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Card;
@@ -16,9 +18,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.NetworkMessageService;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,13 +38,14 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+
   private final NetworkMessageService networkMessageService;
 
   @SneakyThrows
   @Test
   void exportCsv() {
 
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
 
     User user = createBusinessRecord.user();
@@ -55,15 +56,19 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
             user,
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            true);
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(100))));
+            Amount.of(Currency.USD, 100));
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));

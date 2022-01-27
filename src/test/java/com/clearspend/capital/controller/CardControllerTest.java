@@ -77,7 +77,8 @@ public class CardControllerTest extends BaseCapitalTest {
               entityManager.getReference(User.class, userId),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
     }
   }
 
@@ -163,7 +164,8 @@ public class CardControllerTest extends BaseCapitalTest {
             testHelper.createUser(business).user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            false);
 
     // when
     UpdateCardRequest updateCardRequest = new UpdateCardRequest();

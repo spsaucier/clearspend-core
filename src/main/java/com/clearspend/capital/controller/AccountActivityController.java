@@ -110,7 +110,8 @@ public class AccountActivityController {
                         new GraphData(
                             graphData.getStartDate(),
                             graphData.getEndDate(),
-                            graphData.getAmount()))
+                            graphData.getAmount(),
+                            graphData.getCount()))
                 .collect(Collectors.toList())
             : Collections.emptyList();
 

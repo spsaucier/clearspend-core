@@ -55,7 +55,8 @@ class CardServiceTest extends BaseCapitalTest {
             userRecord.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            false);
     Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
@@ -70,7 +71,8 @@ class CardServiceTest extends BaseCapitalTest {
         userRecord.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     log.info("allCards: {}", cardRepository.findAll());
     log.info("businessId: {}, userId: {}", business.getId(), userRecord.user().getId());
     List<CardDetailsRecord> userCardRecords =

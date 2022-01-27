@@ -229,6 +229,7 @@ public class UserController {
         cardService.updateCardStatus(
             currentUser.businessId(),
             currentUser.userId(),
+            currentUser.userType(),
             cardId,
             CardStatus.INACTIVE,
             request.getStatusReason()));
@@ -250,6 +251,7 @@ public class UserController {
         cardService.activateCard(
             currentUser.businessId(),
             currentUser.userId(),
+            currentUser.userType(),
             cardId,
             request.getLastFour(),
             request.getStatusReason()));
@@ -271,6 +273,7 @@ public class UserController {
         cardService.updateCardStatus(
             currentUser.businessId(),
             currentUser.userId(),
+            currentUser.userType(),
             cardId,
             CardStatus.ACTIVE,
             request.getStatusReason()));
@@ -292,6 +295,7 @@ public class UserController {
         cardService.updateCardStatus(
             currentUser.businessId(),
             currentUser.userId(),
+            currentUser.userType(),
             cardId,
             CardStatus.CANCELLED,
             request.getStatusReason()));

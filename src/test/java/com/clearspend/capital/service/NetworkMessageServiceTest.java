@@ -53,7 +53,8 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
               user,
               business.getCurrency(),
               FundingType.POOLED,
-              CardType.VIRTUAL);
+              CardType.VIRTUAL,
+              false);
     }
   }
 

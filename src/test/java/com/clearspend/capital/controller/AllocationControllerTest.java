@@ -176,7 +176,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             testHelper.createUser(business).user(),
             amount.getCurrency(),
             FundingType.INDIVIDUAL,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            false);
     Account businessAccount = allocationService.getRootAllocation(business.getId()).account();
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(

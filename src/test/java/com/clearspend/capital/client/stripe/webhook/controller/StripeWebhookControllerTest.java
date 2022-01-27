@@ -172,7 +172,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             user,
             business.getCurrency(),
             FundingType.POOLED,
-            CardType.VIRTUAL);
+            CardType.VIRTUAL,
+            false);
     allocationService.reallocateAllocationFunds(
         business,
         rootAllocation.getId(),
@@ -437,9 +438,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new ParseRecord(
                 new StripeWebhookLog(), transaction, StripeEventType.ISSUING_TRANSACTION_CREATED),
             true);
-
-    log.debug("adjustment: {}", networkCommon.getAdjustmentRecord().adjustment());
-    log.debug("account: {}", networkCommon.getAccount());
 
     assertThat(networkCommon.isPostAdjustment()).isTrue();
     assertThat(networkCommon.isPostDecline()).isFalse();

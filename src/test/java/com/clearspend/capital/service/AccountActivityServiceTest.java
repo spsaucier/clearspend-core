@@ -10,6 +10,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Card;
@@ -20,7 +21,6 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;
@@ -151,17 +151,18 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            true);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(100));
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            user.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            amount));
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            user.user(), card, createBusinessRecord.allocationRecord().account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
     Page<AccountActivity> accountActivity =
         accountActivityRepository.find(

@@ -45,7 +45,8 @@ public class UserControllerExportCsvTest extends BaseCapitalTest {
         user,
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
 
     SearchUserRequest request = new SearchUserRequest();
 

@@ -9,28 +9,19 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.type.activity.ChartDataRequest;
 import com.clearspend.capital.controller.type.activity.ChartDataResponse;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
-import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.FundingType;
-import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
@@ -90,12 +81,18 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         allocation.account().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(4000)));
 
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 1);
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 3);
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 2);
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 1);
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 4);
-    createUserCardAndNetworkTransaction(createBusinessRecord, business, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 3);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 4);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.EMPLOYEE);
@@ -120,37 +117,12 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     log.info(response.getContentAsString());
   }
 
-  private void createUserCardAndNetworkTransaction(
-      CreateBusinessRecord createBusinessRecord, Business business, int transactions)
-      throws JsonProcessingException {
-    CreateUpdateUserRecord user = testHelper.createUser(business);
-    Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            user.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL);
-    SecureRandom random = new SecureRandom();
-    for (int i = 0; i < transactions; i++) {
-      networkMessageService.processNetworkMessage(
-          TestDataController.generateNetworkCommon(
-              NetworkMessageType.AUTH_REQUEST,
-              user.user(),
-              card,
-              createBusinessRecord.allocationRecord().account(),
-              Amount.of(Currency.USD, new BigDecimal(random.nextInt(99)).add(BigDecimal.ONE))));
-    }
-  }
-
   @SneakyThrows
   @Test
   void getChartDataFilterTypeAllocation() {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -172,13 +144,20 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             false);
 
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 4);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 5);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 4);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 5);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, account, 1);
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.ALLOCATION);
@@ -201,43 +180,6 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
     assertEquals(5, chartData.getAllocationChartData().size());
     log.info(response.getContentAsString());
-  }
-
-  private void createUserAllocationCardAndNetworkTransaction(
-      CreateBusinessRecord createBusinessRecord,
-      Business business,
-      Account account,
-      int transactions)
-      throws JsonProcessingException {
-    CreateUpdateUserRecord user = testHelper.createUser(business);
-    AllocationRecord allocation =
-        testHelper.createAllocation(
-            business.getId(),
-            testHelper.generateAccountName(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            user.user());
-    accountService.reallocateFunds(
-        account.getId(),
-        allocation.account().getId(),
-        new Amount(Currency.USD, BigDecimal.valueOf(1000)));
-    Card card =
-        testHelper.issueCard(
-            business,
-            allocation.allocation(),
-            user.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL);
-    SecureRandom random = new SecureRandom();
-    for (int i = 0; i < transactions; i++) {
-      networkMessageService.processNetworkMessage(
-          TestDataController.generateNetworkCommon(
-              NetworkMessageType.AUTH_REQUEST,
-              user.user(),
-              card,
-              allocation.account(),
-              Amount.of(Currency.USD, new BigDecimal(random.nextInt(99)).add(BigDecimal.ONE))));
-    }
   }
 
   @SneakyThrows
@@ -267,13 +209,20 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             false);
 
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 4);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 5);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 4);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 5);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.MERCHANT);
@@ -325,13 +274,20 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             false);
 
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 4);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 5);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 2);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
-    createUserAllocationCardAndNetworkTransaction(createBusinessRecord, business, account, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 4);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 5);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 2);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
+    testHelper.createUserAllocationCardAndNetworkTransaction(
+        createBusinessRecord, business, null, 1);
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.MERCHANT_CATEGORY);

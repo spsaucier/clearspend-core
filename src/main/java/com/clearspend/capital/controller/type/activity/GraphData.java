@@ -20,4 +20,8 @@ public class GraphData {
   @JsonProperty("amount")
   @NonNull
   private BigDecimal amount;
+
+  @JsonProperty("count")
+  @NonNull
+  private BigDecimal count;
 }

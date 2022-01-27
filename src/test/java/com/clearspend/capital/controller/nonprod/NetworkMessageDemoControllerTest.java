@@ -53,7 +53,8 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
               user.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
     }
   }
 
@@ -64,7 +65,8 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
         new NetworkMessageRequest(
             card.getId(),
             NetworkMessageType.AUTH_REQUEST,
-            new Amount(business.getCurrency(), BigDecimal.TEN));
+            new Amount(business.getCurrency(), BigDecimal.TEN),
+            null);
 
     String body = objectMapper.writeValueAsString(request);
 

@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -8,6 +9,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
@@ -15,7 +17,6 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
@@ -48,7 +49,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
 
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
 
     testHelper.createBusinessOwner(business.getId(), email, password);
@@ -61,23 +62,30 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             user,
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            true);
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(100))));
+            Amount.of(Currency.USD, new BigDecimal(100)));
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
+    networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(200))));
+            Amount.of(Currency.USD, new BigDecimal(200)));
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
     CardStatementRequest cardStatementRequest = new CardStatementRequest();
     cardStatementRequest.setCardId(card.getId());

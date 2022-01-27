@@ -325,30 +325,23 @@ public class NetworkMessageService {
     new Thread(
             () -> {
               try {
-                if (!networkMerchantRepository
-                    .existsByMerchantNameAndMerchantCategoryCodeAndMerchantType(
-                        common.getMerchantName(),
-                        common.getMerchantCategoryCode(),
-                        common.getMerchantType())) {
+                if (!networkMerchantRepository.existsByMerchantNameAndMerchantCategoryCode(
+                    common.getMerchantName(), common.getMerchantCategoryCode())) {
                   networkMerchantRepository.save(
                       new NetworkMerchant(
-                          common.getMerchantName(),
-                          common.getMerchantCategoryCode(),
-                          common.getMerchantType()));
+                          common.getMerchantName(), common.getMerchantCategoryCode()));
                 }
               } catch (org.springframework.dao.DataIntegrityViolationException
                   | org.hibernate.exception.ConstraintViolationException e) {
                 log.warn(
-                    "NetworkMerchant already present: {} {} {}",
+                    "NetworkMerchant already present: {} {}",
                     common.getMerchantName(),
-                    common.getMerchantCategoryCode(),
-                    common.getMerchantType());
+                    common.getMerchantCategoryCode());
               } catch (Exception e) {
                 log.error(
-                    "Unexpected failure to create NetworkMessage record ({} {} {})",
+                    "Unexpected failure to create NetworkMerchant record ({} {})",
                     common.getMerchantName(),
                     common.getMerchantCategoryCode(),
-                    common.getMerchantType(),
                     e);
               }
             })

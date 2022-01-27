@@ -12,6 +12,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
@@ -167,10 +168,11 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                           "select custom_time_series.startdate, "
                               + " custom_time_series.enddate,  "
                               + " (select coalesce(sum(account_activity.amount_amount), 0) "
-                              + "          from account_activity "
-                              + "          where account_activity.business_id = ? "
-                              + "          and account_activity.activity_time >= custom_time_series.startdate "
-                              + "          and account_activity.activity_time < custom_time_series.enddate ");
+                              + "  from account_activity "
+                              + "  where account_activity.business_id = ? "
+                              + "    and account_activity.type = ? "
+                              + "    and account_activity.activity_time >= custom_time_series.startdate "
+                              + "    and account_activity.activity_time < custom_time_series.enddate ");
                   BeanUtils.setNotNull(
                       criteria.getUserId(),
                       userId -> stringBuilder.append(" and account_activity.user_id = ? "));
@@ -181,10 +183,11 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                   stringBuilder.append(
                       " and account_activity.card_card_id is not null ),"
                           + " (select coalesce(count(*), 0) "
-                          + "          from account_activity "
-                          + "          where account_activity.business_id = ? "
-                          + "          and account_activity.activity_time >= custom_time_series.startdate "
-                          + "          and account_activity.activity_time < custom_time_series.enddate  ");
+                          + "  from account_activity "
+                          + "  where account_activity.business_id = ? "
+                          + "    and account_activity.type = ? "
+                          + "    and account_activity.activity_time >= custom_time_series.startdate "
+                          + "    and account_activity.activity_time < custom_time_series.enddate  ");
                   BeanUtils.setNotNull(
                       criteria.getUserId(),
                       userId -> stringBuilder.append(" and account_activity.user_id = ? "));
@@ -205,6 +208,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                   int parameterIndex = 0;
                   for (int i = 0; i < 2; i++) {
                     preparedStatement.setObject(++parameterIndex, businessId.toUuid());
+                    preparedStatement.setObject(
+                        ++parameterIndex, AccountActivityType.NETWORK_CAPTURE.name());
                     if (criteria.getUserId() != null) {
                       preparedStatement.setObject(++parameterIndex, criteria.getUserId().toUuid());
                     }
@@ -281,19 +286,21 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     CriteriaBuilder<Tuple> query =
         criteriaBuilderFactory
             .create(entityManager, Tuple.class)
-            .from(AccountActivity.class, "accountActivity");
+            .from(AccountActivity.class, "accountActivity")
+            .where("accountActivity.businessId")
+            .eqLiteral(businessId)
+            .where("accountActivity.type") // only include posted card transactions
+            .eqLiteral(AccountActivityType.NETWORK_CAPTURE)
+            .where("accountActivity.activityTime")
+            .ge(criteria.getFrom())
+            .where("accountActivity.activityTime")
+            .lt(criteria.getTo());
 
-    query.where("accountActivity.businessId").eqLiteral(businessId);
     BeanUtils.setNotNull(
         criteria.getUserId(), userId -> query.where("accountActivity.userId").eqLiteral(userId));
     BeanUtils.setNotNull(
         criteria.getAllocationId(),
         allocationId -> query.where("accountActivity.allocationId").eqLiteral(allocationId));
-
-    query.where("accountActivity.activityTime").between(criteria.getFrom()).and(criteria.getTo());
-
-    // This will take into consideration only card transaction => spend
-    query.where("accountActivity.card.cardId").isNotNull();
 
     switch (criteria.getChartFilterType()) {
       case ALLOCATION -> query
@@ -323,7 +330,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           .groupBy("accountActivity.merchant.type");
     }
 
-    query.select("COALESCE(SUM(accountActivity.amount.amount), 0)", "s");
+    query.select("coalesce(sum(accountActivity.amount.amount), 0)", "s");
     query.select("accountActivity.amount.currency");
     query.orderByDesc("s");
 

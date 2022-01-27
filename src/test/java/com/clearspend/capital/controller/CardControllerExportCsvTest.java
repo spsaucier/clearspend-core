@@ -46,7 +46,8 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
         user,
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
 
     PageRequest pageRequest = new PageRequest();
     pageRequest.setPageSize(1);

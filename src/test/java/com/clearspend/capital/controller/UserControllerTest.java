@@ -12,6 +12,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
@@ -35,7 +36,6 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
@@ -100,7 +100,8 @@ public class UserControllerTest extends BaseCapitalTest {
               user.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL);
+              CardType.PHYSICAL,
+              false);
       card2 =
           testHelper.issueCard(
               business,
@@ -108,7 +109,8 @@ public class UserControllerTest extends BaseCapitalTest {
               user.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.VIRTUAL);
+              CardType.VIRTUAL,
+              false);
     }
   }
 
@@ -431,7 +433,8 @@ public class UserControllerTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.VIRTUAL);
+            CardType.VIRTUAL,
+            false);
 
     // when
     com.clearspend.capital.controller.type.card.Card blockedCard =
@@ -458,7 +461,8 @@ public class UserControllerTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.VIRTUAL);
+            CardType.VIRTUAL,
+            false);
 
     card.setStatus(CardStatus.INACTIVE);
     cardRepository.saveAndFlush(card);
@@ -488,7 +492,8 @@ public class UserControllerTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.VIRTUAL);
+            CardType.VIRTUAL,
+            false);
 
     // when
     com.clearspend.capital.controller.type.card.Card blockedCard =
@@ -515,7 +520,8 @@ public class UserControllerTest extends BaseCapitalTest {
             user.user(),
             Currency.USD,
             FundingType.POOLED,
-            CardType.PHYSICAL);
+            CardType.PHYSICAL,
+            false);
 
     // when
     com.clearspend.capital.controller.type.card.Card blockedCard =
@@ -535,7 +541,7 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getCardAccountActivity() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
 
     CreateUpdateUserRecord userRecord =
         userService.createUser(
@@ -567,13 +573,13 @@ public class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
-    networkMessageService.processNetworkMessage(
-        TestDataController.generateNetworkCommon(
-            NetworkMessageType.AUTH_REQUEST,
-            userRecord.user(),
-            cardRecord.card(),
-            cardRecord.account(),
-            amount));
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -690,21 +696,24 @@ public class UserControllerTest extends BaseCapitalTest {
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation.allocation(),
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation.allocation(),
         user1.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setPageRequest(new PageRequest(0, 10));
@@ -786,21 +795,24 @@ public class UserControllerTest extends BaseCapitalTest {
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation2.allocation(),
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation3.allocation(),
         user1.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setAllocations(List.of(allocation3.allocation().getId()));
@@ -883,21 +895,24 @@ public class UserControllerTest extends BaseCapitalTest {
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation2.allocation(),
         user.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
     testHelper.issueCard(
         business,
         allocation3.allocation(),
         user1.user(),
         Currency.USD,
         FundingType.POOLED,
-        CardType.PHYSICAL);
+        CardType.PHYSICAL,
+        false);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
     searchUserRequest.setHasPhysicalCard(true);

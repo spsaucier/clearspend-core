@@ -1,0 +1,1 @@
+alter table network_merchant drop column merchant_type;

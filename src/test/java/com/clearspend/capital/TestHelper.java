@@ -17,6 +17,8 @@ import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.business.BusinessBankAccountController.LinkTokenResponse;
+import com.clearspend.capital.controller.nonprod.TestDataController;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationResponse;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
@@ -50,6 +52,7 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
@@ -60,6 +63,7 @@ import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -71,8 +75,10 @@ import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.type.NetworkCommon;
 import com.clearspend.capital.util.PhoneUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -160,6 +166,7 @@ public class TestHelper {
   private final TransactionLimitRepository transactionLimitRepository;
   private final UserRepository userRepository;
 
+  private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessBankAccountService businessBankAccountService;
   private final BusinessOwnerService businessOwnerService;
@@ -167,7 +174,9 @@ public class TestHelper {
   private final BusinessService businessService;
   private final CardService cardService;
   private final FusionAuthService fusionAuthService;
+  private final NetworkMessageService networkMessageService;
   private final UserService userService;
+
   private final PlaidClient plaidClient;
   private final EntityManager entityManager;
 
@@ -194,7 +203,7 @@ public class TestHelper {
   public void init() {
     TypedId<BusinessId> businessId = businessIds.get(0);
     if (businessRepository.findById(businessId).isEmpty()) {
-      createBusiness(businessId);
+      createBusiness(businessId, null);
     } else {
       log.debug("Default businessID {} already exists, not creating.", businessId);
     }
@@ -624,11 +633,19 @@ public class TestHelper {
       Cookie authCookie) {}
 
   public CreateBusinessRecord createBusiness() {
-    return createBusiness(getNextBusinessId());
+    return createBusiness(getNextBusinessId(), 0L);
+  }
+
+  public CreateBusinessRecord createBusiness(Long openingBalance) {
+    return createBusiness(getNextBusinessId(), openingBalance);
+  }
+
+  public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId) {
+    return createBusiness(businessId, 0L);
   }
 
   @SneakyThrows
-  public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId) {
+  public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId, Long openingBalance) {
     String email = generateEmail();
     String password = generatePassword();
     String legalName = faker.company().name() + " " + UUID.randomUUID(); // more unique names
@@ -652,6 +669,15 @@ public class TestHelper {
     log.debug("Created business {} with owner and root allocation.", businessId);
 
     CurrentUserSwitcher.setCurrentUser(businessOwner.user());
+
+    if (openingBalance != null && openingBalance != 0L) {
+      accountService.depositFunds(
+          business.getId(),
+          rootAllocation.account(),
+          Amount.of(Currency.USD, new BigDecimal("1000")),
+          false);
+    }
+
     return new CreateBusinessRecord(
         business,
         businessOwner.businessOwner(),
@@ -690,23 +716,37 @@ public class TestHelper {
       User user,
       Currency currency,
       FundingType fundingType,
-      CardType cardType) {
-    return cardService
-        .issueCard(
-            BinType.DEBIT,
-            fundingType,
-            cardType,
-            business.getId(),
-            allocation.getId(),
-            user.getId(),
-            currency,
-            true,
-            business.getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptyList(),
-            Collections.emptySet(),
-            business.getClearAddress().toAddress())
-        .card();
+      CardType cardType,
+      boolean activateCard) {
+    Card card =
+        cardService
+            .issueCard(
+                BinType.DEBIT,
+                fundingType,
+                cardType,
+                business.getId(),
+                allocation.getId(),
+                user.getId(),
+                currency,
+                true,
+                business.getLegalName(),
+                Map.of(Currency.USD, new HashMap<>()),
+                Collections.emptyList(),
+                Collections.emptySet(),
+                business.getClearAddress().toAddress())
+            .card();
+    if (activateCard) {
+      card =
+          cardService.activateCard(
+              card.getBusinessId(),
+              card.getUserId(),
+              UserType.EMPLOYEE,
+              card.getId(),
+              card.getLastFour(),
+              CardStatusReason.NONE);
+    }
+
+    return card;
   }
 
   public Address generateEntityAddress() {
@@ -788,6 +828,59 @@ public class TestHelper {
     verificationData.setExpiryCheck("match");
     authorization.setWallet(null);
     return authorization;
+  }
+
+  public void createUserAllocationCardAndNetworkTransaction(
+      CreateBusinessRecord createBusinessRecord,
+      Business business,
+      Account sourceAccount,
+      int transactions) {
+    Allocation allocation = createBusinessRecord.allocationRecord.allocation();
+    Account account = createBusinessRecord.allocationRecord.account();
+    CreateUpdateUserRecord user = createUser(business);
+    int maxAmount = 99;
+    if (sourceAccount != null) {
+      AllocationRecord allocationRecord =
+          createAllocation(
+              business.getId(),
+              generateAccountName(),
+              createBusinessRecord.allocationRecord().allocation().getId(),
+              user.user());
+      accountService.reallocateFunds(
+          sourceAccount.getId(),
+          allocationRecord.account().getId(),
+          new Amount(Currency.USD, BigDecimal.valueOf((long) maxAmount * transactions)));
+      allocation = allocationRecord.allocation();
+      account = allocationRecord.account();
+    }
+    Card card =
+        issueCard(
+            business,
+            allocation,
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    SecureRandom random = new SecureRandom();
+    for (int i = 0; i < transactions; i++) {
+      Amount amount =
+          Amount.of(Currency.USD, new BigDecimal(random.nextInt(maxAmount)).add(BigDecimal.ONE));
+      NetworkCommonAuthorization networkCommonAuthorization =
+          TestDataController.generateAuthorizationNetworkCommon(user.user(), card, account, amount);
+      networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+      assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+      assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+      assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+
+      NetworkCommon common =
+          TestDataController.generateCaptureNetworkCommon(
+              business, networkCommonAuthorization.authorization());
+      networkMessageService.processNetworkMessage(common);
+      assertThat(common.isPostAdjustment()).isTrue();
+      assertThat(common.isPostDecline()).isFalse();
+      assertThat(common.isPostHold()).isFalse();
+    }
   }
 
   private com.stripe.model.issuing.Card getStripeCard(Business business, User user, Card card) {
