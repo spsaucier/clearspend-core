@@ -12,6 +12,7 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
+import com.stripe.net.ApiResource;
 import com.stripe.net.Webhook;
 import java.io.IOException;
 import java.time.Duration;
@@ -149,7 +150,12 @@ public class StripeWebhookController {
       payload = IOUtils.toString(request.getReader());
       stripeWebhookLog.setRequest(payload);
       log.info("{} payload: {}", requestType, payload.replaceAll("\n *", " "));
-      event = Webhook.constructEvent(payload, sigHeader, secret);
+      if (stripeProperties.isAllowSkipStripeHeaderValidation()
+          && "true".equals(request.getHeader("skip-stripe-header-verification"))) {
+        event = ApiResource.GSON.fromJson(payload, Event.class);
+      } else {
+        event = Webhook.constructEvent(payload, sigHeader, secret);
+      }
       stripeWebhookLog.setStripeEventRef(event.getId());
       stripeWebhookLog.setEventType(event.getType());
     } catch (IOException e) {

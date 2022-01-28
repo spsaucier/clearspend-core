@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class StripeProperties {
 
   private String apiKey;
+  private boolean allowSkipStripeHeaderValidation;
   private String directSecret;
   private String connectSecret;
 

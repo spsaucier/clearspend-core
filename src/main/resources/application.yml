@@ -96,6 +96,7 @@ client:
     connect-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
     direct-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
+    allow-skip-stripe-header-validation: true
     enable-telemetry: false
     connect-timeout: 30000
     read-timeout: 30000
