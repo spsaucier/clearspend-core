@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import lombok.NonNull;
@@ -225,18 +226,30 @@ public class UserService {
                 User user = record.user();
                 String employee = user.getFirstName() + " " + user.getLastName();
                 String emailAddress = user.getEmail().getEncrypted();
-                record
-                    .card()
-                    .forEach(
-                        card -> {
-                          String cardInfo =
-                              "**** " + card.card().getLastFour() + " " + card.allocationName();
-                          try {
-                            csvPrinter.printRecord(Arrays.asList(employee, cardInfo, emailAddress));
-                          } catch (IOException e) {
-                            throw new RuntimeException(e.getMessage());
-                          }
-                        });
+                StringJoiner cardsList = new StringJoiner(";");
+
+                if (record.card() != null) {
+                  record
+                      .card()
+                      .forEach(
+                          card -> {
+                            cardsList.add(
+                                "**** "
+                                    + card.card().getLastFour()
+                                    + " "
+                                    + card.allocationName()
+                                    + " ");
+                          });
+                } else {
+                  cardsList.add("No cards");
+                }
+
+                try {
+                  csvPrinter.printRecord(
+                      Arrays.asList(employee, cardsList.toString(), emailAddress));
+                } catch (IOException e) {
+                  throw new RuntimeException(e.getMessage());
+                }
               });
       csvPrinter.flush();
     } catch (IOException e) {

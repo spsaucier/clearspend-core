@@ -71,7 +71,7 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
-    accountActivityRequest.setPageRequest(new PageRequest(0, 10));
+    accountActivityRequest.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
     accountActivityRequest.setAllocationId(
         createBusinessRecord.allocationRecord().allocation().getId());
     accountActivityRequest.setFrom(OffsetDateTime.now().minusDays(1));

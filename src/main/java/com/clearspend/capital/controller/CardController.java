@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
+import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -139,6 +140,10 @@ public class CardController {
   @PostMapping("/export-csv")
   private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request)
       throws IOException {
+
+    // export must return all records, regardless if pagination is set in "view records" mode
+    request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
+
     byte[] csvFile =
         cardService.createCSVFile(new CardFilterCriteria(CurrentUser.get().businessId(), request));
     HttpHeaders headers = new HttpHeaders();

@@ -49,10 +49,7 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
         CardType.PHYSICAL,
         false);
 
-    PageRequest pageRequest = new PageRequest();
-    pageRequest.setPageSize(1);
-    pageRequest.setPageNumber(0);
-    SearchCardRequest request = new SearchCardRequest(pageRequest);
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, Integer.MAX_VALUE));
 
     request.setSearchText(user.getLastName().getEncrypted());
     request.setUserId(user.getId());

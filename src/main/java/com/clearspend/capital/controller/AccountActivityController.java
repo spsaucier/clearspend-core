@@ -130,6 +130,10 @@ public class AccountActivityController {
   @PostMapping("/export-csv")
   private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request)
       throws IOException {
+
+    // export must return all records, regardless if pagination is set in "view records" mode
+    request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
+
     byte[] csvFile =
         accountActivityService.createCSVFile(
             new AccountActivityFilterCriteria(

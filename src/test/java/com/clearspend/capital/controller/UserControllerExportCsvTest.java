@@ -84,4 +84,56 @@ public class UserControllerExportCsvTest extends BaseCapitalTest {
     Assertions.assertTrue(foundHeader);
     Assertions.assertTrue(foundLine);
   }
+
+  @SneakyThrows
+  @Test
+  void exportCsvNoCards() {
+
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    createBusinessRecord.business();
+    User user = createBusinessRecord.user();
+
+    SearchUserRequest request = new SearchUserRequest();
+
+    request.setSearchText(user.getLastName().getEncrypted());
+
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/users/export-csv")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    String csvResult = response.getContentAsString();
+
+    boolean foundHeader = false;
+    boolean foundLine = false;
+
+    for (String line : csvResult.split("\n")) {
+
+      line = line.trim();
+      if (StringUtils.isEmpty(line)) {
+        continue;
+      }
+      if (line.equals("Employee,Card Info,Email Address")) {
+        foundHeader = true;
+      } else if (line.contains(
+          user.getFirstName()
+              + " "
+              + user.getLastName()
+              + ","
+              + "No cards"
+              + ","
+              + user.getEmail())) {
+        foundLine = true;
+      }
+    }
+    Assertions.assertTrue(foundHeader);
+    Assertions.assertTrue(foundLine);
+  }
 }

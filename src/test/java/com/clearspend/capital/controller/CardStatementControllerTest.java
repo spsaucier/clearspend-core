@@ -22,7 +22,6 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.regex.Pattern;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -70,7 +69,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(100)));
+            Amount.of(Currency.USD, new BigDecimal(900)));
     networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
@@ -81,8 +80,9 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(200)));
+            Amount.of(Currency.USD, new BigDecimal(9)));
     networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -107,27 +107,38 @@ public class CardStatementControllerTest extends BaseCapitalTest {
     /*
       Parse PDF back into text, and try to find several pieces which we know should be there
       Expected string should look like below:
-      Total: 300.00
-      Lowe LLC f014af24-bf28-4661-9a91-f51425b4853c
-      01/17/2022 - 01/19/2022
-      Date Description Amount
-      01/18/2022Tuscon Bakery100.00
-      01/18/2022Tuscon Bakery200.00
+
+       Monthly Statement
+       Total amount spent this period:VISA Statement 01/30/2022 - 02/01/2022
+       $909.00
+       Cardholder: Armand O'Conner
+       Card number: **** 4489
+       Allocation: Brekke, Franecki and Turner 32b546ee-c7a7-4823-ac3d-
+       79dca14502e9 - root
+       Available to spend as of 02/01/2022:
+       $91.00
+       Thank you for using ClearSpend. For details and upcoming payments,
+       log into your ClearSpend account
+       Transactions
+       DATE Merchant AMOUNT
+       01/31/2022 Tuscon Bakery$900.00
+       01/31/2022 Tuscon Bakery$9.00
+       $909.00
+
     */
 
     PdfTextExtractor pdfTextExtractor =
         new PdfTextExtractor(new PdfReader(response.getContentAsByteArray()));
 
     String pdfParsed = pdfTextExtractor.getTextFromPage(1);
-    boolean foundTotal = false;
+    boolean foundAvailableToSpend = false;
     boolean foundHeader = false;
     boolean foundLine1 = false;
     boolean foundLine2 = false;
+    boolean foundCardholder = false;
+    boolean foundCardNumber = false;
 
-    Pattern patternTotal = Pattern.compile("Total:\\s300\\.00");
-    Pattern patternHeader = Pattern.compile("DATE\\sDESCRIPTION\\sAMOUNT");
-    Pattern patternLine1 = Pattern.compile("^.*100\\.00$");
-    Pattern patternLine2 = Pattern.compile("^.*200\\.00$");
+    String lastWord = null;
 
     for (String line : pdfParsed.split("\n")) {
 
@@ -136,17 +147,28 @@ public class CardStatementControllerTest extends BaseCapitalTest {
         continue;
       }
 
-      if (patternTotal.matcher(line).matches()) {
-        foundTotal = true;
-      } else if (patternHeader.matcher(line).matches()) {
+      if (line.contains("DATE Merchant AMOUNT")) {
         foundHeader = true;
-      } else if (patternLine1.matcher(line).matches()) {
+      } else if (line.contains("$900.00")) {
         foundLine1 = true;
-      } else if (patternLine2.matcher(line).matches()) {
+      } else if (line.contains("$9.00")) {
         foundLine2 = true;
+      } else if (line.contains("$91.00")) {
+        foundAvailableToSpend = true;
+      } else if (line.contains(user.getFirstName() + " " + user.getLastName())) {
+        foundCardholder = true;
+      } else if (line.contains("**** " + card.getLastFour())) {
+        foundCardNumber = true;
       }
+      lastWord = line;
     }
 
-    Assertions.assertTrue((foundTotal && foundHeader && foundLine1 && foundLine2));
+    Assertions.assertTrue(foundHeader);
+    Assertions.assertTrue(foundLine1);
+    Assertions.assertTrue(foundLine2);
+    Assertions.assertTrue(foundAvailableToSpend);
+    Assertions.assertTrue(foundCardholder);
+    Assertions.assertTrue(foundCardNumber);
+    Assertions.assertEquals("$909.00", lastWord);
   }
 }

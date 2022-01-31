@@ -445,6 +445,10 @@ public class UserController {
   private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchUserRequest request)
       throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+
+    // export must return all records, regardless if pagination is set in "view records" mode
+    request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
+
     byte[] csvFile = userService.createCSVFile(businessId, new UserFilterCriteria(request));
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=employees.csv");
