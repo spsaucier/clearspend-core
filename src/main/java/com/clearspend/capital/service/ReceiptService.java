@@ -86,7 +86,7 @@ public class ReceiptService {
     }
 
     AccountActivity accountActivity =
-        accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
+        accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
     ReceiptDetails receiptDetails =
         accountActivity.getReceipt() != null ? accountActivity.getReceipt() : new ReceiptDetails();
     receiptDetails.getReceiptIds().add(receipt.getId());
@@ -117,7 +117,7 @@ public class ReceiptService {
     }
 
     AccountActivity accountActivity =
-        accountActivityService.getUserAccountActivity(businessId, userId, accountActivityId);
+        accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
     accountActivity.getReceipt().getReceiptIds().remove(receiptId);
     accountActivityRepository.save(accountActivity);
 

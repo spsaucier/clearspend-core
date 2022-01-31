@@ -397,35 +397,83 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void processCompletion_exactAmount() {
+  void processCompletion_underAuthAmount() {
     BigDecimal openingBalance = BigDecimal.TEN;
-    BigDecimal closingBalance = BigDecimal.ZERO;
     UserRecord userRecord = createUser(openingBalance);
     Allocation allocation = userRecord.allocation;
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    long amount = 1000L;
-    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, amount);
+    long authAmount = 1000L;
+    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
 
+    long captureAmount = 900L;
+    BigDecimal closingBalance = BigDecimal.ONE;
+    capture(authorize, allocation, user, card, captureAmount, closingBalance);
+  }
+
+  @SneakyThrows
+  @Test
+  void processCompletion_exactAuthAmount() {
+    BigDecimal openingBalance = BigDecimal.TEN;
+    UserRecord userRecord = createUser(openingBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    long authAmount = 1000L;
+    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
+
+    long captureAmount = authAmount;
+    BigDecimal closingBalance = BigDecimal.ZERO;
+    capture(authorize, allocation, user, card, captureAmount, closingBalance);
+  }
+
+  @SneakyThrows
+  @Test
+  void processCompletion_overAuthAmount() {
+    BigDecimal openingBalance = BigDecimal.TEN;
+    UserRecord userRecord = createUser(openingBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    long authAmount = 1000L;
+    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
+
+    long captureAmount = 1200L;
+    BigDecimal closingBalance = BigDecimal.valueOf(-2);
+    capture(authorize, allocation, user, card, captureAmount, closingBalance);
+  }
+
+  private void capture(
+      AuthorizationRecord authorize,
+      Allocation allocation,
+      User user,
+      Card card,
+      long amount,
+      BigDecimal ledgerBalance) {
     Transaction transaction = new Transaction();
     transaction.setId(generateStripeId("ipi_"));
     transaction.setLivemode(false);
-    transaction.setAmount(-authorize.authorization.getPendingRequest().getAmount());
+    transaction.setAmount(-amount);
     Transaction.AmountDetails amountDetails = new Transaction.AmountDetails();
-    amountDetails.setAtmFee(
-        authorize.authorization.getPendingRequest().getAmountDetails().getAtmFee());
+    amountDetails.setAtmFee(0L);
     transaction.setAmountDetails(amountDetails);
-    transaction.setAuthorization(authorize.authorization.getId());
     transaction.setBalanceTransaction(generateStripeId("txn_"));
-    transaction.setCard(authorize.authorization.getCard().getId());
-    transaction.setCardholder(authorize.authorization.getCard().getCardholder().getId());
+    if (authorize != null) {
+      amountDetails.setAtmFee(
+          authorize.authorization.getPendingRequest().getAmountDetails().getAtmFee());
+      transaction.setAuthorization(authorize.authorization.getId());
+      transaction.setCard(authorize.authorization.getCard().getId());
+      transaction.setCardholder(authorize.authorization.getCard().getCardholder().getId());
+      transaction.setMerchantData(authorize.authorization.getMerchantData());
+    }
     transaction.setCreated(OffsetDateTime.now().toEpochSecond());
     transaction.setCurrency(business.getCurrency().toStripeCurrency());
     transaction.setDispute(null);
-    transaction.setMerchantAmount(-authorize.authorization.getPendingRequest().getAmount());
+    transaction.setMerchantAmount(-amount);
     transaction.setMerchantCurrency(business.getCurrency().toStripeCurrency());
-    transaction.setMerchantData(authorize.authorization.getMerchantData());
     transaction.setMetadata(new HashMap<>());
     transaction.setObject("issuing.transaction");
     //    PurchaseDetails purchaseDetails;
@@ -439,10 +487,12 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 new StripeWebhookLog(), transaction, StripeEventType.ISSUING_TRANSACTION_CREATED),
             true);
 
+    log.debug("capture networkCommon\n{}", networkCommon);
+
     assertThat(networkCommon.isPostAdjustment()).isTrue();
     assertThat(networkCommon.isPostDecline()).isFalse();
     assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), closingBalance, closingBalance);
+    assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, ledgerBalance);
 
     validateStripeWebhookLog(networkCommon);
 
@@ -540,32 +590,44 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(networkLedgerAccount.getType()).isEqualTo(LedgerAccountType.NETWORK);
   }
 
-  //  @SneakyThrows
-  //  @Test
-  //  void processIncrementalAuthorization() {
-  //    BigDecimal openingBalance = BigDecimal.TEN;
-  //    BigDecimal closingBalance = BigDecimal.ONE;
-  //    UserRecord userRecord = createUser(openingBalance);
-  //    Allocation allocation = userRecord.allocation;
-  //    User user = userRecord.user;
-  //    Card card = userRecord.card;
-  //
-  //    long amount = 900L;
-  //    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, amount);
-  //
-  //    openingBalance = BigDecimal.ONE;
-  //    closingBalance = BigDecimal.ZERO;
-  //    incrementalAuthorization(
-  //        authorize.networkCommon.getAllocation(), authorize.authorization, 100L, openingBalance);
-  //  }
+  @SneakyThrows
+  @Test
+  void processIncrementalAuthorization() {
+    BigDecimal openingBalance = BigDecimal.TEN;
+    BigDecimal closingBalance = BigDecimal.ONE;
+    UserRecord userRecord = createUser(openingBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
 
-  private AuthorizationRecord incrementalAuthorization(
-      Allocation allocation, Authorization auth, long amount, BigDecimal openingBalance) {
+    long amount = 900L;
+    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, amount);
+
+    openingBalance = BigDecimal.TEN;
+    closingBalance = BigDecimal.ZERO;
+    incrementalAuthorizationFromAuthorization(
+        authorize.networkCommon.getAllocation(),
+        authorize.authorization,
+        100L,
+        openingBalance,
+        closingBalance);
+  }
+
+  private AuthorizationRecord incrementalAuthorizationFromAuthorization(
+      Allocation allocation,
+      Authorization originalAuthorization,
+      long incrementalAmount,
+      BigDecimal ledgerBalance,
+      BigDecimal availableBalance) {
 
     Gson gson = new Gson();
-    Authorization authorization = gson.fromJson(gson.toJson(auth), Authorization.class);
-    authorization.getPendingRequest().setIsAmountControllable(true);
-    authorization.getPendingRequest().setAmount(amount);
+    Authorization incrementalAuthorization =
+        gson.fromJson(gson.toJson(originalAuthorization), Authorization.class);
+    incrementalAuthorization.setAmount(
+        originalAuthorization.getAmount() + originalAuthorization.getPendingRequest().getAmount());
+    incrementalAuthorization.setStatus("approved");
+    incrementalAuthorization.getPendingRequest().setAmount(incrementalAmount);
+    incrementalAuthorization.getPendingRequest().setIsAmountControllable(false);
 
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
 
@@ -573,17 +635,13 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, stripeEventType),
+                new StripeWebhookLog(), incrementalAuthorization, stripeEventType),
             true);
+    log.debug("incrementalAuthorization\n{}", networkCommon);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isFalse();
     assertThat(networkCommon.isPostHold()).isTrue();
-    assertBalance(
-        allocation,
-        networkCommon.getAccount(),
-        openingBalance,
-        openingBalance.subtract(
-            Amount.fromStripeAmount(business.getCurrency(), amount).getAmount()));
+    assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, availableBalance);
     return null;
   }
 }

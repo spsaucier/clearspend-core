@@ -140,15 +140,19 @@ public class Amount {
     return amount.compareTo(BigDecimal.ZERO) > 0;
   }
 
-  public void ensureNegative() {
+  public Amount ensureNegative() {
     if (!isNegative()) {
       throw new AmountException(AmountType.NEGATIVE, this);
     }
+
+    return this;
   }
 
-  public void ensureNonNegative() {
+  public Amount ensureNonNegative() {
     if (isNegative()) {
       throw new AmountException(AmountType.POSITIVE, this);
     }
+
+    return this;
   }
 }

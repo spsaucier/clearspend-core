@@ -1,8 +1,10 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.HoldId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -26,6 +28,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Comparator;
+import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -55,11 +59,9 @@ public class NetworkMessageService {
 
   @Transactional
   public void processNetworkMessage(NetworkCommon common) {
-    retrieveCard(common);
+    retrieveCardAndNetworkMessages(common);
 
     storeMerchantAsync(common);
-
-    setPaddedAmountAndHoldPeriod(common);
 
     // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
     //    potentially in a async batch job)
@@ -97,7 +99,7 @@ public class NetworkMessageService {
     common.setNetworkMessage(networkMessageRepository.save(networkMessage));
   }
 
-  private void retrieveCard(NetworkCommon common) {
+  private void retrieveCardAndNetworkMessages(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord;
     try {
@@ -129,6 +131,23 @@ public class NetworkMessageService {
       common.setAllocation(
           allocationService.retrieveAllocation(
               common.getBusinessId(), common.earliestNetworkMessage.getAllocationId()));
+
+      // get the most recently created Hold if any
+      Optional<NetworkMessage> optionalNetworkMessage =
+          common.getPriorNetworkMessages().stream()
+              .filter(networkMessage -> networkMessage.getHoldId() != null)
+              .min(Comparator.comparing(Versioned::getCreated));
+      if (optionalNetworkMessage.isPresent()) {
+        TypedId<HoldId> holdId = optionalNetworkMessage.get().getHoldId();
+        common.setPriorHold(
+            common.getAccount().getHolds().stream()
+                .filter(hold -> hold.getId().equals(holdId))
+                .findFirst()
+                .orElse(null));
+        if (common.getPriorHold() == null) {
+          log.warn("prior hold {} not found for account {}", holdId, common.getAccount().getId());
+        }
+      }
     } else {
       common.setAccount(cardRecord.account());
       common.setAllocation(
@@ -141,7 +160,7 @@ public class NetworkMessageService {
     if (common.isPostHold()) {
       HoldRecord holdRecord =
           accountService.recordNetworkHold(
-              common.getAccount(), common.getPaddedAmount(), common.getHoldExpiration());
+              common.getAccount(), common.getHoldAmount(), common.getHoldExpiration());
       networkMessage.setHoldId(holdRecord.hold().getId());
       common.setHold(holdRecord.hold());
       common.getAccountActivityDetails().setActivityTime(holdRecord.hold().getCreated());
@@ -150,7 +169,7 @@ public class NetworkMessageService {
       log.debug(
           "networkMessage {} for {} hold {} (available {} / ledger {})",
           networkMessage.getId(),
-          common.getPaddedAmount(),
+          common.getHoldAmount(),
           networkMessage.getHoldId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
@@ -232,7 +251,8 @@ public class NetworkMessageService {
         common.setPaddedAmount(common.getRequestedAmount());
       }
     }
-    ;
+
+    common.getPaddedAmount().ensureNegative();
   }
 
   private void processAuthorizationUpdated(NetworkCommon common) {
@@ -245,7 +265,7 @@ public class NetworkMessageService {
   }
 
   private void processAuthorizationRequest(NetworkCommon common) {
-    common.getPaddedAmount().ensureNegative();
+    setPaddedAmountAndHoldPeriod(common);
 
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
@@ -276,6 +296,19 @@ public class NetworkMessageService {
       common.setApprovedAmount(
           Amount.min(common.getAccount().getAvailableBalance(), common.getPaddedAmount().abs()));
     }
+    common.setHoldAmount(common.getApprovedAmount());
+
+    if (common.isIncrementalAuthorization()) {
+      if (common.getPriorHold() != null) {
+        common.getPriorHold().setStatus(HoldStatus.RELEASED);
+        common.getUpdatedHolds().add(common.getPriorHold());
+      }
+      log.info(
+          "IncrementalHoldAmount: {} + {}",
+          common.getApprovedAmount(),
+          common.getPriorHoldAmount().negate());
+      common.setHoldAmount(common.getApprovedAmount().add(common.getPriorHoldAmount().negate()));
+    }
 
     // TODO(kuchlein): assess spending limits on card
     // if (over limit)
@@ -295,19 +328,13 @@ public class NetworkMessageService {
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
 
-    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
-    Hold hold =
-        common.getAccount().getHolds().stream()
-            .filter(e -> e.getId().equals(common.earliestNetworkMessage.getHoldId()))
-            .findFirst()
-            .orElseThrow(
-                () ->
-                    new RecordNotFoundException(
-                        Table.NETWORK_MESSAGE, common.earliestNetworkMessage.getHoldId()));
-    hold.setStatus(HoldStatus.RELEASED);
-    common.getUpdatedHolds().add(hold);
-    common.getAccount().recalculateAvailableBalance();
-    accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
+    Hold hold = common.getPriorHold();
+    if (hold != null) {
+      hold.setStatus(HoldStatus.RELEASED);
+      common.getUpdatedHolds().add(hold);
+      common.getAccount().recalculateAvailableBalance();
+      accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
+    }
   }
 
   private NetworkMessage getPriorAuthNetworkMessage(String externalRef) {

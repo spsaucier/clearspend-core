@@ -55,14 +55,19 @@ public class NetworkCommon {
   // the type of network message we're processing from Stripe
   @NonNull private NetworkMessageType networkMessageType;
 
-  // flag to indicated we can give a lower approval than asked for
-  boolean allowPartialApproval;
+  // flag to indicate we can give a lower approval than asked for
+  boolean allowPartialApproval = false;
+
+  // flag to indicate we are increasing the value of an existing authorization
+  boolean isIncrementalAuthorization = false;
+  // the amount held by Stripe prior to this request or zero if none
+  @NonNull private Amount priorHoldAmount = Amount.of(Currency.UNSPECIFIED);
 
   // the amount that the merchant is asking for
   @NonNull private Amount requestedAmount;
 
   // the amount that the merchant asked for including padding
-  private Amount paddedAmount;
+  @NonNull private Amount paddedAmount;
 
   // a.k.a. MID or merchant ID
   @NonNull private String merchantNumber;
@@ -110,6 +115,7 @@ public class NetworkCommon {
 
   private boolean postHold = false;
   private OffsetDateTime holdExpiration;
+  private Amount holdAmount;
   private Hold hold;
   private Hold priorHold;
   // list of holds that we need to update (typically to change the status)
@@ -131,10 +137,7 @@ public class NetworkCommon {
   StripeWebhookLog stripeWebhookLog;
 
   // Stripe authorizations
-  public NetworkCommon(
-      NetworkMessageType networkMessageType,
-      Authorization authorization,
-      StripeWebhookLog stripeWebhookLog) {
+  public NetworkCommon(NetworkMessageType type, Authorization authorization, StripeWebhookLog log) {
     cardExternalRef = authorization.getCard().getId();
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
@@ -143,11 +146,15 @@ public class NetworkCommon {
       amount = Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
     }
     // amounts from Stripe for authorization requests are always debits and positive
-    amount = amount.negate();
-    amount.ensureNegative();
-    this.networkMessageType = networkMessageType;
+    amount = amount.negate().ensureNegative();
+    networkMessageType = type;
+    isIncrementalAuthorization = authorization.getApproved();
+    if (isIncrementalAuthorization) {
+      priorHoldAmount = Amount.fromStripeAmount(currency, authorization.getAmount());
+    }
     // we do all our processing with positive amounts and rely on cr
     requestedAmount = amount;
+    paddedAmount = requestedAmount;
     approvedAmount = Amount.of(amount.getCurrency());
 
     if (authorization.getMerchantData() != null) {
@@ -164,16 +171,17 @@ public class NetworkCommon {
     externalRef = authorization.getId();
     stripeAuthorizationExternalRef = authorization.getId();
 
-    this.stripeWebhookLog = stripeWebhookLog;
+    stripeWebhookLog = log;
   }
 
   // Stripe completions (or more incorrect captures)
-  public NetworkCommon(Transaction transaction, StripeWebhookLog stripeWebhookLog) {
+  public NetworkCommon(Transaction transaction, StripeWebhookLog log) {
     cardExternalRef = transaction.getCard();
     networkMessageType = NetworkMessageType.TRANSACTION_CREATED;
     Currency currency = Currency.of(transaction.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, transaction.getAmount());
     requestedAmount = amount;
+    paddedAmount = requestedAmount;
     approvedAmount = Amount.of(amount.getCurrency());
 
     if (transaction.getMerchantData() != null) {
@@ -190,7 +198,7 @@ public class NetworkCommon {
     externalRef = transaction.getId();
     stripeAuthorizationExternalRef = transaction.getAuthorization();
 
-    this.stripeWebhookLog = stripeWebhookLog;
+    stripeWebhookLog = log;
   }
 
   private ClearAddress getMerchantAddress(MerchantData merchantData) {
@@ -211,7 +219,7 @@ public class NetworkCommon {
         networkMessageGroupId,
         networkMessageType,
         requestedAmount,
-        paddedAmount,
+        approvedAmount,
         merchantName,
         merchantAddress,
         merchantNumber,

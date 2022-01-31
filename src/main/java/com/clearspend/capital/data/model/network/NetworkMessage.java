@@ -96,6 +96,8 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @Embedded @NonNull private Amount requestedAmount;
 
+  //  @Embedded private Amount incrementalAmount;
+
   @Embedded @NonNull private Amount amount;
 
   @NonNull private String merchantName;
