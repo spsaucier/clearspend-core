@@ -4,24 +4,29 @@ import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
-import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
+import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -43,6 +48,7 @@ import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -154,7 +160,7 @@ public class BusinessBankAccountService {
                 + accountsResponse.achList().stream()
                     .map(NumbersACH::getAccountId)
                     .map(s -> s.substring(s.length() - 6))
-                    .collect(Collectors.toList()));
+                    .toList());
       }
     }
 
@@ -182,8 +188,14 @@ public class BusinessBankAccountService {
         .toList();
   }
 
-  public List<BusinessBankAccount> getBusinessBankAccounts(TypedId<BusinessId> businessId) {
-    return businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId);
+  public List<BusinessBankAccount> getBusinessBankAccounts(
+      TypedId<BusinessId> businessId, boolean stripeRegisteredOnly) {
+    return businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId).stream()
+        .filter(
+            businessBankAccount ->
+                !stripeRegisteredOnly
+                    || StringUtils.isNotEmpty(businessBankAccount.getStripeBankAccountRef()))
+        .collect(Collectors.toList());
   }
 
   @Transactional
@@ -194,6 +206,7 @@ public class BusinessBankAccountService {
       Amount amount,
       boolean placeHold) {
 
+    Business business = businessService.retrieveBusiness(businessId);
     BusinessBankAccount businessBankAccount =
         businessBankAccountRepository
             .findById(businessBankAccountId)
@@ -230,34 +243,68 @@ public class BusinessBankAccountService {
 
     businessBankAccountRepository.flush();
 
-    // Execute actual transfer with Stripe
-    if (bankAccountTransactType == BankAccountTransactType.DEPOSIT) {
-      // Create inbound ACH transfer
-      // Waiting for final decision about the internal description of transaction
-      // assuming it will change in final version.
-      String transactionDescription = "clearspend.com";
-      String statementDescriptor = "clearspend.com";
-      Business business = businessService.retrieveBusiness(businessId);
-      InboundTransfer inboundTransfer =
-          stripeClient.execInboundTransfer(
-              adjustmentAndHoldRecord.adjustment().getId(),
-              business,
-              businessBankAccount,
-              amount.toStripeAmount(),
-              transactionDescription,
-              statementDescriptor);
-
-      /*
-      TODO: understand how to use status
-      possible states: "status": "processing" | "succeeded" | "failed",
-      do we need to support "succeeded" here?
-      */
-      if (!inboundTransfer.getStatus().equals("processing")) {
-        throw new RuntimeException("Unexpected inbound transfer status");
-      }
+    switch (bankAccountTransactType) {
+      case DEPOSIT -> stripeClient.executeInboundTransfer(
+          businessId,
+          adjustmentAndHoldRecord.adjustment().getId(),
+          adjustmentAndHoldRecord.hold() != null ? adjustmentAndHoldRecord.hold().getId() : null,
+          business.getExternalRef(),
+          businessBankAccount.getStripeBankAccountRef(),
+          business.getStripeFinancialAccountRef(),
+          amount,
+          "ACH pull",
+          "clearspend.com");
+      case WITHDRAW -> stripeClient.pushFundsToConnectedFinancialAccount(
+          businessId,
+          business.getStripeFinancialAccountRef(),
+          adjustmentAndHoldRecord.adjustment().getId(),
+          amount,
+          "Company [%s] ACH push funds relocation".formatted(business.getLegalName()),
+          "Company [%s] ACH push funds relocation".formatted(business.getLegalName()));
     }
 
     return adjustmentAndHoldRecord;
+  }
+
+  @Transactional
+  public void processBankAccountDepositOutcome(
+      TypedId<BusinessId> businessId,
+      TypedId<AdjustmentId> adjustmentId,
+      TypedId<HoldId> holdId,
+      Amount amount,
+      boolean succeed) {
+    if (holdId != null) {
+      Hold hold = accountService.retrieveHold(holdId);
+      hold.setStatus(HoldStatus.RELEASED);
+
+      accountActivityService.recordBankAccountHoldReleaseAccountActivity(hold);
+    }
+
+    AccountActivity accountActivity =
+        accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
+
+    if (!succeed) {
+      AllocationRecord rootAllocation = allocationService.getRootAllocation(businessId);
+      rootAllocation
+          .account()
+          .setLedgerBalance(rootAllocation.account().getLedgerBalance().sub(amount));
+
+      accountActivity.setStatus(AccountActivityStatus.DECLINED);
+    } else {
+      accountActivity.setStatus(AccountActivityStatus.PROCESSED);
+
+      businessBankAccountRepository.flush();
+
+      Business business = businessService.retrieveBusiness(businessId);
+      stripeClient.pushFundsToClearspendFinancialAccount(
+          businessId,
+          business.getExternalRef(),
+          business.getStripeFinancialAccountRef(),
+          adjustmentId,
+          amount,
+          "Company [%s] ACH pull funds relocation".formatted(business.getLegalName()),
+          "Company [%s] ACH pull funds relocation".formatted(business.getLegalName()));
+    }
   }
 
   /**
@@ -291,13 +338,28 @@ public class BusinessBankAccountService {
     }
   }
 
+  /**
+   * Creates stripe external account with setup intent for further money transfers. Current
+   * requirement is to make sure that only one bank account may be configured in Stripe
+   */
   @Transactional
   public void registerExternalBank(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
       String customerAcceptanceIpAddress,
-      String customerAcceptanceUserAgent)
-      throws IOException {
+      String customerAcceptanceUserAgent) {
+
+    // check that only one bank account is registered in Stripe
+    BusinessBankAccount registeredBankAccount =
+        getBusinessBankAccounts(businessId, true).stream().findFirst().orElse(null);
+
+    if (registeredBankAccount != null) {
+      if (registeredBankAccount.getId().equals(businessBankAccountId)) {
+        return;
+      } else {
+        throw new RuntimeException("Cannot register additional bank account in Stripe");
+      }
+    }
 
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
 
@@ -309,7 +371,10 @@ public class BusinessBankAccountService {
     Account account =
         stripeClient.setExternalAccount(
             stripeAccountId,
-            plaidClient.getStripeBankAccountToken(businessBankAccount, businessId));
+            plaidClient.getStripeBankAccountToken(
+                businessBankAccount.getAccessToken().getEncrypted(),
+                businessBankAccount.getPlaidAccountRef().getEncrypted(),
+                businessId));
 
     // Assuming we are expecting strictly 1 verified bank account;
     // future obtained knowledge may challenge this early assumption

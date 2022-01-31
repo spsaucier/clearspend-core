@@ -8,6 +8,7 @@ import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -126,6 +127,11 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public void recordBankAccountHoldReleaseAccountActivity(Hold hold) {
+    recordNetworkHoldReleaseAccountActivity(hold);
+  }
+
+  @Transactional(TxType.REQUIRED)
   public void recordNetworkAdjustmentAccountActivity(NetworkCommon common, Adjustment adjustment) {
     recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
@@ -198,6 +204,14 @@ public class AccountActivityService {
     return accountActivityRepository
         .findByBusinessIdAndId(businessId, accountActivityId)
         .orElse(null);
+  }
+
+  public AccountActivity retrieveAccountActivityByAdjustmentId(
+      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId) {
+    return accountActivityRepository
+        .findByBusinessIdAndAdjustmentId(businessId, adjustmentId)
+        .orElseThrow(
+            () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
   public Page<AccountActivity> getCardAccountActivity(

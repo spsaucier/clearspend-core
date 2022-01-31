@@ -52,6 +52,8 @@ public class StripeWebhookController {
           stripeObject);
       case INBOUND_TRANSFER_FAILED -> stripeConnectHandler.inboundTransferFailed(stripeObject);
 
+      case RECEIVED_CREDIT_CREATED -> stripeConnectHandler.receivedCreditCreated(stripeObject);
+
         // outbound transfers
       case OUTBOUND_TRANSFER_CREATED -> stripeConnectHandler.outboundTransferCreated(stripeObject);
       case OUTBOUND_TRANSFER_RETURNED -> stripeConnectHandler.outboundTransferReturned(

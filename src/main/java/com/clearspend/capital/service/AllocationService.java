@@ -34,6 +34,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -44,7 +45,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AllocationService {
 
+  private final UserRepository userRepository;
   private final AllocationRepository allocationRepository;
 
   private final AccountActivityService accountActivityService;
@@ -65,7 +66,6 @@ public class AllocationService {
   private final CardService cardService;
   private final TransactionLimitService transactionLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
-  private final EntityManager entityManager;
   private final AllocationRolePermissionsService allocationRolePermissionsService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
@@ -201,7 +201,9 @@ public class AllocationService {
     return new AllocationDetailsRecord(
         allocation,
         account,
-        entityManager.getReference(User.class, allocation.getOwnerId()),
+        userRepository
+            .findById(allocation.getOwnerId())
+            .orElseThrow(() -> new RecordNotFoundException(Table.USER, allocation.getOwnerId())),
         transactionLimitService.retrieveSpendLimit(
             business.getId(), TransactionLimitType.ALLOCATION, allocationId.toUuid()));
   }

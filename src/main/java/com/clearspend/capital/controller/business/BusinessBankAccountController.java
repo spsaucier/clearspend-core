@@ -7,6 +7,7 @@ import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentRespons
 import com.clearspend.capital.controller.type.business.bankaccount.BankAccount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -89,7 +90,7 @@ public class BusinessBankAccountController {
   @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
   private List<BankAccount> getBusinessBankAccounts() {
     return toListBankAccount(
-        businessBankAccountService.getBusinessBankAccounts(CurrentUser.get().businessId()));
+        businessBankAccountService.getBusinessBankAccounts(CurrentUser.get().businessId(), true));
   }
 
   @PostMapping(
@@ -103,21 +104,8 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
-      @RequestBody @Validated TransactBankAccountRequest request,
-      HttpServletRequest httpServletRequest)
-      throws IOException {
+      @RequestBody @Validated TransactBankAccountRequest request) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-
-    // TODO: we are working with frontend team to split this endpoint into 2 separate endpoints
-    // Once new endpoint will be used, some of the code below which is related to onboarding will be
-    // removed
-    if (request.isOnboarding()) {
-      businessBankAccountService.registerExternalBank(
-          businessId,
-          businessBankAccountId,
-          httpServletRequest.getRemoteAddr(),
-          httpServletRequest.getHeader("User-Agent"));
-    }
 
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
@@ -127,23 +115,17 @@ public class BusinessBankAccountController {
             request.getAmount().toAmount(),
             placeHold);
 
-    if (request.isOnboarding()) {
-      businessService.updateBusiness(
-          businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
-    }
-
     return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }
 
   /**
    * New endpoint for frontend to be used for initial onboarding transaction. It will create and
-   * link bank account, execute transaction itself, and will mark the business as fully active Once
-   * this will be used, old endpoint will be cleaned-up and onboarding related code will be removed
+   * link bank account, execute transaction itself, and will mark the business as fully active
    */
   @PostMapping(
       value = "/{businessBankAccountId}/onboard",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateAdjustmentResponse onboardingTransaction(
+  private CreateAdjustmentResponse onboard(
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,
@@ -152,8 +134,7 @@ public class BusinessBankAccountController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request,
-      HttpServletRequest httpServletRequest)
-      throws IOException {
+      HttpServletRequest httpServletRequest) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
     // TODO: 3 calls below will have to be moved to either a dedicated "onboarding service"
@@ -169,7 +150,7 @@ public class BusinessBankAccountController {
         businessBankAccountService.transactBankAccount(
             businessId,
             businessBankAccountId,
-            request.getBankAccountTransactType(),
+            BankAccountTransactType.DEPOSIT,
             request.getAmount().toAmount(),
             placeHold);
 

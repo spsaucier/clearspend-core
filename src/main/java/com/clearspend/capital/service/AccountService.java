@@ -9,6 +9,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
+import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
@@ -268,5 +269,11 @@ public class AccountService {
     toAccount = accountRepository.save(toAccount);
 
     return new AccountReallocateFundsRecord(fromAccount, toAccount, reallocateFundsRecord);
+  }
+
+  public Hold retrieveHold(TypedId<HoldId> holdId) {
+    return holdRepository
+        .findById(holdId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.HOLD, holdId));
   }
 }

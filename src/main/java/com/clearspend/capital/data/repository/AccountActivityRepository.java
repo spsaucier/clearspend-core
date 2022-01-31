@@ -27,6 +27,9 @@ public interface AccountActivityRepository
   Optional<AccountActivity> findByBusinessIdAndUserIdAndAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AdjustmentId> adjustmentId);
 
+  Optional<AccountActivity> findByBusinessIdAndAdjustmentId(
+      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId);
+
   @Query(
       value =
           """

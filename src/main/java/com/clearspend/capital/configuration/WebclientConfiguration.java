@@ -32,16 +32,22 @@ public class WebclientConfiguration {
 
   @Bean
   HttpClient httpClient() {
+    return createNewHttpClient(
+        properties.getConnectTimeout(),
+        properties.getResponseTimeout(),
+        properties.getReadTimeout(),
+        properties.getWriteTimeout());
+  }
+
+  private HttpClient createNewHttpClient(
+      int connectTimeout, int responseTimeout, int readTimeout, int writeTimeout) {
     return HttpClient.create()
-        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, properties.getConnectTimeout())
-        .responseTimeout(Duration.ofMillis(properties.getResponseTimeout()))
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
+        .responseTimeout(Duration.ofMillis(responseTimeout))
         .doOnConnected(
             conn ->
-                conn.addHandlerLast(
-                        new ReadTimeoutHandler(properties.getReadTimeout(), TimeUnit.MILLISECONDS))
-                    .addHandlerLast(
-                        new WriteTimeoutHandler(
-                            properties.getWriteTimeout(), TimeUnit.MILLISECONDS)));
+                conn.addHandlerLast(new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(new WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS)));
   }
 
   @Bean
@@ -150,7 +156,13 @@ public class WebclientConfiguration {
   WebClient stripeTreasuryWebClient(StripeProperties stripeProperties) {
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())
-        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .clientConnector(
+            new ReactorClientHttpConnector(
+                createNewHttpClient(
+                    stripeProperties.getConnectTimeout(),
+                    stripeProperties.getReadTimeout(),
+                    stripeProperties.getReadTimeout(),
+                    properties.getWriteTimeout())))
         .baseUrl("https://api.stripe.com/v1")
         .defaultHeaders(
             headers -> {

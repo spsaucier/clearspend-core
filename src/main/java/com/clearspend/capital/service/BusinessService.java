@@ -26,7 +26,6 @@ import com.clearspend.capital.data.repository.AlloyRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
-import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -52,9 +51,6 @@ public class BusinessService {
   private final StripeClient stripeClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
-
-  public record BusinessAndAllocationsRecord(
-      Business business, AllocationRecord allocationRecord) {}
 
   @SneakyThrows
   @Transactional
@@ -145,6 +141,12 @@ public class BusinessService {
     return businessRepository
         .findById(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+  }
+
+  public Business retrieveBusinessByStripeFinancialAccount(String stripeFinancialAccountRef) {
+    return businessRepository
+        .findByStripeFinancialAccountRef(stripeFinancialAccountRef)
+        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeFinancialAccountRef));
   }
 
   public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {

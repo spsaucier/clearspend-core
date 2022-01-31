@@ -3,7 +3,6 @@ package com.clearspend.capital.client.plaid;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.AccountBase;
@@ -14,7 +13,6 @@ import com.plaid.client.model.SandboxPublicTokenCreateRequest;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -207,16 +205,15 @@ public class TestPlaidClient extends PlaidClient {
   protected <T> @NonNull T validBody(@NonNull TypedId<BusinessId> businessId, Response<T> response)
       throws IOException {
     T t = super.validBody(businessId, response);
-    StringWriter writer = new StringWriter();
-    objectMapper.writeValue(writer, t);
-    System.out.println(writer.toString());
+    System.out.println(objectMapper.writeValueAsString(t));
 
     return t;
   }
 
   @Override
   public String getStripeBankAccountToken(
-      @NonNull BusinessBankAccount businessBankAccount, @NonNull TypedId<BusinessId> businessId) {
+      String plaidAccessToken, String plaidAccountId, TypedId<BusinessId> businessId) {
+
     return "dummy_btok";
   }
 }

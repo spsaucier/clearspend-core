@@ -2,14 +2,17 @@ package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
+import com.clearspend.capital.client.stripe.types.OutboundPayment;
+import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
+import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -128,13 +131,60 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public InboundTransfer execInboundTransfer(
+  public InboundTransfer executeInboundTransfer(
+      TypedId<BusinessId> businessId,
       TypedId<AdjustmentId> adjustmentId,
-      Business business,
-      BusinessBankAccount businessBankAccount,
-      long amount,
+      TypedId<HoldId> holdId,
+      String stripeAccountRef,
+      String stripeBankAccountRef,
+      String stripeFinancialAccountRef,
+      Amount amount,
       String description,
       String statementDescriptor) {
     return generateEntityWithIdAndStatus(InboundTransfer.class, "processing");
+  }
+
+  @Override
+  public OutboundTransfer executeOutboundTransfer(
+      TypedId<BusinessId> businessId,
+      String stripeAccountRef,
+      String stripeFinancialAccountRef,
+      String stripeBankAccountRef,
+      Amount amount,
+      String description,
+      String statementDescriptor) {
+
+    return generateEntityWithIdAndStatus(OutboundTransfer.class, "processing");
+  }
+
+  @Override
+  public OutboundPayment pushFundsToConnectedFinancialAccount(
+      TypedId<BusinessId> businessId,
+      String toStripeFinancialAccountRef,
+      TypedId<AdjustmentId> adjustmentId,
+      Amount amount,
+      String description,
+      String statementDescriptor) {
+
+    return generateEntityWithIdAndStatus(OutboundPayment.class, "processing");
+  }
+
+  @Override
+  public OutboundPayment pushFundsToClearspendFinancialAccount(
+      TypedId<BusinessId> businessId,
+      String fromAccountRef,
+      String fromFinancialAccountRef,
+      TypedId<AdjustmentId> adjustmentId,
+      Amount amount,
+      String description,
+      String statementDescriptor) {
+    return super.pushFundsToClearspendFinancialAccount(
+        businessId,
+        fromAccountRef,
+        fromFinancialAccountRef,
+        adjustmentId,
+        amount,
+        description,
+        statementDescriptor);
   }
 }

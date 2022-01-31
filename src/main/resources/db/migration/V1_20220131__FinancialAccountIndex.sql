@@ -1,0 +1,1 @@
+create unique index if not exists business_uidx1 on business (stripe_financial_account_ref) where stripe_financial_account_ref is not null;

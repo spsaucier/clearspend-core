@@ -4,7 +4,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.PlaidLogEntry;
-import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -195,14 +194,18 @@ public class PlaidClient {
   }
 
   public String getStripeBankAccountToken(
-      @NonNull BusinessBankAccount businessBankAccount, @NonNull TypedId<BusinessId> businessId)
-      throws IOException {
+      String plaidAccessToken, String plaidAccountId, TypedId<BusinessId> businessId) {
     ProcessorStripeBankAccountTokenCreateRequest request =
         new ProcessorStripeBankAccountTokenCreateRequest()
-            .accessToken(businessBankAccount.getAccessToken().getEncrypted())
-            .accountId(businessBankAccount.getPlaidAccountRef().getEncrypted());
-    Response<ProcessorStripeBankAccountTokenCreateResponse> response =
-        plaidApi.processorStripeBankAccountTokenCreate(request).execute();
-    return validBody(businessId, response).getStripeBankAccountToken();
+            .accessToken(plaidAccessToken)
+            .accountId(plaidAccountId);
+    try {
+      Response<ProcessorStripeBankAccountTokenCreateResponse> response =
+          plaidApi.processorStripeBankAccountTokenCreate(request).execute();
+
+      return validBody(businessId, response).getStripeBankAccountToken();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to get stripe account token from plaid", e);
+    }
   }
 }

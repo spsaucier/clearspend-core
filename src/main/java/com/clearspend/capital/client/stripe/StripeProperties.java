@@ -24,4 +24,5 @@ public class StripeProperties {
   private Integer maxNetworkRetries;
 
   private String tosAcceptanceIp;
+  private String clearspendFinancialAccountId;
 }
