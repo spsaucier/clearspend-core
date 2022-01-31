@@ -4,6 +4,7 @@ import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
+@AllArgsConstructor
 @NoArgsConstructor
 public class Merchant {
 
@@ -44,12 +46,13 @@ public class Merchant {
       return null;
     }
 
-    Merchant merchant =
-        new Merchant(
-            in.getName(), in.getType(), in.getMerchantNumber(), in.getMerchantCategoryCode());
-    merchant.setLatitude(in.getLatitude());
-    merchant.setLongitude(in.getLongitude());
-
-    return merchant;
+    return new Merchant(
+        in.getName(),
+        in.getType(),
+        in.getMerchantNumber(),
+        in.getMerchantCategoryCode(),
+        in.getLogoUrl(),
+        in.getLatitude(),
+        in.getLongitude());
   }
 }
