@@ -128,6 +128,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -200,10 +201,18 @@ public class TestHelper {
       BusinessProspect businessProspect,
       Cookie cookie) {}
 
-  public void init() {
+  /**
+   * Creates the default business if it doesn't already exist, creates a businessBankAccount if it
+   * doesn't exist.
+   *
+   * @return a CreateBusinessRecord representing the business
+   */
+  public CreateBusinessRecord init() {
     TypedId<BusinessId> businessId = businessIds.get(0);
+    CreateBusinessRecord createBusinessRecord = null;
     if (businessRepository.findById(businessId).isEmpty()) {
-      createBusiness(businessId, null);
+      createBusinessRecord = createBusiness(businessId);
+      setCurrentUser(createBusinessRecord.user());
     } else {
       log.debug("Default businessID {} already exists, not creating.", businessId);
     }
@@ -212,6 +221,27 @@ public class TestHelper {
     } else {
       log.debug("Business bank account already exists for default business. Not creating");
     }
+
+    if (createBusinessRecord == null) {
+      Business business = entityManager.getReference(Business.class, businessId);
+      BusinessOwner businessOwner = businessOwnerRepository.findByBusinessId(businessId).get(0);
+      User user =
+          userService.retrieveUsersForBusiness(businessId).stream()
+              .filter(u -> u.getType().equals(UserType.BUSINESS_OWNER))
+              .findFirst()
+              .orElseThrow();
+      setCurrentUser(user);
+      createBusinessRecord =
+          new CreateBusinessRecord(
+              business,
+              businessOwner,
+              user,
+              user.getEmail().getEncrypted(),
+              allocationService.getRootAllocation(businessId),
+              login(user));
+    }
+
+    return createBusinessRecord;
   }
 
   /** @return the first unused BusinessId from {@link #businessIds} */
@@ -323,6 +353,16 @@ public class TestHelper {
         businessProspectService.createBusinessProspect(
             generateFirstName(), generateLastName(), email);
     assertThat(record.businessProspectStatus()).isEqualTo(status);
+  }
+
+  /**
+   * Set the current user for direct service testing, including global roles, if any.
+   *
+   * @param user the user who will be taking subsequent
+   */
+  public void setCurrentUser(@NonNull User user) {
+    CurrentUserSwitcher.setCurrentUser(
+        user, fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef())));
   }
 
   /**
@@ -573,7 +613,7 @@ public class TestHelper {
       String name,
       TypedId<AllocationId> parentAllocationId,
       User user) {
-    CurrentUserSwitcher.setCurrentUser(
+    setCurrentUser(
         entityManager.getReference(
             User.class, allocationService.getRootAllocation(businessId).allocation().getOwnerId()));
     entityManager.flush();
@@ -662,13 +702,14 @@ public class TestHelper {
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);
     passwords.put(businessOwner.user().getId(), password);
+    setCurrentUser(businessOwner.user());
     AllocationRecord rootAllocation =
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName() + " - root");
 
     log.debug("Created business {} with owner and root allocation.", businessId);
 
-    CurrentUserSwitcher.setCurrentUser(businessOwner.user());
+    setCurrentUser(businessOwner.user());
 
     if (openingBalance != null && openingBalance != 0L) {
       accountService.depositFunds(

@@ -63,16 +63,12 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getLatestAccountActivityPageData() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -101,6 +97,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
+
+    Cookie authCookie = testHelper.login(createBusinessRecord.user());
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
@@ -137,16 +135,12 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredByTextAccountActivityPageData() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -197,6 +191,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
 
+    Cookie authCookie = testHelper.login(createBusinessRecord.user());
+
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
     accountActivityRequest.setSearchText(card.getLastFour());
@@ -232,16 +228,12 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredAccountActivityPageDataForVisibleAfterCase() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -249,6 +241,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("100")),
         true);
+
+    Cookie authCookie = testHelper.login(createBusinessRecord.user());
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
@@ -288,14 +282,12 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredAccountActivityPageDataForHideAfterCase() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
-    testHelper.createBusinessOwner(business.getId(), email, password);
-    Cookie authCookie = testHelper.login(email, password);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -308,13 +300,17 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         accountActivityRepository.findAll().stream()
             .peek(
                 accountActivity -> {
-                  if (accountActivity.getHideAfter() != null)
+                  if (accountActivity.getHideAfter() != null) {
                     accountActivity.setHideAfter(accountActivity.getHideAfter().minusDays(20));
-                  if (accountActivity.getVisibleAfter() != null)
+                  }
+                  if (accountActivity.getVisibleAfter() != null) {
                     accountActivity.setVisibleAfter(
                         accountActivity.getVisibleAfter().minusDays(20));
+                  }
                 })
             .collect(Collectors.toList()));
+
+    Cookie authCookie = testHelper.login(createBusinessRecord.user());
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));

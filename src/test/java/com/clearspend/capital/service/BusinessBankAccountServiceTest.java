@@ -49,6 +49,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Test
   void depositFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
@@ -64,6 +66,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void withdrawFunds_success() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
@@ -85,6 +89,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
     BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    testHelper.setCurrentUser(createBusinessRecord.user());
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),
@@ -108,6 +113,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   void depositFunds_insufficientFunds() {
     assumeTrue(plaidClient.isConfigured());
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     InsufficientFundsException insufficientFundsException =

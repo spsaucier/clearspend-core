@@ -36,7 +36,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 @Repository
 public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepositoryCustom {
 
@@ -140,6 +142,8 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         .addValue("userId", safeUUID(userId), Types.OTHER)
         .addValue("userGlobalRoles", globalRoles, Types.ARRAY)
         .addValue("crossBusinessBoundaryPermission", CROSS_BUSINESS_BOUNDARY.name(), Types.VARCHAR);
+
+    entityManager.flush(); // needs to be fresh for permissions
 
     return query(userPermissionsQuery, params, this::rolesAndPermissionsRowMapper);
   }

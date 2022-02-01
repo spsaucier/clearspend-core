@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.controller.type.security.AllocationRolePermissionRecord;
 import com.clearspend.capital.controller.type.security.AllocationRolePermissionsResponse;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
-import com.clearspend.capital.service.AllocationService;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
@@ -35,17 +35,14 @@ public class AllocationRolePermissionsControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
-  private final AllocationService allocationService;
   private final EntityManager entityManager;
 
   @SneakyThrows
   @Test
   void getDefaultRoles() {
-    testHelper.init();
-    final Allocation rootAllocation =
-        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
-    final User rootAllocationOwner =
-        entityManager.getReference(User.class, rootAllocation.getOwnerId());
+    CreateBusinessRecord createBusinessRecord = testHelper.init();
+    final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    final User rootAllocationOwner = createBusinessRecord.user();
 
     entityManager.flush();
     testHelper.login(rootAllocationOwner); // Has Admin permissions by default
@@ -55,7 +52,7 @@ public class AllocationRolePermissionsControllerTest extends BaseCapitalTest {
                 get("/allocation-role-permissions/business/%s"
                         .formatted(rootAllocation.getId().toUuid().toString()))
                     .contentType("application/json")
-                    .cookie(testHelper.getDefaultAuthCookie()))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();

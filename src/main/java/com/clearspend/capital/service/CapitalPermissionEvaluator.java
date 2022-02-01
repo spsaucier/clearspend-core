@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
 
@@ -40,17 +39,34 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
     } else if (targetDomainObject instanceof Allocation) {
       allocationId = ((Allocation) targetDomainObject).getId();
     } else if (targetDomainObject instanceof TypedId) {
-      // we need a method that has a parameterized type argument or return value to
-      // check the parameterized type.
-      // https://stackoverflow.com/questions/1942644/get-generic-type-of-java-util-list
+      // only allocationID will work here, else use the syntax with an explicit targetType
       //noinspection unchecked
       allocationId = (TypedId<AllocationId>) targetDomainObject;
     }
-    if (businessId != null && !CurrentUser.get().businessId().equals(businessId)) {
-      return false;
+
+    if (businessId == null) {
+      businessId = CurrentUser.getBusinessId();
     }
+
+    return hasPermission(
+        authentication,
+        allocationId == null ? businessId : allocationId,
+        allocationId == null ? "BusinessId" : "AllocationId",
+        permission);
+  }
+
+  @Override
+  public boolean hasPermission(
+      Authentication authentication, Serializable targetId, String targetType, Object permission) {
+    TypedId<AllocationId> allocationId =
+        targetType.equals("AllocationId") ? (TypedId<AllocationId>) targetId : null;
+    TypedId<BusinessId> businessId =
+        targetType.equals("BusinessId") ? (TypedId<BusinessId>) targetId : null;
+
     UserRolesAndPermissions userPermissions =
-        rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId);
+        allocationId == null
+            ? rolesAndPermissionsService.getUserRolesAndPermissionsAtRootAllocation(businessId)
+            : rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId);
 
     if (userPermissions == null) {
       return false;
@@ -63,13 +79,6 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
 
     return !overlapPermissions.allocationPermisions.isEmpty()
         || !overlapPermissions.globalUserPermissions.isEmpty();
-  }
-
-  @Override
-  public boolean hasPermission(
-      Authentication authentication, Serializable targetId, String targetType, Object permission) {
-    // Deferring implementation until we have a reason to call it
-    throw new NotImplementedException();
   }
 
   private record RequiredPermissions(

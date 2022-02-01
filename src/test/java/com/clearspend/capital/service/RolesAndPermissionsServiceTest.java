@@ -69,6 +69,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     createBusinessRecord = testHelper.createBusiness();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
     rootAllocationOwner = entityManager.getReference(User.class, rootAllocation.getOwnerId());
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     // Give the root allocation some money
     TypedId<BusinessBankAccountId> businessBankAccountId =

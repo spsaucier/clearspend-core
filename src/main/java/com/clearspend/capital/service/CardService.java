@@ -12,6 +12,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AccountType;
@@ -25,6 +26,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
@@ -38,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +61,8 @@ public class CardService {
   private final AccountService accountService;
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final EntityManager entityManager;
 
   private final StripeClient stripeClient;
 
@@ -161,6 +166,10 @@ public class CardService {
 
     card = cardRepository.save(card);
 
+    rolesAndPermissionsService.ensureMinimumAllocationPermissions(
+        user,
+        entityManager.getReference(Allocation.class, allocationId),
+        DefaultRoles.ALLOCATION_VIEW_ONLY);
     return new CardRecord(card, account);
   }
 

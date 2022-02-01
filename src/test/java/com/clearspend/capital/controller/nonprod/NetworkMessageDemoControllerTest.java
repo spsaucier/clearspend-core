@@ -10,12 +10,12 @@ import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMess
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
-import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
-  private CreateUpdateUserRecord user;
+  private User user;
   private Card card;
 
   @SneakyThrows
@@ -45,12 +45,12 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
-      user = testHelper.createUser(createBusinessRecord.business());
+      user = createBusinessRecord.user();
       card =
           testHelper.issueCard(
               business,
               createBusinessRecord.allocationRecord().allocation(),
-              user.user(),
+              user,
               Currency.USD,
               FundingType.POOLED,
               CardType.PHYSICAL,

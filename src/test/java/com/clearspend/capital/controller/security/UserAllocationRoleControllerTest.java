@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.security.UserAllocationRole;
@@ -16,7 +17,6 @@ import com.clearspend.capital.controller.type.security.UserAllocationRolesRespon
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
-import com.clearspend.capital.service.AllocationService;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -38,18 +38,16 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
-  private final AllocationService allocationService;
   private final EntityManager entityManager;
 
   @SneakyThrows
   @Test
   void createAllocationPostPermissionPutChangeDelete() {
-    testHelper.init();
-    final Allocation rootAllocation =
-        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
-    final User rootAllocationOwner =
-        entityManager.getReference(User.class, rootAllocation.getOwnerId());
-    User manager = testHelper.createUser(testHelper.retrieveBusiness()).user();
+    CreateBusinessRecord createBusinessRecord = testHelper.init();
+    final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    final User rootAllocationOwner = createBusinessRecord.user();
+    testHelper.setCurrentUser(rootAllocationOwner);
+    User manager = testHelper.createUser(createBusinessRecord.business()).user();
 
     entityManager.flush();
     testHelper.login(rootAllocationOwner); // Has Admin permissions by default

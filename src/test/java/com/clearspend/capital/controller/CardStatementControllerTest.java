@@ -45,15 +45,13 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getCardStatement() {
-
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
     User user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
     Card card =
         testHelper.issueCard(
             business,
@@ -64,6 +62,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             CardType.PHYSICAL,
             true);
 
+    testHelper.setCurrentUser(user);
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             user,

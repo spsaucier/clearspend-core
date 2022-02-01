@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.DataAccessViolationException;
@@ -23,28 +22,27 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
-import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionChannel;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
-import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,13 +64,18 @@ public class AllocationService {
   private final CardService cardService;
   private final TransactionLimitService transactionLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
-  private final AllocationRolePermissionsService allocationRolePermissionsService;
+  private final EntityManager entityManager;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
   public record AllocationDetailsRecord(
       Allocation allocation, Account account, User owner, TransactionLimit transactionLimit) {}
 
+  @RestrictedApi(
+      explanation = "This only happens during onboarding",
+      link = "",
+      allowedOnPath =
+          "/(test/.*)|(?:main/java/com/clearspend/capital/(?:controller/nonprod/TestDataController|service/BusinessProspectService).java)")
   @Transactional
   public AllocationRecord createRootAllocation(
       TypedId<BusinessId> businessId, User user, String name) {
@@ -157,22 +160,18 @@ public class AllocationService {
         disabledMccGroups,
         disabledTransactionChannels);
 
-    if (user.getType().equals(UserType.EMPLOYEE)) {
-      UserRolesAndPermissions parentRole =
-          rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(parentAllocationId);
-      EnumSet<AllocationPermission> managerPermissions =
-          allocationRolePermissionsService.getAllocationRolePermissions(
-              businessId, DefaultRoles.ALLOCATION_MANAGER);
-      rolesAndPermissionsService.createUserAllocationRole(
-          user,
-          allocation,
-          parentRole.allocationPermissions().containsAll(managerPermissions)
-              ? parentRole.allocationRole()
-              : DefaultRoles.ALLOCATION_MANAGER);
-    }
+    ensureAllocationOwnerPermissions(user, allocation);
+
     return new AllocationRecord(allocation, account);
   }
 
+  private void ensureAllocationOwnerPermissions(User user, Allocation allocation) {
+    rolesAndPermissionsService.ensureMinimumAllocationPermissions(
+        user, allocation, DefaultRoles.ALLOCATION_MANAGER);
+  }
+
+  // TODO fix NetworkMessageDemoControllerTest
+  // @PreAuthorize("hasPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public Allocation retrieveAllocation(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
     Allocation allocation =
@@ -190,6 +189,7 @@ public class AllocationService {
   }
 
   // TODO: improve entity retrieval to make a single db call
+  @PreAuthorize("hasPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public AllocationDetailsRecord getAllocation(
       Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
@@ -209,6 +209,7 @@ public class AllocationService {
   }
 
   @Transactional
+  @PreAuthorize("hasPermission(#allocationId, 'MANAGE_FUNDS')")
   public void updateAllocation(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
@@ -231,8 +232,11 @@ public class AllocationService {
         transactionLimits,
         disabledMccGroups,
         disabledTransactionChannels);
+
+    ensureAllocationOwnerPermissions(entityManager.getReference(User.class, ownerId), allocation);
   }
 
+  @PreAuthorize("hasPermission(#businessId, 'BusinessId', 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {
     Allocation rootAllocation =
         allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId);
@@ -244,6 +248,7 @@ public class AllocationService {
         accountService.retrieveAllocationAccount(businessId, Currency.USD, rootAllocation.getId()));
   }
 
+  @PreAuthorize("hasPermission(#allocationId, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> getAllocationChildren(
       Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId
@@ -261,6 +266,12 @@ public class AllocationService {
               business.getId(), allocationId);
     }
     // if none, return empty list
+    return getAllocationRecords(business, allocations);
+  }
+
+  @NonNull
+  private List<AllocationRecord> getAllocationRecords(
+      Business business, List<Allocation> allocations) {
     if (allocations.size() == 0) {
       return Collections.emptyList();
     }
@@ -276,6 +287,8 @@ public class AllocationService {
     return searchBusinessAllocations(business, null);
   }
 
+  @PreAuthorize(
+      "hasPermission(#business.getId(), 'BusinessId', 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> searchBusinessAllocations(Business business, String name) {
     List<Allocation> allocations =
         StringUtils.isEmpty(name)
@@ -284,15 +297,7 @@ public class AllocationService {
                 business.getId(), name);
 
     // if none, return empty list
-    if (allocations.size() == 0) {
-      return Collections.emptyList();
-    }
-
-    Map<TypedId<AllocationId>, Account> accountMap = getAllocationAccountMap(business, allocations);
-
-    return allocations.stream()
-        .map(e -> new AllocationRecord(e, accountMap.get(e.getId())))
-        .collect(Collectors.toList());
+    return getAllocationRecords(business, allocations);
   }
 
   private Map<TypedId<AllocationId>, Account> getAllocationAccountMap(
@@ -312,6 +317,7 @@ public class AllocationService {
   }
 
   @Transactional
+  @PreAuthorize("hasPermission(#allocationId, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateAllocationFunds(
       Business business,
       @NonNull TypedId<AllocationId> allocationId,

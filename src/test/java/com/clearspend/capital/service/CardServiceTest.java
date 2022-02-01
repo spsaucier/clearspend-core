@@ -48,6 +48,7 @@ class CardServiceTest extends BaseCapitalTest {
 
   @Test
   void issueCard() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Card card =
         testHelper.issueCard(
             business,
@@ -65,6 +66,7 @@ class CardServiceTest extends BaseCapitalTest {
   @Test
   void getUserCards() {
     log.info("allCards: {}", cardRepository.findAll());
+    testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.issueCard(
         business,
         allocation,

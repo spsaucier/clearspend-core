@@ -10,19 +10,23 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.GlobalRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -63,6 +67,7 @@ public class RolesAndPermissionsService {
   private final FusionAuthService fusionAuthService;
   private final AllocationRepository allocationRepository;
   private final EntityManager entityManager;
+  private final AllocationRolePermissionsRepository allocationRolePermissionsRepository;
 
   /**
    * Creates a user's role, adding the given permission to any existing UserAllocationRole
@@ -377,6 +382,42 @@ public class RolesAndPermissionsService {
 
   public Set<String> getGlobalRoles(@NonNull User user) {
     return fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef()));
+  }
+
+  public UserRolesAndPermissions getUserRolesAndPermissionsAtRootAllocation(
+      TypedId<BusinessId> businessId) {
+    CurrentUser user = CurrentUser.get();
+    return userAllocationRoleRepository.getUserPermissionAtBusiness(
+        businessId, user.userId(), user.roles());
+  }
+
+  public void ensureMinimumAllocationPermissions(
+      User user, Allocation allocation, String defaultRole) {
+    if (user.getType().equals(UserType.EMPLOYEE)) {
+      UserRolesAndPermissions existingRole =
+          getUserRolesAndPermissionsForAllocation(allocation.getId());
+      EnumSet<AllocationPermission> minimumPermissions =
+          EnumSet.copyOf(
+              Arrays.asList(
+                  allocationRolePermissionsRepository
+                      .findAllocationRolePermissionsByBusiness(allocation.getBusinessId())
+                      .stream()
+                      .filter(r -> r.getRoleName().equals(defaultRole))
+                      .map(AllocationRolePermissions::getPermissions)
+                      .findFirst()
+                      .orElseThrow()));
+      if (existingRole == null) {
+        createUserAllocationRole(user, allocation, defaultRole);
+      } else {
+        if (!existingRole.allocationPermissions().containsAll(minimumPermissions)) {
+          if (existingRole.inherited()) {
+            createUserAllocationRole(user, allocation, defaultRole);
+          } else {
+            updateUserAllocationRole(user, allocation, defaultRole);
+          }
+        }
+      }
+    }
   }
 
   // TODO list businesses available to a user (bookkeeper, customer service)

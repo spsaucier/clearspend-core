@@ -11,6 +11,8 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.Address;
@@ -38,6 +40,7 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AllocationService;
+import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
@@ -89,10 +92,11 @@ public class UserControllerTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
+      createBusinessRecord = testHelper.init();
       business = createBusinessRecord.business();
       user = testHelper.createUser(createBusinessRecord.business());
-      userCookie = testHelper.login(user.user().getEmail().getEncrypted(), user.password());
+      userCookie = testHelper.login(user.user());
+      testHelper.setCurrentUser(createBusinessRecord.user());
       card =
           testHelper.issueCard(
               business,
@@ -112,11 +116,7 @@ public class UserControllerTest extends BaseCapitalTest {
               CardType.VIRTUAL,
               false);
     }
-  }
-
-  @BeforeEach
-  void init() {
-    testHelper.init();
+    testHelper.setCurrentUser(createBusinessRecord.user());
   }
 
   @Test
@@ -139,13 +139,9 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    testHelper.createBusinessOwner(business.getId(), email, password);
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     testHelper.createAllocation(
         business.getId(),
@@ -170,29 +166,24 @@ public class UserControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    com.clearspend.capital.data.model.User user =
-        userService.retrieveUsersForBusiness(business.getId()).stream()
-            .filter(u -> u.getType() == UserType.EMPLOYEE)
-            .findAny()
-            .orElseThrow();
-    Assertions.assertEquals(
-        user.getId(),
-        objectMapper
-            .readValue(response.getContentAsString(), CreateUserResponse.class)
-            .getUserId());
+    final TypedId<UserId> createdUserId =
+        objectMapper.readValue(response.getContentAsString(), CreateUserResponse.class).getUserId();
+
+    userService.retrieveUsersForBusiness(business.getId()).stream()
+        .filter(u -> u.getType() == UserType.EMPLOYEE)
+        .filter(u -> u.getId().equals(createdUserId))
+        .findFirst()
+        .orElseThrow(); // failure here indicates created user was not found
+
     log.info(response.getContentAsString());
   }
 
   @SneakyThrows
   @Test
   void updateUser() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    testHelper.createBusinessOwner(business.getId(), email, password);
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     testHelper.createAllocation(
         business.getId(),
@@ -236,13 +227,9 @@ public class UserControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void bulkCreateUser() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    testHelper.createBusinessOwner(business.getId(), email, password);
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     testHelper.createAllocation(
         business.getId(),
@@ -287,13 +274,9 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsers() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
-    testHelper.createBusinessOwner(business.getId(), email, password);
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     testHelper.createAllocation(
         business.getId(),
@@ -543,18 +526,10 @@ public class UserControllerTest extends BaseCapitalTest {
   void getCardAccountActivity() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
 
-    CreateUpdateUserRecord userRecord =
-        userService.createUser(
-            createBusinessRecord.business().getId(),
-            UserType.EMPLOYEE,
-            "First",
-            "Last",
-            testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber());
+    CreateUpdateUserRecord userRecord = testHelper.createUser(createBusinessRecord.business());
 
-    Cookie authCookie =
-        testHelper.login(userRecord.user().getEmail().getEncrypted(), userRecord.password());
+    Cookie authCookie = testHelper.login(userRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     CardRecord cardRecord =
         cardService.issueCard(
@@ -609,18 +584,15 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUsersForBusinessIdByUserName() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.createAllocation(
         business.getId(),
         "",
         createBusinessRecord.allocationRecord().allocation().getId(),
         createBusinessRecord.user());
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = testHelper.getDefaultAuthCookie();
 
     CreateUpdateUserRecord userRecord =
         userService.createUser(
@@ -664,6 +636,7 @@ public class UserControllerTest extends BaseCapitalTest {
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     AllocationService.AllocationRecord allocation =
         testHelper.createAllocation(
             business.getId(),
@@ -742,10 +715,6 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsersFilteredByAllocation() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
     AllocationService.AllocationRecord allocation =
         testHelper.createAllocation(
@@ -768,7 +737,7 @@ public class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             createBusinessRecord.user());
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     CreateUpdateUserRecord user =
         userService.createUser(
@@ -845,8 +814,11 @@ public class UserControllerTest extends BaseCapitalTest {
     String email = testHelper.generateEmail();
     String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
+    BusinessOwnerAndUserRecord owner =
+        testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     AllocationService.AllocationRecord allocation =
         testHelper.createAllocation(
             business.getId(),
@@ -868,7 +840,7 @@ public class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             createBusinessRecord.user());
 
-    Cookie authCookie = testHelper.login(email, password);
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     CreateUpdateUserRecord user =
         userService.createUser(
@@ -889,6 +861,7 @@ public class UserControllerTest extends BaseCapitalTest {
             faker.internet().emailAddress(),
             faker.phoneNumber().phoneNumber());
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.issueCard(
         business,
         allocation.allocation(),

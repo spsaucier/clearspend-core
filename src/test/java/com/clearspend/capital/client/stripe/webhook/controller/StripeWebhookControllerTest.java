@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.stripe.webhook.controller;
 
+import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -102,6 +103,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord().allocation();
+      setCurrentUser(createBusinessRecord.user());
       businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
       testHelper.transactBankAccount(
           businessBankAccount, BankAccountTransactType.DEPOSIT, BigDecimal.valueOf(100L), false);

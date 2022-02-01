@@ -58,17 +58,19 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final AllocationService allocationService;
 
   private Cookie authCookie;
+  private CreateBusinessRecord createBusinessRecord;
 
   @BeforeEach
   void init() {
-    testHelper.init();
-    this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
+    createBusinessRecord = testHelper.init();
+    authCookie = createBusinessRecord.authCookie();
+    testHelper.setCurrentUser(createBusinessRecord.user());
   }
 
   @SneakyThrows
   @Test
   void getBusiness_success() {
-    Business business = testHelper.retrieveBusiness();
+    Business business = createBusinessRecord.business();
 
     MockHttpServletResponse response =
         mvc.perform(get("/businesses/").contentType("application/json").cookie(this.authCookie))
@@ -103,7 +105,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void reallocateBusinessFunds_success() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             createBusinessRecord.business().getId(),
@@ -185,7 +186,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void getBusinessAllocations_success() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
     AllocationRecord allocationChild1 =
         testHelper.createAllocation(
@@ -280,7 +280,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void getRootAllocation_ForUnknownBusinessId_expectStatus204() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 
     testHelper.deleteBusinessOwner(createBusinessRecord.businessOwner().getId());
@@ -303,7 +302,6 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void searchBusinessAllocation_success() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     SearchBusinessAllocationRequest request =
         new SearchBusinessAllocationRequest(
             createBusinessRecord.allocationRecord().allocation().getName());
@@ -329,7 +327,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getBusinessAccountWithFetchHoldTrueWhenAmountIsAddedOnHold() {
-    Business business = testHelper.retrieveBusiness();
+    Business business = createBusinessRecord.business();
     accountService.depositFunds(
         business.getId(),
         allocationService.getRootAllocation(business.getId()).account(),

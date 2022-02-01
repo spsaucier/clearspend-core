@@ -47,16 +47,12 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeEmployee() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -106,7 +102,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
                 post("/account-activity/category-spend")
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -120,16 +116,13 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeAllocation() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -159,6 +152,8 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, account, 1);
 
+    Cookie authCookie = createBusinessRecord.authCookie();
+
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.ALLOCATION);
     chartDataRequest.setFrom(OffsetDateTime.now().minusDays(1));
@@ -185,16 +180,12 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeMerchant() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -223,6 +214,8 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         createBusinessRecord, business, null, 1);
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, null, 1);
+
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.MERCHANT);
@@ -250,16 +243,12 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getChartDataFilterTypeMerchantCategory() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
-
-    Cookie authCookie = testHelper.login(email, password);
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -288,6 +277,8 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         createBusinessRecord, business, null, 1);
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, null, 1);
+
+    Cookie authCookie = createBusinessRecord.authCookie();
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.MERCHANT_CATEGORY);

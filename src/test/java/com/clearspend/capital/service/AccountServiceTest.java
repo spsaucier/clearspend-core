@@ -29,8 +29,10 @@ class AccountServiceTest extends BaseCapitalTest {
   @Test
   void reallocateFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),

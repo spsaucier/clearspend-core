@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidProperties;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
@@ -35,11 +36,12 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   private final PlaidProperties plaidProperties;
 
   private Cookie authCookie;
+  private CreateBusinessRecord createBusinessRecord;
 
   @BeforeEach
   void init() {
-    testHelper.init();
-    this.authCookie = testHelper.login("business-owner-tester@clearspend.com", "Password1!");
+    createBusinessRecord = testHelper.init();
+    this.authCookie = createBusinessRecord.authCookie();
   }
 
   @SneakyThrows

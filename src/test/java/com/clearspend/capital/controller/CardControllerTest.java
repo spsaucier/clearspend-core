@@ -69,7 +69,7 @@ public class CardControllerTest extends BaseCapitalTest {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       userId = createBusinessRecord.allocationRecord().allocation().getOwnerId();
-      userCookie = testHelper.login(userId);
+      userCookie = createBusinessRecord.authCookie();
       card =
           testHelper.issueCard(
               business,
@@ -156,6 +156,7 @@ public class CardControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void updateCardLimits() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     // given
     Card card =
         testHelper.issueCard(

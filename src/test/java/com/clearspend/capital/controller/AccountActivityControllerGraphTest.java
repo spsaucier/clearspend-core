@@ -50,6 +50,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
 
     CreateUpdateUserRecord user = testHelper.createUser(business);
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Card card =
         testHelper.issueCard(
             business,

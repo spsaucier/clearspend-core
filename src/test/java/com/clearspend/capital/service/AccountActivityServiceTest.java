@@ -49,6 +49,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     businessBankAccountService.transactBankAccount(
@@ -67,6 +69,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void recordAccountActivityOnReallocationBusinessFunds() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -98,6 +101,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void createAccountActivity() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(business.getId());
     accountService.retrieveRootAllocationAccount(
@@ -121,6 +125,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void retrieveLatestAccountActivity() throws JsonProcessingException {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     accountService.depositFunds(
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
@@ -179,6 +185,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),

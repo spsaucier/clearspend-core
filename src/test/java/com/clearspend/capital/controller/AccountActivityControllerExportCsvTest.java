@@ -49,6 +49,7 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
 
     User user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
     Card card =
         testHelper.issueCard(
             business,
