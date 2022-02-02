@@ -1,4 +1,4 @@
-alter table business add column if not exists mcc varchar(100) not null ;
+alter table business add column if not exists mcc varchar(100) not null default 5462 ;
 alter table business add column if not exists description varchar(200) ;
 alter table business add column if not exists url varchar(100);
 alter table business alter column business_email_encrypted drop not null ;
@@ -47,3 +47,6 @@ update business set type = 'PUBLIC_CORPORATION' where type = 'C_CORP';
 update business set type = 'PUBLIC_CORPORATION' where type = 'B_CORP';
 update business set type = 'SOLE_PROPRIETORSHIP' where type = 'SOLE_PROPROETORSHIP';
 update business set type = 'INCORPORATED_NON_PROFIT' where type = '_501_C_3';
+
+alter table business alter column mcc drop default;
+alter table business_prospect alter column business_type drop default;
