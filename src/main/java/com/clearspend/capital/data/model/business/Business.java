@@ -81,8 +81,14 @@ public class Business extends TypedMutable<BusinessId> {
   @Enumerated(EnumType.STRING)
   private BusinessStatusReason statusReason;
 
+  private String description;
+
+  @NonNull private Integer mcc;
+
+  private String url;
+
   // identifier of this business (account in stripe terms) at Stripe
-  private String externalRef;
+  private String stripeAccountReference;
 
   // identifier of the treasury (financial) bank account at Stripe
   private String stripeFinancialAccountRef;

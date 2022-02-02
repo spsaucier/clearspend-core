@@ -1,40 +1,42 @@
 package com.clearspend.capital.controller.type.review;
 
-import com.clearspend.capital.service.SoftFailService.RequiredDocumentsForManualReview;
+import com.clearspend.capital.service.ApplicationReviewService.RequiredDocumentsForStripe;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
+@AllArgsConstructor
 @NoArgsConstructor
-public class SoftFailRequiredDocumentsResponse {
+public class ApplicationReviewRequirements {
 
   public record RequiredDocument(String documentName, String type, String entityTokenId) {}
 
   public record KycDocuments(String owner, List<RequiredDocument> documents) {}
 
+  @JsonProperty("kybRequiredFields")
+  List<String> kybRequiredFields;
+
+  @JsonProperty("kycRequiredFields")
+  List<String> kycRequiredFields;
+
   @JsonProperty("kybRequiredDocuments")
-  @NonNull
   List<RequiredDocument> kybRequiredDocuments;
 
   @JsonProperty("kycRequiredDocuments")
-  @NonNull
   List<KycDocuments> kycRequiredDocuments;
 
-  public SoftFailRequiredDocumentsResponse(
-      RequiredDocumentsForManualReview requestedDocumentsByAlloy) {
+  public ApplicationReviewRequirements(RequiredDocumentsForStripe requiredDocumentsForStripe) {
     this.kybRequiredDocuments =
-        requestedDocumentsByAlloy.kybDocuments() != null
-            ? requestedDocumentsByAlloy.kybDocuments().kybErrorCodeList().stream()
+        requiredDocumentsForStripe.kybDocuments() != null
+            ? requiredDocumentsForStripe.kybDocuments().kybErrorCodeList().stream()
                 .map(
                     kybErrorCode ->
-                        new SoftFailRequiredDocumentsResponse.RequiredDocument(
+                        new ApplicationReviewRequirements.RequiredDocument(
                             kybErrorCode.getDocuments().stream()
                                 .map(KybDocuments::getDocumentName)
                                 .collect(Collectors.joining(" or ")),
@@ -42,20 +44,20 @@ public class SoftFailRequiredDocumentsResponse {
                                 .map(kybDocuments -> kybDocuments.getDocumentType().name())
                                 .distinct()
                                 .collect(Collectors.joining("|")),
-                            requestedDocumentsByAlloy.kybDocuments().entityTokenId()))
+                            requiredDocumentsForStripe.kybDocuments().entityTokenId()))
                 .distinct()
                 .collect(Collectors.toList())
             : Collections.emptyList();
     this.kycRequiredDocuments =
-        requestedDocumentsByAlloy.kycDocuments().stream()
+        requiredDocumentsForStripe.kycDocuments().stream()
             .map(
                 kycOwnerDocuments ->
-                    new SoftFailRequiredDocumentsResponse.KycDocuments(
+                    new ApplicationReviewRequirements.KycDocuments(
                         kycOwnerDocuments.owner(),
                         kycOwnerDocuments.kycErrorCodes().stream()
                             .map(
                                 kycErrorCode ->
-                                    new SoftFailRequiredDocumentsResponse.RequiredDocument(
+                                    new ApplicationReviewRequirements.RequiredDocument(
                                         kycErrorCode.getDocuments().stream()
                                             .map(
                                                 com.clearspend.capital.controller.type.review

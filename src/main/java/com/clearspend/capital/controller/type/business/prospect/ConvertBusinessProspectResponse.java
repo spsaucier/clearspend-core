@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.controller.type.business.Business;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -19,4 +20,7 @@ public class ConvertBusinessProspectResponse {
   @JsonProperty("businessOwnerId")
   @NonNull
   private TypedId<BusinessOwnerId> businessOwnerId;
+
+  @JsonProperty("errorMessages")
+  private List<String> stripeAccountCreationMessages;
 }

@@ -15,14 +15,20 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Account;
+import com.stripe.model.Account.Requirements;
+import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.Person;
 import com.stripe.model.SetupIntent;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
+import java.util.List;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
@@ -34,6 +40,8 @@ public class StripeMockClient extends StripeClient {
 
   private static final String fakerRandom32SymbolsPattern = "????????????????????????????????";
   private static final Faker faker = new Faker();
+  @Autowired private BusinessRepository businessRepository;
+  @Autowired private BusinessOwnerRepository businessOwnerRepository;
 
   public StripeMockClient(
       StripeProperties stripeProperties,
@@ -44,7 +52,22 @@ public class StripeMockClient extends StripeClient {
 
   @Override
   public Account createAccount(Business business) {
-    return generateEntityWithId(Account.class);
+    Account account = generateEntityWithId(Account.class);
+
+    if ("Review".equals(business.getLegalName())) {
+      Requirements requirements = new Requirements();
+      Errors failed_address_match = new Errors();
+      failed_address_match.setCode("verification_failed_address_match");
+      requirements.setErrors(List.of(failed_address_match));
+      requirements.setPastDue(List.of("verification.document"));
+      account.setRequirements(requirements);
+    } else if ("Denied".equals(business.getLegalName())) {
+      Requirements requirements = new Requirements();
+      requirements.setDisabledReason("rejected.other");
+      account.setRequirements(requirements);
+    }
+
+    return account;
   }
 
   @Override
@@ -54,7 +77,99 @@ public class StripeMockClient extends StripeClient {
 
   @Override
   public Person createPerson(BusinessOwner businessOwner, String businessExternalRef) {
+    Person person = generateEntityWithId(Person.class);
+    if (businessOwner.getTitle() != null) {
+      if ("Review".equals(businessOwner.getTitle())) {
+        Person.Requirements requirements = new Person.Requirements();
+        Errors failed_address_match = new Errors();
+        failed_address_match.setCode("verification_document_id_number_mismatch");
+        requirements.setErrors(List.of(failed_address_match));
+        requirements.setPastDue(List.of("verification.document"));
+        person.setRequirements(requirements);
+      } else if ("Fraud".equals(businessOwner.getTitle())) {
+        Person.Requirements requirements = new Person.Requirements();
+        Errors failed_address_match = new Errors();
+        failed_address_match.setCode("verification_failed_other");
+        requirements.setErrors(List.of(failed_address_match));
+        person.setRequirements(requirements);
+      }
+    }
+    return person;
+  }
+
+  public Account updateAccount(Account account, BusinessOwner owner) {
+    Account account1 = generateEntityWithId(Account.class);
+    if (owner.getTitle() != null) {
+      if ("Fraud".equals(owner.getTitle())) {
+        Requirements requirements = new Requirements();
+        requirements.setDisabledReason("rejected.fraud");
+        account1.setRequirements(requirements);
+      } else if ("Review".equals(owner.getTitle())) {
+        Requirements requirements = new Requirements();
+        Errors failed_address_match = new Errors();
+        failed_address_match.setCode("verification_failed_address_match");
+        requirements.setErrors(List.of(failed_address_match));
+        requirements.setPastDue(List.of("verification.document"));
+        account1.setRequirements(requirements);
+      }
+    }
+    return account1;
+  }
+
+  public Account triggerAccountValidationAfterPersonsProvided(
+      String stripeAccountReference, Boolean ownersProvided, Boolean executiveProvided) {
+    Account account1 = generateEntityWithId(Account.class);
+    TypedId<BusinessId> id =
+        businessRepository
+            .findByStripeAccountReference(stripeAccountReference)
+            .orElseThrow()
+            .getId();
+    List<BusinessOwner> businessOwnerByBusinessId = businessOwnerRepository.findByBusinessId(id);
+    boolean fraud =
+        businessOwnerByBusinessId.stream()
+            .anyMatch(businessOwner -> "Fraud".equals(businessOwner.getTitle()));
+    boolean review =
+        businessOwnerByBusinessId.stream()
+            .anyMatch(businessOwner -> "Review".equals(businessOwner.getTitle()));
+    if (fraud) {
+      Requirements requirements = new Requirements();
+      requirements.setDisabledReason("rejected.fraud");
+      account1.setRequirements(requirements);
+    } else if (review) {
+      Requirements requirements = new Requirements();
+      Errors failed_address_match = new Errors();
+      failed_address_match.setCode("verification_failed_address_match");
+      requirements.setErrors(List.of(failed_address_match));
+      requirements.setPastDue(List.of("verification.document"));
+      account1.setRequirements(requirements);
+    }
+    return account1;
+  }
+
+  public Person createPersonOnboardRepresentative(
+      BusinessOwner businessOwner, String businessExternalRef) {
     return generateEntityWithId(Person.class);
+  }
+
+  public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
+    return generateEntityWithId(Person.class);
+  }
+
+  public Person updatePerson(Person person, BusinessOwner businessOwner) {
+    Person person1 = generateEntityWithId(Person.class);
+    if (businessOwner.getTitle() != null && "Review".equals(businessOwner.getTitle())) {
+      Person.Requirements requirements = new Person.Requirements();
+      Errors failed_address_match = new Errors();
+      failed_address_match.setCode("verification_document_id_number_mismatch");
+      requirements.setErrors(List.of(failed_address_match));
+      requirements.setPastDue(List.of("verification.document"));
+      person1.setRequirements(requirements);
+    }
+    return person1;
+  }
+
+  public Account retrieveAccount(String businessExternalReference) {
+    return generateEntityWithId(Account.class);
   }
 
   @Override

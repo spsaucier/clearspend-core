@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.EphemeralKey;
+import com.stripe.model.File;
 import com.stripe.model.Person;
 import com.stripe.model.PersonCollection;
 import com.stripe.model.SetupIntent;
@@ -29,20 +30,24 @@ import com.stripe.net.ApiRequestParams;
 import com.stripe.net.ApiResource;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.AccountCreateParams;
-import com.stripe.param.AccountCreateParams.BusinessType;
+import com.stripe.param.AccountCreateParams.BusinessProfile;
 import com.stripe.param.AccountCreateParams.Capabilities;
 import com.stripe.param.AccountCreateParams.Capabilities.CardIssuing;
 import com.stripe.param.AccountCreateParams.Capabilities.CardPayments;
 import com.stripe.param.AccountCreateParams.Capabilities.Transfers;
 import com.stripe.param.AccountCreateParams.Company;
 import com.stripe.param.AccountCreateParams.Company.Address;
+import com.stripe.param.AccountCreateParams.Settings;
 import com.stripe.param.AccountCreateParams.TosAcceptance;
 import com.stripe.param.AccountCreateParams.Type;
 import com.stripe.param.AccountUpdateParams;
+import com.stripe.param.FileCreateParams;
+import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonCollectionCreateParams;
 import com.stripe.param.PersonCollectionCreateParams.Builder;
 import com.stripe.param.PersonCollectionCreateParams.Dob;
 import com.stripe.param.PersonCollectionCreateParams.Relationship;
+import com.stripe.param.PersonUpdateParams;
 import com.stripe.param.SetupIntentCreateParams;
 import com.stripe.param.SetupIntentCreateParams.MandateData;
 import com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance;
@@ -53,9 +58,11 @@ import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -63,6 +70,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -104,6 +112,24 @@ public class StripeClient {
   }
 
   public Account createAccount(Business business) {
+
+    Company.Builder companyBuilder =
+        Company.builder()
+            .setName(business.getLegalName())
+            .setTaxId(business.getEmployerIdentificationNumber())
+            .setStructure(business.getType().getStripeValue());
+
+    AccountCreateParams.Builder accountBuilder =
+        AccountCreateParams.builder()
+            .setType(Type.CUSTOM)
+            .setBusinessType(business.getType().getStripeBusinessType())
+            .setBusinessProfile(
+                BusinessProfile.builder()
+                    .setMcc(business.getMcc().toString())
+                    .setProductDescription(business.getDescription())
+                    .setUrl(business.getUrl())
+                    .build());
+
     Address.Builder addressBuilder =
         Address.builder()
             .setLine1(business.getClearAddress().getStreetLine1())
@@ -115,46 +141,50 @@ public class StripeClient {
       addressBuilder.setLine2(business.getClearAddress().getStreetLine2());
     }
 
-    Company company =
-        Company.builder()
-            .setName(business.getLegalName())
-            .setTaxId(business.getEmployerIdentificationNumber())
-            .setPhone(business.getBusinessPhone().getEncrypted())
-            // TODO: Implement proper conversion
-            /*
-                        .setStructure(
-                            switch (business.getType()) {
-                              case LLC -> Structure.LLC;
-                              case LLP -> Structure.LIMITED_LIABILITY_PARTNERSHIP;
-                              case SOLE_PROPRIETORSHIP -> Structure.SOLE_PROPRIETORSHIP;
-                              default -> Structure.PRIVATE_COMPANY;
-                            })
-            */
-            .setAddress(addressBuilder.build())
-            .build();
+    companyBuilder
+        .setPhone(business.getBusinessPhone().getEncrypted())
+        .setAddress(addressBuilder.build());
 
-    Capabilities capabilities =
+    accountBuilder.setCountry(business.getClearAddress().getCountry().getTwoCharacterCode());
+
+    accountBuilder.setCompany(companyBuilder.build());
+    accountBuilder.setCapabilities(
         Capabilities.builder()
             .setTransfers(Transfers.builder().setRequested(true).build())
             .setCardPayments(CardPayments.builder().setRequested(true).build())
             .setCardIssuing(CardIssuing.builder().setRequested(true).build())
             .putExtraParam("treasury", REQUESTED_CAPABILITY)
             .putExtraParam("us_bank_account_ach_payments", REQUESTED_CAPABILITY)
-            .build();
+            .build());
 
     AccountCreateParams accountCreateParams =
-        AccountCreateParams.builder()
-            .setType(Type.CUSTOM)
-            .setBusinessType(BusinessType.COMPANY)
-            .setCountry(business.getClearAddress().getCountry().getTwoCharacterCode())
-            .setEmail(business.getBusinessEmail().getEncrypted())
-            .setCompany(company)
-            .setCapabilities(capabilities)
+        accountBuilder
             .setTosAcceptance(
                 TosAcceptance.builder()
                     // TODO: identify proper values
                     .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
                     .setIp(stripeProperties.getTosAcceptanceIp())
+                    .build())
+            .setSettings(
+                Settings.builder()
+                    .setCardIssuing(
+                        Settings.CardIssuing.builder()
+                            .setTosAcceptance(
+                                Settings.CardIssuing.TosAcceptance.builder()
+                                    .setDate(
+                                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
+                                    .setIp(stripeProperties.getTosAcceptanceIp())
+                                    .build())
+                            .build())
+                    .putExtraParam(
+                        "treasury",
+                        Map.of(
+                            "tos_acceptance",
+                            Map.of(
+                                "date",
+                                TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
+                                "ip",
+                                stripeProperties.getTosAcceptanceIp())))
                     .build())
             .build();
 
@@ -162,6 +192,25 @@ public class StripeClient {
         "createAccount",
         accountCreateParams,
         () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
+  }
+
+  public Account retrieveAccount(String businessExternalReference) {
+    return callStripe("retrieveAccount", null, () -> Account.retrieve(businessExternalReference));
+  }
+
+  @SneakyThrows
+  public Account triggerAccountValidationAfterPersonsProvided(
+      String stripeAccountReference, Boolean ownersProvided, Boolean executiveProvided) {
+
+    Account account = retrieveAccount(stripeAccountReference);
+
+    AccountUpdateParams.Company.Builder companyBuilder = AccountUpdateParams.Company.builder();
+    companyBuilder.setOwnersProvided(ownersProvided);
+    companyBuilder.setExecutivesProvided(executiveProvided);
+
+    AccountUpdateParams accountUpdateParams =
+        new AccountUpdateParams.Builder().setCompany(companyBuilder.build()).build();
+    return account.update(accountUpdateParams, getRequestOptions(new TypedId<>()));
   }
 
   public Cardholder createCardholder(User user, ClearAddress billingAddress) {
@@ -208,13 +257,29 @@ public class StripeClient {
       addressBuilder.setLine2(businessOwner.getAddress().getStreetLine1().getEncrypted());
     }
 
+    // TODO: gb: check cases of inconsistency on stripe
+    Relationship.Builder relationship = Relationship.builder().setOwner(true);
+
+    relationship.setOwner(businessOwner.getRelationshipOwner());
+    relationship.setRepresentative(businessOwner.getRelationshipRepresentative());
+    relationship.setExecutive(businessOwner.getRelationshipExecutive());
+    relationship.setDirector(businessOwner.getRelationshipDirector());
+
+    if (businessOwner.getTitle() != null) {
+      relationship.setTitle(businessOwner.getTitle());
+    }
+
+    if (businessOwner.getPercentageOwnership() != null) {
+      relationship.setPercentOwnership(businessOwner.getPercentageOwnership());
+    }
+
     Builder builder =
         PersonCollectionCreateParams.builder()
             .setFirstName(businessOwner.getFirstName().getEncrypted())
             .setLastName(businessOwner.getLastName().getEncrypted())
             .setEmail(businessOwner.getEmail().getEncrypted())
             .setPhone(businessOwner.getPhone().getEncrypted())
-            .setRelationship(Relationship.builder().setRepresentative(true).setOwner(true).build())
+            .setRelationship(relationship.build())
             .setAddress(addressBuilder.build());
 
     if (businessOwner.getDateOfBirth() != null) {
@@ -224,6 +289,17 @@ public class StripeClient {
               .setMonth((long) businessOwner.getDateOfBirth().getMonth().getValue())
               .setDay((long) businessOwner.getDateOfBirth().getDayOfMonth())
               .build());
+    }
+
+    // TODO request this in case is mandatory for big company
+    // TODO setFullSSN to stripe person
+    if (businessOwner.getTaxIdentificationNumber() != null) {
+      builder.setSsnLast4(
+          businessOwner
+              .getTaxIdentificationNumber()
+              .getEncrypted()
+              .substring(businessOwner.getTaxIdentificationNumber().getEncrypted().length() - 4));
+      builder.setIdNumber(businessOwner.getTaxIdentificationNumber().getEncrypted());
     }
 
     PersonCollectionCreateParams personParameters = builder.build();
@@ -236,6 +312,94 @@ public class StripeClient {
         "createPerson",
         personParameters,
         () -> personCollection.create(personParameters, getRequestOptions(businessOwner.getId())));
+  }
+
+  public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
+    PersonCollection personCollection = new PersonCollection();
+    personCollection.setUrl("/v1/accounts/%s/persons".formatted(businessExternalRef));
+    return callStripe(
+        "retrievePerson", null, () -> personCollection.retrieve(businessOwnerExternalRef));
+  }
+
+  @SneakyThrows
+  public File uploadFile(MultipartFile file, Purpose purpose) {
+
+    FileCreateParams fileCreateParams =
+        FileCreateParams.builder().setPurpose(purpose).setFile(file.getInputStream()).build();
+
+    return File.create(fileCreateParams);
+  }
+
+  @SneakyThrows
+  public File uploadFile(InputStream inputStream, Purpose purpose) {
+
+    FileCreateParams fileCreateParams =
+        FileCreateParams.builder().setPurpose(purpose).setFile(inputStream).build();
+
+    return File.create(fileCreateParams);
+  }
+
+  @SneakyThrows
+  public Person updatePerson(Person person, BusinessOwner businessOwner) {
+
+    PersonUpdateParams.Address.Builder addressBuilder =
+        PersonUpdateParams.Address.builder()
+            .setLine1(businessOwner.getAddress().getStreetLine1().getEncrypted())
+            .setCity(businessOwner.getAddress().getLocality())
+            .setState(businessOwner.getAddress().getRegion())
+            .setPostalCode(businessOwner.getAddress().getPostalCode().getEncrypted())
+            .setCountry(businessOwner.getAddress().getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(businessOwner.getAddress().getStreetLine1().getEncrypted())) {
+      addressBuilder.setLine2(businessOwner.getAddress().getStreetLine1().getEncrypted());
+    }
+
+    // TODO check if id number is mandatory to get from UI
+    PersonUpdateParams.Builder builder = PersonUpdateParams.builder();
+    builder.setAddress(addressBuilder.build());
+
+    PersonUpdateParams.Relationship.Builder builderRelationShip =
+        PersonUpdateParams.Relationship.builder();
+    if (businessOwner.getRelationshipOwner() != null) {
+      builderRelationShip.setOwner(businessOwner.getRelationshipOwner());
+    }
+
+    if (businessOwner.getRelationshipRepresentative() != null) {
+      builderRelationShip.setRepresentative(businessOwner.getRelationshipRepresentative());
+    }
+
+    if (businessOwner.getRelationshipExecutive() != null) {
+      builderRelationShip.setExecutive(businessOwner.getRelationshipExecutive());
+    }
+
+    if (businessOwner.getRelationshipDirector() != null) {
+      builderRelationShip.setDirector(businessOwner.getRelationshipDirector());
+    }
+
+    if (businessOwner.getTitle() != null) {
+      builderRelationShip.setTitle(businessOwner.getTitle());
+    }
+
+    if (businessOwner.getPercentageOwnership() != null) {
+      builderRelationShip.setPercentOwnership(businessOwner.getPercentageOwnership());
+    }
+
+    builder.setRelationship(builderRelationShip.build());
+
+    if (businessOwner.getDateOfBirth() != null) {
+      builder.setDob(
+          PersonUpdateParams.Dob.builder()
+              .setYear((long) businessOwner.getDateOfBirth().getYear())
+              .setMonth((long) businessOwner.getDateOfBirth().getMonth().getValue())
+              .setDay((long) businessOwner.getDateOfBirth().getDayOfMonth())
+              .build());
+    }
+
+    if (businessOwner.getTaxIdentificationNumber() != null) {
+      String encrypted = businessOwner.getTaxIdentificationNumber().getEncrypted();
+      builder.setSsnLast4(encrypted.substring(encrypted.length() - 4));
+    }
+
+    return person.update(builder.build());
   }
 
   public Card updateCard(String cardExternalRef, CardStatus cardStatus) {

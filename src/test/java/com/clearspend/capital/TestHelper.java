@@ -78,6 +78,8 @@ import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.clearspend.capital.util.PhoneUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -332,7 +334,7 @@ public class TestHelper {
 
     // set business owner password
     String password = PasswordUtil.generatePassword();
-    businessProspectService.setBusinessProspectPassword(businessProspect.getId(), password);
+    businessProspectService.setBusinessProspectPassword(businessProspect.getId(), password, true);
     passwords.put(businessProspect.getId(), password);
 
     login(businessProspect.getEmail().getEncrypted(), password);
@@ -351,7 +353,15 @@ public class TestHelper {
   public void testBusinessProspectState(String email, BusinessProspectStatus status) {
     BusinessProspectRecord record =
         businessProspectService.createBusinessProspect(
-            generateFirstName(), generateLastName(), email);
+            generateFirstName(),
+            generateLastName(),
+            BusinessType.MULTI_MEMBER_LLC,
+            true,
+            false,
+            false,
+            false,
+            email,
+            true);
     assertThat(record.businessProspectStatus()).isEqualTo(status);
   }
 
@@ -425,7 +435,15 @@ public class TestHelper {
 
   public BusinessProspect createBusinessProspect() throws Exception {
     CreateBusinessProspectRequest request =
-        new CreateBusinessProspectRequest(generateEmail(), generateFirstName(), generateLastName());
+        new CreateBusinessProspectRequest(
+            generateEmail(),
+            generateFirstName(),
+            generateLastName(),
+            BusinessType.MULTI_MEMBER_LLC,
+            true,
+            false,
+            false,
+            false);
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
@@ -486,10 +504,12 @@ public class TestHelper {
     ConvertBusinessProspectRequest request =
         new ConvertBusinessProspectRequest(
             businessLegalName,
-            BusinessType.C_CORP,
+            BusinessType.PUBLIC_CORPORATION,
             generateEmployerIdentificationNumber(),
             generatePhone(),
-            generateApiAddress());
+            generateApiAddress(),
+            7311,
+            "Business default description.");
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
@@ -532,17 +552,25 @@ public class TestHelper {
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
     passwords.put(businessOwnerId, password);
-    return businessOwnerService.createBusinessOwner(
-        businessOwnerId,
-        businessId,
-        generateFirstName(),
-        generateLastName(),
-        generateEntityAddress(),
-        email,
-        generatePhone(),
-        fusionAuthUserId.toString(),
-        false,
-        null);
+    return businessOwnerService.createMainBusinessOwnerAndRepresentative(
+        new BusinessOwnerData(
+            businessOwnerId,
+            businessId,
+            generateFirstName(),
+            generateLastName(),
+            null,
+            null,
+            true,
+            false,
+            false,
+            false,
+            null,
+            null,
+            generateEntityAddress(),
+            email,
+            generatePhone(),
+            fusionAuthUserId.toString(),
+            null));
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
@@ -690,15 +718,20 @@ public class TestHelper {
     String password = generatePassword();
     String legalName = faker.company().name() + " " + UUID.randomUUID(); // more unique names
     Business business =
-        businessService.createBusiness(
-            businessId,
-            legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
-            BusinessType.LLC,
-            generateEntityAddress(),
-            generateEmployerIdentificationNumber(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            Currency.USD);
+        businessService
+            .createBusiness(
+                businessId,
+                new ConvertBusinessProspect(
+                    null,
+                    legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
+                    BusinessType.SINGLE_MEMBER_LLC,
+                    generateEmployerIdentificationNumber(),
+                    faker.phoneNumber().phoneNumber(),
+                    generateEntityAddress(),
+                    MerchantType.AGRICULTURAL_COOPERATIVE,
+                    MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
+                    faker.internet().url()))
+            .business();
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);
     passwords.put(businessOwner.user().getId(), password);

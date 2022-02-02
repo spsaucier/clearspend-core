@@ -16,4 +16,6 @@ public interface BusinessOwnerRepository
   List<BusinessOwner> findByBusinessId(TypedId<BusinessId> businessId);
 
   Optional<BusinessOwner> findByBusinessIdAndSubjectRefIsNotNull(TypedId<BusinessId> businessId);
+
+  Optional<BusinessOwner> findByStripePersonReference(String stripePersonReference);
 }

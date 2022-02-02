@@ -248,7 +248,7 @@ public class BusinessBankAccountService {
           businessId,
           adjustmentAndHoldRecord.adjustment().getId(),
           adjustmentAndHoldRecord.hold() != null ? adjustmentAndHoldRecord.hold().getId() : null,
-          business.getExternalRef(),
+          business.getStripeAccountReference(),
           businessBankAccount.getStripeBankAccountRef(),
           business.getStripeFinancialAccountRef(),
           amount,
@@ -298,7 +298,7 @@ public class BusinessBankAccountService {
       Business business = businessService.retrieveBusiness(businessId);
       stripeClient.pushFundsToClearspendFinancialAccount(
           businessId,
-          business.getExternalRef(),
+          business.getStripeAccountReference(),
           business.getStripeFinancialAccountRef(),
           adjustmentId,
           amount,
@@ -364,7 +364,7 @@ public class BusinessBankAccountService {
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
 
     Business business = businessService.retrieveBusiness(businessId);
-    String stripeAccountId = business.getExternalRef();
+    String stripeAccountId = business.getStripeAccountReference();
 
     // Get a Stripe "Bank Account Token" (btok) via Plaid
     // Attach the already-verified bank account to the connected account

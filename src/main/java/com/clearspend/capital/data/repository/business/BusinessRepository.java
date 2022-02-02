@@ -8,5 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BusinessRepository extends JpaRepository<Business, TypedId<BusinessId>> {
 
+  Optional<Business> findByStripeAccountReference(String stripeAccountReference);
+
   Optional<Business> findByStripeFinancialAccountRef(String stripeFinancialAccountRef);
 }

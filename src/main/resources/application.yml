@@ -53,20 +53,6 @@ client:
   response-timeout: 5000
   read-timeout: 10000
   write-timeout: 10000
-  alloy:
-    url: https://sandbox.alloy.co/v1/
-    individual:
-      token: hyGpn2Lrdo04eLiolXSHAAsUJghQHxO4
-      secret: s25ZtYvujLaIypNeXbw5ZvhpYh5RD3VQ
-    business:
-      token: ylU99zgb9lI8EtVfHzYWmGBEWqqYHUdX
-      secret: oLvy6KLi7I0kAcIYsc4RpsYfoSVBdx4s
-    document:
-      token: GGNSWsFr2Tm86QIMi37gzKpZ0sFfxUqZ
-      secret: c7ZbBLm5mHdqhrAGbaYfAdxrbhG815oE
-    group:
-      token: EE3h7zPppYwdEDBS4gNNT2GRrEydrbok
-      secret: fx6TWSPSlFQCNz8TQ2Q46CamEjK0pd1B
   fusionauth:
     api-key: ${FUSIONAUTH_API_KEY:TFNOproE4qBhUy1B8-coLoTfW-paQIzGKWK6yXzPv340Dkrk7fwHFDGx}
     base-url: ${FUSIONAUTH_BASE_URL:http://localhost:9011}
@@ -75,6 +61,7 @@ client:
     storage:
       credentials: ${GCS_IMAGES_RECEIPTS_SA:<not set>}
       receiptBucketName: dev-images-receipts
+      onboardFileBucketName: dev-images-onboard-file
       createBucket: true
       enabled: true
 

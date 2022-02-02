@@ -9,9 +9,12 @@ import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -48,6 +51,18 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> {
   @Sensitive @NonNull @Embedded private RequiredEncryptedString firstName;
 
   @Sensitive @NonNull @Embedded private RequiredEncryptedString lastName;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private BusinessType businessType;
+
+  private Boolean relationshipOwner;
+
+  private Boolean relationshipRepresentative;
+
+  private Boolean relationshipExecutive;
+
+  private Boolean relationshipDirector;
 
   @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash email;
 

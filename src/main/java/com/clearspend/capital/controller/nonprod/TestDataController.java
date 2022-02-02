@@ -2,6 +2,7 @@ package com.clearspend.capital.controller.nonprod;
 
 import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
 
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -10,6 +11,8 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
 import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResponse;
+import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
+import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements.KycDocuments;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
@@ -26,6 +29,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -38,15 +42,20 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.ApplicationReviewService;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessOwnerService;
-import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
+import com.clearspend.capital.service.BusinessProspectService;
+import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
+import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,6 +63,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Person;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.AmountDetails;
 import com.stripe.model.issuing.Authorization.MerchantData;
@@ -62,9 +73,15 @@ import com.stripe.model.issuing.Cardholder;
 import com.stripe.model.issuing.Cardholder.Billing;
 import com.stripe.model.issuing.Cardholder.Individual;
 import com.stripe.model.issuing.Transaction;
+import com.stripe.param.FileCreateParams.Purpose;
+import com.stripe.param.PersonUpdateParams;
+import com.stripe.param.PersonUpdateParams.Verification;
+import com.stripe.param.PersonUpdateParams.Verification.Document;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,11 +89,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -112,6 +131,8 @@ public class TestDataController {
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
+  private final BusinessProspectService businessProspectService;
+  private final ApplicationReviewService applicationReviewService;
 
   private final AllocationRepository allocationRepository;
   private final AccountActivityRepository accountActivityRepository;
@@ -120,8 +141,10 @@ public class TestDataController {
   private final UserRepository userRepository;
   private final Faker faker = new Faker();
 
+  private final StripeClient stripeClient;
+
   public record BusinessRecord(
-      Business business, BusinessOwner businessOwner, User user, Allocation allocation) {}
+      Business business, List<BusinessOwner> businessOwners, User user, Allocation allocation) {}
 
   @GetMapping("/db-content")
   private CreateTestDataResponse getDbContent() {
@@ -152,7 +175,7 @@ public class TestDataController {
   private CreateTestDataResponse createTestData() throws IOException {
 
     // create a new business
-    BusinessRecord businessRecord = createBusiness(new TypedId<>());
+    BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
     Business business = businessRecord.business();
     createUser(business);
     setCurrentUser(businessRecord.user());
@@ -350,40 +373,144 @@ public class TestDataController {
                 users)));
   }
 
-  private BusinessRecord createBusiness(TypedId<BusinessId> businessId) {
-    Business business =
-        businessService.createBusiness(
-            businessId,
-            faker.company().name(),
-            BusinessType.LLC,
-            generateEntityAddress(),
-            generateEmployerIdentificationNumber(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            Currency.USD);
+  @GetMapping("/business/{type}/onboard")
+  private BusinessRecord onboardNewBusiness(
+      @PathVariable(value = "type") BusinessType businessType) {
 
-    BusinessOwnerAndUserRecord businessOwnerRecord =
-        businessOwnerService.createBusinessOwner(
-            new TypedId<>(),
-            businessId,
+    BusinessProspectRecord businessProspect =
+        businessProspectService.createBusinessProspect(
             faker.name().firstName(),
             faker.name().lastName(),
-            generateEntityAddress(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
-            null,
+            businessType,
+            true,
+            true,
             false,
-            null);
+            false,
+            faker.internet().safeEmailAddress(),
+            false);
+    businessProspectService.setBusinessProspectPhone(
+        businessProspect.businessProspect().getId(), getValidPhoneNumber(), false);
+    businessProspectService.setBusinessProspectPassword(
+        businessProspect.businessProspect().getId(), "1234567890", false);
+    ConvertBusinessProspectRecord convertBusinessProspectRecord =
+        businessProspectService.convertBusinessProspect(
+            new ConvertBusinessProspect(
+                businessProspect.businessProspect().getId(),
+                faker.company().name(),
+                businessType,
+                generateEmployerIdentificationNumber(),
+                "202-555-0111",
+                new Address(
+                    new EncryptedString("13810 Shavano Wind"),
+                    new EncryptedString("San Antonio, Texas(TX), 78230"),
+                    "San Antonio",
+                    "Texas",
+                    new EncryptedString("78230"),
+                    Country.USA),
+                MerchantType.TELECOMMUNICATION_EQUIPMENT_AND_TELEPHONE_SALES,
+                "Description of business",
+                faker.internet().url()));
 
-    AllocationRecord allocationRecord =
-        allocationService.createRootAllocation(
-            businessId, businessOwnerRecord.user(), business.getLegalName() + " - root");
+    Business business = convertBusinessProspectRecord.business();
+
+    List<BusinessOwner> businessOwners =
+        businessOwnerService.createOrUpdateBusinessOwners(
+            business.getId(),
+            List.of(
+                new BusinessOwnerData(
+                    convertBusinessProspectRecord.businessOwner().getId(),
+                    business.getId(),
+                    convertBusinessProspectRecord.businessOwner().getFirstName().getEncrypted(),
+                    convertBusinessProspectRecord.businessOwner().getLastName().getEncrypted(),
+                    LocalDate.of(1902, 1, 1),
+                    faker.number().digits(9),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipOwner(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipRepresentative(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipExecutive(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipDirector(),
+                    BigDecimal.valueOf(40),
+                    "Title Owner",
+                    new Address(
+                        new EncryptedString("13810 Shavano Wind"),
+                        new EncryptedString("San Antonio, Texas(TX), 78230"),
+                        "San Antonio",
+                        "Texas",
+                        new EncryptedString("78230"),
+                        Country.USA),
+                    convertBusinessProspectRecord.businessOwner().getEmail().getEncrypted(),
+                    convertBusinessProspectRecord.businessOwner().getPhone().getEncrypted(),
+                    null,
+                    true),
+                new BusinessOwnerData(
+                    null,
+                    business.getId(),
+                    faker.name().firstName(),
+                    faker.name().lastName(),
+                    LocalDate.of(1902, 1, 1),
+                    faker.number().digits(9),
+                    true,
+                    false,
+                    true,
+                    false,
+                    BigDecimal.valueOf(40),
+                    "Title Representative",
+                    new Address(
+                        new EncryptedString("13810 Shavano Wind"),
+                        new EncryptedString("San Antonio, Texas(TX), 78230"),
+                        "San Antonio",
+                        "Texas",
+                        new EncryptedString("78230"),
+                        Country.USA),
+                    faker.internet().safeEmailAddress(),
+                    getValidPhoneNumber(),
+                    null,
+                    true)));
+
+    AllocationRecord allocationRecord = convertBusinessProspectRecord.rootAllocationRecord();
+
+    ApplicationReviewRequirements documentsForManualReview =
+        applicationReviewService.getStripeApplicationRequirements(business.getId());
+
+    documentsForManualReview
+        .getKycRequiredDocuments()
+        .forEach(kycOwnerDocuments -> uploadIdentityDocument(business, kycOwnerDocuments));
 
     return new BusinessRecord(
         business,
-        businessOwnerRecord.businessOwner(),
-        businessOwnerRecord.user(),
+        businessOwners,
+        convertBusinessProspectRecord.user(),
         allocationRecord.allocation());
+  }
+
+  private void uploadIdentityDocument(Business business, KycDocuments kycOwnerDocuments) {
+    kycOwnerDocuments
+        .documents()
+        .forEach(
+            requiredDocument -> {
+              Person person =
+                  stripeClient.retrievePerson(
+                      requiredDocument.entityTokenId(), business.getStripeAccountReference());
+
+              try {
+                com.stripe.model.File file =
+                    stripeClient.uploadFile(
+                        new FileInputStream(
+                            new ClassPathResource("files/stripeTestFile/success.png").getFile()),
+                        Purpose.IDENTITY_DOCUMENT);
+
+                Person update =
+                    person.update(
+                        PersonUpdateParams.builder()
+                            .setVerification(
+                                Verification.builder()
+                                    .setDocument(Document.builder().setFront(file.getId()).build())
+                                    .build())
+                            .build());
+
+              } catch (StripeException | IOException e) {
+                e.printStackTrace();
+              }
+            });
   }
 
   public Address generateEntityAddress() {
@@ -425,7 +552,7 @@ public class TestDataController {
         faker.name().lastName(),
         generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber());
+        getValidPhoneNumber());
   }
 
   private CreateTestDataResponse getAllData(TypedId<BusinessId> businessId) {
@@ -568,5 +695,13 @@ public class TestDataController {
     transaction.setWallet(null);
 
     return new NetworkCommon(transaction, new StripeWebhookLog());
+  }
+
+  private String getValidPhoneNumber() {
+    String phone = faker.phoneNumber().cellPhone();
+    while (!Pattern.matches("^(\\+\\d{1,2}\\s)?\\(?\\d{3}\\)?[\\s.-]\\d{3}[\\s.-]\\d{4}$", phone)) {
+      phone = faker.phoneNumber().cellPhone();
+    }
+    return phone;
   }
 }

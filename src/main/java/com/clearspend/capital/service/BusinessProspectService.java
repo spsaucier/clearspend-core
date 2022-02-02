@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
@@ -12,16 +11,20 @@ import com.clearspend.capital.controller.type.business.prospect.ValidateBusiness
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
+import com.clearspend.capital.service.BusinessService.BusinessAndStripeMessagesRecord;
+import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -54,17 +57,32 @@ public class BusinessProspectService {
 
   @Transactional
   public BusinessProspectRecord createBusinessProspect(
-      String firstName, String lastName, String email) {
+      String firstName,
+      String lastName,
+      BusinessType businessType,
+      Boolean relationshipOwner,
+      Boolean relationshipRepresentative,
+      Boolean relationshipExecutive,
+      Boolean relationshipDirector,
+      String email,
+      boolean live) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findByEmailHash(new RequiredEncryptedStringWithHash(email).getHash())
             .orElseGet(
-                () ->
-                    businessProspectRepository.save(
-                        new BusinessProspect(
-                            new RequiredEncryptedString(firstName),
-                            new RequiredEncryptedString(lastName),
-                            new RequiredEncryptedStringWithHash(email))));
+                () -> {
+                  BusinessProspect entity =
+                      new BusinessProspect(
+                          new RequiredEncryptedString(firstName),
+                          new RequiredEncryptedString(lastName),
+                          businessType,
+                          new RequiredEncryptedStringWithHash(email));
+                  entity.setRelationshipOwner(relationshipOwner);
+                  entity.setRelationshipRepresentative(relationshipRepresentative);
+                  entity.setRelationshipExecutive(relationshipExecutive);
+                  entity.setRelationshipDirector(relationshipDirector);
+                  return businessProspectRepository.save(entity);
+                });
 
     // Update first/last names in case a prospect has been resumed with different values
     if (!Objects.equals(businessProspect.getFirstName().getEncrypted(), firstName)) {
@@ -88,11 +106,13 @@ public class BusinessProspectService {
       return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.EMAIL_VERIFIED);
     }
 
-    Verification verification = twilioService.sendVerificationEmail(email, businessProspect);
-    log.debug("createBusinessProspect: {}", verification);
-    if (!"pending".equals(verification.getStatus())) {
-      throw new RuntimeException(
-          String.format("expected pending, got %s", verification.getStatus()));
+    if (live) {
+      Verification verification = twilioService.sendVerificationEmail(email, businessProspect);
+      log.debug("createBusinessProspect: {}", verification);
+      if (!"pending".equals(verification.getStatus())) {
+        throw new RuntimeException(
+            String.format("expected pending, got %s", verification.getStatus()));
+      }
     }
 
     return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.NEW);
@@ -100,7 +120,7 @@ public class BusinessProspectService {
 
   @Transactional
   public BusinessProspect setBusinessProspectPhone(
-      TypedId<BusinessProspectId> businessProspectId, String phone) {
+      TypedId<BusinessProspectId> businessProspectId, String phone, Boolean live) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
@@ -115,15 +135,20 @@ public class BusinessProspectService {
 
     businessProspect.setPhone(new NullableEncryptedString(phone));
 
-    Verification verification = twilioService.sendVerificationSms(phone);
-    log.debug("verification: {}", verification);
+    if (Boolean.TRUE.equals(live)) {
+      Verification verification = twilioService.sendVerificationSms(phone);
+      log.debug("verification: {}", verification);
+    }
 
     return businessProspectRepository.save(businessProspect);
   }
 
   @Transactional
   public BusinessProspect validateBusinessProspectIdentifier(
-      TypedId<BusinessProspectId> businessProspectId, IdentifierType identifierType, String otp) {
+      TypedId<BusinessProspectId> businessProspectId,
+      IdentifierType identifierType,
+      String otp,
+      Boolean live) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
@@ -135,11 +160,13 @@ public class BusinessProspectService {
         if (businessProspect.isEmailVerified()) {
           throw new InvalidRequestException("email already validated");
         }
-        VerificationCheck verificationCheck =
-            twilioService.checkVerification(businessProspect.getEmail().getEncrypted(), otp);
-        log.debug("verificationCheck: {}", verificationCheck);
-        if (!verificationCheck.getValid()) {
-          throw new InvalidRequestException("email otp does not match");
+        if (Boolean.TRUE.equals(live)) {
+          VerificationCheck verificationCheck =
+              twilioService.checkVerification(businessProspect.getEmail().getEncrypted(), otp);
+          log.debug("verificationCheck: {}", verificationCheck);
+          if (Boolean.FALSE.equals(verificationCheck.getValid())) {
+            throw new InvalidRequestException("email otp does not match");
+          }
         }
         businessProspect.setEmailVerified(true);
       }
@@ -150,11 +177,13 @@ public class BusinessProspectService {
         if (businessProspect.isPhoneVerified()) {
           throw new InvalidRequestException("phone already validated");
         }
-        VerificationCheck verificationCheck =
-            twilioService.checkVerification(businessProspect.getPhone().getEncrypted(), otp);
-        log.debug("verificationCheck: {}", verificationCheck);
-        if (!verificationCheck.getValid()) {
-          throw new InvalidRequestException("phone otp does not match");
+        if (Boolean.TRUE.equals(live)) {
+          VerificationCheck verificationCheck =
+              twilioService.checkVerification(businessProspect.getPhone().getEncrypted(), otp);
+          log.debug("verificationCheck: {}", verificationCheck);
+          if (Boolean.FALSE.equals(verificationCheck.getValid())) {
+            throw new InvalidRequestException("phone otp does not match");
+          }
         }
         businessProspect.setPhoneVerified(true);
       }
@@ -165,7 +194,7 @@ public class BusinessProspectService {
 
   @Transactional
   public BusinessProspect setBusinessProspectPassword(
-      TypedId<BusinessProspectId> businessProspectId, String password) {
+      TypedId<BusinessProspectId> businessProspectId, String password, Boolean live) {
     BusinessProspect businessProspect =
         businessProspectRepository
             .findById(businessProspectId)
@@ -185,67 +214,60 @@ public class BusinessProspectService {
                 password)
             .toString());
 
-    twilioService.sendOnboardingWelcomeEmail(
-        businessProspect.getEmail().toString(), businessProspect);
+    if (Boolean.TRUE.equals(live)) {
+      twilioService.sendOnboardingWelcomeEmail(
+          businessProspect.getEmail().toString(), businessProspect);
+    }
 
     return businessProspectRepository.save(businessProspect);
   }
 
   public record ConvertBusinessProspectRecord(
-      Business business, AllocationRecord rootAllocationRecord, BusinessOwner businessOwner) {}
+      Business business,
+      AllocationRecord rootAllocationRecord,
+      BusinessOwner businessOwner,
+      User user,
+      List<String> stripeAccountCreationMessages) {}
 
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
-      TypedId<BusinessProspectId> businessProspectId,
-      String legalName,
-      BusinessType businessType,
-      String businessPhone,
-      String employerIdentificationNumber,
-      Address toAddress) {
+      ConvertBusinessProspect convertBusinessProspect) {
     BusinessProspect businessProspect =
         businessProspectRepository
-            .findById(businessProspectId)
+            .findById(convertBusinessProspect.getBusinessProspectId())
             .orElseThrow(
-                () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_PROSPECT, convertBusinessProspect.getBusinessProspectId()));
 
     if (StringUtils.isBlank(businessProspect.getSubjectRef())) {
       throw new InvalidRequestException("password has not been set");
     }
 
-    Business business =
-        businessService.createBusiness(
-            businessProspect.getBusinessId(),
-            legalName,
-            businessType,
-            toAddress,
-            employerIdentificationNumber,
-            businessProspect.getEmail().getEncrypted(),
-            businessPhone,
-            Currency.USD);
+    // When a business is created, a corespondent into stripe will be created too
+    BusinessAndStripeMessagesRecord businessAndStripeMessagesRecord =
+        businessService.createBusiness(businessProspect.getBusinessId(), convertBusinessProspect);
 
+    BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
+
+    // On convert step we will create owner without the person stripe corespondent
     BusinessOwnerAndUserRecord businessOwner =
-        businessOwnerService.createBusinessOwner(
-            businessProspect.getBusinessOwnerId(),
-            business.getId(),
-            businessProspect.getFirstName().getEncrypted(),
-            businessProspect.getLastName().getEncrypted(),
-            toAddress,
-            businessProspect.getEmail().getEncrypted(),
-            businessProspect.getPhone().getEncrypted(),
-            businessProspect.getSubjectRef(),
-            false,
-            null);
+        businessOwnerService.createMainBusinessOwnerAndRepresentative(businessOwnerData);
 
     // delete the business prospect so that the owner of the email could register a new business
-    // later
     businessProspectRepository.delete(businessProspect);
 
+    Business business = businessAndStripeMessagesRecord.business();
     AllocationRecord allocationRecord =
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName() + " - root");
 
     return new ConvertBusinessProspectRecord(
-        business, allocationRecord, businessOwner.businessOwner());
+        business,
+        allocationRecord,
+        businessOwner.businessOwner(),
+        businessOwner.user(),
+        businessAndStripeMessagesRecord.stripeAccountCreationMessages());
   }
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {

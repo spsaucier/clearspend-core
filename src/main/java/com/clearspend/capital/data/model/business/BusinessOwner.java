@@ -13,7 +13,7 @@ import com.clearspend.capital.data.model.enums.BusinessOwnerStatus;
 import com.clearspend.capital.data.model.enums.BusinessOwnerType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
-import com.clearspend.capital.data.model.enums.RelationshipToBusiness;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -21,6 +21,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -35,6 +36,7 @@ import org.hibernate.annotations.Type;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RequiredArgsConstructor
+@AllArgsConstructor
 @DynamicUpdate
 @Slf4j
 public class BusinessOwner extends TypedMutable<BusinessOwnerId> {
@@ -52,17 +54,25 @@ public class BusinessOwner extends TypedMutable<BusinessOwnerId> {
 
   @Sensitive @NonNull @Embedded private NullableEncryptedString lastName;
 
-  @NonNull
-  @Enumerated(EnumType.STRING)
-  private RelationshipToBusiness relationshipToBusiness;
+  private String title;
 
-  @NonNull @Embedded private Address address;
+  private Boolean relationshipOwner;
+
+  private Boolean relationshipRepresentative;
+
+  private Boolean relationshipExecutive;
+
+  private Boolean relationshipDirector;
+
+  private BigDecimal percentageOwnership;
+
+  @Embedded private Address address;
 
   @Sensitive @Embedded private NullableEncryptedString taxIdentificationNumber;
 
   @Sensitive @NonNull @Embedded private RequiredEncryptedStringWithHash email;
 
-  @Sensitive @NonNull @Embedded private RequiredEncryptedString phone;
+  @Sensitive @Embedded private RequiredEncryptedString phone;
 
   private LocalDate dateOfBirth;
 
@@ -82,5 +92,5 @@ public class BusinessOwner extends TypedMutable<BusinessOwnerId> {
   private BusinessOwnerStatus status;
 
   // identifier of this business owner (person in stripe terms) at Stripe
-  private String externalRef;
+  private String stripePersonReference;
 }

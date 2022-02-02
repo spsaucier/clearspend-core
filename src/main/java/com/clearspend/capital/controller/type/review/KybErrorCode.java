@@ -18,7 +18,14 @@ public enum KybErrorCode {
       "FEIN Document Required", List.of(KybDocuments.PROCESSED_SS4, KybDocuments.TAX_RETURN)),
   OFAC_MATCH("OFAC Match", List.of(KybDocuments.MANUAL_THIRD_PARTY_REVIEW)),
   WATCHLIST_WARNING(
-      "Watchlist Warning", List.of(KybDocuments.PROCESSED_SS4, KybDocuments.TAX_RETURN));
+      "Watchlist Warning", List.of(KybDocuments.PROCESSED_SS4, KybDocuments.TAX_RETURN)),
+  COMPANY_VERIFICATION_DOCUMENT(
+      "",
+      List.of(
+          KybDocuments.BANK_STATEMENT,
+          KybDocuments.UTILITY_BILL,
+          KybDocuments.PROCESSED_SS4,
+          KybDocuments.TAX_RETURN));
 
   private String name;
   private List<KybDocuments> documents;

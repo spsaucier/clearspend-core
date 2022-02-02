@@ -14,13 +14,16 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.stripe.model.Account;
 import com.stripe.model.StripeObject;
 import com.stripe.model.StripeRawJsonObject;
 import java.util.Map;
 import java.util.Optional;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -51,7 +54,12 @@ public class StripeConnectHandler {
     this.placeHold = placeHold;
   }
 
-  public void accountUpdated(StripeObject stripeObject) {}
+  @SneakyThrows
+  public void accountUpdated(StripeObject stripeObject) {
+    Account account = new ObjectMapper().readValue(stripeObject.toJson(), Account.class);
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        businessService.retrieveBusinessByStripeAccountReference(account.getId()), account);
+  }
 
   public void externalAccountCreated(StripeObject stripeObject) {}
 
@@ -110,7 +118,7 @@ public class StripeConnectHandler {
 
                     stripeClient.executeOutboundTransfer(
                         business.getId(),
-                        business.getExternalRef(),
+                        business.getStripeAccountReference(),
                         receivedCredit.getFinancialAccount(),
                         businessBankAccount.getStripeBankAccountRef(),
                         Amount.fromStripeAmount(

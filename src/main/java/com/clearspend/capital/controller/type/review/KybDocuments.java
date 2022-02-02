@@ -1,15 +1,14 @@
 package com.clearspend.capital.controller.type.review;
 
-import com.clearspend.capital.client.alloy.request.DocumentType;
-
 public enum KybDocuments {
-  CERTIFICATE_OF_INCORPORATION("Certificate Of Incorporation", DocumentType.contract),
-  BANK_STATEMENT("Bank Statement", DocumentType.contract),
-  UTILITY_BILL("Utility Bill", DocumentType.utility),
-  TAX_RETURN("Tax Return", DocumentType.utility),
-  PROCESSED_SS4("Social Security Card", DocumentType.contract),
-  MANUAL_THIRD_PARTY_REVIEW(null, null),
-  UNEXPIRED_GOVERNMENT_ISSUED_ID("Unexpired Government Issued Id", DocumentType.passport);
+  CERTIFICATE_OF_INCORPORATION("Certificate Of Incorporation", DocumentType.ACCOUNT_REQUIREMENT),
+  BANK_STATEMENT("Bank Statement", DocumentType.ACCOUNT_REQUIREMENT),
+  UTILITY_BILL("Utility Bill", DocumentType.ACCOUNT_REQUIREMENT),
+  TAX_RETURN("Tax Return", DocumentType.ACCOUNT_REQUIREMENT),
+  PROCESSED_SS4("Social Security Card", DocumentType.ACCOUNT_REQUIREMENT),
+  MANUAL_THIRD_PARTY_REVIEW(null, DocumentType.ACCOUNT_REQUIREMENT),
+  UNEXPIRED_GOVERNMENT_ISSUED_ID(
+      "Unexpired Government Issued Id", DocumentType.ACCOUNT_REQUIREMENT);
 
   DocumentType documentType;
 

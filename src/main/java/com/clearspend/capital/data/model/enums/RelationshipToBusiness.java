@@ -1,9 +1,9 @@
 package com.clearspend.capital.data.model.enums;
 
 public enum RelationshipToBusiness {
-  UNSPECIFIED,
+  OWNER,
+  REPRESENTATIVE,
   EXECUTIVE,
-  FOUNDER,
+  DIRECTOR,
   OTHER,
-  SENIOR_LEADERSHIP,
 }

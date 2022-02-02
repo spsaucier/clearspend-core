@@ -11,6 +11,7 @@ import com.clearspend.capital.controller.type.business.reallocation.BusinessFund
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService;
+import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ public class BusinessController {
 
   private final AllocationService allocationService;
   private final BusinessService businessService;
+  private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("/transactions")
   private BusinessFundAllocationResponse reallocateBusinessFunds(
@@ -94,12 +96,11 @@ public class BusinessController {
             businessService.retrieveBusiness(CurrentUser.get().businessId()), request.getName())
         .stream()
         .map(Allocation::of)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   @GetMapping
   private ResponseEntity<Business> getBusiness() {
-
     return ResponseEntity.ok(
         new Business(businessService.retrieveBusiness(CurrentUser.get().businessId())));
   }

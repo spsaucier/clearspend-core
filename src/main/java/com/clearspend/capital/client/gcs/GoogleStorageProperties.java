@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class GoogleStorageProperties {
   private String credentials;
   private String receiptBucketName;
+  private String onboardFileBucketName;
   private boolean createBucket;
   private boolean enabled;
 }

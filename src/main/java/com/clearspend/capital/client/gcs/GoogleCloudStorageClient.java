@@ -18,7 +18,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class GoogleCloudStorageClient {
 
-  private Bucket bucket;
+  private Bucket receiptBucket;
+  private Bucket onboardFileBucket;
 
   public GoogleCloudStorageClient(GoogleStorageProperties googleStorageProperties) {
     if (!googleStorageProperties.isEnabled()) {
@@ -35,14 +36,8 @@ public class GoogleCloudStorageClient {
           StorageOptions.newBuilder().setCredentials(credentials).build().getService();
 
       if (googleStorageProperties.isCreateBucket()) {
-        if (!storage.get(googleStorageProperties.getReceiptBucketName()).exists()) {
-          // Attempts to create the bucket
-          bucket = storage.create(BucketInfo.of(googleStorageProperties.getReceiptBucketName()));
-
-          System.out.printf("Bucket %s created.%n", bucket.getName());
-        } else {
-          bucket = storage.get(googleStorageProperties.getReceiptBucketName());
-        }
+        receiptBucket = getBucket(googleStorageProperties.getReceiptBucketName(), storage);
+        onboardFileBucket = getBucket(googleStorageProperties.getOnboardFileBucketName(), storage);
       }
     } catch (Exception e) {
       log.error("failed to connect to Google bucket");
@@ -53,23 +48,55 @@ public class GoogleCloudStorageClient {
   }
 
   public void writeFile(String path, byte[] receiptFile) throws IOException {
-    Blob blob = bucket.create(path, receiptFile);
+    Blob blob = receiptBucket.create(path, receiptFile);
     log.info("wrote: {} ({} bytes)", blob.getName(), blob.getSize());
   }
 
   public byte[] readFile(String path) {
     log.info("reading from {}", path);
-    byte[] bytes = bucket.get(path).getContent();
+    byte[] bytes = receiptBucket.get(path).getContent();
     log.info("read: {} ({} bytes)", path, bytes.length);
 
     return bytes;
   }
 
   public boolean deleteFile(String path) {
-    Blob blob = bucket.get(path);
+    Blob blob = receiptBucket.get(path);
     boolean deleted = blob.delete();
     log.info("deleted: {} ({} bytes)", blob.getName(), blob.getSize());
 
     return deleted;
+  }
+
+  public void writeOnboardFile(String path, byte[] onboardFile) {
+    if (onboardFileBucket == null) {
+      return;
+    }
+    Blob blob = onboardFileBucket.create(path, onboardFile);
+    log.info("wrote: {} ({} bytes)", blob.getName(), blob.getSize());
+  }
+
+  public byte[] readOnboardFile(String path) {
+    if (onboardFileBucket == null) {
+      return new byte[0];
+    }
+    log.info("reading from {}", path);
+    byte[] bytes = onboardFileBucket.get(path).getContent();
+    log.info("read: {} ({} bytes)", path, bytes.length);
+
+    return bytes;
+  }
+
+  private Bucket getBucket(String bucketName, Storage storage) {
+    Bucket bucket;
+    if (!storage.get(bucketName).exists()) {
+      // Attempts to create the bucket
+      bucket = storage.create(BucketInfo.of(bucketName));
+
+      log.info("Bucket {} created.\n", bucket.getName());
+    } else {
+      bucket = storage.get(bucketName);
+    }
+    return bucket;
   }
 }

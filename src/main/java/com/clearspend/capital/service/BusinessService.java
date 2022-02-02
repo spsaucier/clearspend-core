@@ -1,9 +1,6 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.alloy.AlloyClient;
-import com.clearspend.capital.client.alloy.AlloyClient.KybEvaluationResponse;
 import com.clearspend.capital.client.stripe.StripeClient;
-import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.error.RecordNotFoundException;
@@ -13,33 +10,48 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Alloy;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.enums.AlloyTokenType;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
-import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
-import com.clearspend.capital.data.repository.AlloyRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
+import com.clearspend.capital.service.type.ConvertBusinessProspect;
+import com.stripe.model.Account.Capabilities;
+import com.stripe.model.Account.Requirements;
+import com.stripe.model.Account.Requirements.Errors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessService {
 
+  public static final String EXTERNAL_ACCOUNT_CODE_REQUIREMENT = "external_account";
+  public static final String ACTIVE = "active";
+  public static final String TREASURY = "treasury";
+  public static final String US_BANK_ACCOUNT_ACH_PAYMENTS = "us_bank_account_ach_payments";
+  public static final String REQUIREMENTS = "requirements";
+  public static final String REJECTED = "rejected";
+  public static final String BUSINESS_PROFILE_DETAILS_REQUIRED = "business_profile";
+  public static final String OWNERS_DETAILS_REQUIRED = "owners";
+  public static final String REPRESENTATIVE_DETAILS_REQUIRED = "representative";
+  public static final String DOCUMENT = "document";
+
   private final BusinessRepository businessRepository;
-  private final AlloyRepository alloyRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
@@ -47,68 +59,221 @@ public class BusinessService {
   private final BusinessLimitService businessLimitService;
   private final MccGroupService mccGroupService;
 
-  private final AlloyClient alloyClient;
   private final StripeClient stripeClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
 
+  public record BusinessAndStripeMessagesRecord(
+      Business business, List<String> stripeAccountCreationMessages) {}
+
   @SneakyThrows
   @Transactional
-  public Business createBusiness(
-      TypedId<BusinessId> businessId,
-      String legalName,
-      BusinessType type,
-      Address address,
-      String employerIdentificationNumber,
-      String email,
-      String phone,
-      Currency currency) {
+  public BusinessAndStripeMessagesRecord createBusiness(
+      TypedId<BusinessId> businessId, ConvertBusinessProspect convertBusinessProspect) {
     Business business =
         new Business(
-            legalName,
-            type,
-            ClearAddress.of(address),
-            employerIdentificationNumber,
-            currency,
+            convertBusinessProspect.getLegalName(),
+            convertBusinessProspect.getBusinessType(),
+            ClearAddress.of(convertBusinessProspect.getAddress()),
+            convertBusinessProspect.getEmployerIdentificationNumber(),
+            Currency.USD,
             BusinessOnboardingStep.BUSINESS_OWNERS,
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING,
-            BusinessStatusReason.NONE);
+            BusinessStatusReason.NONE,
+            convertBusinessProspect.getMerchantType().getMcc());
     if (businessId != null) {
       business.setId(businessId);
     }
-    business.setBusinessEmail(new RequiredEncryptedString(email));
-    business.setBusinessPhone(new RequiredEncryptedString(phone));
 
-    KybEvaluationResponse kybEvaluationResponse = alloyClient.onboardBusiness(business);
-    business.setKnowYourBusinessStatus(kybEvaluationResponse.status());
+    business.setDescription(convertBusinessProspect.getDescription());
+    business.setBusinessPhone(
+        new RequiredEncryptedString(convertBusinessProspect.getBusinessPhone()));
+    // for SMB without online presence we will set a default as clearspend url
+    business.setUrl(
+        StringUtils.isEmpty(convertBusinessProspect.getUrl())
+            ? "https://www.clearspend.com/"
+            : convertBusinessProspect.getUrl());
 
     business = businessRepository.save(business);
 
-    if (kybEvaluationResponse.status() == KnowYourBusinessStatus.REVIEW) {
-      alloyRepository.save(
-          new Alloy(
+    // stripe account creation
+    com.stripe.model.Account account = stripeClient.createAccount(business);
+    business.setStripeAccountReference(account.getId());
+
+    // TODO: The step below probably should be moved to a later phase, after KYB/KYC,
+    // to be finalized after KYB/KYC part will be ready
+    business.setStripeFinancialAccountRef(
+        stripeClient
+            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
+            .getId());
+
+    businessLimitService.initializeBusinessSpendLimit(business.getId());
+    mccGroupService.initializeMccGroups(business.getId());
+
+    // validate and update business based on stripe account requirements
+    List<String> stripeAccountErrorMessages =
+        updateBusinessAccordingToStripeAccountRequirements(business, account);
+
+    return new BusinessAndStripeMessagesRecord(business, stripeAccountErrorMessages);
+  }
+
+  public List<String> updateBusinessAccordingToStripeAccountRequirements(
+      Business business, com.stripe.model.Account account) {
+
+    Requirements requirements = account.getRequirements();
+    if (requirements == null) {
+      // This is for testing case, in real case we should not have null requirements
+      return new ArrayList<>();
+    }
+
+    Capabilities accountCapabilities = account.getCapabilities();
+    boolean activeAccountCapabilities =
+        accountCapabilities != null
+            && ACTIVE.equals(accountCapabilities.getCardIssuing())
+            && ACTIVE.equals(accountCapabilities.getCardPayments())
+            && ACTIVE.equals(accountCapabilities.getTransfers());
+    // TODO: gb: check how to get these capabilities
+    //            &&
+    // ACTIVE.equals(accountCapabilities.getRawJsonObject().get(TREASURY).getAsString())
+    //            && ACTIVE.equals(
+    //                accountCapabilities
+    //                    .getRawJsonObject()
+    //                    .get(US_BANK_ACCOUNT_ACH_PAYMENTS)
+    //                    .getAsString());
+    // TODO - discuss eventualy due and required capabilities
+    boolean noOtherCheckRequiredForKYCStep =
+        (CollectionUtils.isEmpty(requirements.getPastDue())
+                || (requirements.getPastDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
+                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+            && (CollectionUtils.isEmpty(requirements.getEventuallyDue())
+                || (requirements.getEventuallyDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
+                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+            && (CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+                || (requirements.getCurrentlyDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
+                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+            && CollectionUtils.isEmpty(requirements.getPendingVerification())
+            && CollectionUtils.isEmpty(requirements.getErrors());
+
+    boolean applicationReadyForNextStep =
+        noOtherCheckRequiredForKYCStep && activeAccountCapabilities;
+
+    boolean applicationRejected =
+        StringUtils.isNotEmpty(requirements.getDisabledReason())
+            && requirements.getDisabledReason().startsWith(REJECTED);
+
+    boolean applicationRequireAdditionalCheck =
+        !activeAccountCapabilities && !noOtherCheckRequiredForKYCStep;
+
+    boolean applicationIsInReviewState =
+        !activeAccountCapabilities && noOtherCheckRequiredForKYCStep;
+
+    if (applicationRejected) {
+      if (business.getStatus() != BusinessStatus.CLOSED) {
+        updateBusiness(business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
+        // TODO:gb: send email for fail application
+      }
+    } else if (applicationReadyForNextStep) {
+      if (business.getOnboardingStep() != BusinessOnboardingStep.LINK_ACCOUNT) {
+        updateBusiness(
+            business.getId(),
+            null,
+            BusinessOnboardingStep.LINK_ACCOUNT,
+            KnowYourBusinessStatus.PASS);
+        // TODO:gb: send email for success application KYC
+      }
+    } else if (applicationIsInReviewState) {
+      if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
+        updateBusiness(
+            business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
+        // TODO:gb: send email for REVIEW state
+      }
+    } else if (applicationRequireAdditionalCheck) {
+      // when additional checks are required,
+      // we will move business onboarding status depending on the stripe required information
+      if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+              && requirements.getCurrentlyDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+          || (!CollectionUtils.isEmpty(requirements.getPastDue())
+              && requirements.getPastDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+              && requirements.getEventuallyDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))) {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
+          updateBusiness(
               business.getId(),
               null,
-              AlloyTokenType.BUSINESS,
-              kybEvaluationResponse.entityToken()));
-    }
-
-    if (business.getKnowYourBusinessStatus() == KnowYourBusinessStatus.FAIL) {
-      business.setStatus(BusinessStatus.CLOSED);
+              BusinessOnboardingStep.BUSINESS_OWNERS,
+              KnowYourBusinessStatus.PENDING);
+          // TODO:gb: send email for additional information required about business owners
+        }
+      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+              && requirements.getCurrentlyDue().stream()
+                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
+          || (!CollectionUtils.isEmpty(requirements.getPastDue())
+              && requirements.getPastDue().stream()
+                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
+          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+              && requirements.getEventuallyDue().stream()
+                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))) {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
+          updateBusiness(
+              business.getId(),
+              null,
+              BusinessOnboardingStep.BUSINESS,
+              KnowYourBusinessStatus.PENDING);
+          // TODO:gb: send email for additional information required about business
+        }
+      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+              && requirements.getCurrentlyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+          || (!CollectionUtils.isEmpty(requirements.getPastDue())
+              && requirements.getPastDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+              && requirements.getEventuallyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+          || (!CollectionUtils.isEmpty(requirements.getPendingVerification())
+              && requirements.getPendingVerification().stream()
+                  .anyMatch(s -> s.endsWith(DOCUMENT)))) {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.SOFT_FAIL) {
+          updateBusiness(
+              business.getId(),
+              null,
+              BusinessOnboardingStep.SOFT_FAIL,
+              KnowYourBusinessStatus.REVIEW);
+          // TODO:gb: send email for required documents to review
+        }
+      } else {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
+          updateBusiness(
+              business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
+          // TODO:gb: send email for review application KYC
+        }
+      }
     } else {
-      business.setExternalRef(stripeClient.createAccount(business).getId());
-
-      // TODO: The step below probably should be moved to a later phase, after KYB/KYC,
-      // to be finalized after KYB/KYC part will be ready
-      business.setStripeFinancialAccountRef(
-          stripeClient.createFinancialAccount(business.getId(), business.getExternalRef()).getId());
-
-      businessLimitService.initializeBusinessSpendLimit(business.getId());
-      mccGroupService.initializeMccGroups(business.getId());
+      // this case should be developed
+      log.error("This case should be checked", account.toJson());
+      // TODO:gb: check if is possible to arrive on unknown state
     }
 
-    return business;
+    return extractErrorMessages(requirements);
+  }
+
+  private List<String> extractErrorMessages(Requirements requirements) {
+    List<String> stripeAccountCreationMessages;
+    stripeAccountCreationMessages =
+        requirements.getErrors() != null
+            ? requirements.getErrors().stream().map(Errors::getReason).collect(Collectors.toList())
+            : null;
+    return stripeAccountCreationMessages;
   }
 
   @Transactional
@@ -147,6 +312,12 @@ public class BusinessService {
     return businessRepository
         .findByStripeFinancialAccountRef(stripeFinancialAccountRef)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeFinancialAccountRef));
+  }
+
+  public Business retrieveBusinessByStripeAccountReference(String stripeAccountReference) {
+    return businessRepository
+        .findByStripeAccountReference(stripeAccountReference)
+        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeAccountReference));
   }
 
   public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {

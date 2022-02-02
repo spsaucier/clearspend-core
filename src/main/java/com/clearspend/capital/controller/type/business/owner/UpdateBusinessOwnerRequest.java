@@ -13,39 +13,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
 
-@Setter
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
-public class CreateOrUpdateBusinessOwnerRequest {
-
-  @JsonProperty("id")
-  private TypedId<BusinessOwnerId> businessOwnerId;
+@AllArgsConstructor
+public class UpdateBusinessOwnerRequest {
 
   @Sensitive
   @JsonProperty("firstName")
-  @NonNull
-  @NotNull(message = "firstName required")
-  @Schema(title = "The first name of the person", required = true, example = "John")
+  @Schema(title = "The first name of the person", example = "John")
   @Size(max = 100, message = "The first name should not be more than 100 characters.")
   private String firstName;
 
   @Sensitive
   @JsonProperty("lastName")
-  @NonNull
-  @NotNull(message = "lastName required")
-  @Schema(title = "The last name of the person", required = true, example = "Wick")
+  @Schema(title = "The last name of the person", example = "Wick")
   @Size(max = 100, message = "The last name should not be more than 100 characters.")
   private String lastName;
 
@@ -76,27 +61,18 @@ public class CreateOrUpdateBusinessOwnerRequest {
 
   @Sensitive
   @JsonProperty("dateOfBirth")
-  @NonNull
-  @NotNull(message = "dateOfBirth required")
-  @Schema(title = "The date of birth of the person", required = true, example = "1990-01-01")
+  @Schema(title = "The date of birth of the person", example = "1990-01-01")
   private LocalDate dateOfBirth;
 
   @Sensitive
   @JsonProperty("taxIdentificationNumber")
-  @NonNull
-  @NotNull(message = "taxIdentificationNumber required")
-  @Schema(
-      title = "The tax identification number of the person",
-      required = true,
-      example = "091827364")
+  @Schema(title = "The tax identification number of the person", example = "091827364")
   @Size(max = 10, message = "The taxIdentificationNumber should not be more than 10 characters.")
   private String taxIdentificationNumber;
 
   @Sensitive
   @JsonProperty("email")
-  @NonNull
-  @NotNull(message = "email required")
-  @Schema(title = "Email address of the person", required = true, example = "johnw@hightable.com")
+  @Schema(title = "Email address of the person", example = "johnw@hightable.com")
   @Pattern(regexp = EMAIL_PATTERN, message = "Incorrect email format.")
   @Size(max = 100, message = "The email should not be more than 100 characters.")
   private String email;
@@ -108,7 +84,7 @@ public class CreateOrUpdateBusinessOwnerRequest {
   @Size(max = 20, message = "The phone should not be more than 20 characters.")
   private String phone;
 
-  @NonNull private Address address;
+  private Address address;
 
   @JsonProperty("isOnboarding")
   @Schema(
@@ -116,7 +92,8 @@ public class CreateOrUpdateBusinessOwnerRequest {
       example = "false")
   private boolean isOnboarding;
 
-  public BusinessOwnerData toBusinessOwnerData(TypedId<BusinessId> businessId) {
+  public BusinessOwnerData toBusinessOwnerData(
+      TypedId<BusinessId> businessId, TypedId<BusinessOwnerId> businessOwnerId) {
     return new BusinessOwnerData(
         businessOwnerId,
         businessId,

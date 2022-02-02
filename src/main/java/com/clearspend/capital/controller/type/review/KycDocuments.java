@@ -1,15 +1,14 @@
 package com.clearspend.capital.controller.type.review;
 
-import com.clearspend.capital.client.alloy.request.DocumentType;
-
 public enum KycDocuments {
-  CERTIFICATE_OF_INCORPORATION("Certificate Of Incorporation", DocumentType.contract),
-  BANK_STATEMENT("Bank Statement", DocumentType.contract),
-  UTILITY_BILL("Utility Bill", DocumentType.utility),
-  TAX_RETURN("Tax Return", DocumentType.contract),
-  PROCESSED_SS4(null, null),
+  CERTIFICATE_OF_INCORPORATION(
+      "Certificate Of Incorporation", DocumentType.ADDITIONAL_VERIFICATION),
+  BANK_STATEMENT("Bank Statement", DocumentType.PCI_DOCUMENT),
+  UTILITY_BILL("Utility Bill", DocumentType.ADDITIONAL_VERIFICATION),
+  TAX_RETURN("Tax Return", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
+  PROCESSED_SS4("Processed SS4", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
   MANUAL_THIRD_PARTY_REVIEW(null, null),
-  UNEXPIRED_GOVERNMENT_ISSUED_ID("Unexpired Government Issued ID", DocumentType.passport);
+  UNEXPIRED_GOVERNMENT_ISSUED_ID("Unexpired Government Issued ID", DocumentType.IDENTITY_DOCUMENT);
 
   DocumentType documentType;
   String documentName;

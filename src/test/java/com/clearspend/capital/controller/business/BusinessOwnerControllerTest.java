@@ -8,16 +8,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
+import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -42,6 +48,15 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
   OnboardBusinessRecord onboardBusinessRecord;
 
+  Address address =
+      new Address(
+          new EncryptedString("13810 Shavano Wind"),
+          new EncryptedString("San Antonio, Texas(TX), 78230"),
+          "San Antonio",
+          "Texas",
+          new EncryptedString("78230"),
+          Country.USA);
+
   @BeforeEach
   void init() throws Exception {
     if (onboardBusinessRecord == null) {
@@ -57,19 +72,28 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createBusinessOwner_success() {
-    CreateOrUpdateBusinessOwnerRequest request =
-        new CreateOrUpdateBusinessOwnerRequest(
-            testHelper.generateFirstName(),
-            testHelper.generateLastName(),
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            testHelper.generateEmail(),
-            testHelper.generateApiAddress());
+    BusinessOwner businessOwner = onboardBusinessRecord.businessOwner();
 
-    request.setOnboarding(true);
+    List<CreateOrUpdateBusinessOwnerRequest> request =
+        List.of(
+            new CreateOrUpdateBusinessOwnerRequest(
+                null,
+                testHelper.generateFirstName(),
+                testHelper.generateLastName(),
+                businessOwner.getRelationshipOwner(),
+                businessOwner.getRelationshipRepresentative(),
+                businessOwner.getRelationshipExecutive(),
+                businessOwner.getRelationshipDirector(),
+                BigDecimal.valueOf(40),
+                "CEO",
+                LocalDate.of(1900, 1, 1),
+                testHelper.generateTaxIdentificationNumber(),
+                testHelper.generateEmail(),
+                testHelper.generatePhone(),
+                new com.clearspend.capital.controller.type.Address(address),
+                true));
 
     String body = objectMapper.writeValueAsString(request);
-
     MockHttpServletResponse response =
         mvc.perform(
                 post("/business-owners")
@@ -80,10 +104,14 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    CreateBusinessOwnerResponse createBusinessOwnerResponse =
-        objectMapper.readValue(response.getContentAsString(), CreateBusinessOwnerResponse.class);
+    List<CreateBusinessOwnerResponse> createBusinessOwnerResponse =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(List.class, CreateBusinessOwnerResponse.class));
 
-    Assertions.assertNull(createBusinessOwnerResponse.getErrorMessage());
+    Assertions.assertNull(createBusinessOwnerResponse.get(0).getErrorMessage());
   }
 
   @SneakyThrows
@@ -92,47 +120,64 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
     CreateOrUpdateBusinessOwnerRequest request =
         new CreateOrUpdateBusinessOwnerRequest(
+            null,
             businessProspect.getFirstName().getEncrypted(),
             businessProspect.getLastName().getEncrypted(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             testHelper.generateDateOfBirth(),
             testHelper.generateTaxIdentificationNumber(),
             businessProspect.getEmail().getEncrypted(),
-            testHelper.generateApiAddress());
+            null,
+            testHelper.generateApiAddress(),
+            true);
     request.setOnboarding(true);
     String body = objectMapper.writeValueAsString(request);
 
-    MockHttpServletResponse response =
-        mvc.perform(
-                patch(
-                        String.format(
-                            "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
-                    .contentType("application/json")
-                    .content(body)
-                    .cookie(onboardBusinessRecord.cookie()))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
+    mvc.perform(
+            patch(
+                    String.format(
+                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+                .contentType("application/json")
+                .content(body)
+                .cookie(onboardBusinessRecord.cookie()))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
   }
 
   @SneakyThrows
   @Test
   void updateBusinessOwner_ToHardFail() {
-    BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
-    CreateOrUpdateBusinessOwnerRequest request =
-        new CreateOrUpdateBusinessOwnerRequest(
-            businessProspect.getFirstName().getEncrypted(),
-            "Denied",
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            businessProspect.getEmail().getEncrypted(),
-            testHelper.generateApiAddress());
-    request.setOnboarding(true);
+    Business business = onboardBusinessRecord.business();
+    BusinessOwner businessOwner = onboardBusinessRecord.businessOwner();
+
+    List<CreateOrUpdateBusinessOwnerRequest> request =
+        List.of(
+            new CreateOrUpdateBusinessOwnerRequest(
+                businessOwner.getId(),
+                businessOwner.getFirstName().getEncrypted(),
+                businessOwner.getLastName().getEncrypted(),
+                businessOwner.getRelationshipOwner(),
+                businessOwner.getRelationshipRepresentative(),
+                businessOwner.getRelationshipExecutive(),
+                businessOwner.getRelationshipDirector(),
+                BigDecimal.valueOf(50),
+                "Fraud",
+                LocalDate.of(1900, 1, 1),
+                testHelper.generateTaxIdentificationNumber(),
+                businessOwner.getEmail().getEncrypted(),
+                businessOwner.getPhone().getEncrypted(),
+                new com.clearspend.capital.controller.type.Address(address),
+                true));
 
     String body = objectMapper.writeValueAsString(request);
     mvc.perform(
-            patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+            post("/business-owners")
                 .contentType("application/json")
                 .content(body)
                 .cookie(onboardBusinessRecord.cookie()))
@@ -140,32 +185,41 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    BusinessOwner owner =
-        businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
-    Business business = businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
-    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
-    assertThat(business.getStatus()).isEqualTo(BusinessStatus.CLOSED);
-    assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.FAIL);
+    businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
+    Business businessResponse = businessService.retrieveBusiness(business.getId());
+    assertThat(businessResponse.getOnboardingStep())
+        .isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+    assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.CLOSED);
   }
 
   @SneakyThrows
   @Test
   void updateBusinessOwner_ToSoftFail() {
-    BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
-    CreateOrUpdateBusinessOwnerRequest request =
-        new CreateOrUpdateBusinessOwnerRequest(
-            businessProspect.getFirstName().getEncrypted(),
-            "Review",
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            businessProspect.getEmail().getEncrypted(),
-            testHelper.generateApiAddress());
-    request.setOnboarding(true);
+    Business business = onboardBusinessRecord.business();
+    BusinessOwner businessOwner = onboardBusinessRecord.businessOwner();
+
+    List<CreateOrUpdateBusinessOwnerRequest> request =
+        List.of(
+            new CreateOrUpdateBusinessOwnerRequest(
+                businessOwner.getId(),
+                businessOwner.getFirstName().getEncrypted(),
+                businessOwner.getLastName().getEncrypted(),
+                businessOwner.getRelationshipOwner(),
+                businessOwner.getRelationshipRepresentative(),
+                businessOwner.getRelationshipExecutive(),
+                businessOwner.getRelationshipDirector(),
+                BigDecimal.valueOf(40),
+                "Review",
+                LocalDate.of(1900, 1, 1),
+                testHelper.generateTaxIdentificationNumber(),
+                businessOwner.getEmail().getEncrypted(),
+                businessOwner.getPhone().getEncrypted(),
+                new com.clearspend.capital.controller.type.Address(address),
+                true));
+
     String body = objectMapper.writeValueAsString(request);
     mvc.perform(
-            patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+            post("/business-owners")
                 .contentType("application/json")
                 .content(body)
                 .cookie(onboardBusinessRecord.cookie()))
@@ -173,26 +227,50 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    BusinessOwner owner =
-        businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
-    Business business = businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
-    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
-    assertThat(business.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
+    BusinessOwner owner = businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
+    Business businessResponse = businessService.retrieveBusiness(business.getId());
+    assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
+    assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
     assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.REVIEW);
   }
 
   @SneakyThrows
   @Test
   void updateBusinessOwner_ToHardFail_fromAdditionalOwnerReview() {
-    CreateOrUpdateBusinessOwnerRequest request =
-        new CreateOrUpdateBusinessOwnerRequest(
-            testHelper.generateFirstName(),
-            "Denied",
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            testHelper.generateEmail(),
-            testHelper.generateApiAddress());
-    request.setOnboarding(true);
+    List<CreateOrUpdateBusinessOwnerRequest> request =
+        List.of(
+            new CreateOrUpdateBusinessOwnerRequest(
+                onboardBusinessRecord.businessOwner().getId(),
+                onboardBusinessRecord.businessOwner().getFirstName().getEncrypted(),
+                onboardBusinessRecord.businessOwner().getLastName().getEncrypted(),
+                true,
+                false,
+                false,
+                false,
+                BigDecimal.valueOf(50),
+                "CEO",
+                testHelper.generateDateOfBirth(),
+                testHelper.generateTaxIdentificationNumber(),
+                onboardBusinessRecord.businessOwner().getEmail().getEncrypted(),
+                onboardBusinessRecord.businessOwner().getPhone().getEncrypted(),
+                testHelper.generateApiAddress(),
+                true),
+            new CreateOrUpdateBusinessOwnerRequest(
+                null,
+                testHelper.generateFirstName(),
+                testHelper.generateLastName(),
+                true,
+                false,
+                false,
+                false,
+                BigDecimal.valueOf(50),
+                "Fraud",
+                testHelper.generateDateOfBirth(),
+                testHelper.generateTaxIdentificationNumber(),
+                testHelper.generateEmail(),
+                null,
+                testHelper.generateApiAddress(),
+                true));
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -205,39 +283,29 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
-    CreateBusinessOwnerResponse createBusinessOwnerResponse =
-        objectMapper.readValue(response.getContentAsString(), CreateBusinessOwnerResponse.class);
-
-    BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
-    CreateOrUpdateBusinessOwnerRequest request2 =
-        new CreateOrUpdateBusinessOwnerRequest(
-            businessProspect.getFirstName().getEncrypted(),
-            businessProspect.getLastName().getEncrypted(),
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            businessProspect.getEmail().getEncrypted(),
-            testHelper.generateApiAddress());
-    request2.setOnboarding(true);
-
-    String body2 = objectMapper.writeValueAsString(request2);
-    mvc.perform(
-            patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
-                .contentType("application/json")
-                .content(body2)
-                .cookie(onboardBusinessRecord.cookie()))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse();
+    List<CreateBusinessOwnerResponse> createBusinessOwnerResponse =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(List.class, CreateBusinessOwnerResponse.class));
 
     BusinessOwner owner =
         businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
     Business business = businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
     BusinessOwner additionalOwner =
         businessOwnerService.retrieveBusinessOwner(
-            createBusinessOwnerResponse.getBusinessOwnerId());
-    assertThat(additionalOwner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.FAIL);
+            createBusinessOwnerResponse.stream()
+                .filter(
+                    response1 ->
+                        !response1
+                            .getBusinessOwnerId()
+                            .equals(onboardBusinessRecord.businessOwner().getId()))
+                .findAny()
+                .orElseThrow()
+                .getBusinessOwnerId());
+    assertThat(additionalOwner.getKnowYourCustomerStatus())
+        .isEqualTo(KnowYourCustomerStatus.REVIEW);
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.CLOSED);
     assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.PASS);
@@ -246,18 +314,42 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void updateBusinessOwner_ToSoftFail_fromAdditionalOwner() {
-    CreateOrUpdateBusinessOwnerRequest request =
-        new CreateOrUpdateBusinessOwnerRequest(
-            testHelper.generateFirstName(),
-            "Review",
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            testHelper.generateEmail(),
-            testHelper.generateApiAddress());
-    request.setOnboarding(true);
+    List<CreateOrUpdateBusinessOwnerRequest> request =
+        List.of(
+            new CreateOrUpdateBusinessOwnerRequest(
+                onboardBusinessRecord.businessOwner().getId(),
+                onboardBusinessRecord.businessOwner().getFirstName().getEncrypted(),
+                onboardBusinessRecord.businessOwner().getLastName().getEncrypted(),
+                true,
+                false,
+                false,
+                false,
+                BigDecimal.valueOf(50),
+                "CEO",
+                testHelper.generateDateOfBirth(),
+                testHelper.generateTaxIdentificationNumber(),
+                onboardBusinessRecord.businessOwner().getEmail().getEncrypted(),
+                onboardBusinessRecord.businessOwner().getPhone().getEncrypted(),
+                testHelper.generateApiAddress(),
+                true),
+            new CreateOrUpdateBusinessOwnerRequest(
+                null,
+                testHelper.generateFirstName(),
+                testHelper.generateLastName(),
+                true,
+                false,
+                false,
+                false,
+                BigDecimal.valueOf(50),
+                "Review",
+                testHelper.generateDateOfBirth(),
+                testHelper.generateTaxIdentificationNumber(),
+                testHelper.generateEmail(),
+                null,
+                testHelper.generateApiAddress(),
+                true));
 
     String body = objectMapper.writeValueAsString(request);
-
     MockHttpServletResponse response =
         mvc.perform(
                 post("/business-owners")
@@ -267,41 +359,25 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
-    CreateBusinessOwnerResponse createBusinessOwnerResponse =
-        objectMapper.readValue(response.getContentAsString(), CreateBusinessOwnerResponse.class);
 
-    BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
-    CreateOrUpdateBusinessOwnerRequest request2 =
-        new CreateOrUpdateBusinessOwnerRequest(
-            businessProspect.getFirstName().getEncrypted(),
-            businessProspect.getLastName().getEncrypted(),
-            testHelper.generateDateOfBirth(),
-            testHelper.generateTaxIdentificationNumber(),
-            businessProspect.getEmail().getEncrypted(),
-            testHelper.generateApiAddress());
-    request2.setOnboarding(true);
-    String body2 = objectMapper.writeValueAsString(request2);
-    mvc.perform(
-            patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
-                .contentType("application/json")
-                .content(body2)
-                .cookie(onboardBusinessRecord.cookie()))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse();
+    List<CreateBusinessOwnerResponse> createBusinessOwnerResponse =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(List.class, CreateBusinessOwnerResponse.class));
 
     BusinessOwner owner =
         businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
-    Business business = businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
+    Business businessResponse =
+        businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
     BusinessOwner additionalOwner =
         businessOwnerService.retrieveBusinessOwner(
-            createBusinessOwnerResponse.getBusinessOwnerId());
+            createBusinessOwnerResponse.get(1).getBusinessOwnerId());
     assertThat(additionalOwner.getKnowYourCustomerStatus())
         .isEqualTo(KnowYourCustomerStatus.REVIEW);
-    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
-    assertThat(business.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
+    assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
+    assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
     assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.PASS);
   }
 }

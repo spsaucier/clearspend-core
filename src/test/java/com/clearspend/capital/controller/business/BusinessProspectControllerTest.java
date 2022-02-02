@@ -277,7 +277,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     testHelper.login(businessProspect.getEmail().getEncrypted(), password);
 
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
-        testHelper.convertBusinessProspect("BusinessDenied", businessProspect.getId());
+        testHelper.convertBusinessProspect("Denied", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
 
     assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
@@ -306,13 +306,13 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     testHelper.login(businessProspect.getEmail().getEncrypted(), password);
 
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
-        testHelper.convertBusinessProspect("BusinessReview", businessProspect.getId());
+        testHelper.convertBusinessProspect("Review", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
 
     assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
     Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
     log.info("{}", business);
-    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
+    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.REVIEW);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
   }

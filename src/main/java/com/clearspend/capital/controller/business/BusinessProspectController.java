@@ -15,7 +15,6 @@ import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,14 +35,22 @@ public class BusinessProspectController {
       @Validated @RequestBody CreateBusinessProspectRequest request) {
     BusinessProspectRecord record =
         businessProspectService.createBusinessProspect(
-            request.getFirstName(), request.getLastName(), request.getEmail());
+            request.getFirstName(),
+            request.getLastName(),
+            request.getBusinessType(),
+            request.getRelationshipOwner(),
+            request.getRelationshipRepresentative(),
+            request.getRelationshipExecutive(),
+            request.getRelationshipDirector(),
+            request.getEmail(),
+            true);
 
     return new CreateBusinessProspectResponse(
         record.businessProspect().getId(), record.businessProspectStatus());
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
-  private void validateBusinessProspectEmail(
+  private void validateBusinessProspectIdentifier(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -53,7 +60,7 @@ public class BusinessProspectController {
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ValidateBusinessProspectIdentifierRequest request) {
     businessProspectService.validateBusinessProspectIdentifier(
-        businessProspectId, request.getIdentifierType(), request.getOtp());
+        businessProspectId, request.getIdentifierType(), request.getOtp(), true);
   }
 
   @PostMapping("/{businessProspectId}/phone")
@@ -66,7 +73,7 @@ public class BusinessProspectController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody SetBusinessProspectPhoneRequest request) {
-    businessProspectService.setBusinessProspectPhone(businessProspectId, request.getPhone());
+    businessProspectService.setBusinessProspectPhone(businessProspectId, request.getPhone(), true);
   }
 
   @PostMapping("/{businessProspectId}/password")
@@ -81,7 +88,7 @@ public class BusinessProspectController {
       @Validated @RequestBody SetBusinessProspectPasswordRequest request) {
     BusinessProspect businessProspect =
         businessProspectService.setBusinessProspectPassword(
-            businessProspectId, request.getPassword());
+            businessProspectId, request.getPassword(), true);
   }
 
   @PostMapping("/{businessProspectId}/convert")
@@ -93,16 +100,10 @@ public class BusinessProspectController {
               description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
-      @Validated @RequestBody ConvertBusinessProspectRequest request)
-      throws IOException {
+      @Validated @RequestBody ConvertBusinessProspectRequest request) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
-            businessProspectId,
-            request.getLegalName(),
-            request.getBusinessType(),
-            request.getBusinessPhone(),
-            request.getEmployerIdentificationNumber(),
-            request.getAddress().toAddress());
+            request.toConvertBusinessProspect(businessProspectId));
 
     return new ConvertBusinessProspectResponse(
         new Business(convertBusinessProspectRecord.business()),
