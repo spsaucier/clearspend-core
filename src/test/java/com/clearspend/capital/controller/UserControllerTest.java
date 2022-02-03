@@ -507,7 +507,7 @@ public class UserControllerTest extends BaseCapitalTest {
             false);
 
     // when
-    com.clearspend.capital.controller.type.card.Card blockedCard =
+    com.clearspend.capital.controller.type.card.Card activeCard =
         mockMvcHelper.queryObject(
             "/users/cards/%s/activate".formatted(card.getId()),
             HttpMethod.PATCH,
@@ -516,9 +516,40 @@ public class UserControllerTest extends BaseCapitalTest {
             com.clearspend.capital.controller.type.card.Card.class);
 
     // then
-    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
-    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.ACTIVE);
-    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+    assertThat(activeCard.getCardId()).isEqualTo(card.getId());
+    assertThat(activeCard.getStatus()).isEqualTo(CardStatus.ACTIVE);
+    assertThat(activeCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void activateCards() {
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+
+    // when
+    com.clearspend.capital.controller.type.card.Card receivedCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/activate",
+            HttpMethod.PATCH,
+            userCookie,
+            new ActivateCardRequest(card.getLastFour(), CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    // then
+    assertThat(receivedCard.getCardId()).isEqualTo(card.getId());
+    assertThat(receivedCard.getStatus()).isEqualTo(CardStatus.ACTIVE);
+    assertThat(receivedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+
+    // check db for the activated card
+    assertThat(cardService.getCard(business.getId(), receivedCard.getCardId()).card().isActivated())
+        .isTrue();
   }
 
   @SneakyThrows

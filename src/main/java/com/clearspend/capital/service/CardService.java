@@ -228,16 +228,61 @@ public class CardService {
       TypedId<CardId> cardId,
       String lastFour,
       CardStatusReason statusReason) {
-
     Card card =
         (switch (userType) {
-              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
+              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndIdAndLastFour(
+                  businessId, cardId, lastFour);
               case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndIdAndLastFour(
                   businessId, userId, cardId, lastFour);
             })
             .orElseThrow(
                 () ->
                     new RecordNotFoundException(Table.CARD, businessId, userId, cardId, lastFour));
+
+    return activateCard(businessId, userId, userType, card, statusReason);
+  }
+
+  @Transactional
+  public Card activateCards(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      UserType userType,
+      String lastFour,
+      CardStatusReason statusReason) {
+    List<Card> cards =
+        switch (userType) {
+          case EMPLOYEE -> cardRepository.findNonActivatedByBusinessIdAndUserIdAndLastFour(
+              businessId, userId, lastFour);
+          case BUSINESS_OWNER -> cardRepository.findNonActivatedByBusinessIdAndLastFour(
+              businessId, lastFour);
+        };
+
+    if (cards.isEmpty()) {
+      throw new RecordNotFoundException(Table.CARD, businessId, userId, lastFour);
+    }
+
+    Card activatedCard = activateCard(businessId, userId, userType, cards.get(0), statusReason);
+
+    if (cards.size() > 1) {
+      log.warn(
+          "Found a card collision during card activation for businessId={}, lastFour={}. Total activated cards: {}",
+          businessId,
+          lastFour,
+          cards.size());
+      cards
+          .subList(1, cards.size())
+          .forEach(card -> activateCard(businessId, userId, userType, card, statusReason));
+    }
+
+    return activatedCard;
+  }
+
+  private Card activateCard(
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      UserType userType,
+      Card card,
+      CardStatusReason statusReason) {
 
     if (card.isActivated()) {
       throw new InvalidRequestException("Card is already activated");
@@ -250,7 +295,8 @@ public class CardService {
     card.setActivated(true);
     card.setActivationDate(OffsetDateTime.now());
 
-    return updateCardStatus(businessId, userId, userType, cardId, CardStatus.ACTIVE, statusReason);
+    return updateCardStatus(
+        businessId, userId, userType, card.getId(), CardStatus.ACTIVE, statusReason);
   }
 
   @Transactional
@@ -310,7 +356,7 @@ public class CardService {
     return cardRepository.filter(filterCriteria);
   }
 
-  public byte[] createCSVFile(CardFilterCriteria filterCriteria) throws IOException {
+  public byte[] createCSVFile(CardFilterCriteria filterCriteria) {
 
     Page<FilteredCardRecord> cardsPage = cardRepository.filter(filterCriteria);
 

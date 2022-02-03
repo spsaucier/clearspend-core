@@ -257,6 +257,19 @@ public class UserController {
             request.getStatusReason()));
   }
 
+  @PatchMapping("/cards/activate")
+  private Card activateCards(@Validated @RequestBody ActivateCardRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.activateCards(
+            currentUser.businessId(),
+            currentUser.userId(),
+            currentUser.userType(),
+            request.getLastFour(),
+            request.getStatusReason()));
+  }
+
   @PatchMapping("/cards/{cardId}/unblock")
   private Card unblockCard(
       @PathVariable(value = "cardId")
