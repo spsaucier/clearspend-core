@@ -108,7 +108,7 @@ public class BusinessService {
             .createFinancialAccount(business.getId(), business.getStripeAccountReference())
             .getId());
 
-    businessLimitService.initializeBusinessSpendLimit(business.getId());
+    businessLimitService.initializeBusinessLimit(business.getId());
     mccGroupService.initializeMccGroups(business.getId());
 
     // validate and update business based on stripe account requirements
@@ -260,7 +260,7 @@ public class BusinessService {
       }
     } else {
       // this case should be developed
-      log.error("This case should be checked", account.toJson());
+      log.error("This case should be checked {}", account.toJson());
       // TODO:gb: check if is possible to arrive on unknown state
     }
 

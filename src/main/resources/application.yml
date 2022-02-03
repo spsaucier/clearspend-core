@@ -34,6 +34,11 @@ spring:
           issuer-uri: ${client.fusionauth.base-url}
 
 clearspend:
+  business:
+    limit:
+      issuance:
+        card:
+          physical: 10
   ach:
     hold:
       place: false

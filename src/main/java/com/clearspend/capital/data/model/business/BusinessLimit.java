@@ -13,6 +13,7 @@ import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
+import javax.persistence.Transient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -44,4 +45,12 @@ public class BusinessLimit extends TypedMutable<BusinessLimitId> {
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits;
+
+  @NonNull private Integer issuedPhysicalCardsLimit;
+
+  /**
+   * Will be a calculated value for now. Might be reworked to a persistent field in case of any
+   * performance issues
+   */
+  @Transient private int issuedPhysicalCardsTotal;
 }

@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
@@ -9,6 +10,7 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
@@ -214,5 +216,42 @@ public class CardControllerTest extends BaseCapitalTest {
             RevealCardResponse.class);
     assertThat(revealCardResponse.getExternalRef()).isNotNull();
     assertThat(revealCardResponse.getEphemeralKey()).isNotNull();
+  }
+
+  @Test
+  void physicalCardsIssuanceLimit() {
+    BusinessLimit businessLimit =
+        mockMvcHelper.queryObject(
+            "/businesses/business-limit", HttpMethod.GET, userCookie, BusinessLimit.class);
+
+    IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(CardType.PHYSICAL),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userId,
+            Currency.USD,
+            true,
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Collections.emptyList(),
+            Set.of(TransactionChannel.MOTO));
+    issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
+
+    for (int i = businessLimit.getIssuedPhysicalCardsTotal();
+        i < businessLimit.getIssuedPhysicalCardsLimit();
+        i++) {
+      mockMvcHelper.queryList(
+          "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
+    }
+
+    assertThatThrownBy(
+            () ->
+                mockMvcHelper.queryList(
+                    "/cards",
+                    HttpMethod.POST,
+                    userCookie,
+                    issueCardRequest,
+                    new TypeReference<>() {}))
+        .isInstanceOf(AssertionError.class)
+        .hasMessage("Status expected:<200> but was:<400>");
   }
 }

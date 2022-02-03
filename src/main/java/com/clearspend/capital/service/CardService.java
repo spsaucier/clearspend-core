@@ -15,6 +15,7 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.BusinessLimit;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -59,6 +60,7 @@ public class CardService {
   private final CardRepository cardRepository;
 
   private final AccountService accountService;
+  private final BusinessLimitService businessLimitService;
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
@@ -84,8 +86,16 @@ public class CardService {
       Set<TransactionChannel> disabledTransactionChannels,
       Address shippingAddress) {
 
-    if (cardType.equals(CardType.PHYSICAL) && shippingAddress == null) {
-      throw new InvalidRequestException("Shipping address required for physical cards");
+    if (cardType == CardType.PHYSICAL) {
+      if (shippingAddress == null) {
+        throw new InvalidRequestException("Shipping address required for physical cards");
+      }
+
+      BusinessLimit businessLimit = businessLimitService.retrieveBusinessLimit(businessId);
+      if (businessLimit.getIssuedPhysicalCardsTotal()
+          >= businessLimit.getIssuedPhysicalCardsLimit()) {
+        throw new InvalidRequestException("Physical card issuance limit exceeded");
+      }
     }
 
     User user = userService.retrieveUser(userId);
@@ -308,7 +318,7 @@ public class CardService {
         Arrays.asList("Card Number", "Employee", "Allocation", "Balance", "Status");
 
     ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
-    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT)) {
       csvPrinter.printRecord(headerFields);
       cardsPage
           .getContent()

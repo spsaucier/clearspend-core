@@ -7,11 +7,12 @@ import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.business.Business;
+import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService;
-import com.clearspend.capital.service.BusinessOwnerService;
+import com.clearspend.capital.service.BusinessLimitService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ public class BusinessController {
 
   private final AllocationService allocationService;
   private final BusinessService businessService;
-  private final BusinessOwnerService businessOwnerService;
+  private final BusinessLimitService businessLimitService;
 
   @PostMapping("/transactions")
   private BusinessFundAllocationResponse reallocateBusinessFunds(
@@ -43,7 +44,7 @@ public class BusinessController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         businessService.reallocateBusinessFunds(
-            CurrentUser.get().businessId(),
+            CurrentUser.getBusinessId(),
             request.getAllocationIdFrom(),
             request.getAllocationIdTo(),
             request.getAmount().toAmount());
@@ -57,8 +58,7 @@ public class BusinessController {
 
   @GetMapping("/accounts")
   private Account getRootAllocationAccount() {
-    return Account.of(
-        allocationService.getRootAllocation(CurrentUser.get().businessId()).account());
+    return Account.of(allocationService.getRootAllocation(CurrentUser.getBusinessId()).account());
   }
 
   @GetMapping("/allocations")
@@ -66,7 +66,7 @@ public class BusinessController {
     Map<TypedId<AllocationId>, Allocation> result =
         allocationService
             .searchBusinessAllocations(
-                businessService.retrieveBusiness(CurrentUser.get().businessId()))
+                businessService.retrieveBusiness(CurrentUser.getBusinessId()))
             .stream()
             .map(Allocation::of)
             .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
@@ -93,7 +93,7 @@ public class BusinessController {
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
         .searchBusinessAllocations(
-            businessService.retrieveBusiness(CurrentUser.get().businessId()), request.getName())
+            businessService.retrieveBusiness(CurrentUser.getBusinessId()), request.getName())
         .stream()
         .map(Allocation::of)
         .toList();
@@ -102,6 +102,12 @@ public class BusinessController {
   @GetMapping
   private ResponseEntity<Business> getBusiness() {
     return ResponseEntity.ok(
-        new Business(businessService.retrieveBusiness(CurrentUser.get().businessId())));
+        new Business(businessService.retrieveBusiness(CurrentUser.getBusinessId())));
+  }
+
+  @GetMapping("/business-limit")
+  private BusinessLimit getBusinessLimit() {
+    return BusinessLimit.of(
+        businessLimitService.retrieveBusinessLimit(CurrentUser.getBusinessId()));
   }
 }

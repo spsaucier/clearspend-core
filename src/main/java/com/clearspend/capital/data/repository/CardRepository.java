@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -19,4 +20,6 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> id, String lastFour);
 
   Optional<Card> findByExternalRef(String externalRef);
+
+  int countByBusinessIdAndType(TypedId<BusinessId> businessId, CardType cardType);
 }

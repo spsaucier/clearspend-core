@@ -12,6 +12,8 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
@@ -20,25 +22,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class BusinessLimitService {
 
   private final BusinessLimitRepository businessLimitRepository;
-
   private final AdjustmentService adjustmentService;
 
-  public BusinessLimit initializeBusinessSpendLimit(TypedId<BusinessId> businessId) {
+  private final CardRepository cardRepository;
+
+  private final Integer issuedPhysicalCardDefaultLimit;
+
+  public BusinessLimitService(
+      BusinessLimitRepository businessLimitRepository,
+      AdjustmentService adjustmentService,
+      CardRepository cardRepository,
+      @Value("${clearspend.business.limit.issuance.card.physical}")
+          Integer issuedPhysicalCardDefaultLimit) {
+    this.businessLimitRepository = businessLimitRepository;
+    this.adjustmentService = adjustmentService;
+    this.cardRepository = cardRepository;
+    this.issuedPhysicalCardDefaultLimit = issuedPhysicalCardDefaultLimit;
+  }
+
+  public BusinessLimit initializeBusinessLimit(TypedId<BusinessId> businessId) {
     Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
 
     limits.put(Currency.USD, new HashMap<>());
 
-    return businessLimitRepository.save(new BusinessLimit(businessId, limits));
+    return businessLimitRepository.save(
+        new BusinessLimit(businessId, limits, issuedPhysicalCardDefaultLimit));
+  }
+
+  public BusinessLimit retrieveBusinessLimit(TypedId<BusinessId> businessId) {
+    BusinessLimit businessLimit =
+        businessLimitRepository
+            .findByBusinessId(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_LIMIT, businessId));
+    businessLimit.setIssuedPhysicalCardsTotal(
+        cardRepository.countByBusinessIdAndType(businessId, CardType.PHYSICAL));
+
+    return businessLimit;
   }
 
   public void ensureWithinDepositLimit(TypedId<BusinessId> businessId, Amount amount) {

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
@@ -17,6 +18,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
+import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.data.model.Allocation;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -50,6 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
 public class BusinessControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
+  private final MockMvcHelper mvcHelper;
   private final TestHelper testHelper;
 
   private final UserRepository userRepository;
@@ -344,5 +348,15 @@ public class BusinessControllerTest extends BaseCapitalTest {
         com.clearspend.capital.controller.type.Amount.of(
             Amount.of(Currency.USD, BigDecimal.valueOf(200))),
         account.getLedgerBalance());
+  }
+
+  @Test
+  void defaultBusinessLimit() {
+    BusinessLimit businessLimit =
+        mvcHelper.queryObject(
+            "/businesses/business-limit", HttpMethod.GET, authCookie, BusinessLimit.class);
+
+    assertThat(businessLimit.getIssuedPhysicalCardsLimit()).isEqualTo(10);
+    assertThat(businessLimit.getIssuedPhysicalCardsTotal()).isEqualTo(0);
   }
 }
