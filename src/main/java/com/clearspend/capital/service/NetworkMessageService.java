@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.clearbit.ClearbitClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
+import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -49,6 +50,7 @@ public class NetworkMessageService {
   private final AccountActivityService accountActivityService;
   private final AllocationService allocationService;
   private final CardService cardService;
+  private final TransactionLimitService transactionLimitService;
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -313,13 +315,19 @@ public class NetworkMessageService {
       common.setHoldAmount(common.getApprovedAmount().add(common.getPriorHoldAmount().negate()));
     }
 
-    // TODO(kuchlein): assess spending limits on card
-    // if (over limit)
-    // {
-    //    common.setApprovedAmount(Amount.of(amount.getCurrency()));
-    //    common.setPostDecline(true);
-    //    return;
-    // }
+    // Card spending limits and settings checks
+    try {
+      transactionLimitService.ensureWithinLimit(
+          common.getBusinessId(),
+          common.getAllocation().getId(),
+          common.getCard().getId(),
+          common.getApprovedAmount());
+    } catch (LimitViolationException e) {
+      log.warn("Failed to accept a transaction due to a limit violation: {}", e.getMessage());
+      common.getDeclineReasons().add(DeclineReason.LIMIT_EXCEEDED);
+      common.setPostDecline(true);
+      return;
+    }
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);

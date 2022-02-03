@@ -940,21 +940,26 @@ public class TestHelper {
     for (int i = 0; i < transactions; i++) {
       Amount amount =
           Amount.of(Currency.USD, new BigDecimal(random.nextInt(maxAmount)).add(BigDecimal.ONE));
-      NetworkCommonAuthorization networkCommonAuthorization =
-          TestDataController.generateAuthorizationNetworkCommon(user.user(), card, account, amount);
-      networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
-      assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
-      assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
-      assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
-
-      NetworkCommon common =
-          TestDataController.generateCaptureNetworkCommon(
-              business, networkCommonAuthorization.authorization());
-      networkMessageService.processNetworkMessage(common);
-      assertThat(common.isPostAdjustment()).isTrue();
-      assertThat(common.isPostDecline()).isFalse();
-      assertThat(common.isPostHold()).isFalse();
+      createNetworkTransaction(business, account, user.user(), card, amount);
     }
+  }
+
+  public void createNetworkTransaction(
+      Business business, Account account, User user, Card card, Amount amount) {
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(user, card, account, amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+
+    NetworkCommon common =
+        TestDataController.generateCaptureNetworkCommon(
+            business, networkCommonAuthorization.authorization());
+    networkMessageService.processNetworkMessage(common);
+    assertThat(common.isPostAdjustment()).isTrue();
+    assertThat(common.isPostDecline()).isFalse();
+    assertThat(common.isPostHold()).isFalse();
   }
 
   private com.stripe.model.issuing.Card getStripeCard(Business business, User user, Card card) {

@@ -27,6 +27,8 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
+import com.clearspend.capital.data.model.enums.LimitPeriod;
+import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
@@ -46,6 +48,8 @@ import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
@@ -56,7 +60,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -87,6 +93,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   @Autowired private AccountService accountService;
   @Autowired private AllocationService allocationService;
+  @Autowired private TransactionLimitService transactionLimitService;
 
   @Autowired StripeWebhookController stripeWebhookController;
   @Autowired StripeDirectHandler stripeDirectHandler;
@@ -158,19 +165,17 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(foundAccount.getAvailableBalance()).isEqualTo(account.getAvailableBalance());
   }
 
-  record UserRecord(User user, Card card, Allocation allocation) {}
+  record UserRecord(User user, Card card, Allocation allocation, Account account) {}
 
   private UserRecord createUser(BigDecimal openingBalance) {
     User user = createBusinessRecord.user();
-    Allocation allocation =
-        testHelper
-            .createAllocation(
-                business.getId(), testHelper.generateAllocationName(), rootAllocation.getId(), user)
-            .allocation();
+    AllocationRecord allocationRecord =
+        testHelper.createAllocation(
+            business.getId(), testHelper.generateAllocationName(), rootAllocation.getId(), user);
     Card card =
         testHelper.issueCard(
             business,
-            allocation,
+            allocationRecord.allocation(),
             user,
             business.getCurrency(),
             FundingType.POOLED,
@@ -184,7 +189,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         AllocationReallocationType.ALLOCATION_TO_CARD,
         Amount.of(business.getCurrency(), openingBalance));
 
-    return new UserRecord(user, card, allocation);
+    return new UserRecord(user, card, allocationRecord.allocation(), allocationRecord.account());
   }
 
   record AuthorizationRecord(NetworkCommon networkCommon, Authorization authorization) {}
@@ -260,6 +265,33 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(hold.getAmount()).isEqualTo(accountActivity.getAmount());
 
     assertThat(networkMessage.getExternalRef()).isEqualTo(authorization.getId());
+
+    return new AuthorizationRecord(networkCommon, authorization);
+  }
+
+  private AuthorizationRecord authorize_decline(
+      Allocation allocation, User user, Card card, BigDecimal openingBalance, long amount) {
+    StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
+    String stripeId = generateStripeId("iauth_");
+    Authorization authorization =
+        testHelper.getAuthorization(
+            business, user, card, MerchantType.TRANSPORTATION_SERVICES, 0L, amount, stripeId);
+
+    NetworkCommon networkCommon =
+        stripeWebhookController.handleDirectRequest(
+            Instant.now(),
+            new StripeWebhookController.ParseRecord(
+                new StripeWebhookLog(), authorization, stripeEventType),
+            true);
+    assertThat(networkCommon.isPostAdjustment()).isFalse();
+    assertThat(networkCommon.isPostDecline()).isTrue();
+    assertThat(networkCommon.isPostHold()).isFalse();
+    assertBalance(allocation, networkCommon.getAccount(), openingBalance, openingBalance);
+    assertThat(networkCommon.getDecline()).isNotNull();
+    assertThat(networkCommon.getDecline().getId())
+        .isEqualTo(networkCommon.getNetworkMessage().getDeclineId());
+
+    validateStripeWebhookLog(networkCommon);
 
     return new AuthorizationRecord(networkCommon, authorization);
   }
@@ -645,5 +677,129 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(networkCommon.isPostHold()).isTrue();
     assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, availableBalance);
     return null;
+  }
+
+  @Test
+  public void spendControl_withinLimits() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+  }
+
+  @Test
+  public void spendControl_exceedCardDailyLimit() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    transactionLimitService.updateCardSpendLimit(
+        business.getId(),
+        card.getId(),
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
+        Collections.emptyList(),
+        Collections.emptySet());
+
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+
+    authorize_decline(allocation, user, card, BigDecimal.valueOf(7), 100);
+  }
+
+  @Test
+  public void spendControl_exceedCardMonthlyLimit() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    transactionLimitService.updateCardSpendLimit(
+        business.getId(),
+        card.getId(),
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(5L)))),
+        Collections.emptyList(),
+        Collections.emptySet());
+
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(4L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+
+    authorize_decline(allocation, user, card, BigDecimal.valueOf(5), 100);
+  }
+
+  @Test
+  public void spendControl_exceedAllocationDailyLimit() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card1 = userRecord.card;
+    Card card2 =
+        testHelper.issueCard(
+            business, allocation, user, Currency.USD, FundingType.POOLED, CardType.VIRTUAL, false);
+
+    transactionLimitService.updateAllocationSpendLimit(
+        business.getId(),
+        allocation.getId(),
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
+        Collections.emptyList(),
+        Collections.emptySet());
+
+    testHelper.createNetworkTransaction(
+        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card2, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+
+    authorize_decline(allocation, user, card2, BigDecimal.valueOf(7), 100);
+  }
+
+  @Test
+  public void spendControl_exceedAllocationMonthlyLimit() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card1 = userRecord.card;
+    Card card2 =
+        testHelper.issueCard(
+            business, allocation, user, Currency.USD, FundingType.POOLED, CardType.VIRTUAL, false);
+
+    transactionLimitService.updateAllocationSpendLimit(
+        business.getId(),
+        allocation.getId(),
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(3L)))),
+        Collections.emptyList(),
+        Collections.emptySet());
+
+    testHelper.createNetworkTransaction(
+        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card2, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+    testHelper.createNetworkTransaction(
+        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+
+    authorize_decline(allocation, user, card2, BigDecimal.valueOf(7), 100);
   }
 }

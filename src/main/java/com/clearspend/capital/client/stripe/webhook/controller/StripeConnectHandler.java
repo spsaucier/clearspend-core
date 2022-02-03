@@ -187,6 +187,7 @@ public class StripeConnectHandler {
           businessService.retrieveBusiness(businessId);
         } catch (RecordNotFoundException e) {
           log.info("Skipping event for business id {} since it is not found in the db", businessId);
+          return Optional.empty();
         }
       }
     } else {

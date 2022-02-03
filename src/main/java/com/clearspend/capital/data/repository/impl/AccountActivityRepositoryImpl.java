@@ -5,13 +5,16 @@ import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.PaginatedCriteriaBuilder;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
@@ -20,6 +23,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepositoryCustom;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.type.AllocationChartData;
+import com.clearspend.capital.service.type.CardAllocationSpendingDaily;
 import com.clearspend.capital.service.type.CardStatementActivity;
 import com.clearspend.capital.service.type.CardStatementData;
 import com.clearspend.capital.service.type.CardStatementFilterCriteria;
@@ -37,10 +41,12 @@ import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -55,6 +61,7 @@ import org.hibernate.internal.SessionImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 @Slf4j
@@ -439,5 +446,48 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     return new CardStatementData(activities, totalAmount);
+  }
+
+  @Override
+  public CardAllocationSpendingDaily findCardAllocationSpendingDaily(
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      TypedId<CardId> cardId,
+      int daysAgo) {
+
+    return JDBCUtils.query(
+        entityManager,
+        SqlResourceLoader.load("db/sql/accountActivityRepository/cardAllocationSpendingDaily.sql"),
+        new MapSqlParameterSource()
+            .addValue("businessId", businessId.toUuid())
+            .addValue("cardId", cardId.toUuid())
+            .addValue("allocationId", allocationId.toUuid())
+            .addValue("activityType", AccountActivityType.NETWORK_CAPTURE.name())
+            .addValue(
+                "statuses",
+                List.of(
+                    AccountActivityStatus.PENDING.name(), AccountActivityStatus.APPROVED.name()))
+            .addValue("timeFrom", LocalDate.now().minusDays(daysAgo)),
+        (resultSet) -> {
+          CardAllocationSpendingDaily spendingTotal =
+              new CardAllocationSpendingDaily(new HashMap<>(), new HashMap<>());
+          while (resultSet.next()) {
+            Currency currency = Currency.of(resultSet.getString("currency"));
+            LocalDate activityTime = resultSet.getObject("activity_date", LocalDate.class);
+
+            spendingTotal
+                .getCardSpendings()
+                .computeIfAbsent(currency, key -> new HashMap<>())
+                .put(activityTime, Amount.of(currency, resultSet.getBigDecimal("card_total")));
+
+            spendingTotal
+                .getAllocationSpendings()
+                .computeIfAbsent(currency, key -> new HashMap<>())
+                .put(
+                    activityTime, Amount.of(currency, resultSet.getBigDecimal("allocation_total")));
+          }
+
+          return spendingTotal;
+        });
   }
 }

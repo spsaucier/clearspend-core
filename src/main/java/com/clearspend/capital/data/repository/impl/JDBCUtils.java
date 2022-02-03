@@ -14,6 +14,7 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.hibernate.Session;
 import org.springframework.jdbc.core.PreparedStatementCallback;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -46,6 +47,19 @@ public class JDBCUtils {
                     .query(sql, paramSource, rowMapper));
   }
 
+  public static <R> R query(
+      EntityManager entityManager,
+      String sql,
+      SqlParameterSource paramSource,
+      ResultSetExtractor<R> resultSetExtractor) {
+    return entityManager
+        .unwrap(Session.class)
+        .doReturningWork(
+            connection ->
+                new NamedParameterJdbcTemplate(new SingleConnectionDataSource(connection, true))
+                    .query(sql, paramSource, resultSetExtractor));
+  }
+
   public static <R> R execute(
       EntityManager entityManager,
       String sql,
@@ -72,7 +86,7 @@ public class JDBCUtils {
   public static <T> TypedId<T> getTypedId(@NonNull ResultSet resultSet, @NonNull final String field)
       throws SQLException {
     UUID uuid = resultSet.getObject(field, UUID.class);
-    return uuid == null || uuid.equals(NULL_UUID) ? null : new TypedId<T>(uuid);
+    return uuid == null || uuid.equals(NULL_UUID) ? null : new TypedId<>(uuid);
   }
 
   /**
