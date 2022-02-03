@@ -23,9 +23,10 @@ import com.stripe.param.PersonUpdateParams.Verification;
 import com.stripe.param.PersonUpdateParams.Verification.Document;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -99,14 +100,13 @@ public class ApplicationReviewService {
 
     File file = stripeClient.uploadFile(multipartFile, Purpose.IDENTITY_DOCUMENT);
 
-    Person update =
-        person.update(
-            PersonUpdateParams.builder()
-                .setVerification(
-                    Verification.builder()
-                        .setDocument(Document.builder().setFront(file.getId()).build())
-                        .build())
-                .build());
+    person.update(
+        PersonUpdateParams.builder()
+            .setVerification(
+                Verification.builder()
+                    .setDocument(Document.builder().setFront(file.getId()).build())
+                    .build())
+            .build());
   }
 
   private void uploadDocumentToStripeForAccount(
@@ -115,20 +115,19 @@ public class ApplicationReviewService {
 
     Account account = stripeClient.retrieveAccount(business.getStripeAccountReference());
     File file = stripeClient.uploadFile(multipartFile, Purpose.valueOf(documentType.toString()));
-    Account account1 =
-        account.update(
-            AccountUpdateParams.builder()
-                .setCompany(
-                    Company.builder()
-                        .setVerification(
-                            Company.Verification.builder()
-                                .setDocument(
-                                    Company.Verification.Document.builder()
-                                        .setFront(file.getId())
-                                        .build())
-                                .build())
-                        .build())
-                .build());
+    account.update(
+        AccountUpdateParams.builder()
+            .setCompany(
+                Company.builder()
+                    .setVerification(
+                        Company.Verification.builder()
+                            .setDocument(
+                                Company.Verification.Document.builder()
+                                    .setFront(file.getId())
+                                    .build())
+                            .build())
+                    .build())
+            .build());
   }
 
   public ApplicationReviewRequirements getStripeApplicationRequirements(
@@ -147,7 +146,7 @@ public class ApplicationReviewService {
                           .getStripePersonReference();
                   return stripeClient.retrievePerson(stripePersonReference, stripeAccountReference);
                 })
-            .collect(Collectors.toList());
+            .toList();
 
     List<KycOwnerDocuments> kycDocuments = extractStripeRequiredDocumentsForPerson(personList);
     List<KybErrorCode> kybErrorCodeList = extractStripeRequiredDocumentsForAccount(account);
@@ -163,13 +162,15 @@ public class ApplicationReviewService {
   private List<KybErrorCode> extractStripeRequiredDocumentsForAccount(Account account) {
     List<KybErrorCode> kybErrorCodeList = new ArrayList<>();
     if (account.getRequirements() != null) {
-      List<String> accountCurrentlyDue = account.getRequirements().getCurrentlyDue();
-      List<String> accountEventuallyDue = account.getRequirements().getEventuallyDue();
-      List<String> accountPastDue = account.getRequirements().getPastDue();
-      List<String> accountPendingVerification = account.getRequirements().getPendingVerification();
-      accountCurrentlyDue.forEach(
-          (element) -> {
-            if (element.endsWith(DOCUMENT)) {
+      Set<String> accountRequiredFields = new HashSet<>();
+      accountRequiredFields.addAll(account.getRequirements().getCurrentlyDue());
+      accountRequiredFields.addAll(account.getRequirements().getEventuallyDue());
+      accountRequiredFields.addAll(account.getRequirements().getPastDue());
+      accountRequiredFields.addAll(account.getRequirements().getPendingVerification());
+      accountRequiredFields.forEach(
+          accountFieldRequired -> {
+            if (accountFieldRequired.endsWith(DOCUMENT)
+                && !accountFieldRequired.startsWith("person")) {
               kybErrorCodeList.add(KybErrorCode.COMPANY_VERIFICATION_DOCUMENT);
             }
           });
@@ -192,18 +193,23 @@ public class ApplicationReviewService {
                     person.getId(), KnowYourCustomerStatus.PASS);
                 return null;
               }
-              return personRequirements.getCurrentlyDue().stream()
-                  .filter(s1 -> s1.endsWith(DOCUMENT))
+              Set<String> personRequiredFields = new HashSet<>();
+              personRequiredFields.addAll(personRequirements.getCurrentlyDue());
+              personRequiredFields.addAll(personRequirements.getPastDue());
+              personRequiredFields.addAll(personRequirements.getEventuallyDue());
+              personRequiredFields.addAll(personRequirements.getPendingVerification());
+              return personRequiredFields.stream()
+                  .filter(s1 -> s1.endsWith(DOCUMENT) && s1.startsWith("person"))
                   .map(
                       s1 ->
                           new KycOwnerDocuments(
                               person.getEmail(),
                               person.getId(),
                               List.of(KycErrorCode.NAME_NOT_VERIFIED)))
-                  .collect(Collectors.toList());
+                  .toList();
             })
         .filter(Objects::nonNull)
         .flatMap(Collection::stream)
-        .collect(Collectors.toList());
+        .toList();
   }
 }

@@ -90,7 +90,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -168,11 +167,11 @@ public class TestDataController {
     return new GetBusinessesResponse(
         businessRepository.findAll().stream()
             .map(com.clearspend.capital.controller.type.business.Business::new)
-            .collect(Collectors.toList()));
+            .toList());
   }
 
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateTestDataResponse createTestData() throws IOException {
+  private CreateTestDataResponse createTestData() throws IOException, InterruptedException {
 
     // create a new business
     BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
@@ -373,6 +372,8 @@ public class TestDataController {
                 users)));
   }
 
+  // This test data method is used to simulate an onboarding flow as in UI ,
+  // and upload test documents provided by Stripe for application review.
   @GetMapping("/business/{type}/onboard")
   private BusinessRecord onboardNewBusiness(
       @PathVariable(value = "type") BusinessType businessType) {
@@ -399,7 +400,7 @@ public class TestDataController {
                 faker.company().name(),
                 businessType,
                 generateEmployerIdentificationNumber(),
-                "202-555-0111",
+                getValidPhoneNumber(),
                 new Address(
                     new EncryptedString("13810 Shavano Wind"),
                     new EncryptedString("San Antonio, Texas(TX), 78230"),
@@ -475,6 +476,16 @@ public class TestDataController {
         .getKycRequiredDocuments()
         .forEach(kycOwnerDocuments -> uploadIdentityDocument(business, kycOwnerDocuments));
 
+    // This is done again because on Stripe it can take some time to validate data
+    // and first time will not return all the requirements
+
+    documentsForManualReview =
+        applicationReviewService.getStripeApplicationRequirements(business.getId());
+
+    documentsForManualReview
+        .getKycRequiredDocuments()
+        .forEach(kycOwnerDocuments -> uploadIdentityDocument(business, kycOwnerDocuments));
+
     return new BusinessRecord(
         business,
         businessOwners,
@@ -498,14 +509,13 @@ public class TestDataController {
                             new ClassPathResource("files/stripeTestFile/success.png").getFile()),
                         Purpose.IDENTITY_DOCUMENT);
 
-                Person update =
-                    person.update(
-                        PersonUpdateParams.builder()
-                            .setVerification(
-                                Verification.builder()
-                                    .setDocument(Document.builder().setFront(file.getId()).build())
-                                    .build())
-                            .build());
+                person.update(
+                    PersonUpdateParams.builder()
+                        .setVerification(
+                            Verification.builder()
+                                .setDocument(Document.builder().setFront(file.getId()).build())
+                                .build())
+                        .build());
 
               } catch (StripeException | IOException e) {
                 e.printStackTrace();
@@ -544,7 +554,7 @@ public class TestDataController {
         Collections.emptySet());
   }
 
-  public CreateUpdateUserRecord createUser(Business business) throws IOException {
+  public CreateUpdateUserRecord createUser(Business business) {
     return userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -574,15 +584,15 @@ public class TestDataController {
                         allocations.stream()
                             .filter(
                                 allocation -> allocation.getBusinessId().equals(business.getId()))
-                            .collect(Collectors.toList()),
+                            .toList(),
                         cards.stream()
                             .filter(card -> card.getBusinessId().equals(business.getId()))
-                            .collect(Collectors.toList()),
+                            .toList(),
                         users.stream()
                             .filter(user -> user.getBusinessId().equals(business.getId()))
                             .map(u -> new CreateUpdateUserRecord(u, null))
-                            .collect(Collectors.toList())))
-            .collect(Collectors.toList()));
+                            .toList()))
+            .toList());
   }
 
   private static String generateStripeId(String prefix) {
