@@ -12,8 +12,8 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.security.UserAllocationRole;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
+import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRecord;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
@@ -66,10 +66,12 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
     // Get back 2 permissions, one default for the owner and the other for the manager
     entityManager.flush();
-    Map<TypedId<UserId>, UserAllocationRole> permissions = getPermissions(rootAllocation);
+    Map<TypedId<UserId>, UserRolesAndPermissionsRecord> permissions =
+        getPermissions(rootAllocation);
 
-    assertEquals(ALLOCATION_MANAGER, permissions.get(manager.getId()).getRole());
-    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(ALLOCATION_MANAGER, permissions.get(manager.getId()).getAllocationRole());
+    assertEquals(
+        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
     assertEquals(2, permissions.size());
 
     // Now edit the permission - give the second user only read permission
@@ -88,8 +90,9 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
     // And check it
     permissions = getPermissions(rootAllocation);
-    assertEquals(ALLOCATION_VIEW_ONLY, permissions.get(manager.getId()).getRole());
-    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(ALLOCATION_VIEW_ONLY, permissions.get(manager.getId()).getAllocationRole());
+    assertEquals(
+        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
     assertEquals(2, permissions.size());
 
     // Then delete the manager user's permission
@@ -108,13 +111,14 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
     // And check it
     permissions = getPermissions(rootAllocation);
-    assertEquals(ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getRole());
+    assertEquals(
+        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
     assertEquals(1, permissions.size());
   }
 
   @NotNull
-  private Map<TypedId<UserId>, UserAllocationRole> getPermissions(Allocation rootAllocation)
-      throws Exception {
+  private Map<TypedId<UserId>, UserRolesAndPermissionsRecord> getPermissions(
+      Allocation rootAllocation) throws Exception {
     MockHttpServletResponse response =
         mvc.perform(
                 get("/user-allocation-roles/allocation/%s"
@@ -129,7 +133,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     UserAllocationRolesResponse allocationRolesResponse =
         objectMapper.readValue(response.getContentAsString(), UserAllocationRolesResponse.class);
 
-    return allocationRolesResponse.getUserAllocationRoleRecordList().stream()
+    return allocationRolesResponse.getUserRolesAndPermissionsRecordList().stream()
         .collect(Collectors.toMap(e -> e.getUser().getUserId(), e -> e));
   }
 }

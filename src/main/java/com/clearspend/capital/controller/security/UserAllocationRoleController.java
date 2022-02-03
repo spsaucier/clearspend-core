@@ -3,8 +3,8 @@ package com.clearspend.capital.controller.security;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.security.UserAllocationRole;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
+import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRecord;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.RolesAndPermissionsService;
@@ -47,7 +47,7 @@ public class UserAllocationRoleController {
             .getAllRolesAndPermissionsForAllocation(allocationId)
             .values()
             .stream()
-            .map(UserAllocationRole::new)
+            .map(UserRolesAndPermissionsRecord::new)
             .collect(Collectors.toList()));
   }
 

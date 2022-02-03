@@ -11,8 +11,8 @@ import lombok.NonNull;
 @AllArgsConstructor
 public class UserAllocationRolesResponse {
 
-  @JsonProperty("userAllocationRoleList")
+  @JsonProperty("userRolesAndPermissionsList")
   @NonNull
-  @NotNull(message = "userAllocationRoles required")
-  private List<UserAllocationRole> userAllocationRoleRecordList;
+  @NotNull(message = "userRolesAndPermissions required")
+  private List<UserRolesAndPermissionsRecord> userRolesAndPermissionsRecordList;
 }
