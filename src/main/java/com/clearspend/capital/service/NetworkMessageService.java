@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.client.clearbit.ClearbitClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.RecordNotFoundException;
@@ -56,6 +57,8 @@ public class NetworkMessageService {
           .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
           .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+  private final ClearbitClient clearbitClient;
 
   @Transactional
   public void processNetworkMessage(NetworkCommon common) {
@@ -348,16 +351,30 @@ public class NetworkMessageService {
   }
 
   private void storeMerchantAsync(NetworkCommon common) {
+    Optional<NetworkMerchant> networkMerchantOptional =
+        networkMerchantRepository.findByMerchantNameAndMerchantCategoryCode(
+            common.getMerchantName(), common.getMerchantCategoryCode());
+    if (networkMerchantOptional.isPresent()) {
+      common
+          .getAccountActivityDetails()
+          .setMerchantLogoUrl(networkMerchantOptional.get().getMerchantLogoUrl());
+
+      return;
+    }
     // asynchronously store the merchant details so that they can be used to define limits
     new Thread(
             () -> {
               try {
-                if (!networkMerchantRepository.existsByMerchantNameAndMerchantCategoryCode(
-                    common.getMerchantName(), common.getMerchantCategoryCode())) {
-                  networkMerchantRepository.save(
-                      new NetworkMerchant(
-                          common.getMerchantName(), common.getMerchantCategoryCode()));
-                }
+                NetworkMerchant networkMerchant =
+                    new NetworkMerchant(common.getMerchantName(), common.getMerchantCategoryCode());
+                networkMerchant.setMerchantLogoUrl(
+                    clearbitClient.getLogo(common.getMerchantName()));
+                networkMerchant = networkMerchantRepository.save(networkMerchant);
+                // TODO if the accountActivity is written before the following assignment due to a
+                //   race condition add a batch job to update it
+                common
+                    .getAccountActivityDetails()
+                    .setMerchantLogoUrl(networkMerchant.getMerchantLogoUrl());
               } catch (org.springframework.dao.DataIntegrityViolationException
                   | org.hibernate.exception.ConstraintViolationException e) {
                 log.warn(

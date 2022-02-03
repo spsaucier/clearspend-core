@@ -29,4 +29,6 @@ public class NetworkMerchant extends TypedMutable<NetworkMerchantId> {
 
   // a.k.a. MCC (4 digits)
   @NonNull private Integer merchantCategoryCode;
+
+  private String merchantLogoUrl;
 }
