@@ -427,9 +427,8 @@ public class StripeClient {
             .setCurrency(Currency.USD.name())
             .setType(CardCreateParams.Type.VIRTUAL)
             .setStatus(Status.ACTIVE)
-            // TODO: Sort out what is wrong with it
-            // .putExtraParam("financial_account",
-            // stripeProperties.getClearspendFinancialAccountId())
+             .putExtraParam("financial_account",
+             stripeProperties.getClearspendFinancialAccountId())
             .build();
     log.debug("Virtual card: cardParameters: {}", cardParameters);
 
