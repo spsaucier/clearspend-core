@@ -2,6 +2,7 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.stripe.StripeMetadataEntry;
+import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -41,16 +43,19 @@ public class StripeConnectHandler {
   private final BusinessBankAccountService businessBankAccountService;
   private final StripeClient stripeClient;
   private final boolean placeHold;
+  private final StripeProperties stripeProperties;
 
   public StripeConnectHandler(
       BusinessService businessService,
       BusinessBankAccountService businessBankAccountService,
       StripeClient stripeClient,
+      StripeProperties stripeProperties,
       @Value("${clearspend.ach.hold.place:true}") boolean placeHold) {
 
     this.businessService = businessService;
     this.businessBankAccountService = businessBankAccountService;
     this.stripeClient = stripeClient;
+    this.stripeProperties = stripeProperties;
     this.placeHold = placeHold;
   }
 
@@ -107,6 +112,14 @@ public class StripeConnectHandler {
               ReceivedCredit receivedCredit = event.getEvent();
               switch (receivedCredit.getNetwork()) {
                 case "stripe" -> {
+                  // We should only process this event for customer connected accounts to push
+                  // money further to the Clearspend financial account
+                  if (StringUtils.equals(
+                      stripeProperties.getClearspendFinancialAccountId(),
+                      event.getEvent().getFinancialAccount())) {
+                    return;
+                  }
+
                   try {
                     Business business =
                         businessService.retrieveBusinessByStripeFinancialAccount(

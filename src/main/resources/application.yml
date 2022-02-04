@@ -89,7 +89,8 @@ client:
     direct-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
     allow-skip-stripe-header-validation: true
-    clearspend_financial_account_id: ${STRIPE_CLEARSPEND_FINANCIAL_ACCOUNT_ID:fa_1KGwwBGAnZyEKADz34N7GuHA}
+    clearspend_connected_account_id: ${STRIPE_CLEARSPEND_CONNECTED_ACCOUNT_ID:acct_1KPLzp4g2Xo63Nb8}
+    clearspend_financial_account_id: ${STRIPE_CLEARSPEND_FINANCIAL_ACCOUNT_ID:fa_1KPLzt4g2Xo63Nb8uaQvsdmO}
     enable-telemetry: false
     connect-timeout: 30000
     read-timeout: 30000

@@ -71,12 +71,13 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Cardholder createCardholder(User user, ClearAddress billingAddress) {
+  public Cardholder createCardholder(
+      User user, ClearAddress billingAddress, String stripeAccountId) {
     return generateEntityWithId(Cardholder.class);
   }
 
   @Override
-  public Person createPerson(BusinessOwner businessOwner, String businessExternalRef) {
+  public Person createPerson(BusinessOwner businessOwner, String stripeAccountId) {
     Person person = generateEntityWithId(Person.class);
     if (businessOwner.getTitle() != null) {
       if ("Review".equals(businessOwner.getTitle())) {
@@ -117,13 +118,10 @@ public class StripeMockClient extends StripeClient {
   }
 
   public Account triggerAccountValidationAfterPersonsProvided(
-      String stripeAccountReference, Boolean ownersProvided, Boolean executiveProvided) {
+      String stripeAccountId, Boolean ownersProvided, Boolean executiveProvided) {
     Account account1 = generateEntityWithId(Account.class);
     TypedId<BusinessId> id =
-        businessRepository
-            .findByStripeAccountReference(stripeAccountReference)
-            .orElseThrow()
-            .getId();
+        businessRepository.findByStripeAccountReference(stripeAccountId).orElseThrow().getId();
     List<BusinessOwner> businessOwnerByBusinessId = businessOwnerRepository.findByBusinessId(id);
     boolean fraud =
         businessOwnerByBusinessId.stream()
@@ -168,7 +166,7 @@ public class StripeMockClient extends StripeClient {
     return person1;
   }
 
-  public Account retrieveAccount(String businessExternalReference) {
+  public Account retrieveAccount(String stripeAccountId) {
     return generateEntityWithId(Account.class);
   }
 

@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.springframework.boot") version "2.6.1"
+    id("org.springframework.boot") version "2.6.3"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
@@ -53,8 +53,8 @@ tasks {
 }
 
 dependencies {
-    val testContainersVersion = "1.16.2"
-    val blazePersistenceVersion = "1.6.3"
+    val testContainersVersion = "1.16.3"
+    val blazePersistenceVersion = "1.6.6"
 
     //annotation processor and dependencies
     annotationProcessor("org.projectlombok:lombok")
@@ -80,24 +80,26 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     //other 3rd party libs
-    implementation("com.google.guava:guava:30.1.1-jre")
-    implementation("org.springdoc:springdoc-openapi-ui:1.6.1")
-    implementation("com.plaid:plaid-java:9.0.0")
-    implementation("com.twilio.sdk:twilio:8.20.0")
-    implementation("com.sendgrid:sendgrid-java:4.7.5")
-    implementation("com.idealista:format-preserving-encryption:1.0.0")
-    implementation("io.fusionauth:fusionauth-java-client:1.30.2")
-    implementation("com.google.cloud:google-cloud-nio:0.123.17")
-    implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
-    implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java
-    implementation("com.github.librepdf:openpdf:1.3.26")
+    implementation("com.google.guava:guava:31.0.1-jre")
     implementation("org.apache.commons:commons-csv:1.9.0")
-
-    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
-
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.5")
+    implementation("com.idealista:format-preserving-encryption:1.0.0")
+    implementation("com.github.librepdf:openpdf:1.3.26")
+    implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
     implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")
-    implementation("com.blazebit:blaze-persistence-integration-hibernate-5.4:$blazePersistenceVersion")
+    implementation("com.blazebit:blaze-persistence-integration-hibernate-5.6:$blazePersistenceVersion")
+
+    //client libs
+    implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java
+    implementation("com.google.cloud:google-cloud-nio:0.123.17")
+    implementation("com.sendgrid:sendgrid-java:4.7.5")
+    implementation("com.plaid:plaid-java:9.0.0")
+    implementation("com.twilio.sdk:twilio:8.20.0")
+    implementation("io.fusionauth:fusionauth-java-client:1.30.2")
+
+    //monitoring support
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     //just for the non-prod data generator
     implementation("com.github.javafaker:javafaker:1.0.1")

@@ -15,6 +15,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.service.BeanUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.StripeException;
@@ -29,6 +30,7 @@ import com.stripe.model.issuing.Cardholder;
 import com.stripe.net.ApiRequestParams;
 import com.stripe.net.ApiResource;
 import com.stripe.net.RequestOptions;
+import com.stripe.net.RequestOptions.RequestOptionsBuilder;
 import com.stripe.param.AccountCreateParams;
 import com.stripe.param.AccountCreateParams.BusinessProfile;
 import com.stripe.param.AccountCreateParams.Capabilities;
@@ -191,18 +193,19 @@ public class StripeClient {
     return callStripe(
         "createAccount",
         accountCreateParams,
-        () -> Account.create(accountCreateParams, getRequestOptions(business.getId())));
+        () ->
+            Account.create(accountCreateParams, getRequestOptionsBetaApi(business.getId(), null)));
   }
 
-  public Account retrieveAccount(String businessExternalReference) {
-    return callStripe("retrieveAccount", null, () -> Account.retrieve(businessExternalReference));
+  public Account retrieveAccount(String stripeAccountId) {
+    return callStripe("retrieveAccount", null, () -> Account.retrieve(stripeAccountId));
   }
 
   @SneakyThrows
   public Account triggerAccountValidationAfterPersonsProvided(
-      String stripeAccountReference, Boolean ownersProvided, Boolean executiveProvided) {
+      String stripeAccountId, Boolean ownersProvided, Boolean executiveProvided) {
 
-    Account account = retrieveAccount(stripeAccountReference);
+    Account account = retrieveAccount(stripeAccountId);
 
     AccountUpdateParams.Company.Builder companyBuilder = AccountUpdateParams.Company.builder();
     companyBuilder.setOwnersProvided(ownersProvided);
@@ -210,10 +213,11 @@ public class StripeClient {
 
     AccountUpdateParams accountUpdateParams =
         new AccountUpdateParams.Builder().setCompany(companyBuilder.build()).build();
-    return account.update(accountUpdateParams, getRequestOptions(new TypedId<>()));
+    return account.update(accountUpdateParams, getRequestOptions(new TypedId<>(), stripeAccountId));
   }
 
-  public Cardholder createCardholder(User user, ClearAddress billingAddress) {
+  public Cardholder createCardholder(
+      User user, ClearAddress billingAddress, String stripeAccountId) {
     Billing.Address.Builder addressBuilder =
         Billing.Address.builder()
             .setLine1(billingAddress.getStreetLine1())
@@ -237,15 +241,27 @@ public class StripeClient {
             .setType(CardholderCreateParams.Type.INDIVIDUAL)
             .setBilling(
                 CardholderCreateParams.Billing.builder().setAddress(addressBuilder.build()).build())
+            .putAllMetadata(
+                Map.of(
+                    StripeMetadataEntry.BUSINESS_ID.getKey(),
+                    user.getBusinessId().toString(),
+                    StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(),
+                    stripeAccountId,
+                    StripeMetadataEntry.USER_ID.getKey(),
+                    user.getId().toString()))
             .build();
 
     return callStripe(
         "createCardholder",
         params,
-        () -> Cardholder.create(params, getRequestOptions(user.getId())));
+        () ->
+            Cardholder.create(
+                params,
+                getRequestOptions(
+                    user.getId(), stripeProperties.getClearspendConnectedAccountId())));
   }
 
-  public Person createPerson(BusinessOwner businessOwner, String businessExternalRef) {
+  public Person createPerson(BusinessOwner businessOwner, String stripeAccountId) {
     PersonCollectionCreateParams.Address.Builder addressBuilder =
         PersonCollectionCreateParams.Address.builder()
             .setLine1(businessOwner.getAddress().getStreetLine1().getEncrypted())
@@ -280,7 +296,13 @@ public class StripeClient {
             .setEmail(businessOwner.getEmail().getEncrypted())
             .setPhone(businessOwner.getPhone().getEncrypted())
             .setRelationship(relationship.build())
-            .setAddress(addressBuilder.build());
+            .setAddress(addressBuilder.build())
+            .putAllMetadata(
+                Map.of(
+                    StripeMetadataEntry.BUSINESS_ID.getKey(),
+                    businessOwner.getBusinessId().toString(),
+                    StripeMetadataEntry.BUSINESS_OWNER_ID.getKey(),
+                    businessOwner.getId().toString()));
 
     if (businessOwner.getDateOfBirth() != null) {
       builder.setDob(
@@ -307,11 +329,13 @@ public class StripeClient {
     // TODO: Is there a proper api way to get children collection via static methods rather than
     // passing the proper URL?
     PersonCollection personCollection = new PersonCollection();
-    personCollection.setUrl("/v1/accounts/%s/persons".formatted(businessExternalRef));
+    personCollection.setUrl("/v1/accounts/%s/persons".formatted(stripeAccountId));
     return callStripe(
         "createPerson",
         personParameters,
-        () -> personCollection.create(personParameters, getRequestOptions(businessOwner.getId())));
+        () ->
+            personCollection.create(
+                personParameters, getRequestOptions(businessOwner.getId(), stripeAccountId)));
   }
 
   public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
@@ -436,7 +460,9 @@ public class StripeClient {
         cardParameters,
         () ->
             com.stripe.model.issuing.Card.create(
-                cardParameters, getRequestOptionsBetaApi(card.getId())));
+                cardParameters,
+                getRequestOptionsBetaApi(
+                    card.getId(), stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public Card createPhysicalCard(
@@ -467,9 +493,8 @@ public class StripeClient {
                     .setService(Service.STANDARD)
                     .setAddress(addressBuilder.build())
                     .build())
-            // TODO: Sort out what is wrong with it
-            // .putExtraParam("financial_account",
-            // stripeProperties.getClearspendFinancialAccountId())
+            .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
+            // TODO: Add business_id/stripe_account_id etc to the metadata
             .build();
     log.debug("Physical card: cardParameters: {}", cardParameters);
 
@@ -478,7 +503,9 @@ public class StripeClient {
         cardParameters,
         () ->
             com.stripe.model.issuing.Card.create(
-                cardParameters, getRequestOptionsBetaApi(card.getId())));
+                cardParameters,
+                getRequestOptionsBetaApi(
+                    card.getId(), stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public FinancialAccount createFinancialAccount(
@@ -590,15 +617,25 @@ public class StripeClient {
   }
 
   // see https://stripe.com/docs/api/idempotent_requests
-  private RequestOptions getRequestOptions(TypedId<?> idempotencyKey) {
-    return RequestOptions.builder().setIdempotencyKey(idempotencyKey.toString()).build();
+  private RequestOptions getRequestOptions(TypedId<?> idempotencyKey, String stripeAccountId) {
+    RequestOptionsBuilder builder =
+        RequestOptions.builder().setIdempotencyKey(idempotencyKey.toString());
+
+    BeanUtils.setNotNull(stripeAccountId, builder::setStripeAccount);
+
+    return builder.build();
   }
 
-  private RequestOptions getRequestOptionsBetaApi(TypedId<?> idempotencyKey) {
-    return RequestOptions.builder()
-        .setStripeVersionOverride(STRIPE_BETA_HEADER)
-        .setIdempotencyKey(idempotencyKey.toString())
-        .build();
+  private RequestOptions getRequestOptionsBetaApi(
+      TypedId<?> idempotencyKey, String stripeAccountId) {
+    RequestOptionsBuilder builder =
+        RequestOptions.builder()
+            .setStripeVersionOverride(STRIPE_BETA_HEADER)
+            .setIdempotencyKey(idempotencyKey.toString());
+
+    BeanUtils.setNotNull(stripeAccountId, builder::setStripeAccount);
+
+    return builder.build();
   }
 
   /**

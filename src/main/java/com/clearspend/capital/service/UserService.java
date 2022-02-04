@@ -80,7 +80,11 @@ public class UserService {
     user = userRepository.save(user);
     userRepository.flush();
 
-    user.setExternalRef(stripeClient.createCardholder(user, business.getClearAddress()).getId());
+    user.setExternalRef(
+        stripeClient
+            .createCardholder(
+                user, business.getClearAddress(), business.getStripeAccountReference())
+            .getId());
 
     return user;
   }
@@ -117,7 +121,11 @@ public class UserService {
 
     user.setSubjectRef(
         fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
-    user.setExternalRef(stripeClient.createCardholder(user, business.getClearAddress()).getId());
+    user.setExternalRef(
+        stripeClient
+            .createCardholder(
+                user, business.getClearAddress(), business.getStripeAccountReference())
+            .getId());
 
     twilioService.sendNotificationEmail(
         user.getEmail().getEncrypted(),
@@ -209,15 +217,15 @@ public class UserService {
     return userRepository.save(user).isArchived();
   }
 
-  public byte[] createCSVFile(TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria)
-      throws IOException {
+  public byte[] createCSVFile(
+      TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
 
     Page<FilteredUserWithCardListRecord> userPage =
         userRepository.find(businessId, userFilterCriteria);
 
     List<String> headerFields = Arrays.asList("Employee", "Card Info", "Email Address");
     ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
-    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT)) {
       csvPrinter.printRecord(headerFields);
       userPage
           .getContent()
@@ -232,14 +240,13 @@ public class UserService {
                   record
                       .card()
                       .forEach(
-                          card -> {
-                            cardsList.add(
-                                "**** "
-                                    + card.card().getLastFour()
-                                    + " "
-                                    + card.allocationName()
-                                    + " ");
-                          });
+                          card ->
+                              cardsList.add(
+                                  "**** "
+                                      + card.card().getLastFour()
+                                      + " "
+                                      + card.allocationName()
+                                      + " "));
                 } else {
                   cardsList.add("No cards");
                 }
