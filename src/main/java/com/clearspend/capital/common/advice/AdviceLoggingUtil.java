@@ -1,9 +1,16 @@
 package com.clearspend.capital.common.advice;
 
+import com.clearspend.capital.common.typedid.codec.TypedIdModule;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,7 +29,18 @@ import org.springframework.stereotype.Component;
 public class AdviceLoggingUtil {
 
   private final ObjectMapper objectMapper =
-      new ObjectMapper().configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+      new ObjectMapper()
+          .registerModule(new JavaTimeModule())
+          .registerModule(new TypedIdModule())
+          .registerModule(new Jdk8Module())
+          .registerModule(new ParameterNamesModule())
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+          .configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false)
+          .configure(JsonGenerator.Feature.IGNORE_UNKNOWN, true)
+          .configure(JsonParser.Feature.IGNORE_UNDEFINED, true)
+          .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+
   private static final Map<String, Boolean> noisyEndpoints =
       Map.of("/actuator/health", false, "/actuator/prometheus", false);
 
@@ -130,7 +148,8 @@ public class AdviceLoggingUtil {
                   String token = value.substring("bearer".length() + 1);
                   token = new String(Base64.decodeBase64(token.split("\\.")[1]));
                   Map<String, Object> stringObjectMap =
-                      objectMapper.readValue(token, new TypeReference<>() {});
+                      objectMapper.readValue(token, new TypeReference<>() {
+                      });
                   for (Entry<String, Object> entry : stringObjectMap.entrySet()) {
                     claims.put(entry.getKey(), entry.getValue().toString());
                   }
