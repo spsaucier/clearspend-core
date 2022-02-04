@@ -197,8 +197,8 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Card updateCard(String cardExternalRef, CardStatus cardStatus) {
-    return generateEntityWithId(Card.class, cardExternalRef);
+  public Card updateCard(String stripeCardId, CardStatus cardStatus) {
+    return generateEntityWithId(Card.class, stripeCardId);
   }
 
   private <T> T generateEntityWithId(Class<T> entityClass) {

@@ -426,9 +426,9 @@ public class StripeClient {
     return person.update(builder.build());
   }
 
-  public Card updateCard(String cardExternalRef, CardStatus cardStatus) {
+  public Card updateCard(String stripeCardId, CardStatus cardStatus) {
     Card card = new Card();
-    card.setId(cardExternalRef);
+    card.setId(stripeCardId);
 
     CardUpdateParams params =
         CardUpdateParams.builder()
@@ -440,7 +440,14 @@ public class StripeClient {
                 })
             .build();
 
-    return callStripe("updateCard", params, () -> card.update(params));
+    return callStripe(
+        "updateCard",
+        params,
+        () ->
+            card.update(
+                params,
+                getRequestOptions(
+                    new TypedId<>(), stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public Card createVirtualCard(
@@ -649,6 +656,7 @@ public class StripeClient {
               RequestOptions.builder()
                   .setIdempotencyKey(cardId + nonce)
                   .setStripeVersionOverride("2020-03-02")
+                  .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
                   .build())
           .getSecret();
     } catch (StripeException e) {
