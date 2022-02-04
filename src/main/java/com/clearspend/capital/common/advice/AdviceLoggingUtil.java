@@ -3,6 +3,7 @@ package com.clearspend.capital.common.advice;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -20,7 +21,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AdviceLoggingUtil {
 
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper =
+      new ObjectMapper().configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
   private static final Map<String, Boolean> noisyEndpoints =
       Map.of("/actuator/health", false, "/actuator/prometheus", false);
 
