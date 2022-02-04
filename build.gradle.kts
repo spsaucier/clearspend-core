@@ -76,7 +76,7 @@ dependencies {
     implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.4")
     runtimeOnly("org.postgresql:postgresql")
 
     //other 3rd party libs
