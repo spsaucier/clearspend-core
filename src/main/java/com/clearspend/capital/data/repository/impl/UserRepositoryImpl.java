@@ -61,6 +61,9 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
     userCriteriaBuilder.where("user.businessId").eqLiteral(businessId);
 
     BeanUtils.setNotNull(
+        criteria.getWithoutCard(), withoutCard -> userCriteriaBuilder.where("card").isNull());
+
+    BeanUtils.setNotNull(
         criteria.getHasVirtualCard(),
         hasVirtualCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.VIRTUAL));
 
@@ -100,10 +103,6 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     userCriteriaBuilder.groupBy("user.id");
 
-    BeanUtils.setNotNull(
-        criteria.getWithoutCard(),
-        withoutCard -> userCriteriaBuilder.having("count(card)").eqLiteral("0"));
-
     // we should order by an unique identifier to apply pagination
     userCriteriaBuilder.orderByDesc("user.created");
     userCriteriaBuilder.orderByDesc("user.id");
@@ -114,8 +113,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
     PaginatedCriteriaBuilder<User> page = userCriteriaBuilder.page(firstResult, maxResults);
     PagedList<User> paged = page.getResultList();
 
-    List<TypedId<UserId>> listOfUserId =
-        paged.stream().map(TypedMutable::getId).collect(Collectors.toList());
+    List<TypedId<UserId>> listOfUserId = paged.stream().map(TypedMutable::getId).toList();
 
     Map<TypedId<UserId>, List<CardAndAllocationName>> cardsGroupByUserId =
         creCriteriaBuilderFactory
@@ -145,7 +143,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .map(
                 user ->
                     new FilteredUserWithCardListRecord(user, cardsGroupByUserId.get(user.getId())))
-            .collect(Collectors.toList()),
+            .toList(),
         PageRequest.of(
             criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
         paged.getTotalSize());

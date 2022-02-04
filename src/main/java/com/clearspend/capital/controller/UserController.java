@@ -44,7 +44,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -174,9 +173,7 @@ public class UserController {
   @GetMapping(value = "/list")
   private List<User> getUsersByUserName() {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    return userService.retrieveUsersForBusiness(businessId).stream()
-        .map(User::new)
-        .collect(Collectors.toList());
+    return userService.retrieveUsersForBusiness(businessId).stream().map(User::new).toList();
   }
 
   @PostMapping(value = "/search")
@@ -424,7 +421,7 @@ public class UserController {
 
     return receiptService.getReceipts(currentUser.businessId(), currentUser.userId()).stream()
         .map(Receipt::of)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   @DeleteMapping("/receipts/{receiptId}/delete")

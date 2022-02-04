@@ -40,7 +40,6 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AllocationService;
-import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
@@ -69,7 +68,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
-public class UserControllerTest extends BaseCapitalTest {
+class UserControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final MockMvcHelper mockMvcHelper;
@@ -663,8 +662,6 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsers() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
     testHelper.setCurrentUser(createBusinessRecord.user());
@@ -842,11 +839,7 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsersFilteredByCardType() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    BusinessOwnerAndUserRecord owner =
-        testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
     testHelper.setCurrentUser(createBusinessRecord.user());
 
@@ -955,23 +948,17 @@ public class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchForUsersFilteredBySmartSearch() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.createBusinessOwner(createBusinessRecord.business().getId(), email, password);
     Business business = createBusinessRecord.business();
 
-    Cookie authCookie = testHelper.login(email, password);
-
-    CreateUpdateUserRecord user =
-        userService.createUser(
-            business.getId(),
-            UserType.EMPLOYEE,
-            "First",
-            "Last",
-            testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber());
+    userService.createUser(
+        business.getId(),
+        UserType.EMPLOYEE,
+        "First",
+        "Last",
+        testHelper.generateEntityAddress(),
+        faker.internet().emailAddress(),
+        faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
             business.getId(),
@@ -993,7 +980,7 @@ public class UserControllerTest extends BaseCapitalTest {
                 post("/users/search")
                     .contentType("application/json")
                     .content(body)
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -1005,7 +992,9 @@ public class UserControllerTest extends BaseCapitalTest {
                 .getTypeFactory()
                 .constructParametricType(PagedData.class, UserPageData.class));
     Assertions.assertEquals(1, userPageData.getTotalElements());
-    Assertions.assertEquals("Name", userPageData.getContent().get(0).getUserData().getFirstName());
+    Assertions.assertEquals(
+        user1.user().getFirstName().getEncrypted(),
+        userPageData.getContent().get(0).getUserData().getFirstName());
   }
 
   @SneakyThrows
@@ -1111,5 +1100,107 @@ public class UserControllerTest extends BaseCapitalTest {
                 .getTypeFactory()
                 .constructParametricType(PagedData.class, UserPageData.class));
     Assertions.assertEquals(3, userPageData.getTotalElements());
+  }
+
+  @SneakyThrows
+  @Test
+  void searchForUsersWithoutCard() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation1",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    AllocationService.AllocationRecord allocation2 =
+        testHelper.createAllocation(
+            business.getId(),
+            "allocation2",
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.user());
+
+    Cookie authCookie = createBusinessRecord.authCookie();
+
+    CreateUpdateUserRecord user =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "First",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+    CreateUpdateUserRecord user1 =
+        userService.createUser(
+            business.getId(),
+            UserType.EMPLOYEE,
+            "Name",
+            "Last",
+            testHelper.generateEntityAddress(),
+            faker.internet().emailAddress(),
+            faker.phoneNumber().phoneNumber());
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    testHelper.issueCard(
+        business,
+        allocation.allocation(),
+        user.user(),
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL,
+        false);
+    testHelper.issueCard(
+        business,
+        allocation2.allocation(),
+        user.user(),
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.PHYSICAL,
+        false);
+
+    SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setWithoutCard(true);
+    searchUserRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(searchUserRequest);
+
+    MockHttpServletResponse responseFilteredByUserName =
+        mvc.perform(
+                post("/users/search")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(responseFilteredByUserName.getContentAsString());
+    PagedData<UserPageData> userPageData =
+        objectMapper.readValue(
+            responseFilteredByUserName.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, UserPageData.class));
+    log.debug("userPageData: {}", userPageData);
+    Assertions.assertEquals(2, userPageData.getTotalElements());
+    Assertions.assertEquals(
+        user1.user().getFirstName().getEncrypted(),
+        userPageData.getContent().stream()
+            .filter(userData -> userData.getUserData().getType() == UserType.EMPLOYEE)
+            .findFirst()
+            .orElseThrow()
+            .getUserData()
+            .getFirstName());
+    Assertions.assertEquals(
+        createBusinessRecord.businessOwner().getFirstName().getEncrypted(),
+        userPageData.getContent().stream()
+            .filter(userData -> userData.getUserData().getType() == UserType.BUSINESS_OWNER)
+            .findFirst()
+            .orElseThrow()
+            .getUserData()
+            .getFirstName());
   }
 }
