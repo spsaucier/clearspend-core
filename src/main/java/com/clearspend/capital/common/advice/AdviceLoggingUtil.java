@@ -3,7 +3,6 @@ package com.clearspend.capital.common.advice;
 import com.clearspend.capital.common.typedid.codec.TypedIdModule;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,7 +88,7 @@ public class AdviceLoggingUtil {
       stringBuilder.append("Request Body: [");
       try {
         stringBuilder.append(objectMapper.writeValueAsString(requestBody));
-      } catch (JsonProcessingException e) {
+      } catch (Exception e) {
         e.printStackTrace();
       }
       stringBuilder.append("]\n");
@@ -99,7 +98,7 @@ public class AdviceLoggingUtil {
       stringBuilder.append("Response Body: [");
       try {
         stringBuilder.append(objectMapper.writeValueAsString(responseBody));
-      } catch (JsonProcessingException e) {
+      } catch (Exception e) {
         e.printStackTrace();
       }
       stringBuilder.append("]\n");
@@ -148,8 +147,7 @@ public class AdviceLoggingUtil {
                   String token = value.substring("bearer".length() + 1);
                   token = new String(Base64.decodeBase64(token.split("\\.")[1]));
                   Map<String, Object> stringObjectMap =
-                      objectMapper.readValue(token, new TypeReference<>() {
-                      });
+                      objectMapper.readValue(token, new TypeReference<>() {});
                   for (Entry<String, Object> entry : stringObjectMap.entrySet()) {
                     claims.put(entry.getKey(), entry.getValue().toString());
                   }
