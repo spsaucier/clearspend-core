@@ -27,12 +27,13 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
 
   Optional<Card> findByExternalRef(String externalRef);
 
-  @Query("select c from Card c where c.businessId = :businessId and c.lastFour = :lastFour")
+  @Query(
+      "select c from Card c where c.businessId = :businessId and c.lastFour = :lastFour and c.activated = false")
   List<Card> findNonActivatedByBusinessIdAndLastFour(
       @Param("businessId") TypedId<BusinessId> businessId, @Param("lastFour") String lastFour);
 
   @Query(
-      "select c from Card c where c.businessId = :businessId and c.userId = :userId and c.lastFour = :lastFour")
+      "select c from Card c where c.businessId = :businessId and c.userId = :userId and c.lastFour = :lastFour and c.activated = false")
   List<Card> findNonActivatedByBusinessIdAndUserIdAndLastFour(
       @Param("businessId") TypedId<BusinessId> businessId,
       @Param("userId") TypedId<UserId> userId,
