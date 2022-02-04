@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.business;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -8,6 +9,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
+import com.clearspend.capital.controller.type.business.prospect.BusinessProspectData;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
@@ -22,6 +24,7 @@ import com.clearspend.capital.data.repository.business.BusinessProspectRepositor
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.FusionAuthService;
 import io.fusionauth.domain.User;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
@@ -315,5 +318,45 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.REVIEW);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
+  }
+
+  @Test
+  void getBusinessProspect_success() throws Exception {
+    mockServerHelper.expectOtpViaEmail();
+    mockServerHelper.expectOtpViaSms();
+    mockServerHelper.expectEmailVerification("777888999");
+    mockServerHelper.expectPhoneVerification("766255906");
+
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.PHONE, businessProspect.getId(), "766255906");
+
+    String password = setBusinessProspectPassword(businessProspect.getId());
+
+    Cookie cookie = testHelper.login(businessProspect.getEmail().getEncrypted(), password);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/business-prospects/" + businessProspect.getId())
+                    .contentType("application/json")
+                    .cookie(cookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    BusinessProspectData businessProspectData =
+        objectMapper.readValue(response.getContentAsString(), BusinessProspectData.class);
+    org.junit.jupiter.api.Assertions.assertEquals(
+        businessProspect.getFirstName().getEncrypted(), businessProspectData.getFirstName());
+    org.junit.jupiter.api.Assertions.assertEquals(
+        businessProspect.getLastName().getEncrypted(), businessProspectData.getLastName());
+    org.junit.jupiter.api.Assertions.assertEquals(
+        businessProspect.getEmail().getEncrypted(), businessProspectData.getEmail());
+    org.junit.jupiter.api.Assertions.assertEquals(
+        businessProspect.getBusinessType(), businessProspectData.getBusinessType());
   }
 }

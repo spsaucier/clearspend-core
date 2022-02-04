@@ -52,6 +52,7 @@ clearspend:
       pan:
         key: 148F8C2650959006B52D67A1E927A4D83DF6C967B8D4BA30C457EAF492F7C825
         tweak: 9F1E1761
+  onboarding-validation: ${ONBOARD_EMAIL_PHONE_VALIDATION:true}
 
 client:
   connect-timeout: 2000

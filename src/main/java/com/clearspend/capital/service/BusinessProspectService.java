@@ -121,11 +121,7 @@ public class BusinessProspectService {
   @Transactional
   public BusinessProspect setBusinessProspectPhone(
       TypedId<BusinessProspectId> businessProspectId, String phone, Boolean live) {
-    BusinessProspect businessProspect =
-        businessProspectRepository
-            .findById(businessProspectId)
-            .orElseThrow(
-                () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+    BusinessProspect businessProspect = retrieveBusinessProspectById(businessProspectId);
 
     if (businessProspect.getPhone() != null
         && StringUtils.isNotBlank(businessProspect.getPhone().getEncrypted())
@@ -149,11 +145,7 @@ public class BusinessProspectService {
       IdentifierType identifierType,
       String otp,
       Boolean live) {
-    BusinessProspect businessProspect =
-        businessProspectRepository
-            .findById(businessProspectId)
-            .orElseThrow(
-                () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+    BusinessProspect businessProspect = retrieveBusinessProspectById(businessProspectId);
 
     switch (identifierType) {
       case EMAIL -> {
@@ -195,11 +187,7 @@ public class BusinessProspectService {
   @Transactional
   public BusinessProspect setBusinessProspectPassword(
       TypedId<BusinessProspectId> businessProspectId, String password, Boolean live) {
-    BusinessProspect businessProspect =
-        businessProspectRepository
-            .findById(businessProspectId)
-            .orElseThrow(
-                () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+    BusinessProspect businessProspect = retrieveBusinessProspectById(businessProspectId);
 
     if (StringUtils.isNotBlank(businessProspect.getSubjectRef())) {
       throw new InvalidRequestException("password already set");
@@ -233,12 +221,7 @@ public class BusinessProspectService {
   public ConvertBusinessProspectRecord convertBusinessProspect(
       ConvertBusinessProspect convertBusinessProspect) {
     BusinessProspect businessProspect =
-        businessProspectRepository
-            .findById(convertBusinessProspect.getBusinessProspectId())
-            .orElseThrow(
-                () ->
-                    new RecordNotFoundException(
-                        Table.BUSINESS_PROSPECT, convertBusinessProspect.getBusinessProspectId()));
+        retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
 
     if (StringUtils.isBlank(businessProspect.getSubjectRef())) {
       throw new InvalidRequestException("password has not been set");
@@ -272,5 +255,13 @@ public class BusinessProspectService {
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {
     return businessProspectRepository.findBySubjectRef(subjectRef);
+  }
+
+  public BusinessProspect retrieveBusinessProspectById(
+      TypedId<BusinessProspectId> businessProspectId) {
+    return businessProspectRepository
+        .findById(businessProspectId)
+        .orElseThrow(
+            () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
   }
 }
