@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.stripe.webhook.controller;
 
+import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.NetworkMessageService;
@@ -9,6 +10,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.StripeObject;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Transaction;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.issuing.AuthorizationApproveParams;
 import com.stripe.param.issuing.AuthorizationApproveParams.Builder;
 import com.stripe.param.issuing.AuthorizationDeclineParams;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class StripeDirectHandler {
   private final NetworkMessageService networkMessageService;
+  private final StripeProperties stripeProperties;
 
   NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
       throws StripeException {
@@ -54,7 +57,11 @@ public class StripeDirectHandler {
               common.getNetworkMessage() != null ? common.getNetworkMessage().getId() : "n/a",
               common.getRequestedAmount());
           if (!isTest) {
-            auth.decline(authorizationDeclineParams);
+            auth.decline(
+                authorizationDeclineParams,
+                RequestOptions.builder()
+                    .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
+                    .build());
           }
         } else {
           auth.setApproved(true);
@@ -72,7 +79,11 @@ public class StripeDirectHandler {
               // amounts going back to Stripe for authorizations should be positive
               common.getRequestedAmount().abs());
           if (!isTest) {
-            auth.approve(authorizationApproveParams.build());
+            auth.approve(
+                authorizationApproveParams.build(),
+                RequestOptions.builder()
+                    .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
+                    .build());
           }
         }
       }
