@@ -34,7 +34,6 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -116,19 +115,19 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkHoldReleaseAccountActivity(Hold hold) {
-    Optional<AccountActivity> accountActivityOptional =
-        accountActivityRepository.findByHoldId(hold.getId());
-    if (accountActivityOptional.isPresent()) {
-      AccountActivity accountActivity = accountActivityOptional.get();
-      accountActivity.setHideAfter(OffsetDateTime.now());
-      accountActivityRepository.save(accountActivity);
-    }
-  }
+  public void recordHoldReleaseAccountActivity(Hold hold) {
+    AccountActivity accountActivity =
+        accountActivityRepository
+            .findByHoldId(hold.getId())
+            .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, hold.getId()));
 
-  @Transactional(TxType.REQUIRED)
-  public void recordBankAccountHoldReleaseAccountActivity(Hold hold) {
-    recordNetworkHoldReleaseAccountActivity(hold);
+    accountActivity.setHideAfter(OffsetDateTime.now());
+    log.debug(
+        "updating account activity {}: hideAfter: {}",
+        accountActivity.getId(),
+        accountActivity.getHideAfter());
+
+    accountActivityRepository.save(accountActivity);
   }
 
   @Transactional(TxType.REQUIRED)

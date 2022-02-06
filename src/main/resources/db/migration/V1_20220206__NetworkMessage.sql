@@ -1,0 +1,1 @@
+alter table network_message add column sub_type varchar(20);

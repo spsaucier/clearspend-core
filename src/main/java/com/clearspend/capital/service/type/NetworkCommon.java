@@ -54,6 +54,7 @@ public class NetworkCommon {
 
   // the type of network message we're processing from Stripe
   @NonNull private NetworkMessageType networkMessageType;
+  private String networkMessageSubType;
 
   // flag to indicate we can give a lower approval than asked for
   boolean allowPartialApproval = false;
@@ -178,6 +179,7 @@ public class NetworkCommon {
   public NetworkCommon(Transaction transaction, StripeWebhookLog log) {
     cardExternalRef = transaction.getCard();
     networkMessageType = NetworkMessageType.TRANSACTION_CREATED;
+    networkMessageSubType = transaction.getType();
     Currency currency = Currency.of(transaction.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, transaction.getAmount());
     requestedAmount = amount;
@@ -212,18 +214,23 @@ public class NetworkCommon {
   }
 
   public NetworkMessage toNetworkMessage() {
-    return new NetworkMessage(
-        businessId,
-        allocation.getId(),
-        account.getId(),
-        networkMessageGroupId,
-        networkMessageType,
-        requestedAmount,
-        approvedAmount,
-        merchantName,
-        merchantAddress,
-        merchantNumber,
-        merchantCategoryCode,
-        externalRef);
+    NetworkMessage networkMessage =
+        new NetworkMessage(
+            businessId,
+            allocation.getId(),
+            account.getId(),
+            networkMessageGroupId,
+            networkMessageType,
+            requestedAmount,
+            approvedAmount,
+            merchantName,
+            merchantAddress,
+            merchantNumber,
+            merchantCategoryCode,
+            externalRef);
+
+    networkMessage.setSubType(networkMessageSubType);
+
+    return networkMessage;
   }
 }

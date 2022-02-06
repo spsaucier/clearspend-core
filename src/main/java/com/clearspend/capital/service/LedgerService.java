@@ -112,14 +112,9 @@ public class LedgerService {
     LedgerAccount ledgerAccount = getLedgerAccount(ledgerAccountId);
 
     JournalEntry journalEntry = new JournalEntry();
-    Posting networkPosting, accountPosting;
-    if (amount.isNegative()) {
-      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount.negate());
-      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
-    } else {
-      accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount.negate());
-      networkPosting = new Posting(journalEntry, networkLedgerAccount.getId(), amount);
-    }
+    Posting networkPosting =
+        new Posting(journalEntry, networkLedgerAccount.getId(), amount.negate());
+    Posting accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
 
     journalEntry.setPostings(List.of(networkPosting, accountPosting));
     journalEntryRepository.save(journalEntry);

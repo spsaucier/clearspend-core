@@ -8,7 +8,6 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Decline;
-import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -163,6 +162,7 @@ public class NetworkMessageService {
 
   private void postHold(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostHold()) {
+      log.debug("holdExpiration: {}", common.getHoldExpiration());
       HoldRecord holdRecord =
           accountService.recordNetworkHold(
               common.getAccount(), common.getHoldAmount(), common.getHoldExpiration());
@@ -184,7 +184,7 @@ public class NetworkMessageService {
   private void postAdjustment(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
-          accountService.recordNetworkAdjustment(common.getAccount(), common.getRequestedAmount());
+          accountService.recordNetworkAdjustment(common.getAccount(), common.getApprovedAmount());
       common.setAdjustmentRecord(adjustmentRecord);
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       common
@@ -195,7 +195,7 @@ public class NetworkMessageService {
       log.debug(
           "networkMessage {} for {} adjustment {} (available {} / ledger {})",
           networkMessage.getId(),
-          common.getRequestedAmount(),
+          common.getApprovedAmount(),
           networkMessage.getAdjustmentId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
@@ -304,10 +304,7 @@ public class NetworkMessageService {
     common.setHoldAmount(common.getApprovedAmount());
 
     if (common.isIncrementalAuthorization()) {
-      if (common.getPriorHold() != null) {
-        common.getPriorHold().setStatus(HoldStatus.RELEASED);
-        common.getUpdatedHolds().add(common.getPriorHold());
-      }
+      releasePriorHold(common);
       log.info(
           "IncrementalHoldAmount: {} + {}",
           common.getApprovedAmount(),
@@ -339,12 +336,15 @@ public class NetworkMessageService {
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
 
-    Hold hold = common.getPriorHold();
-    if (hold != null) {
-      hold.setStatus(HoldStatus.RELEASED);
-      common.getUpdatedHolds().add(hold);
+    releasePriorHold(common);
+  }
+
+  private void releasePriorHold(NetworkCommon common) {
+    if (common.getPriorHold() != null) {
+      common.getPriorHold().setStatus(HoldStatus.RELEASED);
+      common.getUpdatedHolds().add(common.getPriorHold());
       common.getAccount().recalculateAvailableBalance();
-      accountActivityService.recordNetworkHoldReleaseAccountActivity(hold);
+      accountActivityService.recordHoldReleaseAccountActivity(common.getPriorHold());
     }
   }
 

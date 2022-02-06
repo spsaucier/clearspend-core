@@ -277,7 +277,7 @@ public class BusinessBankAccountService {
       Hold hold = accountService.retrieveHold(holdId);
       hold.setStatus(HoldStatus.RELEASED);
 
-      accountActivityService.recordBankAccountHoldReleaseAccountActivity(hold);
+      accountActivityService.recordHoldReleaseAccountActivity(hold);
     }
 
     AccountActivity accountActivity =

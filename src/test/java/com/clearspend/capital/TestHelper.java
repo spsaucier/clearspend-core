@@ -868,15 +868,7 @@ public class TestHelper {
     authorization.setCurrency(business.getCurrency().toStripeCurrency());
     authorization.setMerchantAmount(0L);
     authorization.setMerchantCurrency(business.getCurrency().toStripeCurrency());
-    MerchantData merchantData = new MerchantData();
-    merchantData.setCategory(merchantType.getStripeMerchantType());
-    merchantData.setCategoryCode(String.valueOf(merchantType.getMcc()));
-    merchantData.setCity("San Francisco");
-    merchantData.setCountry("US");
-    merchantData.setName("Tim's Balance");
-    merchantData.setNetworkId("1234567890");
-    merchantData.setPostalCode("94103");
-    merchantData.setState("CA");
+    MerchantData merchantData = getMerchantData(merchantType);
     authorization.setMerchantData(merchantData);
     authorization.setMetadata(new HashMap<>());
     authorization.setObject("issuing.authorization");
@@ -902,6 +894,20 @@ public class TestHelper {
     verificationData.setExpiryCheck("match");
     authorization.setWallet(null);
     return authorization;
+  }
+
+  @org.jetbrains.annotations.NotNull
+  public MerchantData getMerchantData(MerchantType merchantType) {
+    MerchantData merchantData = new MerchantData();
+    merchantData.setCategory(merchantType.getStripeMerchantType());
+    merchantData.setCategoryCode(String.valueOf(merchantType.getMcc()));
+    merchantData.setCity("San Francisco");
+    merchantData.setCountry("US");
+    merchantData.setName("Tim's Balance");
+    merchantData.setNetworkId("1234567890");
+    merchantData.setPostalCode("94103");
+    merchantData.setState("CA");
+    return merchantData;
   }
 
   public void createUserAllocationCardAndNetworkTransaction(

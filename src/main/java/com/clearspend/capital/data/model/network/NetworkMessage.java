@@ -94,6 +94,8 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @Enumerated(EnumType.STRING)
   private NetworkMessageType type;
 
+  private String subType;
+
   @Embedded @NonNull private Amount requestedAmount;
 
   //  @Embedded private Amount incrementalAmount;

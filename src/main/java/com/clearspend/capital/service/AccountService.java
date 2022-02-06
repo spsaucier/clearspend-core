@@ -142,7 +142,7 @@ public class AccountService {
                 expirationDate));
 
     account.getHolds().add(hold);
-    account.setAvailableBalance(account.getAvailableBalance().add(amount));
+    account.recalculateAvailableBalance();
 
     return new HoldRecord(account, hold);
   }
@@ -154,6 +154,7 @@ public class AccountService {
     account.setLedgerBalance(
         account.getLedgerBalance().add(adjustmentRecord.adjustment().getAmount()));
     account = accountRepository.save(account);
+    account.recalculateAvailableBalance();
 
     return new AdjustmentRecord(
         account, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());

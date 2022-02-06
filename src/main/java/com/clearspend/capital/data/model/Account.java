@@ -86,6 +86,10 @@ public class Account extends TypedMutable<AccountId> {
   }
 
   public void recalculateAvailableBalance() {
+    if (holds == null) {
+      return;
+    }
+
     BigDecimal holdAmount =
         holds.stream()
             .filter(hold -> hold.getStatus().equals(HoldStatus.PLACED))
