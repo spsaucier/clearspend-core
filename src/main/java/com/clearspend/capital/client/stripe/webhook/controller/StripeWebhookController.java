@@ -94,10 +94,10 @@ public class StripeWebhookController {
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
   }
 
-  @PostMapping("/webhook/direct")
+  @PostMapping("/webhook/issuing")
   private void directWebhook(HttpServletRequest request) {
     handleDirectRequest(
-        Instant.now(), parseRequest("direct", request, stripeProperties.getDirectSecret()), false);
+        Instant.now(), parseRequest("issuing", request, stripeProperties.getDirectSecret()), false);
   }
 
   @VisibleForTesting
