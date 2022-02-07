@@ -14,6 +14,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -69,11 +70,13 @@ public class BusinessService {
   @SneakyThrows
   @Transactional
   public BusinessAndStripeMessagesRecord createBusiness(
-      TypedId<BusinessId> businessId, ConvertBusinessProspect convertBusinessProspect) {
+      TypedId<BusinessId> businessId,
+      BusinessType businessType,
+      ConvertBusinessProspect convertBusinessProspect) {
     Business business =
         new Business(
             convertBusinessProspect.getLegalName(),
-            convertBusinessProspect.getBusinessType(),
+            businessType,
             ClearAddress.of(convertBusinessProspect.getAddress()),
             convertBusinessProspect.getEmployerIdentificationNumber(),
             Currency.USD,

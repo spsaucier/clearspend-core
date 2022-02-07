@@ -6,7 +6,6 @@ import static com.clearspend.capital.controller.type.Constants.PHONE_PATTERN;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.Address;
-import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,11 +24,6 @@ public class ConvertBusinessProspectRequest {
   @NonNull
   @NotNull(message = "Legal Name is required")
   private String legalName;
-
-  @JsonProperty("businessType")
-  @NonNull
-  @NotNull(message = "Business Type is required")
-  private BusinessType businessType;
 
   @JsonProperty("employerIdentificationNumber")
   @NonNull
@@ -68,7 +62,6 @@ public class ConvertBusinessProspectRequest {
     return new ConvertBusinessProspect(
         businessProspectId,
         legalName,
-        businessType,
         employerIdentificationNumber,
         businessPhone,
         address.toAddress(),

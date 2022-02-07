@@ -398,7 +398,6 @@ public class TestDataController {
             new ConvertBusinessProspect(
                 businessProspect.businessProspect().getId(),
                 faker.company().name(),
-                businessType,
                 generateEmployerIdentificationNumber(),
                 getValidPhoneNumber(),
                 new Address(

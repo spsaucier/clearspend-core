@@ -504,7 +504,6 @@ public class TestHelper {
     ConvertBusinessProspectRequest request =
         new ConvertBusinessProspectRequest(
             businessLegalName,
-            BusinessType.PUBLIC_CORPORATION,
             generateEmployerIdentificationNumber(),
             generatePhone(),
             generateApiAddress(),
@@ -721,10 +720,10 @@ public class TestHelper {
         businessService
             .createBusiness(
                 businessId,
+                BusinessType.SINGLE_MEMBER_LLC,
                 new ConvertBusinessProspect(
                     null,
                     legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
-                    BusinessType.SINGLE_MEMBER_LLC,
                     generateEmployerIdentificationNumber(),
                     faker.phoneNumber().phoneNumber(),
                     generateEntityAddress(),

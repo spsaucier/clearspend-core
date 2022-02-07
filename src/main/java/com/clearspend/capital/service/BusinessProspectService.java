@@ -229,7 +229,10 @@ public class BusinessProspectService {
 
     // When a business is created, a corespondent into stripe will be created too
     BusinessAndStripeMessagesRecord businessAndStripeMessagesRecord =
-        businessService.createBusiness(businessProspect.getBusinessId(), convertBusinessProspect);
+        businessService.createBusiness(
+            businessProspect.getBusinessId(),
+            businessProspect.getBusinessType(),
+            convertBusinessProspect);
 
     BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
 
