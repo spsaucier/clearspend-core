@@ -30,6 +30,8 @@ import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.NonNull;
@@ -137,19 +139,22 @@ public class NetworkMessageService {
               common.getBusinessId(), common.earliestNetworkMessage.getAllocationId()));
 
       // get the most recently created Hold if any
-      Optional<NetworkMessage> optionalNetworkMessage =
+      List<TypedId<HoldId>> holdIds =
           common.getPriorNetworkMessages().stream()
-              .filter(networkMessage -> networkMessage.getHoldId() != null)
-              .min(Comparator.comparing(Versioned::getCreated));
-      if (optionalNetworkMessage.isPresent()) {
-        TypedId<HoldId> holdId = optionalNetworkMessage.get().getHoldId();
+              .map(NetworkMessage::getHoldId)
+              .filter(Objects::nonNull)
+              .toList();
+      if (!holdIds.isEmpty()) {
         common.setPriorHold(
             common.getAccount().getHolds().stream()
-                .filter(hold -> hold.getId().equals(holdId))
-                .findFirst()
+                .filter(
+                    hold ->
+                        holdIds.contains(hold.getId())
+                            && hold.getStatus().equals(HoldStatus.PLACED))
+                .max(Comparator.comparing(Versioned::getCreated))
                 .orElse(null));
         if (common.getPriorHold() == null) {
-          log.warn("prior hold {} not found for account {}", holdId, common.getAccount().getId());
+          log.warn("prior hold not found for account {}", common.getAccount().getId());
         }
       }
     } else {
@@ -340,7 +345,8 @@ public class NetworkMessageService {
   }
 
   private void releasePriorHold(NetworkCommon common) {
-    if (common.getPriorHold() != null) {
+    if (common.getPriorHold() != null
+        && common.getPriorHold().getStatus().equals(HoldStatus.PLACED)) {
       common.getPriorHold().setStatus(HoldStatus.RELEASED);
       common.getUpdatedHolds().add(common.getPriorHold());
       common.getAccount().recalculateAvailableBalance();

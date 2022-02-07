@@ -164,7 +164,7 @@ public class NetworkCommon {
       merchantName = merchantData.getName();
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
-      merchantType = MerchantType.fromString(merchantData.getCategory());
+      merchantType = MerchantType.fromString(merchantData.getCategory().toLowerCase());
     }
 
     transactionDate =
@@ -192,7 +192,7 @@ public class NetworkCommon {
       merchantName = merchantData.getName();
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
-      merchantType = MerchantType.fromString(merchantData.getCategory());
+      merchantType = MerchantType.fromString(merchantData.getCategory().toLowerCase());
     }
 
     transactionDate =

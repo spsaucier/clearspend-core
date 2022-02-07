@@ -110,7 +110,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
         criteria.getCardId(),
         cardId -> select.where("accountActivity.card.cardId").eqLiteral(cardId));
     BeanUtils.setNotNull(
-        criteria.getType(), type -> select.where("accountActivity.type").eqLiteral(type));
+        criteria.getTypes(), types -> select.where("accountActivity.type").in(types));
 
     if (criteria.getFrom() != null && criteria.getTo() != null) {
       select

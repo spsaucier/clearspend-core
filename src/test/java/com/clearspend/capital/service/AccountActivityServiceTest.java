@@ -26,6 +26,7 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
+import java.util.List;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -221,7 +222,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 null,
-                AccountActivityType.REALLOCATE,
+                List.of(AccountActivityType.REALLOCATE),
                 null,
                 null,
                 null,
@@ -236,7 +237,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 null,
-                AccountActivityType.BANK_DEPOSIT,
+                List.of(AccountActivityType.BANK_DEPOSIT),
                 null,
                 null,
                 null,

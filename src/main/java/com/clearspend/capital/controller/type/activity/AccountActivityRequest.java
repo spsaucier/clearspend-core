@@ -8,6 +8,7 @@ import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
+import java.util.List;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,8 +32,8 @@ public class AccountActivityRequest {
   @JsonProperty("searchText")
   private String searchText;
 
-  @JsonProperty("type")
-  private AccountActivityType type;
+  @JsonProperty("types")
+  private List<AccountActivityType> types;
 
   @JsonProperty("from")
   private OffsetDateTime from;

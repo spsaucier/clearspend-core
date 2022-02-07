@@ -333,7 +333,8 @@ public class UserController {
             currentUser.businessId(),
             currentUser.userId(),
             cardId,
-            new AccountActivityFilterCriteria(cardId, type, dateFrom, dateTo, pageRequest));
+            new AccountActivityFilterCriteria(
+                cardId, type != null ? List.of(type) : List.of(), dateFrom, dateTo, pageRequest));
 
     return PagedData.of(accountActivity, AccountActivityResponse::new);
   }
