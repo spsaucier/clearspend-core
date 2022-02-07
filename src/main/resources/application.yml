@@ -87,7 +87,7 @@ client:
   stripe:
     # secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     direct-secret: ${STRIPE_CONNECT_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}
-    connect-secret: ${STRIPE_DIRECT_SECRET:whsec_kszkXc5ikeerOYQ4J4oyWwVM1y0XbwLK}
+    connect-secret: ${STRIPE_DIRECT_SECRET:whsec_EMOPBz5Skbj6fIAG0L7rKe0aNSY8gEUT}
     api-key: ${STRIPE_API_KEY:sk_test_51K4bTGGAnZyEKADzo2QvLZEYpQ4F7SUuK9041f6O7nIweNnEge9zr1yjiULB2ZvolgJPsfYrU64ClSzLTRqiMkMm00mR7wTpjw}
     allow-skip-stripe-header-validation: true
     clearspend_connected_account_id: ${STRIPE_CLEARSPEND_CONNECTED_ACCOUNT_ID:acct_1KPLzp4g2Xo63Nb8}
