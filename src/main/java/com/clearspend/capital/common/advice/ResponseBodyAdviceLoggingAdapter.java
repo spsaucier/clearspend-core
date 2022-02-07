@@ -14,7 +14,7 @@ import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-@ControllerAdvice
+@ControllerAdvice(basePackages = "com.clearspend.capital")
 @Slf4j
 public class ResponseBodyAdviceLoggingAdapter implements ResponseBodyAdvice<Object> {
 

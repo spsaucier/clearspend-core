@@ -40,8 +40,7 @@ public class AdviceLoggingUtil {
           .configure(JsonParser.Feature.IGNORE_UNDEFINED, true)
           .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
-  private static final Map<String, Boolean> noisyEndpoints =
-      Map.of("/actuator/health", false, "/actuator/prometheus", false);
+  private static final Map<String, Boolean> noisyEndpoints = Map.of();
 
   void logRequestResponse(
       String prefix,
