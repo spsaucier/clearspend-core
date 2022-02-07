@@ -15,7 +15,7 @@ public class StripeProperties {
 
   private String apiKey;
   private boolean allowSkipStripeHeaderValidation;
-  private String directSecret;
+  private String issuingSecret;
   private String connectSecret;
 
   private boolean enableTelemetry;

@@ -97,7 +97,9 @@ public class StripeWebhookController {
   @PostMapping("/webhook/issuing")
   private void directWebhook(HttpServletRequest request) {
     handleDirectRequest(
-        Instant.now(), parseRequest("issuing", request, stripeProperties.getDirectSecret()), false);
+        Instant.now(),
+        parseRequest("issuing", request, stripeProperties.getIssuingSecret()),
+        false);
   }
 
   @VisibleForTesting
