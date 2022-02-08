@@ -7,11 +7,10 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.data.model.FileStore;
 import com.clearspend.capital.data.repository.FileStoreRepository;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,29 +20,31 @@ public class FileStoreService {
   private final GoogleCloudStorageClient googleCloudStorageClient;
   private final FileStoreRepository fileStoreRepository;
 
+  @Transactional
   public FileStore saveFileForBusiness(
-      TypedId<BusinessId> businessId, String fileName, String purpose, MultipartFile file)
-      throws IOException {
+      TypedId<BusinessId> businessId, String fileName, String purpose, byte[] file) {
 
     FileStore fileStore = new FileStore(businessId);
     fileStore.setFileName(fileName);
     fileStore.setPurpose(purpose);
+    fileStore.setPath(getFileStorePath(businessId, fileStore.getId()));
     fileStoreRepository.save(fileStore);
 
     String fileStorePath = getFileStorePath(businessId, fileStore.getId());
     fileStore.setPath(fileStorePath);
 
-    googleCloudStorageClient.writeOnboardFile(fileStorePath, file.getBytes());
+    googleCloudStorageClient.writeOnboardFile(fileStorePath, file);
+
     return fileStore;
   }
 
+  @Transactional
   public FileStore saveFileForBusinessOwner(
       TypedId<BusinessId> businessId,
       TypedId<BusinessOwnerId> businessOwnerId,
       String fileName,
       String purpose,
-      MultipartFile file)
-      throws IOException {
+      byte[] file) {
 
     FileStore fileStore = new FileStore(businessId);
     fileStore.setBusinessOwnerId(businessOwnerId);
@@ -55,7 +56,8 @@ public class FileStoreService {
     String fileStorePath = getFileStorePath(businessId, businessOwnerId, fileStore.getId());
     fileStore.setPath(fileStorePath);
 
-    googleCloudStorageClient.writeOnboardFile(fileStorePath, file.getBytes());
+    googleCloudStorageClient.writeOnboardFile(fileStorePath, file);
+
     return fileStore;
   }
 

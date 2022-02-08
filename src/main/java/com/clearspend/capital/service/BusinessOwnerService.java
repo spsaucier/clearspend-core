@@ -54,12 +54,6 @@ public class BusinessOwnerService {
       BusinessOwnerData businessOwnerData) {
 
     BusinessOwner businessOwner = businessOwnerData.toBusinessOwner();
-    businessOwner.setId(
-        businessOwnerData.getBusinessOwnerId() != null
-            ? businessOwnerData.getBusinessOwnerId()
-            : new TypedId<>());
-    businessOwner.setSubjectRef(businessOwnerData.getSubjectRef());
-
     businessOwner = businessOwnerRepository.save(businessOwner);
     businessOwnerRepository.flush();
 
@@ -83,11 +77,12 @@ public class BusinessOwnerService {
       TypedId<BusinessId> businessId, List<BusinessOwnerData> businessOwnersData) {
 
     Assert.notEmpty(businessOwnersData);
-
+    // TODO:gb: In case this will be updated not on the onboarding
+    // what will be the flow to validate email and phone before this method
     List<BusinessOwner> businessOwners =
         businessOwnersData.stream()
             .map(
-                (businessOwner) ->
+                businessOwner ->
                     businessOwner.getBusinessOwnerId() != null
                         ? updateBusinessOwner(businessOwner)
                         : createBusinessOwner(businessOwner))
@@ -96,19 +91,21 @@ public class BusinessOwnerService {
     Business business = businessService.retrieveBusiness(businessId);
     String stripeAccountReference = business.getStripeAccountReference();
 
-    businessOwners.stream()
-        .map(businessOwner -> createStripePersonReference(businessOwner, stripeAccountReference))
-        .toList();
+    businessOwners.forEach(
+        businessOwner ->
+            createOrUpdateStripePersonReference(businessOwner, stripeAccountReference));
 
     Account updatedAccount =
         stripeClient.triggerAccountValidationAfterPersonsProvided(
             stripeAccountReference,
-            businessOwnersData.stream().anyMatch(BusinessOwnerData::getRelationshipOwner),
-            businessOwnersData.stream().anyMatch(BusinessOwnerData::getRelationshipExecutive));
+            businessOwnersData.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
+                .anyMatch(BusinessOwnerData::getRelationshipOwner),
+            businessOwnersData.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
+                .anyMatch(BusinessOwnerData::getRelationshipExecutive));
 
-    List<String> stripeAccountErrorMessages =
-        businessService.updateBusinessAccordingToStripeAccountRequirements(
-            business, updatedAccount);
+    businessService.updateBusinessAccordingToStripeAccountRequirements(business, updatedAccount);
 
     return businessOwners;
   }
@@ -117,25 +114,23 @@ public class BusinessOwnerService {
   public BusinessOwner createBusinessOwner(BusinessOwnerData businessOwnerData) {
 
     BusinessOwner businessOwner = businessOwnerData.toBusinessOwner();
-    businessOwner.setId(
-        businessOwnerData.getBusinessOwnerId() != null
-            ? businessOwnerData.getBusinessOwnerId()
-            : new TypedId<>());
-    businessOwner.setSubjectRef(businessOwnerData.getSubjectRef());
-
     businessOwner = businessOwnerRepository.save(businessOwner);
     businessOwnerRepository.flush();
 
     return businessOwner;
   }
 
-  private StripePersonAndErrorMessages createStripePersonReference(
+  private StripePersonAndErrorMessages createOrUpdateStripePersonReference(
       BusinessOwner businessOwner, String stripeAccountReference) {
 
     Person stripePerson;
 
-    stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
-    businessOwner.setStripePersonReference(stripePerson.getId());
+    if (businessOwner.getStripePersonReference() == null) {
+      stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
+      businessOwner.setStripePersonReference(stripePerson.getId());
+    } else {
+      stripePerson = stripeClient.updatePerson(businessOwner, stripeAccountReference);
+    }
 
     List<String> stripePersonErrorMessages =
         updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
@@ -143,9 +138,10 @@ public class BusinessOwnerService {
     return new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
   }
 
-  public List<String> updateBusinessOwnerAccordingToStripePersonRequirements(
+  private List<String> updateBusinessOwnerAccordingToStripePersonRequirements(
       BusinessOwner businessOwner, Person stripePerson) {
     Requirements stripePersonRequirements = stripePerson.getRequirements();
+
     List<String> stripePersonErrorMessages = new ArrayList<>();
     if (stripePersonRequirements != null
         && (!Collections.isEmpty(stripePersonRequirements.getCurrentlyDue())
@@ -154,20 +150,19 @@ public class BusinessOwnerService {
             || !Collections.isEmpty(stripePersonRequirements.getPendingVerification())
             || !Collections.isEmpty(stripePersonRequirements.getErrors()))) {
       businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus.REVIEW);
-      stripePersonErrorMessages = extractErrorMessages(stripePersonRequirements);
-    } else {
-      businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus.PASS);
+
+      return extractErrorMessages(stripePersonRequirements);
     }
+
+    businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus.PASS);
+
     return stripePersonErrorMessages;
   }
 
   private List<String> extractErrorMessages(Person.Requirements requirements) {
-    List<String> stripeAccountCreationMessages;
-    stripeAccountCreationMessages =
-        requirements.getErrors() != null
-            ? requirements.getErrors().stream().map(Errors::getReason).toList()
-            : null;
-    return stripeAccountCreationMessages;
+    return requirements.getErrors() != null
+        ? requirements.getErrors().stream().map(Errors::getReason).toList()
+        : null;
   }
 
   public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
@@ -183,23 +178,26 @@ public class BusinessOwnerService {
 
   @Transactional
   public BusinessOwner updateBusinessOwnerStatus(
-      TypedId<BusinessOwnerId> businessOwnerId, KnowYourCustomerStatus KnowYourCustomerStatus) {
+      TypedId<BusinessOwnerId> businessOwnerId, KnowYourCustomerStatus knowYourCustomerStatus) {
 
     BusinessOwner businessOwner =
         businessOwnerRepository
             .findById(businessOwnerId)
             .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
 
-    if (KnowYourCustomerStatus != null) {
-      businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus);
+    if (knowYourCustomerStatus != null) {
+      businessOwner.setKnowYourCustomerStatus(knowYourCustomerStatus);
     }
 
     return businessOwnerRepository.save(businessOwner);
   }
 
   @Transactional
-  public BusinessOwner updateBusinessOwnerStatusByStripePersonReference(
-      String stripePersonReference, KnowYourCustomerStatus KnowYourCustomerStatus) {
+  public void updateBusinessOwnerStatusByStripePersonReference(
+      String stripePersonReference, KnowYourCustomerStatus knowYourCustomerStatus) {
+    if (knowYourCustomerStatus == null) {
+      return;
+    }
 
     BusinessOwner businessOwner =
         businessOwnerRepository
@@ -207,16 +205,13 @@ public class BusinessOwnerService {
             .orElseThrow(
                 () -> new RecordNotFoundException(Table.BUSINESS_OWNER, stripePersonReference));
 
-    if (KnowYourCustomerStatus != null) {
-      businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus);
-    }
+    businessOwner.setKnowYourCustomerStatus(knowYourCustomerStatus);
 
-    return businessOwnerRepository.save(businessOwner);
+    businessOwnerRepository.save(businessOwner);
   }
 
   @Transactional
   public BusinessOwner updateBusinessOwner(BusinessOwnerData businessOwnerData) {
-
     BusinessOwner businessOwner =
         businessOwnerRepository
             .findById(businessOwnerData.getBusinessOwnerId())
@@ -228,42 +223,55 @@ public class BusinessOwnerService {
     if (StringUtils.isNotBlank(businessOwnerData.getFirstName())) {
       businessOwner.setFirstName(new NullableEncryptedString(businessOwnerData.getFirstName()));
     }
+
     if (StringUtils.isNotBlank(businessOwnerData.getLastName())) {
       businessOwner.setLastName(new NullableEncryptedString(businessOwnerData.getLastName()));
     }
+
     if (StringUtils.isNotBlank(businessOwnerData.getEmail())) {
       businessOwner.setEmail(new RequiredEncryptedStringWithHash(businessOwnerData.getEmail()));
     }
+
     if (StringUtils.isNotBlank(businessOwnerData.getTaxIdentificationNumber())) {
       businessOwner.setTaxIdentificationNumber(
           new NullableEncryptedString(businessOwnerData.getTaxIdentificationNumber()));
     }
+
     if (businessOwnerData.getDateOfBirth() != null) {
       businessOwner.setDateOfBirth(businessOwnerData.getDateOfBirth());
     }
+
     if (businessOwnerData.getAddress() != null) {
       businessOwner.setAddress(businessOwnerData.getAddress());
     }
+
     if (StringUtils.isNotBlank(businessOwnerData.getTitle())) {
       businessOwner.setTitle(businessOwnerData.getTitle());
     }
+
     if (businessOwnerData.getPercentageOwnership() != null) {
       businessOwner.setPercentageOwnership(businessOwnerData.getPercentageOwnership());
     }
+
     if (businessOwnerData.getRelationshipOwner() != null) {
       businessOwner.setRelationshipOwner(businessOwnerData.getRelationshipOwner());
     }
+
     if (businessOwnerData.getRelationshipRepresentative() != null) {
       businessOwner.setRelationshipRepresentative(
           businessOwnerData.getRelationshipRepresentative());
     }
+
     if (businessOwnerData.getRelationshipExecutive() != null) {
       businessOwner.setRelationshipExecutive(businessOwnerData.getRelationshipExecutive());
     }
+
     if (businessOwnerData.getRelationshipDirector() != null) {
       businessOwner.setRelationshipDirector(businessOwnerData.getRelationshipDirector());
     }
+
     BusinessOwner owner = businessOwnerRepository.save(businessOwner);
+
     businessOwnerRepository.flush();
 
     return owner;
@@ -278,6 +286,9 @@ public class BusinessOwnerService {
   }
 
   public BusinessOwner findBusinessOwnerByStripePersonReference(String stripePersonReference) {
-    return businessOwnerRepository.findByStripePersonReference(stripePersonReference).orElseThrow();
+    return businessOwnerRepository
+        .findByStripePersonReference(stripePersonReference)
+        .orElseThrow(
+            () -> new RecordNotFoundException(Table.BUSINESS_OWNER, stripePersonReference));
   }
 }

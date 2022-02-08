@@ -165,7 +165,7 @@ public class StripeClient {
                 TosAcceptance.builder()
                     // TODO: identify proper values
                     .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                    .setIp(stripeProperties.getTosAcceptanceIp())
+                    .setIp(business.getTosAcceptanceIp())
                     .build())
             .setSettings(
                 Settings.builder()
@@ -175,7 +175,7 @@ public class StripeClient {
                                 Settings.CardIssuing.TosAcceptance.builder()
                                     .setDate(
                                         TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                                    .setIp(stripeProperties.getTosAcceptanceIp())
+                                    .setIp(business.getTosAcceptanceIp())
                                     .build())
                             .build())
                     .putExtraParam(
@@ -186,7 +186,7 @@ public class StripeClient {
                                 "date",
                                 TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
                                 "ip",
-                                stripeProperties.getTosAcceptanceIp())))
+                                business.getTosAcceptanceIp())))
                     .build())
             .build();
 
@@ -213,7 +213,8 @@ public class StripeClient {
 
     AccountUpdateParams accountUpdateParams =
         new AccountUpdateParams.Builder().setCompany(companyBuilder.build()).build();
-    return account.update(accountUpdateParams, getRequestOptions(new TypedId<>(), stripeAccountId));
+    return account.update(
+        accountUpdateParams, getRequestOptions(new TypedId<>(), 0L, stripeAccountId));
   }
 
   public Cardholder createCardholder(
@@ -258,7 +259,9 @@ public class StripeClient {
             Cardholder.create(
                 params,
                 getRequestOptions(
-                    user.getId(), stripeProperties.getClearspendConnectedAccountId())));
+                    user.getId(),
+                    user.getVersion(),
+                    stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public Person createPerson(BusinessOwner businessOwner, String stripeAccountId) {
@@ -335,7 +338,9 @@ public class StripeClient {
         personParameters,
         () ->
             personCollection.create(
-                personParameters, getRequestOptions(businessOwner.getId(), stripeAccountId)));
+                personParameters,
+                getRequestOptions(
+                    businessOwner.getId(), businessOwner.getVersion(), stripeAccountId)));
   }
 
   public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
@@ -364,7 +369,17 @@ public class StripeClient {
   }
 
   @SneakyThrows
-  public Person updatePerson(Person person, BusinessOwner businessOwner) {
+  public Person updatePerson(BusinessOwner businessOwner, String stripeAccountId) {
+
+    Person person = retrievePerson(businessOwner.getStripePersonReference(), stripeAccountId);
+
+    person.setFirstName(businessOwner.getFirstName().getEncrypted());
+    person.setLastName(businessOwner.getLastName().getEncrypted());
+    person.setEmail(businessOwner.getEmail().getEncrypted());
+
+    if (businessOwner.getPhone() != null) {
+      person.setPhone(businessOwner.getPhone().getEncrypted());
+    }
 
     PersonUpdateParams.Address.Builder addressBuilder =
         PersonUpdateParams.Address.builder()
@@ -383,21 +398,10 @@ public class StripeClient {
 
     PersonUpdateParams.Relationship.Builder builderRelationShip =
         PersonUpdateParams.Relationship.builder();
-    if (businessOwner.getRelationshipOwner() != null) {
-      builderRelationShip.setOwner(businessOwner.getRelationshipOwner());
-    }
-
-    if (businessOwner.getRelationshipRepresentative() != null) {
-      builderRelationShip.setRepresentative(businessOwner.getRelationshipRepresentative());
-    }
-
-    if (businessOwner.getRelationshipExecutive() != null) {
-      builderRelationShip.setExecutive(businessOwner.getRelationshipExecutive());
-    }
-
-    if (businessOwner.getRelationshipDirector() != null) {
-      builderRelationShip.setDirector(businessOwner.getRelationshipDirector());
-    }
+    builderRelationShip.setOwner(businessOwner.getRelationshipOwner());
+    builderRelationShip.setRepresentative(businessOwner.getRelationshipRepresentative());
+    builderRelationShip.setExecutive(businessOwner.getRelationshipExecutive());
+    builderRelationShip.setDirector(businessOwner.getRelationshipDirector());
 
     if (businessOwner.getTitle() != null) {
       builderRelationShip.setTitle(businessOwner.getTitle());
@@ -421,6 +425,7 @@ public class StripeClient {
     if (businessOwner.getTaxIdentificationNumber() != null) {
       String encrypted = businessOwner.getTaxIdentificationNumber().getEncrypted();
       builder.setSsnLast4(encrypted.substring(encrypted.length() - 4));
+      builder.setIdNumber(encrypted);
     }
 
     return person.update(builder.build());
@@ -447,7 +452,7 @@ public class StripeClient {
             card.update(
                 params,
                 getRequestOptions(
-                    new TypedId<>(), stripeProperties.getClearspendConnectedAccountId())));
+                    new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public Card createVirtualCard(
@@ -624,9 +629,10 @@ public class StripeClient {
   }
 
   // see https://stripe.com/docs/api/idempotent_requests
-  private RequestOptions getRequestOptions(TypedId<?> idempotencyKey, String stripeAccountId) {
+  private RequestOptions getRequestOptions(
+      TypedId<?> idempotencyKey, Long version, String stripeAccountId) {
     RequestOptionsBuilder builder =
-        RequestOptions.builder().setIdempotencyKey(idempotencyKey.toString());
+        RequestOptions.builder().setIdempotencyKey(idempotencyKey.toString() + version);
 
     BeanUtils.setNotNull(stripeAccountId, builder::setStripeAccount);
 

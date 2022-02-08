@@ -11,6 +11,7 @@ public enum Table {
   BUSINESS_OWNER("BusinessOwner"),
   BUSINESS_PROSPECT("BusinessProspect"),
   CARD("Card"),
+  FILE_STORE("FileStore"),
   HOLD("Hold"),
   LEDGER_ACCOUNT("LedgerAccount"),
   NETWORK_MESSAGE("NetworkMessage"),

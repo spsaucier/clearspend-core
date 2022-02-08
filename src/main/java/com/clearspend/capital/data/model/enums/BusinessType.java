@@ -15,8 +15,8 @@ public enum BusinessType {
   INCORPORATED_NON_PROFIT(
       Structure.INCORPORATED_NON_PROFIT, AccountCreateParams.BusinessType.NON_PROFIT);
 
-  Structure stripeValue;
-  AccountCreateParams.BusinessType stripeBusinessType;
+  private final Structure stripeValue;
+  private final AccountCreateParams.BusinessType stripeBusinessType;
 
   BusinessType(Structure stripeValue, AccountCreateParams.BusinessType stripeBusinessType) {
     this.stripeValue = stripeValue;

@@ -1,6 +1,5 @@
 package com.clearspend.capital.client.gcs;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,7 @@ public class GoogleCloudStorageTestClient {
   public GoogleCloudStorageClient googleCloudStorageClient() {
     return new GoogleCloudStorageClient(googleStorageProperties) {
       @Override
-      public void writeFile(String path, byte[] receiptFile) throws IOException {
+      public void writeFile(String path, byte[] receiptFile) {
         receiptMap.put(path, receiptFile);
         log.info("(test) wrote: {} ({} bytes)", path, receiptFile.length);
       }
@@ -40,6 +39,16 @@ public class GoogleCloudStorageTestClient {
       @Override
       public boolean deleteFile(String path) {
         return !path.contains("false");
+      }
+
+      @Override
+      public void writeOnboardFile(String path, byte[] onboardFile) {
+        writeFile(path, onboardFile);
+      }
+
+      @Override
+      public byte[] readOnboardFile(String path) {
+        return readFile(path);
       }
     };
   }

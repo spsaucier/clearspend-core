@@ -39,9 +39,13 @@ public class FileStore extends TypedMutable<FileStoreId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessOwnerId> businessOwnerId;
 
+  // The name of the uploaded document on application review related to purpose from Stripe
   private String fileName;
 
+  // The purpose used to upload document to Stripe
+  // (Stripe require a purpose to link correct with account)
   private String purpose;
 
+  // This will be the path to file from Google cloud bucket
   private String path;
 }

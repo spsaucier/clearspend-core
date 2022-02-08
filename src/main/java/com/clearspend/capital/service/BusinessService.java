@@ -48,6 +48,7 @@ public class BusinessService {
   public static final String BUSINESS_PROFILE_DETAILS_REQUIRED = "business_profile";
   public static final String OWNERS_DETAILS_REQUIRED = "owners";
   public static final String REPRESENTATIVE_DETAILS_REQUIRED = "representative";
+  public static final String PERSON = "person";
   public static final String DOCUMENT = "document";
 
   private final BusinessRepository businessRepository;
@@ -65,10 +66,12 @@ public class BusinessService {
   public record BusinessAndStripeMessagesRecord(
       Business business, List<String> stripeAccountCreationMessages) {}
 
+  @Transactional
   public BusinessAndStripeMessagesRecord createBusiness(
       TypedId<BusinessId> businessId,
       BusinessType businessType,
-      ConvertBusinessProspect convertBusinessProspect) {
+      ConvertBusinessProspect convertBusinessProspect,
+      String tosAcceptanceIp) {
     Business business =
         new Business(
             convertBusinessProspect.getLegalName(),
@@ -80,7 +83,8 @@ public class BusinessService {
             KnowYourBusinessStatus.PENDING,
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE,
-            convertBusinessProspect.getMerchantType().getMcc());
+            convertBusinessProspect.getMerchantType().getMcc(),
+            tosAcceptanceIp);
     if (businessId != null) {
       business.setId(businessId);
     }
@@ -88,7 +92,7 @@ public class BusinessService {
     business.setDescription(convertBusinessProspect.getDescription());
     business.setBusinessPhone(
         new RequiredEncryptedString(convertBusinessProspect.getBusinessPhone()));
-    // for SMB without online presence we will set a default as clearspend url
+    // for SMB without online presence we will set a default as ClearSpend URL
     business.setUrl(
         StringUtils.isEmpty(convertBusinessProspect.getUrl())
             ? "https://www.clearspend.com/"
@@ -117,6 +121,7 @@ public class BusinessService {
     return new BusinessAndStripeMessagesRecord(business, stripeAccountErrorMessages);
   }
 
+  @Transactional
   public List<String> updateBusinessAccordingToStripeAccountRequirements(
       Business business, com.stripe.model.Account account) {
     if (business.getStatus() == BusinessStatus.ONBOARDING
@@ -147,21 +152,24 @@ public class BusinessService {
       //                    .get(US_BANK_ACCOUNT_ACH_PAYMENTS)
       //                    .getAsString());
       // TODO - discuss eventualy due and required capabilities
+      boolean disabled =
+          requirements.getDisabledReason() != null
+              && requirements.getDisabledReason().startsWith(REQUIREMENTS);
       boolean noOtherCheckRequiredForKYCStep =
           (CollectionUtils.isEmpty(requirements.getPastDue())
                   || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(requirements.getPastDue().get(0))
                       && requirements.getPastDue().size() == 1
-                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+                      && disabled))
               && (CollectionUtils.isEmpty(requirements.getEventuallyDue())
                   || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(
                           requirements.getEventuallyDue().get(0))
                       && requirements.getEventuallyDue().size() == 1
-                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+                      && disabled))
               && (CollectionUtils.isEmpty(requirements.getCurrentlyDue())
                   || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(
                           requirements.getCurrentlyDue().get(0))
                       && requirements.getCurrentlyDue().size() == 1
-                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+                      && disabled))
               && CollectionUtils.isEmpty(requirements.getPendingVerification())
               && CollectionUtils.isEmpty(requirements.getErrors());
 
@@ -209,19 +217,22 @@ public class BusinessService {
                     .anyMatch(
                         s ->
                             s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)
+                                || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))
             || (!CollectionUtils.isEmpty(requirements.getPastDue())
                 && requirements.getPastDue().stream()
                     .anyMatch(
                         s ->
                             s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)
+                                || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))
             || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
                 && requirements.getEventuallyDue().stream()
                     .anyMatch(
                         s ->
                             s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))) {
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)
+                                || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))) {
           if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
             updateBusiness(
                 business.getId(),
@@ -286,14 +297,12 @@ public class BusinessService {
   }
 
   private List<String> extractErrorMessages(Requirements requirements) {
-    List<String> stripeAccountCreationMessages;
-    stripeAccountCreationMessages =
-        requirements.getErrors() != null
-            ? requirements.getErrors().stream().map(Errors::getReason).toList()
-            : null;
-    return stripeAccountCreationMessages;
+    return requirements.getErrors() != null
+        ? requirements.getErrors().stream().map(Errors::getReason).toList()
+        : null;
   }
 
+  @Transactional
   public Business updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,

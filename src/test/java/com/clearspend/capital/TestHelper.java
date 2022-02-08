@@ -729,7 +729,8 @@ public class TestHelper {
                     generateEntityAddress(),
                     MerchantType.AGRICULTURAL_COOPERATIVE,
                     MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
-                    faker.internet().url()))
+                    faker.internet().url()),
+                faker.internet().ipV4Address())
             .business();
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);

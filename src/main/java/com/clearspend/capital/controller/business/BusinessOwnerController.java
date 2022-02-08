@@ -2,21 +2,18 @@ package com.clearspend.capital.controller.business;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
-import com.clearspend.capital.controller.type.business.owner.UpdateBusinessOwnerRequest;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.CurrentUser;
-import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,22 +47,15 @@ public class BusinessOwnerController {
   }
 
   @PatchMapping(
-      value = "/{businessOwnerId}",
+      value = "",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
   private void updateBusinessOwner(
-      @PathVariable(value = "businessOwnerId")
-          @Parameter(
-              required = true,
-              name = "businessOwnerId",
-              description = "ID of the businessOwner record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<BusinessOwnerId> businessOwnerId,
-      @Validated @RequestBody UpdateBusinessOwnerRequest request) {
+      @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
-    // TODO:gb: should we inform Stripe for changed or updates on owners details?
-    BusinessOwnerData businessOwnerData =
-        request.toBusinessOwnerData(CurrentUser.get().businessId(), businessOwnerId);
-    businessOwnerService.updateBusinessOwner(businessOwnerData);
+    Assert.notNull(request.getBusinessOwnerId(), "An BusinessOwnerId should be provided.");
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    BusinessOwnerData businessOwnerData = request.toBusinessOwnerData(businessId);
+    businessOwnerService.createOrUpdateBusinessOwners(businessId, List.of(businessOwnerData));
   }
 }

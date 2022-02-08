@@ -15,6 +15,7 @@ import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import io.swagger.v3.oas.annotations.Parameter;
+import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
@@ -111,10 +112,12 @@ public class BusinessProspectController {
               description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
-      @Validated @RequestBody ConvertBusinessProspectRequest request) {
+      @Validated @RequestBody ConvertBusinessProspectRequest request,
+      HttpServletRequest httpServletRequest) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
-            request.toConvertBusinessProspect(businessProspectId));
+            request.toConvertBusinessProspect(businessProspectId),
+            httpServletRequest.getRemoteHost());
 
     return new ConvertBusinessProspectResponse(
         new Business(convertBusinessProspectRecord.business()),

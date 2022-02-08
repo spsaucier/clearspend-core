@@ -32,6 +32,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -63,11 +64,16 @@ public class ApplicationReviewService {
       KybEntityTokenAndErrorCode kybDocuments, List<KycOwnerDocuments> kycDocuments) {}
 
   @SneakyThrows
+  @Transactional
   public void uploadStripeRequiredDocuments(List<MultipartFile> files) {
     Business business = businessService.getBusiness(CurrentUser.get().businessId()).business();
 
     for (MultipartFile multipartFile : files) {
-      String[] strings = Objects.requireNonNull(multipartFile.getOriginalFilename()).split("\\|");
+      String originalFileName =
+          Objects.requireNonNull(
+              multipartFile.getOriginalFilename(), "Required values for original file name");
+      String[] strings = originalFileName.split("\\|");
+
       DocumentType documentType = DocumentType.valueOf(strings[1]);
       String entityToken = strings[0];
       String fileName = strings[2];
@@ -80,7 +86,7 @@ public class ApplicationReviewService {
             business.getId(),
             fileName,
             Purpose.valueOf(documentType.toString()).getValue(),
-            multipartFile);
+            multipartFile.getBytes());
         uploadDocumentToStripeForAccount(business, multipartFile, documentType);
       } else {
         BusinessOwner businessOwner =
@@ -90,7 +96,7 @@ public class ApplicationReviewService {
             businessOwner.getId(),
             fileName,
             Purpose.valueOf(documentType.toString()).getValue(),
-            multipartFile);
+            multipartFile.getBytes());
         uploadDocumentToStripeForPerson(business, multipartFile, entityToken);
       }
     }
@@ -164,7 +170,7 @@ public class ApplicationReviewService {
         new ApplicationReviewRequirements(
             new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments));
 
-    List<String> kycRequirements = extractStripeRequirementsForPersons(personList, businessOwners);
+    List<String> kycRequirements = extractStripeRequirementsForPersons(personList);
     List<String> kybRequirements = extractStripeRequirementsForAccount(account);
 
     applicationReviewRequirements.setKybRequiredFields(kybRequirements);
@@ -185,10 +191,12 @@ public class ApplicationReviewService {
           accountFieldRequired -> {
             if (accountFieldRequired.endsWith(DOCUMENT)
                 && !accountFieldRequired.startsWith(PERSON)) {
+              // TODO:gb: what are all the correct document type required by Stripe for account
               kybErrorCodeList.add(KybErrorCode.COMPANY_VERIFICATION_DOCUMENT);
             }
           });
     }
+
     return kybErrorCodeList;
   }
 
@@ -205,6 +213,7 @@ public class ApplicationReviewService {
                   && personRequirements.getErrors().isEmpty()) {
                 businessOwnerService.updateBusinessOwnerStatusByStripePersonReference(
                     person.getId(), KnowYourCustomerStatus.PASS);
+
                 return null;
               }
               Set<String> personRequiredFields = new HashSet<>();
@@ -212,12 +221,15 @@ public class ApplicationReviewService {
               personRequiredFields.addAll(personRequirements.getPastDue());
               personRequiredFields.addAll(personRequirements.getEventuallyDue());
               personRequiredFields.addAll(personRequirements.getPendingVerification());
+
               return personRequiredFields.stream()
                   .filter(s1 -> s1.endsWith(DOCUMENT))
                   .map(
                       s1 ->
+                          // TODO:gb: what are all the correct document type required by Stripe for
+                          // person
                           new KycOwnerDocuments(
-                              person.getEmail(),
+                              person.getFirstName() + " " + person.getLastName(),
                               person.getId(),
                               List.of(KycErrorCode.NAME_NOT_VERIFIED)))
                   .toList();
@@ -244,11 +256,11 @@ public class ApplicationReviewService {
             }
           });
     }
+
     return kybRequirements;
   }
 
-  private List<String> extractStripeRequirementsForPersons(
-      List<Person> personList, List<BusinessOwner> owners) {
+  private List<String> extractStripeRequirementsForPersons(List<Person> personList) {
     return personList.stream()
         .filter(person -> person.getRequirements() != null)
         .map(
@@ -261,6 +273,7 @@ public class ApplicationReviewService {
                   && personRequirements.getErrors().isEmpty()) {
                 businessOwnerService.updateBusinessOwnerStatusByStripePersonReference(
                     person.getId(), KnowYourCustomerStatus.PASS);
+
                 return null;
               }
               Set<String> personRequiredFields = new HashSet<>();
@@ -268,6 +281,7 @@ public class ApplicationReviewService {
               personRequiredFields.addAll(personRequirements.getPastDue());
               personRequiredFields.addAll(personRequirements.getEventuallyDue());
               personRequiredFields.addAll(personRequirements.getPendingVerification());
+
               return personRequiredFields.stream().filter(s1 -> !s1.endsWith(DOCUMENT)).toList();
             })
         .filter(Objects::nonNull)

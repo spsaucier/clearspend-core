@@ -81,10 +81,13 @@ public class Business extends TypedMutable<BusinessId> {
   @Enumerated(EnumType.STRING)
   private BusinessStatusReason statusReason;
 
+  // business description required to Stripe for validation
   private String description;
 
+  // merchant category code - saved and send to Stripe - mandatory field
   @NonNull private Integer mcc;
 
+  // the online presence of a business(facebook link, site, etc.) - it is required by Stripe
   private String url;
 
   // identifier of this business (account in stripe terms) at Stripe
@@ -92,4 +95,7 @@ public class Business extends TypedMutable<BusinessId> {
 
   // identifier of the treasury (financial) bank account at Stripe
   private String stripeFinancialAccountRef;
+
+  // on business creation we will collect the ip of the customer, required by Stripe
+  @NonNull private String tosAcceptanceIp;
 }

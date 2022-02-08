@@ -466,10 +466,11 @@ public enum MerchantType {
 
   private final String stripeMerchantType;
   private final String description;
-  private int mcc;
+  private final int mcc;
 
-  private static Map<String, MerchantType> map = initializeMap();
-  private static Map<Integer, MerchantType> mapMcc = initializeMccMap();
+  private static final Map<String, MerchantType> stripeMerchantTypeToMerchantTypeMap =
+      initializeMap();
+  private static final Map<Integer, MerchantType> mccToMerchantTypeMap = initializeMccMap();
 
   private static Map<String, MerchantType> initializeMap() {
     return Arrays.stream(MerchantType.values())
@@ -488,12 +489,12 @@ public enum MerchantType {
   }
 
   public static MerchantType fromString(String stripeMerchantType) {
-    MerchantType eventType = map.get(stripeMerchantType);
+    MerchantType eventType = stripeMerchantTypeToMerchantTypeMap.get(stripeMerchantType);
     return eventType != null ? eventType : UNKNOWN;
   }
 
   public static MerchantType fromMccCode(Integer mccCode) {
-    MerchantType eventType = mapMcc.get(mccCode);
+    MerchantType eventType = mccToMerchantTypeMap.get(mccCode);
     return eventType != null ? eventType : UNKNOWN;
   }
 

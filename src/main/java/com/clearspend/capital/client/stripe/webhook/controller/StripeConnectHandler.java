@@ -58,8 +58,12 @@ public class StripeConnectHandler {
   }
 
   public void accountUpdated(Account account) {
-    Business business = businessService.retrieveBusinessByStripeAccountReference(account.getId());
-    businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
+    try {
+      Business business = businessService.retrieveBusinessByStripeAccountReference(account.getId());
+      businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
+    } catch (RecordNotFoundException recordNotFoundException) {
+      log.info("Ignored case for record not found exception on Stripe connect webhook event.");
+    }
   }
 
   public void externalAccountCreated(StripeObject stripeObject) {}

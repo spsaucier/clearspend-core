@@ -120,7 +120,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     BusinessProspect businessProspect = onboardBusinessRecord.businessProspect();
     CreateOrUpdateBusinessOwnerRequest request =
         new CreateOrUpdateBusinessOwnerRequest(
-            null,
+            onboardBusinessRecord.businessOwner().getId(),
             businessProspect.getFirstName().getEncrypted(),
             businessProspect.getLastName().getEncrypted(),
             null,
@@ -139,15 +139,18 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     String body = objectMapper.writeValueAsString(request);
 
     mvc.perform(
-            patch(
-                    String.format(
-                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+            patch("/business-owners")
                 .contentType("application/json")
                 .content(body)
                 .cookie(onboardBusinessRecord.cookie()))
         .andExpect(status().isOk())
         .andReturn()
         .getResponse();
+
+    BusinessOwner businessOwner =
+        businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
+    Assertions.assertEquals(KnowYourCustomerStatus.PASS, businessOwner.getKnowYourCustomerStatus());
+    Assertions.assertNotNull(businessOwner.getStripePersonReference());
   }
 
   @SneakyThrows

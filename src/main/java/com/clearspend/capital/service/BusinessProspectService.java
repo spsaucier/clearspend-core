@@ -110,8 +110,10 @@ public class BusinessProspectService {
       Verification verification = twilioService.sendVerificationEmail(email, businessProspect);
       log.debug("createBusinessProspect: {}", verification);
       if (!"pending".equals(verification.getStatus())) {
-        throw new RuntimeException(
-            String.format("expected pending, got %s", verification.getStatus()));
+        throw new InvalidRequestException(
+            String.format(
+                "expected pending, got %s for business proepsct id %s",
+                verification.getStatus(), businessProspect.getId()));
       }
     }
 
@@ -219,7 +221,7 @@ public class BusinessProspectService {
 
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
-      ConvertBusinessProspect convertBusinessProspect) {
+      ConvertBusinessProspect convertBusinessProspect, String tosAcceptanceIp) {
     BusinessProspect businessProspect =
         retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
 
@@ -232,7 +234,8 @@ public class BusinessProspectService {
         businessService.createBusiness(
             businessProspect.getBusinessId(),
             businessProspect.getBusinessType(),
-            convertBusinessProspect);
+            convertBusinessProspect,
+            tosAcceptanceIp);
 
     BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
 

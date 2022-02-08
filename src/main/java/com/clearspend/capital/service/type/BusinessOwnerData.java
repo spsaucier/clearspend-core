@@ -75,26 +75,29 @@ public class BusinessOwnerData {
   }
 
   public BusinessOwner toBusinessOwner() {
-    return new BusinessOwner(
-        businessId,
-        BusinessOwnerType.UNSPECIFIED,
-        new NullableEncryptedString(firstName),
-        new NullableEncryptedString(lastName),
-        title,
-        relationshipOwner,
-        relationshipRepresentative,
-        relationshipExecutive,
-        relationshipDirector,
-        percentageOwnership,
-        address,
-        new NullableEncryptedString(taxIdentificationNumber),
-        new RequiredEncryptedStringWithHash(email),
-        new RequiredEncryptedString(phone),
-        dateOfBirth,
-        address != null ? address.getCountry() : Country.UGA,
-        subjectRef,
-        KnowYourCustomerStatus.PENDING,
-        BusinessOwnerStatus.ACTIVE,
-        null);
+    BusinessOwner businessOwner =
+        new BusinessOwner(
+            businessId,
+            BusinessOwnerType.UNSPECIFIED,
+            new NullableEncryptedString(firstName),
+            new NullableEncryptedString(lastName),
+            title,
+            relationshipOwner,
+            relationshipRepresentative,
+            relationshipExecutive,
+            relationshipDirector,
+            percentageOwnership,
+            address,
+            new NullableEncryptedString(taxIdentificationNumber),
+            new RequiredEncryptedStringWithHash(email),
+            new RequiredEncryptedString(phone),
+            dateOfBirth,
+            address != null ? address.getCountry() : Country.UGA,
+            subjectRef,
+            KnowYourCustomerStatus.PENDING,
+            BusinessOwnerStatus.ACTIVE,
+            null);
+    businessOwner.setId(businessOwnerId != null ? businessOwnerId : new TypedId<>());
+    return businessOwner;
   }
 }

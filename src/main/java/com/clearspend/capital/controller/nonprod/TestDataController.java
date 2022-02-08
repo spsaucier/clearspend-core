@@ -409,7 +409,8 @@ public class TestDataController {
                     Country.USA),
                 MerchantType.TELECOMMUNICATION_EQUIPMENT_AND_TELEPHONE_SALES,
                 "Description of business",
-                faker.internet().url()));
+                faker.internet().url()),
+            faker.internet().ipV4Address());
 
     Business business = convertBusinessProspectRecord.business();
 
