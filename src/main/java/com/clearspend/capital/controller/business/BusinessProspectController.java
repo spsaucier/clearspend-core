@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BusinessProspectController {
 
+  public static final boolean CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE = true;
+
   // This can enable/disable send email and phone validation codes
   @Value("${clearspend.onboarding-validation:true}")
   private boolean onboardingEmailPhoneValidation;
@@ -45,7 +47,7 @@ public class BusinessProspectController {
             request.getLastName(),
             request.getBusinessType(),
             request.getRelationshipOwner(),
-            request.getRelationshipRepresentative(),
+            CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE,
             request.getRelationshipExecutive(),
             request.getRelationshipDirector(),
             request.getEmail(),

@@ -26,10 +26,8 @@ import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -67,8 +65,6 @@ public class BusinessService {
   public record BusinessAndStripeMessagesRecord(
       Business business, List<String> stripeAccountCreationMessages) {}
 
-  @SneakyThrows
-  @Transactional
   public BusinessAndStripeMessagesRecord createBusiness(
       TypedId<BusinessId> businessId,
       BusinessType businessType,
@@ -123,163 +119,181 @@ public class BusinessService {
 
   public List<String> updateBusinessAccordingToStripeAccountRequirements(
       Business business, com.stripe.model.Account account) {
+    if (business.getStatus() == BusinessStatus.ONBOARDING
+        && List.of(
+                BusinessOnboardingStep.BUSINESS_OWNERS,
+                BusinessOnboardingStep.REVIEW,
+                BusinessOnboardingStep.SOFT_FAIL)
+            .contains(business.getOnboardingStep())) {
+      Requirements requirements = account.getRequirements();
 
-    Requirements requirements = account.getRequirements();
-    if (requirements == null) {
       // This is for testing case, in real case we should not have null requirements
-      return new ArrayList<>();
-    }
-
-    Capabilities accountCapabilities = account.getCapabilities();
-    boolean activeAccountCapabilities =
-        accountCapabilities != null
-            && ACTIVE.equals(accountCapabilities.getCardIssuing())
-            && ACTIVE.equals(accountCapabilities.getCardPayments())
-            && ACTIVE.equals(accountCapabilities.getTransfers());
-    // TODO: gb: check how to get these capabilities
-    //            &&
-    // ACTIVE.equals(accountCapabilities.getRawJsonObject().get(TREASURY).getAsString())
-    //            && ACTIVE.equals(
-    //                accountCapabilities
-    //                    .getRawJsonObject()
-    //                    .get(US_BANK_ACCOUNT_ACH_PAYMENTS)
-    //                    .getAsString());
-    // TODO - discuss eventualy due and required capabilities
-    boolean noOtherCheckRequiredForKYCStep =
-        (CollectionUtils.isEmpty(requirements.getPastDue())
-                || (requirements.getPastDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
-                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
-            && (CollectionUtils.isEmpty(requirements.getEventuallyDue())
-                || (requirements.getEventuallyDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
-                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
-            && (CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-                || (requirements.getCurrentlyDue().get(0).equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)
-                    && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
-            && CollectionUtils.isEmpty(requirements.getPendingVerification())
-            && CollectionUtils.isEmpty(requirements.getErrors());
-
-    boolean applicationReadyForNextStep =
-        noOtherCheckRequiredForKYCStep && activeAccountCapabilities;
-
-    boolean applicationRejected =
-        StringUtils.isNotEmpty(requirements.getDisabledReason())
-            && requirements.getDisabledReason().startsWith(REJECTED);
-
-    boolean applicationRequireAdditionalCheck =
-        !activeAccountCapabilities && !noOtherCheckRequiredForKYCStep;
-
-    boolean applicationIsInReviewState =
-        !activeAccountCapabilities && noOtherCheckRequiredForKYCStep;
-
-    if (applicationRejected) {
-      if (business.getStatus() != BusinessStatus.CLOSED) {
-        updateBusiness(business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
-        // TODO:gb: send email for fail application
+      if (requirements == null) {
+        return new ArrayList<>();
       }
-    } else if (applicationReadyForNextStep) {
-      if (business.getOnboardingStep() != BusinessOnboardingStep.LINK_ACCOUNT) {
-        updateBusiness(
-            business.getId(),
-            null,
-            BusinessOnboardingStep.LINK_ACCOUNT,
-            KnowYourBusinessStatus.PASS);
-        // TODO:gb: send email for success application KYC
-      }
-    } else if (applicationIsInReviewState) {
-      if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
-        updateBusiness(
-            business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
-        // TODO:gb: send email for REVIEW state
-      }
-    } else if (applicationRequireAdditionalCheck) {
-      // when additional checks are required,
-      // we will move business onboarding status depending on the stripe required information
-      if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
+
+      Capabilities accountCapabilities = account.getCapabilities();
+      boolean activeAccountCapabilities =
+          accountCapabilities != null
+              && ACTIVE.equals(accountCapabilities.getCardIssuing())
+              && ACTIVE.equals(accountCapabilities.getCardPayments())
+              && ACTIVE.equals(accountCapabilities.getTransfers());
+      // TODO: gb: check how to get these capabilities
+      //            &&
+      // ACTIVE.equals(accountCapabilities.getRawJsonObject().get(TREASURY).getAsString())
+      //            && ACTIVE.equals(
+      //                accountCapabilities
+      //                    .getRawJsonObject()
+      //                    .get(US_BANK_ACCOUNT_ACH_PAYMENTS)
+      //                    .getAsString());
+      // TODO - discuss eventualy due and required capabilities
+      boolean noOtherCheckRequiredForKYCStep =
+          (CollectionUtils.isEmpty(requirements.getPastDue())
+                  || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(requirements.getPastDue().get(0))
+                      && requirements.getPastDue().size() == 1
+                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+              && (CollectionUtils.isEmpty(requirements.getEventuallyDue())
+                  || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(
+                          requirements.getEventuallyDue().get(0))
+                      && requirements.getEventuallyDue().size() == 1
+                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+              && (CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+                  || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(
+                          requirements.getCurrentlyDue().get(0))
+                      && requirements.getCurrentlyDue().size() == 1
+                      && requirements.getDisabledReason().startsWith(REQUIREMENTS)))
+              && CollectionUtils.isEmpty(requirements.getPendingVerification())
+              && CollectionUtils.isEmpty(requirements.getErrors());
+
+      boolean applicationReadyForNextStep =
+          noOtherCheckRequiredForKYCStep && activeAccountCapabilities;
+
+      boolean applicationRejected =
+          StringUtils.isNotEmpty(requirements.getDisabledReason())
+              && requirements.getDisabledReason().startsWith(REJECTED);
+
+      boolean applicationRequireAdditionalCheck =
+          !activeAccountCapabilities && !noOtherCheckRequiredForKYCStep;
+
+      boolean applicationIsInReviewState =
+          !activeAccountCapabilities && noOtherCheckRequiredForKYCStep;
+
+      if (applicationRejected) {
+        if (business.getStatus() != BusinessStatus.CLOSED) {
+          updateBusiness(
+              business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
+          // TODO:gb: send email for fail application
+        }
+      } else if (applicationReadyForNextStep) {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.LINK_ACCOUNT
+            || business.getOnboardingStep() != BusinessOnboardingStep.TRANSFER_MONEY
+            || business.getOnboardingStep() != BusinessOnboardingStep.COMPLETE) {
           updateBusiness(
               business.getId(),
               null,
-              BusinessOnboardingStep.BUSINESS_OWNERS,
-              KnowYourBusinessStatus.PENDING);
-          // TODO:gb: send email for additional information required about business owners
+              BusinessOnboardingStep.LINK_ACCOUNT,
+              KnowYourBusinessStatus.PASS);
+          // TODO:gb: send email for success application KYC
         }
-      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
-          updateBusiness(
-              business.getId(),
-              null,
-              BusinessOnboardingStep.BUSINESS,
-              KnowYourBusinessStatus.PENDING);
-          // TODO:gb: send email for additional information required about business
-        }
-      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
-          || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
-          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
-          || (!CollectionUtils.isEmpty(requirements.getPendingVerification())
-              && requirements.getPendingVerification().stream()
-                  .anyMatch(s -> s.endsWith(DOCUMENT)))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.SOFT_FAIL) {
-          updateBusiness(
-              business.getId(),
-              null,
-              BusinessOnboardingStep.SOFT_FAIL,
-              KnowYourBusinessStatus.REVIEW);
-          // TODO:gb: send email for required documents to review
-        }
-      } else {
+      } else if (applicationIsInReviewState) {
         if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
           updateBusiness(
               business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
-          // TODO:gb: send email for review application KYC
+          // TODO:gb: send email for REVIEW state
         }
+      } else if (applicationRequireAdditionalCheck) {
+        // when additional checks are required,
+        // we will move business onboarding status depending on the stripe required information
+        if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+                && requirements.getCurrentlyDue().stream()
+                    .anyMatch(
+                        s ->
+                            s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+            || (!CollectionUtils.isEmpty(requirements.getPastDue())
+                && requirements.getPastDue().stream()
+                    .anyMatch(
+                        s ->
+                            s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))
+            || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+                && requirements.getEventuallyDue().stream()
+                    .anyMatch(
+                        s ->
+                            s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+                                || s.startsWith(OWNERS_DETAILS_REQUIRED)))) {
+          if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
+            updateBusiness(
+                business.getId(),
+                null,
+                BusinessOnboardingStep.BUSINESS_OWNERS,
+                KnowYourBusinessStatus.PENDING);
+            // TODO:gb: send email for additional information required about business owners
+          }
+        } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+                && requirements.getCurrentlyDue().stream()
+                    .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
+            || (!CollectionUtils.isEmpty(requirements.getPastDue())
+                && requirements.getPastDue().stream()
+                    .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
+            || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+                && requirements.getEventuallyDue().stream()
+                    .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))) {
+          if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
+            updateBusiness(
+                business.getId(),
+                null,
+                BusinessOnboardingStep.BUSINESS,
+                KnowYourBusinessStatus.PENDING);
+            // TODO:gb: send email for additional information required about business
+          }
+        } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+                && requirements.getCurrentlyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+            || (!CollectionUtils.isEmpty(requirements.getPastDue())
+                && requirements.getPastDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+            || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+                && requirements.getEventuallyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
+            || (!CollectionUtils.isEmpty(requirements.getPendingVerification())
+                && requirements.getPendingVerification().stream()
+                    .anyMatch(s -> s.endsWith(DOCUMENT)))) {
+          if (business.getOnboardingStep() != BusinessOnboardingStep.SOFT_FAIL) {
+            updateBusiness(
+                business.getId(),
+                null,
+                BusinessOnboardingStep.SOFT_FAIL,
+                KnowYourBusinessStatus.REVIEW);
+            // TODO:gb: send email for required documents to review
+          }
+        } else {
+          if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
+            updateBusiness(
+                business.getId(),
+                null,
+                BusinessOnboardingStep.REVIEW,
+                KnowYourBusinessStatus.REVIEW);
+            // TODO:gb: send email for review application KYC
+          }
+        }
+      } else {
+        // this case should be developed
+        log.error("This case should be checked {}", account.toJson());
+        // TODO:gb: check if is possible to arrive on unknown state
       }
-    } else {
-      // this case should be developed
-      log.error("This case should be checked {}", account.toJson());
-      // TODO:gb: check if is possible to arrive on unknown state
-    }
 
-    return extractErrorMessages(requirements);
+      return extractErrorMessages(requirements);
+    }
+    return new ArrayList<>();
   }
 
   private List<String> extractErrorMessages(Requirements requirements) {
     List<String> stripeAccountCreationMessages;
     stripeAccountCreationMessages =
         requirements.getErrors() != null
-            ? requirements.getErrors().stream().map(Errors::getReason).collect(Collectors.toList())
+            ? requirements.getErrors().stream().map(Errors::getReason).toList()
             : null;
     return stripeAccountCreationMessages;
   }
 
-  @Transactional
   public Business updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,

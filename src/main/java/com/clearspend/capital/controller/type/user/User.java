@@ -50,6 +50,9 @@ public class User {
   @JsonProperty("archived")
   private boolean archived;
 
+  @JsonProperty("relationshipToBusiness")
+  private RelationshipToBusiness relationshipToBusiness;
+
   public User(com.clearspend.capital.data.model.User user) {
     this.userId = user.getId();
     this.businessId = user.getBusinessId();
@@ -71,6 +74,12 @@ public class User {
     this.address = new Address(businessOwner.getAddress());
     this.email = businessOwner.getEmail().getEncrypted();
     this.phone = businessOwner.getPhone().getEncrypted();
+    this.relationshipToBusiness =
+        new RelationshipToBusiness(
+            businessOwner.getRelationshipOwner(),
+            businessOwner.getRelationshipExecutive(),
+            businessOwner.getRelationshipRepresentative(),
+            businessOwner.getRelationshipDirector());
   }
 
   public User(BusinessProspect businessProspect) {
@@ -81,5 +90,11 @@ public class User {
     this.lastName = businessProspect.getLastName().getEncrypted();
     this.email = businessProspect.getEmail().getEncrypted();
     this.phone = businessProspect.getPhone().getEncrypted();
+    this.relationshipToBusiness =
+        new RelationshipToBusiness(
+            businessProspect.getRelationshipOwner(),
+            businessProspect.getRelationshipExecutive(),
+            businessProspect.getRelationshipRepresentative(),
+            businessProspect.getRelationshipDirector());
   }
 }

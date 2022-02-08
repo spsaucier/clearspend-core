@@ -46,7 +46,7 @@ public class ApplicationReviewRequirements {
                                 .collect(Collectors.joining("|")),
                             requiredDocumentsForStripe.kybDocuments().entityTokenId()))
                 .distinct()
-                .collect(Collectors.toList())
+                .toList()
             : Collections.emptyList();
     this.kycRequiredDocuments =
         requiredDocumentsForStripe.kycDocuments().stream()
@@ -67,8 +67,8 @@ public class ApplicationReviewRequirements {
                                         kycErrorCode.getDocuments().get(0).getDocumentType().name(),
                                         kycOwnerDocuments.entityTokenId()))
                             .distinct()
-                            .collect(Collectors.toList())))
+                            .toList()))
             .distinct()
-            .collect(Collectors.toList());
+            .toList();
   }
 }

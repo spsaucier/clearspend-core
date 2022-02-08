@@ -42,6 +42,11 @@ public class ApplicationReviewService {
   public static final String DEFAULT_FILE_RESOURCE_NAME = "file";
   public static final String STRIPE_ACCOUNT_PREFIX = "acct";
   public static final String DOCUMENT = "document";
+  public static final String PERSON = "person";
+  public static final String EXTERNAL_ACCOUNT_CODE_REQUIREMENT = "external_account";
+  public static final String REPRESENTATIVE = "representative";
+  public static final String OWNERS = "owners";
+  public static final String COMPANY = "company";
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final FileStoreService fileStoreService;
@@ -136,16 +141,15 @@ public class ApplicationReviewService {
     Business business = businessService.retrieveBusiness(businessId);
     String stripeAccountReference = business.getStripeAccountReference();
     Account account = stripeClient.retrieveAccount(stripeAccountReference);
+    List<BusinessOwner> businessOwners =
+        businessOwnerService.findBusinessOwnerByBusinessId(businessId);
     List<Person> personList =
-        businessOwnerService.findBusinessOwnerByBusinessId(businessId).stream()
+        businessOwners.stream()
+            .filter(businessOwner -> businessOwner.getStripePersonReference() != null)
             .map(
-                businessOwner -> {
-                  String stripePersonReference =
-                      businessOwnerService
-                          .retrieveBusinessOwner(businessOwner.getId())
-                          .getStripePersonReference();
-                  return stripeClient.retrievePerson(stripePersonReference, stripeAccountReference);
-                })
+                businessOwner ->
+                    stripeClient.retrievePerson(
+                        businessOwner.getStripePersonReference(), stripeAccountReference))
             .toList();
 
     List<KycOwnerDocuments> kycDocuments = extractStripeRequiredDocumentsForPerson(personList);
@@ -155,8 +159,18 @@ public class ApplicationReviewService {
 
     KybEntityTokenAndErrorCode kybEntityTokenAndErrorCode =
         new KybEntityTokenAndErrorCode(account.getId(), kybErrorCodeList);
-    return new ApplicationReviewRequirements(
-        new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments));
+
+    ApplicationReviewRequirements applicationReviewRequirements =
+        new ApplicationReviewRequirements(
+            new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments));
+
+    List<String> kycRequirements = extractStripeRequirementsForPersons(personList, businessOwners);
+    List<String> kybRequirements = extractStripeRequirementsForAccount(account);
+
+    applicationReviewRequirements.setKybRequiredFields(kybRequirements);
+    applicationReviewRequirements.setKycRequiredFields(kycRequirements);
+
+    return applicationReviewRequirements;
   }
 
   private List<KybErrorCode> extractStripeRequiredDocumentsForAccount(Account account) {
@@ -170,7 +184,7 @@ public class ApplicationReviewService {
       accountRequiredFields.forEach(
           accountFieldRequired -> {
             if (accountFieldRequired.endsWith(DOCUMENT)
-                && !accountFieldRequired.startsWith("person")) {
+                && !accountFieldRequired.startsWith(PERSON)) {
               kybErrorCodeList.add(KybErrorCode.COMPANY_VERIFICATION_DOCUMENT);
             }
           });
@@ -199,7 +213,7 @@ public class ApplicationReviewService {
               personRequiredFields.addAll(personRequirements.getEventuallyDue());
               personRequiredFields.addAll(personRequirements.getPendingVerification());
               return personRequiredFields.stream()
-                  .filter(s1 -> s1.endsWith(DOCUMENT) && s1.startsWith("person"))
+                  .filter(s1 -> s1.endsWith(DOCUMENT))
                   .map(
                       s1 ->
                           new KycOwnerDocuments(
@@ -207,6 +221,54 @@ public class ApplicationReviewService {
                               person.getId(),
                               List.of(KycErrorCode.NAME_NOT_VERIFIED)))
                   .toList();
+            })
+        .filter(Objects::nonNull)
+        .flatMap(Collection::stream)
+        .toList();
+  }
+
+  private List<String> extractStripeRequirementsForAccount(Account account) {
+    List<String> kybRequirements = new ArrayList<>();
+    if (account.getRequirements() != null) {
+      Set<String> accountRequiredFields = new HashSet<>();
+      accountRequiredFields.addAll(account.getRequirements().getCurrentlyDue());
+      accountRequiredFields.addAll(account.getRequirements().getEventuallyDue());
+      accountRequiredFields.addAll(account.getRequirements().getPastDue());
+      accountRequiredFields.addAll(account.getRequirements().getPendingVerification());
+      accountRequiredFields.forEach(
+          accountFieldRequired -> {
+            if (!accountFieldRequired.endsWith(DOCUMENT)
+                && !accountFieldRequired.startsWith(PERSON)
+                && !accountFieldRequired.equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)) {
+              kybRequirements.add(accountFieldRequired);
+            }
+          });
+    }
+    return kybRequirements;
+  }
+
+  private List<String> extractStripeRequirementsForPersons(
+      List<Person> personList, List<BusinessOwner> owners) {
+    return personList.stream()
+        .filter(person -> person.getRequirements() != null)
+        .map(
+            person -> {
+              Person.Requirements personRequirements = person.getRequirements();
+              if (personRequirements.getCurrentlyDue().isEmpty()
+                  && personRequirements.getPastDue().isEmpty()
+                  && personRequirements.getEventuallyDue().isEmpty()
+                  && personRequirements.getPendingVerification().isEmpty()
+                  && personRequirements.getErrors().isEmpty()) {
+                businessOwnerService.updateBusinessOwnerStatusByStripePersonReference(
+                    person.getId(), KnowYourCustomerStatus.PASS);
+                return null;
+              }
+              Set<String> personRequiredFields = new HashSet<>();
+              personRequiredFields.addAll(personRequirements.getCurrentlyDue());
+              personRequiredFields.addAll(personRequirements.getPastDue());
+              personRequiredFields.addAll(personRequirements.getEventuallyDue());
+              personRequiredFields.addAll(personRequirements.getPendingVerification());
+              return personRequiredFields.stream().filter(s1 -> !s1.endsWith(DOCUMENT)).toList();
             })
         .filter(Objects::nonNull)
         .flatMap(Collection::stream)
