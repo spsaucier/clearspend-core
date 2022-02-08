@@ -8,5 +8,6 @@ public enum AllocationPermission {
   MANAGE_FUNDS,
   MANAGE_CARDS,
   MANAGE_USERS,
-  MANAGE_PERMISSIONS
+  MANAGE_PERMISSIONS,
+  VIEW_OWN
 }

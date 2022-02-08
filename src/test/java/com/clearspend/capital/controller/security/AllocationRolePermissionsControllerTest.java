@@ -69,7 +69,7 @@ public class AllocationRolePermissionsControllerTest extends BaseCapitalTest {
 
     assertEquals(
         permissionsResponse.getAllocationRolePermissionRecords().size(), permissions.size());
-    assertEquals(3, permissions.size());
+    assertEquals(ALL_ALLOCATION.size(), permissions.size());
     assertEquals(ALL_ALLOCATION, permissions.keySet());
     assertEquals(
         EnumSet.allOf(AllocationPermission.class),

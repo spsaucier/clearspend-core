@@ -15,17 +15,21 @@ public interface DefaultRoles {
   String GLOBAL_VIEWER = "global_viewer";
   String GLOBAL_BOOKKEEPER = "bookkeeper";
   String GLOBAL_RESELLER = "reseller";
+  String GLOBAL_PROCESSOR = "processor";
 
   String ALLOCATION_ADMIN = "Admin";
   String ALLOCATION_MANAGER = "Manager";
   String ALLOCATION_VIEW_ONLY = "View only";
+  String ALLOCATION_EMPLOYEE = "Employee";
 
-  Set<String> ALL_ALLOCATION = Set.of(ALLOCATION_ADMIN, ALLOCATION_MANAGER, ALLOCATION_VIEW_ONLY);
+  Set<String> ALL_ALLOCATION =
+      Set.of(ALLOCATION_ADMIN, ALLOCATION_MANAGER, ALLOCATION_VIEW_ONLY, ALLOCATION_EMPLOYEE);
   Set<String> ALL_GLOBAL =
       Set.of(
           GLOBAL_RESELLER,
           GLOBAL_CUSTOMER_SERVICE,
           GLOBAL_BOOKKEEPER,
           GLOBAL_VIEWER,
-          GLOBAL_CUSTOMER_SERVICE_MANAGER);
+          GLOBAL_CUSTOMER_SERVICE_MANAGER,
+          GLOBAL_PROCESSOR);
 }

@@ -24,7 +24,10 @@ public enum GlobalUserPermission {
   CUSTOMER_SERVICE,
 
   /** Creates ClearSpend customer service accounts */
-  CUSTOMER_SERVICE_MANAGER;
+  CUSTOMER_SERVICE_MANAGER,
+
+  /** Callbacks from the processing network */
+  SYSTEM;
 
   /** Key of a role, value of role(s) allowed to grant that permission. */
   public static final Map<GlobalUserPermission, EnumSet<GlobalUserPermission>> GRANTORS =
