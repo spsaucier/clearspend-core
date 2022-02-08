@@ -11,7 +11,6 @@ import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
-import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
@@ -48,7 +47,7 @@ public class UserService {
 
   public record CreateUpdateUserRecord(User user, String password) {}
 
-  /** Creates a user for an existing fusion auth user */
+  /** Creates a user for an existing fusion auth user, happens during initial onboarding */
   @Transactional
   public User createUserForFusionAuthUser(
       @NonNull TypedId<UserId> userId,
@@ -60,11 +59,6 @@ public class UserService {
       String email,
       String phone,
       @NonNull String subjectRef) {
-    Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
-
     User user =
         new User(
             businessId,
@@ -79,17 +73,10 @@ public class UserService {
 
     user = userRepository.save(user);
     userRepository.flush();
-
-    user.setExternalRef(
-        stripeClient
-            .createCardholder(
-                user, business.getClearAddress(), business.getStripeAccountReference())
-            .getId());
-
     return user;
   }
 
-  /** Creates a new user and a corresponding fusion auth user */
+  /** Creates a new user without a corresponding fusion auth user, for regular employee */
   @Transactional
   public CreateUpdateUserRecord createUser(
       TypedId<BusinessId> businessId,
@@ -99,12 +86,6 @@ public class UserService {
       @Nullable Address address,
       String email,
       String phone) {
-    String password = PasswordUtil.generatePassword();
-
-    Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
 
     User user =
         new User(
@@ -118,19 +99,31 @@ public class UserService {
 
     user = userRepository.save(user);
     userRepository.flush();
+    return new CreateUpdateUserRecord(user, "");
+  }
 
+  /** Creates a new user with a corresponding fusion auth user, currently only for tests */
+  @Transactional
+  public CreateUpdateUserRecord createUserAndFusionAuthRecord(
+      TypedId<BusinessId> businessId,
+      UserType type,
+      String firstName,
+      String lastName,
+      @Nullable Address address,
+      String email,
+      String phone) {
+
+    CreateUpdateUserRecord userRecord =
+        createUser(businessId, type, firstName, lastName, address, email, phone);
+
+    User user = userRecord.user;
+    String password = PasswordUtil.generatePassword();
     user.setSubjectRef(
-        fusionAuthService.createUser(businessId, user.getId(), email, password).toString());
-    user.setExternalRef(
-        stripeClient
-            .createCardholder(
-                user, business.getClearAddress(), business.getStripeAccountReference())
-            .getId());
-
-    twilioService.sendNotificationEmail(
-        user.getEmail().getEncrypted(),
-        String.format("Welcome to ClearSpend, your password is %s", password));
-
+        fusionAuthService
+            .createUser(businessId, user.getId(), user.getEmail().getEncrypted(), password)
+            .toString());
+    user = userRepository.save(user);
+    userRepository.flush();
     return new CreateUpdateUserRecord(user, password);
   }
 

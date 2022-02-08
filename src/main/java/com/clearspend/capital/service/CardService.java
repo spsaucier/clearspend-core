@@ -11,10 +11,12 @@ import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessLimit;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -31,6 +33,8 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
+import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -67,6 +71,11 @@ public class CardService {
   private final EntityManager entityManager;
 
   private final StripeClient stripeClient;
+
+  private final FusionAuthService fusionAuthService;
+  private final TwilioService twilioService;
+  private final UserRepository userRepository;
+  private final BusinessRepository businessRepository;
 
   public record CardRecord(Card card, Account account) {}
 
@@ -159,6 +168,39 @@ public class CardService {
         disabledTransactionChannels);
 
     cardRepository.flush();
+
+    // If user never had any cards, stripe cardholder id (ExternalRef) will be empty
+    // we need to create a stripe cardholder before we can create the actual stripe card
+    if (StringUtils.isEmpty(user.getExternalRef())) {
+      Business business =
+          businessRepository
+              .findById(businessId)
+              .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+      user.setExternalRef(
+          stripeClient
+              .createCardholder(
+                  user, business.getClearAddress(), business.getStripeAccountReference())
+              .getId());
+      user = userRepository.save(user);
+    }
+
+    // If FusionAuth record was never created for the current user, we will create it now
+    // This usually happens for new employees, created after the main user was created,
+    // for whom the cards were not issued yet
+    if (StringUtils.isEmpty(user.getSubjectRef())) {
+      String password = PasswordUtil.generatePassword();
+      user.setSubjectRef(
+          fusionAuthService
+              .createUser(businessId, user.getId(), user.getEmail().getEncrypted(), password)
+              .toString());
+
+      user = userRepository.save(user);
+
+      twilioService.sendNotificationEmail(
+          user.getEmail().getEncrypted(),
+          String.format(
+              "Welcome to ClearSpend! A card was assigned to you. Your password is %s", password));
+    }
 
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {

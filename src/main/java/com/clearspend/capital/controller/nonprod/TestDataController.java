@@ -554,7 +554,7 @@ public class TestDataController {
   }
 
   public CreateUpdateUserRecord createUser(Business business) {
-    return userService.createUser(
+    return userService.createUserAndFusionAuthRecord(
         business.getId(),
         UserType.EMPLOYEE,
         faker.name().firstName(),

@@ -771,7 +771,7 @@ public class TestHelper {
 
   public CreateUpdateUserRecord createUser(Business business) {
     CreateUpdateUserRecord record =
-        userService.createUser(
+        userService.createUserAndFusionAuthRecord(
             business.getId(),
             UserType.EMPLOYEE,
             faker.name().firstName(),
