@@ -341,7 +341,7 @@ public class StripeClient {
             personCollection.create(
                 personParameters,
                 getRequestOptions(
-                    businessOwner.getId(), businessOwner.getVersion(), stripeAccountId)));
+                    new TypedId<>(), businessOwner.getVersion(), stripeAccountId)));
   }
 
   public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
