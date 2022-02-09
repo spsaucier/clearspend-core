@@ -550,7 +550,7 @@ public class StripeClient {
       TypedId<BusinessId> businessId, String accountExternalRef, String stripeFinancialAccountRef) {
     MultiValueMapBuilder multiValueMapBuilder =
         MultiValueMapBuilder.builder()
-            .add("features[inbound_transfers][ach][requested]", "true")
+            .add("inbound_transfers[ach][requested]", "true")
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
 
     if (testMode) {
