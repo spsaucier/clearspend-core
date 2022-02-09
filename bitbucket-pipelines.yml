@@ -72,7 +72,7 @@ pipelines:
       - step:
           name: Deploy image to GKE
           image: google/cloud-sdk:latest
-          deployment: test
+          deployment: DEV
           runs-on:
             - 'env.dev'
           script:
@@ -86,7 +86,7 @@ pipelines:
       - step:
           name: Deploy image to QA
           image: google/cloud-sdk:latest
-          deployment: staging
+          deployment: QA
           runs-on:
             - 'env.qa'
           script:
@@ -98,6 +98,7 @@ pipelines:
             - gcloud container images untag $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:QA --quiet
             - gcloud container images add-tag $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:$BITBUCKET_COMMIT_SHORT $DOCKER_GCR_REPO_URL/$GCLOUD_PROJECT_ID/$DOCKER_IMAGE_NAME:QA --quiet
             - kubectl rollout restart deployment capital-core
+            - kubectl rollout status deployment capital-core
 
 definitions:
   services:
