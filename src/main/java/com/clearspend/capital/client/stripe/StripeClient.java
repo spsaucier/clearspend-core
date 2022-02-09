@@ -194,8 +194,7 @@ public class StripeClient {
     return callStripe(
         "createAccount",
         accountCreateParams,
-        () ->
-            Account.create(accountCreateParams, getRequestOptionsBetaApi(business.getId(), null)));
+        () -> Account.create(accountCreateParams, getRequestOptionsBetaApi(new TypedId<>(), null)));
   }
 
   public Account retrieveAccount(String stripeAccountId) {
@@ -340,8 +339,7 @@ public class StripeClient {
         () ->
             personCollection.create(
                 personParameters,
-                getRequestOptions(
-                    new TypedId<>(), businessOwner.getVersion(), stripeAccountId)));
+                getRequestOptions(new TypedId<>(), businessOwner.getVersion(), stripeAccountId)));
   }
 
   public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
