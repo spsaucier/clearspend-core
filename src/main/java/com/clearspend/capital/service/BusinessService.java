@@ -312,6 +312,16 @@ public class BusinessService {
   }
 
   @Transactional
+  public Business updateBusinessWithCodatCompanyRef(
+      TypedId<BusinessId> businessId, String codatCompanyRef) {
+    Business business = retrieveBusiness(businessId, true);
+
+    business.setCodatCompanyRef(codatCompanyRef);
+
+    return businessRepository.save(business);
+  }
+
+  @Transactional
   public Business updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,

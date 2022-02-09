@@ -98,4 +98,7 @@ public class Business extends TypedMutable<BusinessId> {
 
   // on business creation we will collect the ip of the customer, required by Stripe
   @NonNull private String tosAcceptanceIp;
+
+  // identifier of the company within Codat for this business
+  private String codatCompanyRef;
 }

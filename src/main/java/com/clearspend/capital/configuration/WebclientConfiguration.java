@@ -103,6 +103,22 @@ public class WebclientConfiguration {
         .build();
   }
 
+  @Bean
+  WebClient codatWebClient(
+      @Value("${client.codat.auth-token}") String authToken,
+      @Value("${client.codat.base-url}") String codatBaseUrl) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl(codatBaseUrl)
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(authToken);
+              headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            })
+        .build();
+  }
+
   // Somehow weblcient doesn't pick the correct mapper and uses the one that sends dates as
   // timestamps. Using this bean in order to make sure that correct mapper is used
   @Bean

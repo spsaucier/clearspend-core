@@ -106,6 +106,9 @@ client:
     verify-service-id: ${TWILIO_VERIFY_SERVICE_ID:VA1545a989a4a0b547da6b42b1f579c243}
   clearbit:
     api-key: ${CLEARBIT_API_KEY:sk_2f09108fb81c88e6874543afaefac99c}
+  codat:
+    auth-token: ${CODAT_AUTH_TOKEN:NkJKUHVRZnBIYzdhY3VkUGhRVDFNM3FZWjdhTkE3UWFyeEJ2OE5YbA==}
+    base-url: ${CODAT_BASE_URL:https://api.codat.io}
 
 logging:
   level:
