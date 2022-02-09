@@ -558,7 +558,7 @@ public class StripeClient {
     }
 
     return callStripeBetaApi(
-        "/financial_accounts/%s/".formatted(stripeFinancialAccountRef),
+        "/financial_accounts/%s".formatted(stripeFinancialAccountRef),
         multiValueMapBuilder.build(),
         accountExternalRef,
         "fa" + UUID.randomUUID(),
