@@ -189,7 +189,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .getResponse();
 
     businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
-    Business businessResponse = businessService.retrieveBusiness(business.getId());
+    Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
     assertThat(businessResponse.getOnboardingStep())
         .isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.CLOSED);
@@ -231,7 +231,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .getResponse();
 
     BusinessOwner owner = businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
-    Business businessResponse = businessService.retrieveBusiness(business.getId());
+    Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
     assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
     assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.REVIEW);
@@ -295,7 +295,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
     BusinessOwner owner =
         businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
-    Business business = businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
+    Business business =
+        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
     BusinessOwner additionalOwner =
         businessOwnerService.retrieveBusinessOwner(
             createBusinessOwnerResponse.stream()
@@ -373,7 +374,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     BusinessOwner owner =
         businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
     Business businessResponse =
-        businessService.retrieveBusiness(onboardBusinessRecord.business().getId());
+        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
     BusinessOwner additionalOwner =
         businessOwnerService.retrieveBusinessOwner(
             createBusinessOwnerResponse.get(1).getBusinessOwnerId());

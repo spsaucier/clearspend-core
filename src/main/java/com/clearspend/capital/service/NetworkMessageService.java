@@ -266,12 +266,16 @@ public class NetworkMessageService {
   }
 
   private void processAuthorizationUpdated(NetworkCommon common) {
-    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
-    // TODO(kuchlein): handle the case when the hold amount changes
+    if (common.earliestNetworkMessage != null) {
+      common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
+      // TODO(kuchlein): handle the case when the hold amount changes
+    }
   }
 
   private void processAuthorizationCreated(NetworkCommon common) {
-    common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
+    if (common.earliestNetworkMessage != null) {
+      common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
+    }
   }
 
   private void processAuthorizationRequest(NetworkCommon common) {

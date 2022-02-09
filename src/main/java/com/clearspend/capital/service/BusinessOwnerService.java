@@ -88,7 +88,7 @@ public class BusinessOwnerService {
                         : createBusinessOwner(businessOwner))
             .toList();
 
-    Business business = businessService.retrieveBusiness(businessId);
+    Business business = businessService.retrieveBusiness(businessId, true);
     String stripeAccountReference = business.getStripeAccountReference();
 
     businessOwners.forEach(

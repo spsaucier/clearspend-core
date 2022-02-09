@@ -65,7 +65,7 @@ public class CardController {
   private List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    String businessLegalName = businessService.retrieveBusiness(businessId).getLegalName();
+    String businessLegalName = businessService.retrieveBusiness(businessId, true).getLegalName();
     request
         .getCardType()
         .forEach(

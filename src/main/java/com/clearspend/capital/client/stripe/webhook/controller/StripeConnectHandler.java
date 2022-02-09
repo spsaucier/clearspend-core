@@ -197,7 +197,7 @@ public class StripeConnectHandler {
       TypedId<BusinessId> businessId = event.getBusinessId();
       if (businessId != null) {
         try {
-          businessService.retrieveBusiness(businessId);
+          businessService.retrieveBusiness(businessId, true);
         } catch (RecordNotFoundException e) {
           log.info("Skipping event for business id {} since it is not found in the db", businessId);
           return Optional.empty();

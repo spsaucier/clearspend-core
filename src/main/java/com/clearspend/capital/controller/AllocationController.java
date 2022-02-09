@@ -70,7 +70,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
-            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId);
+            businessService.retrieveBusiness(CurrentUser.get().businessId(), true), allocationId);
 
     return AllocationDetailsResponse.of(allocationRecord);
   }
@@ -98,7 +98,8 @@ public class AllocationController {
         request.getDisabledTransactionChannels());
 
     AllocationDetailsRecord allocationRecord =
-        allocationService.getAllocation(businessService.retrieveBusiness(businessId), allocationId);
+        allocationService.getAllocation(
+            businessService.retrieveBusiness(businessId, true), allocationId);
 
     return AllocationDetailsResponse.of(allocationRecord);
   }
@@ -114,7 +115,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     return allocationService
         .getAllocationChildren(
-            businessService.retrieveBusiness(CurrentUser.get().businessId()), allocationId)
+            businessService.retrieveBusiness(CurrentUser.get().businessId(), true), allocationId)
         .stream()
         .map(
             e ->
@@ -139,7 +140,7 @@ public class AllocationController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         allocationService.reallocateAllocationFunds(
-            businessService.retrieveBusiness(CurrentUser.get().businessId()),
+            businessService.retrieveBusiness(CurrentUser.get().businessId(), true),
             allocationId,
             request.getAllocationAccountId(),
             request.getCardId(),

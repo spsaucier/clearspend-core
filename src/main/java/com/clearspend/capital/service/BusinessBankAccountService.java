@@ -8,6 +8,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
+import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
@@ -49,6 +50,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -206,7 +208,12 @@ public class BusinessBankAccountService {
       Amount amount,
       boolean placeHold) {
 
-    Business business = businessService.retrieveBusiness(businessId);
+    Business business = businessService.retrieveBusiness(businessId, true);
+    if (Strings.isBlank(business.getStripeFinancialAccountRef())) {
+      throw new InvalidStateException(
+          Table.BUSINESS, "Stripe Financial Account Ref missing on business " + businessId);
+    }
+
     BusinessBankAccount businessBankAccount =
         businessBankAccountRepository
             .findById(businessBankAccountId)
@@ -295,7 +302,7 @@ public class BusinessBankAccountService {
 
       businessBankAccountRepository.flush();
 
-      Business business = businessService.retrieveBusiness(businessId);
+      Business business = businessService.retrieveBusiness(businessId, true);
       stripeClient.pushFundsToClearspendFinancialAccount(
           businessId,
           business.getStripeAccountReference(),
@@ -363,7 +370,7 @@ public class BusinessBankAccountService {
 
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
 
-    Business business = businessService.retrieveBusiness(businessId);
+    Business business = businessService.retrieveBusiness(businessId, true);
     String stripeAccountId = business.getStripeAccountReference();
 
     // Get a Stripe "Bank Account Token" (btok) via Plaid
@@ -402,6 +409,17 @@ public class BusinessBankAccountService {
 
     businessBankAccount.setStripeBankAccountRef(stripeBankAccountRef);
     businessBankAccount.setStripeSetupIntentRef(setupIntent.getId());
+
+    if (Strings.isBlank(business.getStripeFinancialAccountRef())) {
+      business.setStripeFinancialAccountRef(
+          stripeClient
+              .createFinancialAccount(business.getId(), business.getStripeAccountReference())
+              .getId());
+    }
+    stripeClient.enableFinancialAccountInboundTransfer(
+        business.getId(),
+        business.getStripeAccountReference(),
+        business.getStripeFinancialAccountRef());
 
     businessBankAccountRepository.save(businessBankAccount);
   }

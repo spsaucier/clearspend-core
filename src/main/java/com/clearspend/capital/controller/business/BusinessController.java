@@ -66,7 +66,7 @@ public class BusinessController {
     Map<TypedId<AllocationId>, Allocation> result =
         allocationService
             .searchBusinessAllocations(
-                businessService.retrieveBusiness(CurrentUser.getBusinessId()))
+                businessService.retrieveBusiness(CurrentUser.getBusinessId(), true))
             .stream()
             .map(Allocation::of)
             .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
@@ -93,7 +93,7 @@ public class BusinessController {
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
         .searchBusinessAllocations(
-            businessService.retrieveBusiness(CurrentUser.getBusinessId()), request.getName())
+            businessService.retrieveBusiness(CurrentUser.getBusinessId(), true), request.getName())
         .stream()
         .map(Allocation::of)
         .toList();
@@ -102,7 +102,7 @@ public class BusinessController {
   @GetMapping
   private ResponseEntity<Business> getBusiness() {
     return ResponseEntity.ok(
-        new Business(businessService.retrieveBusiness(CurrentUser.getBusinessId())));
+        new Business(businessService.retrieveBusiness(CurrentUser.getBusinessId(), false)));
   }
 
   @GetMapping("/business-limit")

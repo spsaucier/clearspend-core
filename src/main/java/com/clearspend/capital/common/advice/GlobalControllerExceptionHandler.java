@@ -55,8 +55,14 @@ public class GlobalControllerExceptionHandler {
 
   @ResponseStatus(HttpStatus.NOT_FOUND)
   @ExceptionHandler({RecordNotFoundException.class})
-  public @ResponseBody void handleRecordNotFoundException(Exception exception) {
-    log.error(String.format("%s exception processing request", exception.getClass()), exception);
+  public @ResponseBody void handleRecordNotFoundException(RecordNotFoundException exception) {
+    if (exception.isPrintStackTrace()) {
+      log.error(String.format("%s exception processing request", exception.getClass()), exception);
+    } else {
+      log.error(
+          String.format(
+              "%s exception processing request: %s", exception.getClass(), exception.getMessage()));
+    }
   }
 
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

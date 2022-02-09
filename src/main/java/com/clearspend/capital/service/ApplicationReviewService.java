@@ -144,7 +144,7 @@ public class ApplicationReviewService {
   public ApplicationReviewRequirements getStripeApplicationRequirements(
       TypedId<BusinessId> businessId) {
 
-    Business business = businessService.retrieveBusiness(businessId);
+    Business business = businessService.retrieveBusiness(businessId, true);
     String stripeAccountReference = business.getStripeAccountReference();
     Account account = stripeClient.retrieveAccount(stripeAccountReference);
     List<BusinessOwner> businessOwners =

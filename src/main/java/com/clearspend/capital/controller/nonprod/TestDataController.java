@@ -176,6 +176,14 @@ public class TestDataController {
     // create a new business
     BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
     Business business = businessRecord.business();
+
+    // FIXME(kuchlein): change this to follow a proper onboarding rather than ramming it through
+    business.setStripeFinancialAccountRef(
+        stripeClient
+            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
+            .getId());
+    business = businessRepository.save(business);
+
     createUser(business);
     setCurrentUser(businessRecord.user());
 

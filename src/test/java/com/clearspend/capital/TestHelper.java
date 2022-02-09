@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.client.plaid.PlaidClient;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -180,8 +181,9 @@ public class TestHelper {
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
 
-  private final PlaidClient plaidClient;
   private final EntityManager entityManager;
+  private final PlaidClient plaidClient;
+  private final StripeClient stripeClient;
 
   private final Faker faker = new Faker(new SecureRandom(new byte[] {0}));
   private final Map<TypedId<?>, String> passwords = new HashMap<>();
@@ -343,7 +345,7 @@ public class TestHelper {
         convertBusinessProspect(businessProspect.getId());
 
     return new OnboardBusinessRecord(
-        businessService.retrieveBusiness(businessProspect.getBusinessId()),
+        businessService.retrieveBusiness(businessProspect.getBusinessId(), true),
         businessOwnerService.retrieveBusinessOwner(
             convertBusinessProspectResponse.getBusinessOwnerId()),
         businessProspect,
@@ -530,7 +532,7 @@ public class TestHelper {
   }
 
   public Business retrieveBusiness() {
-    return businessService.retrieveBusiness(businessIds.get(0));
+    return businessService.retrieveBusiness(businessIds.get(0), true);
   }
 
   public void deleteBusiness(TypedId<BusinessId> businessId) {
@@ -751,6 +753,12 @@ public class TestHelper {
           Amount.of(Currency.USD, new BigDecimal("1000")),
           false);
     }
+
+    business.setStripeFinancialAccountRef(
+        stripeClient
+            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
+            .getId());
+    business = businessRepository.save(business);
 
     return new CreateBusinessRecord(
         business,
