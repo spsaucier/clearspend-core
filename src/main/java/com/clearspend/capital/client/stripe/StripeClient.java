@@ -549,13 +549,7 @@ public class StripeClient {
   public FinancialAccount enableFinancialAccountInboundTransfer(
       TypedId<BusinessId> businessId, String accountExternalRef, String stripeFinancialAccountRef) {
     MultiValueMapBuilder multiValueMapBuilder =
-        MultiValueMapBuilder.builder()
-            .add("inbound_transfers[ach][requested]", "true")
-            .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
-
-    if (testMode) {
-      multiValueMapBuilder.add("testmode_bypass_requirements", "true");
-    }
+        MultiValueMapBuilder.builder().add("inbound_transfers[ach][requested]", "true");
 
     return callStripeBetaApi(
         "/financial_accounts/%s/features".formatted(stripeFinancialAccountRef),
