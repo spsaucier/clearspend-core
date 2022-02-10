@@ -8,11 +8,14 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.TypeMismatchException;
+import com.inversoft.error.Errors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -36,6 +39,12 @@ public class GlobalControllerExceptionHandler {
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError(exception.getMessage());
+  }
+
+  @ExceptionHandler({LoginException.class})
+  public ResponseEntity<Errors> handleLoginException(LoginException exception) {
+    return new ResponseEntity<>(
+        exception.getErrors(), HttpStatus.valueOf(exception.getHttpStatus()));
   }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)

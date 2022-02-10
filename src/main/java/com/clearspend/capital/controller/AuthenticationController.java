@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
@@ -8,19 +9,24 @@ import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.inversoft.error.Errors;
+import com.inversoft.rest.ClientResponse;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import io.fusionauth.domain.api.LoginResponse;
 import java.text.ParseException;
 import java.time.Duration;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
+import javax.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -28,59 +34,76 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 
 @Slf4j
 @RestController
 @RequestMapping("/authentication")
 public class AuthenticationController {
 
-  private final WebClient webClient;
   private final BusinessProspectService businessProspectService;
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
+  private final int refreshTokenTimeToLiveInMinutes;
 
   public AuthenticationController(
-      @Qualifier("fusionAuthWebClient") WebClient webClient,
       BusinessProspectService businessProspectService,
       BusinessOwnerService businessOwnerService,
       FusionAuthService fusionAuthService) {
-    this.webClient = webClient;
     this.businessProspectService = businessProspectService;
     this.businessOwnerService = businessOwnerService;
     this.fusionAuthService = fusionAuthService;
+    refreshTokenTimeToLiveInMinutes =
+        fusionAuthService.getApplication().jwtConfiguration.refreshTokenTimeToLiveInMinutes;
   }
 
   @PostMapping("/login")
-  public ResponseEntity<User> login(@Validated @RequestBody LoginRequest request)
-      throws ParseException {
-    AccessTokenResponse tokenResponse;
+  public ResponseEntity<User> login(
+      @Validated @RequestBody LoginRequest request, HttpServletRequest httpServletRequest)
+      throws ParseException, LoginException {
+    ClientResponse<LoginResponse, Errors> loginResponse;
     try {
-      tokenResponse =
-          webClient
-              .post()
-              .uri("/oauth2/token")
-              .body(
-                  BodyInserters.fromFormData("grant_type", "password")
-                      .with("username", request.getUsername())
-                      .with("password", request.getPassword())
-                      .with("scope", "offline_access"))
-              .retrieve()
-              .bodyToMono(AccessTokenResponse.class)
-              .block();
-      if (tokenResponse == null) {
+      loginResponse = fusionAuthService.login(request.getUsername(), request.getPassword());
+      if (loginResponse == null) {
         throw new RuntimeException("Received empty response from fusion auth");
       }
     } catch (Exception e) {
       // making it debug level to prevent incorrect login/password trace spamming
       log.debug("Failed to get fusion auth token response", e);
+      return null;
+    }
+    if (!loginResponse.wasSuccessful()) {
+      throw new LoginException(loginResponse.status, loginResponse.errorResponse);
+    }
+    LoginResponse response = loginResponse.successResponse;
 
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    // JWT is enriched according to populate-token.js
+    final JWTClaimsSet jwtClaimsSet = JWTParser.parse(response.token).getJWTClaimsSet();
+
+    // Status 202 = The user was authenticated successfully. The user is not registered for
+    // the application specified by the applicationId on the request. The response will contain
+    // the User object that was authenticated.
+    if (loginResponse.status == 202) {
+      // populate-token.js populates the JWT either way
+      CurrentUser user = CurrentUser.get(jwtClaimsSet.getClaims());
+      fusionAuthService.updateUser(
+          user.businessId(),
+          user.userId(),
+          request.getUsername(),
+          request.getPassword(),
+          user.userType(),
+          response.user.id.toString());
+      loginResponse.status = 200;
     }
 
-    String userId =
-        JWTParser.parse(tokenResponse.accessToken).getJWTClaimsSet().getClaim("userId").toString();
+    String userId = response.user.id.toString();
+    Long expiry;
+    try {
+      expiry =
+          (((Date) jwtClaimsSet.getClaim("exp")).getTime() - System.currentTimeMillis()) / 1000;
+    } catch (Exception e) {
+      // not found or not parsed as expected
+      expiry = 20L * 60; // 20 minutes
+    }
 
     // TODO: Rework to correct propagation of UserType to Fusion Auth
     Optional<User> user =
@@ -89,17 +112,14 @@ public class AuthenticationController {
       user = businessProspectService.retrieveBusinessProspectBySubjectRef(userId).map(User::new);
     }
 
-    return ResponseEntity.ok()
+    return ResponseEntity.status(loginResponse.status)
         .header(
             HttpHeaders.SET_COOKIE,
-            createCookie(
-                SecurityConfig.ACCESS_TOKEN_COOKIE_NAME,
-                tokenResponse.accessToken,
-                tokenResponse.expiresIn),
+            createCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME, response.token, expiry),
             createCookie(
                 SecurityConfig.REFRESH_TOKEN_COOKIE_NAME,
-                tokenResponse.refreshToken,
-                tokenResponse.expiresIn))
+                response.refreshToken,
+                refreshTokenTimeToLiveInMinutes * 60L))
         .body(user.orElse(null));
   }
 
@@ -138,6 +158,7 @@ public class AuthenticationController {
 
   @Data
   public static final class AccessTokenResponse {
+
     @JsonProperty("access_token")
     private String accessToken;
 

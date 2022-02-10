@@ -51,24 +51,6 @@ public class WebclientConfiguration {
   }
 
   @Bean
-  WebClient fusionAuthWebClient(
-      @Value("${client.fusionauth.base-url}") String url,
-      @Value("${spring.security.oauth2.client.clientId}") String clientId,
-      @Value("${spring.security.oauth2.client.secret}") String secret) {
-    log.info("configValue: client.fusionauth.base-url: {}", url);
-    return WebClient.builder()
-        .exchangeStrategies(exchangeStrategies())
-        .clientConnector(new ReactorClientHttpConnector(httpClient()))
-        .baseUrl(url)
-        .defaultHeaders(
-            headers -> {
-              headers.setBasicAuth(clientId, secret);
-              headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-            })
-        .build();
-  }
-
-  @Bean
   WebClient clearbitWebClient(@Value("${client.clearbit.api-key}") String apiKey) {
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())

@@ -3,29 +3,36 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
 import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
+import com.clearspend.capital.controller.Common;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
+import io.fusionauth.domain.Application;
 import io.fusionauth.domain.User;
+import io.fusionauth.domain.UserRegistration;
+import io.fusionauth.domain.api.ApplicationResponse;
+import io.fusionauth.domain.api.LoginRequest;
+import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
 import io.fusionauth.domain.api.user.ChangePasswordRequest;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
+import io.fusionauth.domain.api.user.RegistrationRequest;
+import io.fusionauth.domain.api.user.RegistrationResponse;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,13 +63,8 @@ public class FusionAuthService {
       TypedId<BusinessOwnerId> businessOwnerId,
       String username,
       String password) {
-    return create(
-        businessId,
-        businessOwnerId.toUuid(),
-        username,
-        password,
-        UserType.BUSINESS_OWNER,
-        Collections.emptySet());
+    return createUser(
+        businessId, businessOwnerId.toUuid(), username, password, UserType.BUSINESS_OWNER);
   }
 
   @RestrictedApi(
@@ -71,32 +73,50 @@ public class FusionAuthService {
           "/(test/.*)|main/java/com/clearspend/capital/(?:service/UserService.java|controller/nonprod/.*)",
       link = "")
   public UUID createUser(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, String username, String password) {
-    return create(
-        businessId, userId.toUuid(), username, password, UserType.EMPLOYEE, Collections.emptySet());
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, String email, String password) {
+    return createUser(businessId, userId.toUuid(), email, password, UserType.EMPLOYEE);
   }
 
-  @RestrictedApi(
-      explanation = "This should only ever be used by UserService",
-      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/service/UserService.java",
-      link = "")
-  public UUID updateUser(
+  private UUID createUser(
       TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      String username,
+      UUID userId,
+      String email,
       String password,
+      UserType userType) {
+
+    UUID fusionAuthId = UUID.randomUUID();
+
+    RegistrationRequest request =
+        new RegistrationRequest(
+            getUser(email, password, fusionAuthId),
+            getUserRegistration(
+                businessId, userId, userType, fusionAuthId, Collections.emptySet()));
+    validateResponse(client.register(fusionAuthId, request));
+    return fusionAuthId;
+  }
+
+  private UserRegistration getUserRegistration(
+      TypedId<BusinessId> businessId,
+      UUID userId,
       UserType userType,
-      String fusionAuthUUID) {
-    final UUID fusionAuthId = UUID.fromString(fusionAuthUUID);
-    return createOrUpdateUser(
-        client::updateUser,
-        businessId,
-        userId.toUuid(),
-        (u) -> u.username = username,
-        password,
-        userType,
-        getUserRoles(fusionAuthId),
-        fusionAuthId);
+      UUID fusionAuthId,
+      Set<String> roles) {
+    UserRegistration registration = new UserRegistration();
+    registration.data.put(Common.CAPITAL_USER_ID, userId.toString());
+    registration.data.put(BUSINESS_ID, businessId.toUuid());
+    registration.data.put(USER_TYPE, userType.name());
+    registration.data.put(ROLES, roles.toArray(String[]::new));
+    registration.applicationId = getApplicationId();
+    registration.id = fusionAuthId;
+    return registration;
+  }
+
+  private User getUser(String email, String password, UUID fusionAuthId) {
+    User user = new User();
+    user.id = fusionAuthId;
+    user.email = email;
+    user.password = password;
+    return user;
   }
 
   @RestrictedApi(
@@ -110,7 +130,7 @@ public class FusionAuthService {
 
   @SuppressWarnings("unchecked")
   private Set<String> getUserRoles(User user) {
-    return Set.copyOf((List<String>) user.data.get(ROLES));
+    return Set.copyOf((List<String>) user.data.getOrDefault(ROLES, Collections.emptyList()));
   }
 
   public enum RoleChange {
@@ -141,50 +161,43 @@ public class FusionAuthService {
     return true;
   }
 
-  private UUID create(
+  @RestrictedApi(
+      explanation = "This should only ever be used by UserService",
+      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/service/UserService.java",
+      link = "")
+  public UUID updateUser(
       TypedId<BusinessId> businessId,
-      @NonNull UUID userId,
+      @NonNull TypedId<UserId> userId,
       String email,
-      String password,
+      @Sensitive String password,
       UserType userType,
-      Set<String> roles) {
-    return createOrUpdateUser(
-        client::createUser,
-        businessId,
-        userId,
-        (u) -> u.email = email,
-        password,
-        userType,
-        roles,
-        UUID.randomUUID());
-  }
+      String fusionAuthUserIdStr) {
+    UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
 
-  private UUID createOrUpdateUser(
-      BiFunction<UUID, UserRequest, ClientResponse<UserResponse, Errors>> action,
-      TypedId<BusinessId> businessId,
-      @NonNull UUID userId,
-      Consumer<User> setIdentifier,
-      String password,
-      UserType userType,
-      Set<String> roles,
-      UUID fusionAuthUserId) {
-
-    User user = new User();
-    setIdentifier.accept(user);
-    user.password = password;
-    user.data.put(BUSINESS_ID, businessId.toUuid());
-    user.data.put(CAPITAL_USER_ID, userId);
-    user.data.put(USER_TYPE, userType.name());
-    user.data.put(ROLES, roles.toArray(String[]::new));
-
+    User user = getUser(email, password, fusionAuthUserId);
     final ClientResponse<UserResponse, Errors> response =
-        action.apply(fusionAuthUserId, new UserRequest(user));
+        client.updateUser(fusionAuthUserId, new UserRequest(user));
 
     validateResponse(response);
+
+    final ClientResponse<RegistrationResponse, Errors> response1 =
+        client.updateRegistration(
+            fusionAuthUserId,
+            new RegistrationRequest(
+                user,
+                getUserRegistration(
+                    businessId,
+                    userId.toUuid(),
+                    userType,
+                    fusionAuthUserId,
+                    getUserRoles(fusionAuthUserId))));
+
+    validateResponse(response1);
+
     return fusionAuthUserId;
   }
 
-  private UserResponse validateResponse(ClientResponse<UserResponse, Errors> response) {
+  private <T> T validateResponse(ClientResponse<T, Errors> response) {
     if (response.wasSuccessful()) {
       return response.successResponse;
     }
@@ -256,5 +269,23 @@ public class FusionAuthService {
       default -> throw new RuntimeException(
           "unknown reset password status: " + changePasswordResponse.status);
     }
+  }
+
+  public ClientResponse<LoginResponse, Errors> login(String loginId, @Sensitive String password) {
+    LoginRequest request = new LoginRequest(getApplicationId(), loginId, password);
+    return client.login(request);
+  }
+
+  public UUID getApplicationId() {
+    return UUID.fromString(fusionAuthProperties.getApplicationId());
+  }
+
+  public Application getApplication() {
+    ClientResponse<ApplicationResponse, Void> response =
+        client.retrieveApplication(getApplicationId());
+    if (response.wasSuccessful()) {
+      return response.successResponse.application;
+    }
+    throw new InvalidRequestException(String.valueOf(response.status), response.exception);
   }
 }

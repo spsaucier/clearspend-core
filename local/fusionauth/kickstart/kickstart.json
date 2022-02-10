@@ -90,7 +90,8 @@
           "jwtConfiguration": {
             "enabled": true,
             "accessTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba",
-            "idTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba"
+            "idTokenKeyId": "c97515cc-9d1e-4df7-9eb7-8fa95284e6ba",
+            "refreshTokenTimeToLiveInMinutes": 43200
           },
           "oauthConfiguration": {
             "clientId": "58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6",
@@ -100,6 +101,10 @@
               "password",
               "refresh_token"
             ]
+          },
+          "loginConfiguration": {
+            "allowTokenRefresh": true,
+            "generateRefreshTokens": true
           },
           "lambdaConfiguration": {
             "accessTokenPopulateId": "#{accessTokenPopulateLambdaId}"

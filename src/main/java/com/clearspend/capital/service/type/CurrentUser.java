@@ -29,10 +29,14 @@ public record CurrentUser(
     // From the JWT example
     // https://fusionauth.io/docs/v1/tech/core-concepts/authentication-authorization/ it looks right
 
+    return get(getClaims());
+  }
+
+  public static CurrentUser get(Map<String, Object> claims) {
     return new CurrentUser(
-        getUserType(),
-        getUserId(),
-        getBusinessId(),
+        UserType.valueOf(claims.get(USER_TYPE).toString()),
+        new TypedId<>(claims.get(CAPITAL_USER_ID).toString()),
+        new TypedId<>(claims.get(BUSINESS_ID).toString()),
         StreamSupport.stream(
                 ((Iterable<Object>) getClaims().getOrDefault(ROLES, Collections.emptyList()))
                     .spliterator(),
@@ -58,6 +62,7 @@ public record CurrentUser(
   }
 
   private static Map<String, Object> getClaims() {
+    // TODO https://github.com/fusionauth/fusionauth-jwt#verify-and-decode-a-jwt-using-hmac
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     return (((JwtAuthenticationToken) authentication).getToken().getClaims());
   }
