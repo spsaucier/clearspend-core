@@ -6,9 +6,11 @@ import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.User;
+import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.inversoft.error.Errors;
@@ -44,14 +46,17 @@ public class AuthenticationController {
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
   private final int refreshTokenTimeToLiveInMinutes;
+  private final UserService userService;
 
   public AuthenticationController(
       BusinessProspectService businessProspectService,
       BusinessOwnerService businessOwnerService,
-      FusionAuthService fusionAuthService) {
+      FusionAuthService fusionAuthService,
+      UserService userService) {
     this.businessProspectService = businessProspectService;
     this.businessOwnerService = businessOwnerService;
     this.fusionAuthService = fusionAuthService;
+    this.userService = userService;
     refreshTokenTimeToLiveInMinutes =
         fusionAuthService.getApplication().jwtConfiguration.refreshTokenTimeToLiveInMinutes;
   }
@@ -105,11 +110,17 @@ public class AuthenticationController {
       expiry = 20L * 60; // 20 minutes
     }
 
-    // TODO: Rework to correct propagation of UserType to Fusion Auth
-    Optional<User> user =
-        businessOwnerService.retrieveBusinessOwnerBySubjectRef(userId).map(User::new);
+    Optional<User> user = userService.retrieveUserBySubjectRef(userId).map(User::new);
     if (user.isEmpty()) {
+      // If it is not found from "users" table, it may still exist in business_prospect
+      // during the first steps of on-boarding phase
       user = businessProspectService.retrieveBusinessProspectBySubjectRef(userId).map(User::new);
+    } else {
+      // For special group of users =business owners= we want to load them
+      // from business_owner table, as it contains important fields used during on-boarding
+      if (user.get().getType() == UserType.BUSINESS_OWNER) {
+        user = businessOwnerService.retrieveBusinessOwnerBySubjectRef(userId).map(User::new);
+      }
     }
 
     return ResponseEntity.status(loginResponse.status)
