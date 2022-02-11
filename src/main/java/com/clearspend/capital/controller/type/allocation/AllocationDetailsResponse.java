@@ -1,11 +1,10 @@
 package com.clearspend.capital.controller.type.allocation;
 
-import com.clearspend.capital.common.typedid.data.MccGroupId;
-import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.user.UserData;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
@@ -32,11 +31,11 @@ public class AllocationDetailsResponse {
 
   @NonNull
   @JsonProperty("disabledMccGroups")
-  private List<TypedId<MccGroupId>> disabledMccGroups;
+  private Set<MccGroup> disabledMccGroups;
 
   @NonNull
-  @JsonProperty("disabledTransactionChannels")
-  Set<TransactionChannel> disabledTransactionChannels;
+  @JsonProperty("disabledPaymentTypes")
+  Set<PaymentType> disabledPaymentTypes;
 
   public static AllocationDetailsResponse of(AllocationDetailsRecord record) {
     Allocation allocation =
@@ -52,6 +51,6 @@ public class AllocationDetailsResponse {
         new UserData(record.owner()),
         CurrencyLimit.ofMap(record.transactionLimit().getLimits()),
         record.transactionLimit().getDisabledMccGroups(),
-        record.transactionLimit().getDisabledTransactionChannels());
+        record.transactionLimit().getDisabledPaymentTypes());
   }
 }

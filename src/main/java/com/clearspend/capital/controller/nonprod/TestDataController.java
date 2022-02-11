@@ -171,7 +171,7 @@ public class TestDataController {
   }
 
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateTestDataResponse createTestData() throws IOException, InterruptedException {
+  private CreateTestDataResponse createTestData() {
 
     // create a new business
     BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
@@ -220,7 +220,7 @@ public class TestDataController {
             businessRecord.user(),
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
@@ -237,7 +237,7 @@ public class TestDataController {
             businessRecord.user(),
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
@@ -262,7 +262,7 @@ public class TestDataController {
             true,
             business.getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet(),
             business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
@@ -292,7 +292,7 @@ public class TestDataController {
             true,
             business.getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet(),
             business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
@@ -325,7 +325,7 @@ public class TestDataController {
                 true,
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet(),
                 business.getClearAddress().toAddress())
             .card());
@@ -342,7 +342,7 @@ public class TestDataController {
                 true,
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet(),
                 business.getClearAddress().toAddress())
             .card());
@@ -362,7 +362,7 @@ public class TestDataController {
                 true,
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet(),
                 business.getClearAddress().toAddress())
             .card());
@@ -558,7 +558,7 @@ public class TestDataController {
         user,
         Amount.of(Currency.USD),
         DEFAULT_TRANSACTION_LIMITS,
-        Collections.emptyList(),
+        Collections.emptySet(),
         Collections.emptySet());
   }
 

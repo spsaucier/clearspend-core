@@ -43,6 +43,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Country;
@@ -653,7 +654,7 @@ public class TestHelper {
         user,
         Amount.of(Currency.USD),
         DEFAULT_TRANSACTION_LIMITS,
-        Collections.emptyList(),
+        Collections.emptySet(),
         Collections.emptySet());
   }
 
@@ -671,7 +672,7 @@ public class TestHelper {
             owner,
             new com.clearspend.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
@@ -813,7 +814,7 @@ public class TestHelper {
                 true,
                 business.getLegalName(),
                 Map.of(Currency.USD, new HashMap<>()),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet(),
                 business.getClearAddress().toAddress())
             .card();
@@ -858,6 +859,7 @@ public class TestHelper {
       Card card,
       MerchantType merchantType,
       long authorizationAmount,
+      AuthorizationMethod authorizationMethod,
       long pendingAmount,
       String stripeId) {
     Authorization authorization = new Authorization();
@@ -878,6 +880,7 @@ public class TestHelper {
     authorization.setMerchantCurrency(business.getCurrency().toStripeCurrency());
     MerchantData merchantData = getMerchantData(merchantType);
     authorization.setMerchantData(merchantData);
+    authorization.setAuthorizationMethod(authorizationMethod.name().toLowerCase());
     authorization.setMetadata(new HashMap<>());
     authorization.setObject("issuing.authorization");
     if (pendingAmount != 0) {

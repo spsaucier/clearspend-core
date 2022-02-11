@@ -1,12 +1,12 @@
 package com.clearspend.capital.controller.type.allocation;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -54,10 +54,10 @@ public class CreateAllocationRequest {
   @NonNull
   @NotNull(message = "disabled msc groups collection is required")
   @JsonProperty("disabledMccGroups")
-  private List<TypedId<MccGroupId>> disabledMccGroups;
+  private Set<MccGroup> disabledMccGroups;
 
   @NonNull
-  @NotNull(message = "disabled transactions channel collection is required")
-  @JsonProperty("disabledTransactionChannels")
-  Set<TransactionChannel> disabledTransactionChannels;
+  @NotNull(message = "disabled payment types collection is required")
+  @JsonProperty("disabledPaymentTypes")
+  Set<PaymentType> disabledPaymentTypes;
 }

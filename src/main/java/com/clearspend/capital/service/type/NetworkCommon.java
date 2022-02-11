@@ -11,6 +11,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
@@ -97,6 +98,8 @@ public class NetworkCommon {
   // the amount we are approving this transaction for. Will be less than or equal to requestedAmount
   @NonNull private Amount approvedAmount;
 
+  private AuthorizationMethod authorizationMethod;
+
   private String stripeAuthorizationExternalRef;
 
   private TypedId<BusinessId> businessId;
@@ -157,6 +160,7 @@ public class NetworkCommon {
     requestedAmount = amount;
     paddedAmount = requestedAmount;
     approvedAmount = Amount.of(amount.getCurrency());
+    authorizationMethod = AuthorizationMethod.fromString(authorization.getAuthorizationMethod());
 
     if (authorization.getMerchantData() != null) {
       MerchantData merchantData = authorization.getMerchantData();

@@ -58,7 +58,6 @@ public class BusinessService {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
-  private final MccGroupService mccGroupService;
 
   private final StripeClient stripeClient;
 
@@ -106,7 +105,6 @@ public class BusinessService {
     business.setStripeAccountReference(account.getId());
 
     businessLimitService.initializeBusinessLimit(business.getId());
-    mccGroupService.initializeMccGroups(business.getId());
 
     // validate and update business based on stripe account requirements
     List<String> stripeAccountErrorMessages =

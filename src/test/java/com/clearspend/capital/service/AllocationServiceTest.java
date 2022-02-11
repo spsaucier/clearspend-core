@@ -42,7 +42,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 createBusinessRecord.user(),
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet()));
 
     CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
@@ -61,7 +61,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 peon.user(),
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet()));
   }
 }

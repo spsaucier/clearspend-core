@@ -5,9 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
-import com.clearspend.capital.controller.type.mcc.MccGroup;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.enums.I2CMccGroup;
+import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.EnumSet;
@@ -49,8 +48,6 @@ public class MccGroupControllerTest extends BaseCapitalTest {
         mockMvcHelper.queryList(
             "/mcc-groups", HttpMethod.GET, userCookie, null, new TypeReference<>() {});
 
-    assertThat(mccGroups)
-        .extracting("i2cMccGroupRef")
-        .containsExactlyInAnyOrderElementsOf(EnumSet.allOf(I2CMccGroup.class));
+    assertThat(mccGroups).containsExactlyInAnyOrderElementsOf(EnumSet.allOf(MccGroup.class));
   }
 }

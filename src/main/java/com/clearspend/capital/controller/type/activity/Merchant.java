@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.type.activity;
 
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
@@ -30,6 +31,10 @@ public class Merchant {
   @NonNull
   private Integer merchantCategoryCode;
 
+  @JsonProperty("merchantCategoryGroup")
+  @NonNull
+  private MccGroup merchantCategoryGroup;
+
   @JsonProperty("merchantLogoUrl")
   private String logoUrl;
 
@@ -49,6 +54,7 @@ public class Merchant {
         in.getType(),
         in.getMerchantNumber(),
         in.getMerchantCategoryCode(),
+        in.getMerchantCategoryGroup(),
         in.getLogoUrl(),
         in.getLatitude(),
         in.getLongitude());

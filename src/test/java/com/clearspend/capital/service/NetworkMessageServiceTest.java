@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.MerchantType;
@@ -79,7 +80,14 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
         new NetworkCommon(
             NetworkMessageType.AUTH_CREATED,
             testHelper.getAuthorization(
-                business, user, card, merchantType, authAmount.toStripeAmount(), 0, null),
+                business,
+                user,
+                card,
+                merchantType,
+                authAmount.toStripeAmount(),
+                AuthorizationMethod.CONTACTLESS,
+                0,
+                null),
             new StripeWebhookLog());
 
     assertThat(networkCommon.getRequestedAmount().getAmount())

@@ -46,6 +46,11 @@ public class BusinessLimit extends TypedMutable<BusinessLimitId> {
   @Column(columnDefinition = "jsonb")
   private Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits;
 
+  @NonNull
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>> operationLimits;
+
   @NonNull private Integer issuedPhysicalCardsLimit;
 
   /**

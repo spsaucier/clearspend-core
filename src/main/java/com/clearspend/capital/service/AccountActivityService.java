@@ -21,8 +21,12 @@ import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.AuthorizationMethod;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -162,6 +166,7 @@ public class AccountActivityService {
             common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
+            MccGroup.fromMcc(common.getMerchantCategoryCode()),
             common.getAccountActivityDetails().getMerchantLogoUrl(),
             common.getAccountActivityDetails().getMerchantLatitude(),
             common.getAccountActivityDetails().getMerchantLongitude()));
@@ -180,6 +185,12 @@ public class AccountActivityService {
     if (hold != null) {
       accountActivity.setHoldId(hold.getId());
       accountActivity.setHideAfter(hold.getExpirationDate());
+    }
+
+    AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();
+    if (authorizationMethod != null) {
+      accountActivity.setPaymentDetails(
+          new PaymentDetails(authorizationMethod, PaymentType.from(authorizationMethod)));
     }
 
     common.setAccountActivity(accountActivityRepository.save(accountActivity));
@@ -264,7 +275,7 @@ public class AccountActivityService {
     return accountActivity;
   }
 
-  public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) throws IOException {
+  public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) {
 
     Page<AccountActivity> accountActivityPage =
         accountActivityRepository.find(CurrentUser.get().businessId(), filterCriteria);
@@ -273,7 +284,7 @@ public class AccountActivityService {
         Arrays.asList("Date & Time", "Card", "Merchant", "Amount", "Receipt");
 
     ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
-    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT); ) {
+    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT)) {
       csvPrinter.printRecord(headerFields);
       DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
       accountActivityPage

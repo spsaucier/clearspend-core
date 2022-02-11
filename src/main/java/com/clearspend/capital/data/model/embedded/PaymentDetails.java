@@ -1,8 +1,7 @@
 package com.clearspend.capital.data.model.embedded;
 
-import com.clearspend.capital.data.model.enums.MccGroup;
-import com.clearspend.capital.data.model.enums.MerchantType;
-import java.math.BigDecimal;
+import com.clearspend.capital.data.model.enums.AuthorizationMethod;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -16,23 +15,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor // required for Hibernate but shouldn't be used otherwise
 @AllArgsConstructor
 @MappedSuperclass
-public class MerchantDetails {
-
-  private String name;
+public class PaymentDetails {
 
   @Enumerated(EnumType.STRING)
-  private MerchantType type;
+  private AuthorizationMethod authorizationMethod;
 
-  private String merchantNumber;
-
-  private Integer merchantCategoryCode;
-
-  private MccGroup merchantCategoryGroup;
-
-  // path only
-  private String logoUrl;
-
-  private BigDecimal latitude;
-
-  private BigDecimal longitude;
+  @Enumerated(EnumType.STRING)
+  private PaymentType paymentType;
 }

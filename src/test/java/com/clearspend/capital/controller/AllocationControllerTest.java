@@ -19,7 +19,6 @@ import com.clearspend.capital.controller.type.card.limits.Limit;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.MccGroup;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -29,20 +28,20 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
-import com.clearspend.capital.service.MccGroupService;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -63,7 +62,6 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
   private final AllocationService allocationService;
-  private final MccGroupService mccGroupService;
 
   private final Faker faker = new Faker();
   private CreateBusinessRecord createBusinessRecord;
@@ -85,7 +83,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
@@ -225,7 +223,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.valueOf(10)),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet());
 
     String body = objectMapper.writeValueAsString(request);
@@ -266,12 +264,9 @@ class AllocationControllerTest extends BaseCapitalTest {
                 Map.of(
                     LimitType.PURCHASE,
                     Map.of(LimitPeriod.DAILY, new Limit(BigDecimal.TEN, BigDecimal.ZERO))))));
-    updateAllocationRequest.setDisabledMccGroups(
-        mccGroupService.retrieveMccGroups(business.getId()).stream()
-            .map(MccGroup::getId)
-            .collect(Collectors.toList()));
-    updateAllocationRequest.setDisabledTransactionChannels(
-        Collections.singleton(TransactionChannel.MOTO));
+    updateAllocationRequest.setDisabledMccGroups(EnumSet.allOf(MccGroup.class));
+    updateAllocationRequest.setDisabledPaymentTypes(
+        Collections.singleton(PaymentType.MANUAL_ENTRY));
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
@@ -301,7 +296,7 @@ class AllocationControllerTest extends BaseCapitalTest {
         .isEqualTo(updateAllocationRequest.getLimits());
     assertThat(allocationDetailsResponse.getDisabledMccGroups())
         .isEqualTo(updateAllocationRequest.getDisabledMccGroups());
-    assertThat(allocationDetailsResponse.getDisabledTransactionChannels())
-        .isEqualTo(updateAllocationRequest.getDisabledTransactionChannels());
+    assertThat(allocationDetailsResponse.getDisabledPaymentTypes())
+        .isEqualTo(updateAllocationRequest.getDisabledPaymentTypes());
   }
 }

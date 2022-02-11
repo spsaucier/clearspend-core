@@ -346,7 +346,7 @@ class UserControllerTest extends BaseCapitalTest {
           .containsOnly(new CurrencyLimit(Currency.USD, new HashMap<>()));
 
       assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
-      assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
+      assertThat(cardDetailsResponse.getDisabledPaymentTypes()).isEmpty();
     }
 
     assertThat(userCardListResponse)
@@ -402,7 +402,7 @@ class UserControllerTest extends BaseCapitalTest {
         .containsOnly(new CurrencyLimit(Currency.USD, new HashMap<>()));
 
     assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
-    assertThat(cardDetailsResponse.getDisabledTransactionChannels()).isEmpty();
+    assertThat(cardDetailsResponse.getDisabledPaymentTypes()).isEmpty();
   }
 
   @Test
@@ -573,7 +573,7 @@ class UserControllerTest extends BaseCapitalTest {
             true,
             createBusinessRecord.business().getLegalName(),
             Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptyList(),
+            Collections.emptySet(),
             Collections.emptySet(),
             createBusinessRecord.business().getClearAddress().toAddress());
 

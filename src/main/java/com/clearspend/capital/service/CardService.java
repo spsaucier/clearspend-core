@@ -7,7 +7,6 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
-import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -23,7 +22,8 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -91,8 +91,8 @@ public class CardService {
       Boolean isPersonal,
       String businessLegalName,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      List<TypedId<MccGroupId>> disabledMccGroups,
-      Set<TransactionChannel> disabledTransactionChannels,
+      Set<MccGroup> disabledMccGroups,
+      Set<PaymentType> disabledPaymentTypes,
       Address shippingAddress) {
 
     if (cardType == CardType.PHYSICAL) {
@@ -165,7 +165,7 @@ public class CardService {
         card.getId(),
         transactionLimits,
         disabledMccGroups,
-        disabledTransactionChannels);
+        disabledPaymentTypes);
 
     cardRepository.flush();
 
@@ -380,18 +380,14 @@ public class CardService {
       TypedId<BusinessId> businessId,
       TypedId<CardId> cardId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      List<TypedId<MccGroupId>> disabledMccGroups,
-      Set<TransactionChannel> disabledTransactionChannels) {
+      Set<MccGroup> disabledMccGroups,
+      Set<PaymentType> disabledPaymentTypes) {
 
     // check if this card does belong to the business
     Card card = retrieveCard(businessId, cardId);
 
     transactionLimitService.updateCardSpendLimit(
-        businessId,
-        card.getId(),
-        transactionLimits,
-        disabledMccGroups,
-        disabledTransactionChannels);
+        businessId, card.getId(), transactionLimits, disabledMccGroups, disabledPaymentTypes);
   }
 
   public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {

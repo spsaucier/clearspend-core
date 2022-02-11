@@ -1,11 +1,10 @@
 package com.clearspend.capital.controller.type.card;
 
-import com.clearspend.capital.common.typedid.data.MccGroupId;
-import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.TransactionLimit;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
@@ -43,10 +42,10 @@ public class CardDetailsResponse {
   private List<CurrencyLimit> limits;
 
   @JsonProperty("disabledMccGroups")
-  private List<TypedId<MccGroupId>> disabledMccGroups;
+  private Set<MccGroup> disabledMccGroups;
 
-  @JsonProperty("disabledTransactionChannels")
-  Set<TransactionChannel> disabledTransactionChannels;
+  @JsonProperty("disabledPaymentTypes")
+  Set<PaymentType> disabledPaymentTypes;
 
   public static CardDetailsResponse of(CardDetailsRecord cardDetailsRecord) {
     CardDetailsResponse response =
@@ -59,7 +58,7 @@ public class CardDetailsResponse {
     TransactionLimit transactionLimit = cardDetailsRecord.transactionLimit();
     response.setLimits(CurrencyLimit.ofMap(transactionLimit.getLimits()));
     response.setDisabledMccGroups(transactionLimit.getDisabledMccGroups());
-    response.setDisabledTransactionChannels(transactionLimit.getDisabledTransactionChannels());
+    response.setDisabledPaymentTypes(transactionLimit.getDisabledPaymentTypes());
 
     return response;
   }

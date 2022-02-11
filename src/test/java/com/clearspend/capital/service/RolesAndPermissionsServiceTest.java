@@ -221,7 +221,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 otherUser,
                 amt,
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet())
             .allocation();
 
@@ -255,7 +255,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet())
             .allocation();
 
@@ -329,7 +329,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet())
             .allocation();
 
@@ -630,7 +630,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet())
             .allocation();
 
@@ -664,7 +664,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 manager,
                 amt,
                 Collections.emptyMap(),
-                Collections.emptyList(),
+                Collections.emptySet(),
                 Collections.emptySet())
             .allocation();
 

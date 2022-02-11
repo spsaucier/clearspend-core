@@ -18,7 +18,6 @@ import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,6 +28,39 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class BusinessLimitService {
+
+  private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> DEFAULT_LIMITS =
+      Map.of(
+          Currency.USD,
+          Map.of(
+              LimitType.ACH_DEPOSIT,
+                  Map.of(
+                      LimitPeriod.DAILY,
+                      BigDecimal.valueOf(10000),
+                      LimitPeriod.MONTHLY,
+                      BigDecimal.valueOf(30000)),
+              LimitType.ACH_WITHDRAW,
+                  Map.of(
+                      LimitPeriod.DAILY,
+                      BigDecimal.valueOf(10000),
+                      LimitPeriod.MONTHLY,
+                      BigDecimal.valueOf(30000)),
+              LimitType.ACH_PULL_OUT,
+                  Map.of(
+                      LimitPeriod.DAILY,
+                      BigDecimal.valueOf(10000),
+                      LimitPeriod.MONTHLY,
+                      BigDecimal.valueOf(30000))));
+
+  private static final Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>>
+      DEFAULT_OPERATION_LIMITS =
+          Map.of(
+              Currency.USD,
+              Map.of(
+                  LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6),
+                  LimitType.ACH_WITHDRAW, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6),
+                  LimitType.ACH_PUSH_IN, Map.of(LimitPeriod.DAILY, 0, LimitPeriod.MONTHLY, 0),
+                  LimitType.ACH_PULL_OUT, Map.of(LimitPeriod.DAILY, 0, LimitPeriod.MONTHLY, 0)));
 
   private final BusinessLimitRepository businessLimitRepository;
   private final AdjustmentService adjustmentService;
@@ -50,12 +82,9 @@ public class BusinessLimitService {
   }
 
   public BusinessLimit initializeBusinessLimit(TypedId<BusinessId> businessId) {
-    Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits = new HashMap<>();
-
-    limits.put(Currency.USD, new HashMap<>());
-
     return businessLimitRepository.save(
-        new BusinessLimit(businessId, limits, issuedPhysicalCardDefaultLimit));
+        new BusinessLimit(
+            businessId, DEFAULT_LIMITS, DEFAULT_OPERATION_LIMITS, issuedPhysicalCardDefaultLimit));
   }
 
   public BusinessLimit retrieveBusinessLimit(TypedId<BusinessId> businessId) {

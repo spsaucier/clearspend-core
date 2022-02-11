@@ -54,7 +54,7 @@ public class AllocationController {
             request.getAmount().toAmount(),
             CurrencyLimit.toMap(request.getLimits()),
             request.getDisabledMccGroups(),
-            request.getDisabledTransactionChannels());
+            request.getDisabledPaymentTypes());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
   }
@@ -95,7 +95,7 @@ public class AllocationController {
         request.getOwnerId(),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
-        request.getDisabledTransactionChannels());
+        request.getDisabledPaymentTypes());
 
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(

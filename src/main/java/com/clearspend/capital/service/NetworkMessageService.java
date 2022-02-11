@@ -327,7 +327,9 @@ public class NetworkMessageService {
           common.getBusinessId(),
           common.getAllocation().getId(),
           common.getCard().getId(),
-          common.getApprovedAmount());
+          common.getApprovedAmount(),
+          common.getMerchantCategoryCode(),
+          common.getAuthorizationMethod());
     } catch (LimitViolationException e) {
       log.warn("Failed to accept a transaction due to a limit violation: {}", e.getMessage());
       common.getDeclineReasons().add(DeclineReason.LIMIT_EXCEEDED);

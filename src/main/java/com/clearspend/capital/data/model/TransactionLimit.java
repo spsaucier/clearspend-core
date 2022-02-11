@@ -2,19 +2,18 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.data.type.TypedIdArrayType;
-import com.clearspend.capital.common.typedid.data.MccGroupId;
 import com.clearspend.capital.common.typedid.data.TransactionLimitId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.TransactionChannel;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -70,12 +69,12 @@ public class TransactionLimit extends TypedMutable<TransactionLimitId> {
   private Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits;
 
   @NonNull
-  @Column(columnDefinition = "uuid[]")
-  @Type(type = "uuid-array")
-  private List<TypedId<MccGroupId>> disabledMccGroups;
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private Set<MccGroup> disabledMccGroups;
 
   @NonNull
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
-  private Set<TransactionChannel> disabledTransactionChannels;
+  private Set<PaymentType> disabledPaymentTypes;
 }

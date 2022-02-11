@@ -13,6 +13,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -101,6 +102,8 @@ public class AccountActivity extends TypedMutable<AccountActivityId> {
   @Embedded private ReceiptDetails receipt;
 
   @Embedded private AccountingDetails accountingDetails;
+
+  @Embedded private PaymentDetails paymentDetails;
 
   @NonNull private OffsetDateTime activityTime;
 

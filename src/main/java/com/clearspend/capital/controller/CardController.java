@@ -23,7 +23,6 @@ import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -87,7 +86,7 @@ public class CardController {
                                 businessLegalName,
                                 CurrencyLimit.toMap(request.getLimits()),
                                 request.getDisabledMccGroups(),
-                                request.getDisabledTransactionChannels(),
+                                request.getDisabledPaymentTypes(),
                                 request.getShippingAddress() != null
                                     ? request.getShippingAddress().toAddress()
                                     : null)
@@ -115,7 +114,7 @@ public class CardController {
         cardId,
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
-        request.getDisabledTransactionChannels());
+        request.getDisabledPaymentTypes());
 
     return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
   }
@@ -138,8 +137,7 @@ public class CardController {
   }
 
   @PostMapping("/export-csv")
-  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request)
-      throws IOException {
+  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request) {
 
     // export must return all records, regardless if pagination is set in "view records" mode
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
