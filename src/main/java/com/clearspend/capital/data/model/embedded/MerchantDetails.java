@@ -27,6 +27,7 @@ public class MerchantDetails {
 
   private Integer merchantCategoryCode;
 
+  @Enumerated(EnumType.STRING)
   private MccGroup merchantCategoryGroup;
 
   // path only
