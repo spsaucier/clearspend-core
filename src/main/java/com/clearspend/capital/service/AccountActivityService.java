@@ -281,7 +281,14 @@ public class AccountActivityService {
         accountActivityRepository.find(CurrentUser.get().businessId(), filterCriteria);
 
     List<String> headerFields =
-        Arrays.asList("Date & Time", "Card", "Merchant", "Amount", "Receipt");
+        Arrays.asList(
+            "Date & Time",
+            "Card",
+            "Cardholder Name",
+            "Merchant Name",
+            "Merchant Category",
+            "Amount",
+            "Status");
 
     ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
     try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT)) {
@@ -292,28 +299,42 @@ public class AccountActivityService {
           .forEach(
               record -> {
                 try {
+                  String lastFour = "";
+                  String cardholderName = "";
+                  String merchantName = "";
+                  String merchantCategory = "";
+                  if (record.getCard() != null) {
+                    if (record.getCard().getLastFour() != null) {
+                      lastFour = "**** " + record.getCard().getLastFour();
+                    }
+                    if (record.getCard().getOwnerFirstName() != null) {
+                      cardholderName = record.getCard().getOwnerFirstName().getEncrypted();
+                    }
+                    if (record.getCard().getOwnerLastName() != null) {
+                      cardholderName += " " + record.getCard().getOwnerLastName().getEncrypted();
+                    }
+                  }
+
+                  if (record.getMerchant() != null) {
+                    if (record.getMerchant().getName() != null) {
+                      merchantName = record.getMerchant().getName();
+                    }
+                    if (record.getMerchant().getType() != null) {
+                      merchantCategory = record.getMerchant().getType().getDescription();
+                    }
+                  }
+
                   csvPrinter.printRecord(
                       Arrays.asList(
                           dateFormatter.format(record.getActivityTime()),
-                          (record.getCard() != null && record.getCard().getLastFour() != null)
-                              ? "**** "
-                                  + record.getCard().getLastFour()
-                                  + " "
-                                  + record.getCard().getOwnerFirstName()
-                                  + " "
-                                  + record.getCard().getOwnerLastName()
-                              : "",
-                          (record.getMerchant() != null && record.getMerchant().getName() != null)
-                              ? record.getMerchant().getName()
-                                  + " "
-                                  + record.getMerchant().getType()
-                              : "",
+                          lastFour,
+                          cardholderName,
+                          merchantName,
+                          merchantCategory,
                           record.getAmount().getCurrency()
                               + " "
-                              + String.format("%.2f", record.getAmount().getAmount())
-                              + " "
-                              + record.getStatus(),
-                          ""));
+                              + String.format("%.2f", record.getAmount().getAmount()),
+                          record.getStatus()));
                 } catch (IOException e) {
                   throw new RuntimeException(e.getMessage());
                 }

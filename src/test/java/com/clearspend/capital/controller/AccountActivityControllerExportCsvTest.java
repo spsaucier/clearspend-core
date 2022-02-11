@@ -93,21 +93,39 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
     String csvResult = response.getContentAsString();
 
     boolean foundHeader = false;
-    boolean foundLine = false;
+    boolean foundCard = false;
+    boolean foundCardholder = false;
+    boolean foundAmount = false;
+    boolean foundStatus = false;
 
     for (String line : csvResult.split("\n")) {
-
       line = line.trim();
       if (StringUtils.isEmpty(line)) {
         continue;
       }
-      if (line.equals("Date & Time,Card,Merchant,Amount,Receipt")) {
+
+      if (line.equals(
+          "Date & Time,Card,Cardholder Name,Merchant Name,Merchant Category,Amount,Status")) {
         foundHeader = true;
-      } else if (line.contains("**** " + card.getLastFour())) {
-        foundLine = true;
+        continue;
+      }
+      if (line.contains(user.getFirstName() + " " + user.getLastName())) {
+        foundCardholder = true;
+      }
+      if (line.contains("**** " + card.getLastFour())) {
+        foundCard = true;
+      }
+      if (line.contains("USD -100.00")) {
+        foundAmount = true;
+      }
+      if (line.contains("PENDING")) {
+        foundStatus = true;
       }
     }
     Assertions.assertTrue(foundHeader);
-    Assertions.assertTrue(foundLine);
+    Assertions.assertTrue(foundCard);
+    Assertions.assertTrue(foundCardholder);
+    Assertions.assertTrue(foundAmount);
+    Assertions.assertTrue(foundStatus);
   }
 }
