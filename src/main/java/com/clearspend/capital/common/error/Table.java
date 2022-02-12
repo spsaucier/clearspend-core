@@ -18,7 +18,8 @@ public enum Table {
   RECEIPT("Receipt"),
   SPEND_LIMIT("SpendLimit"),
   USER("user"),
-  USER_ALLOCATION_ROLE("user_allocation_role");
+  USER_ALLOCATION_ROLE("user_allocation_role"),
+  EXPENSE_CATEGORY("expense_categories");
 
   private final String name;
 

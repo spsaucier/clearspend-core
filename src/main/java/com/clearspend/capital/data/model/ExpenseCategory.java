@@ -20,7 +20,7 @@ import org.hibernate.annotations.DynamicUpdate;
 public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> {
 
   @NonNull
-  @Column(name = "icon_ref", updatable = false)
+  @Column(name = "icon_ref")
   private Integer iconRef;
 
   @NonNull
