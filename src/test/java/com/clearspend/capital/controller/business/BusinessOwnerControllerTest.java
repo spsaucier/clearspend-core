@@ -60,11 +60,6 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   @BeforeEach
   void init() throws Exception {
     if (onboardBusinessRecord == null) {
-      mockServerHelper.expectOtpViaEmail();
-      mockServerHelper.expectOtpViaSms();
-      mockServerHelper.expectEmailVerification("123456");
-      mockServerHelper.expectPhoneVerification("123456");
-
       onboardBusinessRecord = testHelper.onboardBusiness();
     }
   }

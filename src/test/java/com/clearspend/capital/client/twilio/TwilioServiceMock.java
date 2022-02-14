@@ -1,29 +1,29 @@
 package com.clearspend.capital.client.twilio;
 
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
+import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.service.TwilioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.twilio.Twilio;
-import com.twilio.http.TwilioRestClient;
+import com.twilio.rest.verify.v2.service.Verification;
+import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.util.List;
 import lombok.Getter;
-import lombok.SneakyThrows;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.Setter;
 import org.springframework.stereotype.Service;
 
 @Service("twilioService")
 public class TwilioServiceMock extends TwilioService {
 
-  @Value("${mockServerPort}")
-  Integer mockServerPort;
-
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final Verification verification =
+      Verification.fromJson("{\"status\": \"pending\"}", objectMapper);
+  private final VerificationCheck verificationCheck =
+      VerificationCheck.fromJson("{\"valid\": \"true\"}", objectMapper);
 
-  @Getter private String changePasswordId;
+  @Setter @Getter private String lastChangePasswordId;
+  @Setter @Getter private String lastVerificationEmail;
+  @Setter @Getter private String lastVerificationPhone;
+  @Setter @Getter private String lastOtp;
 
   public TwilioServiceMock(
       TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {
@@ -31,38 +31,44 @@ public class TwilioServiceMock extends TwilioService {
   }
 
   @Override
-  protected void initTwilio() {
-    Twilio.destroy();
-    Twilio.init("", "");
-    ProxiedTwilioClientCreator clientCreator =
-        new ProxiedTwilioClientCreator("asdf", "ghjk", "localhost", mockServerPort);
-    TwilioRestClient twilioRestClient = clientCreator.getClient();
-    Twilio.setRestClient(twilioRestClient);
+  protected void initTwilio() {}
 
-    this.sendGrid = Mockito.mock(SendGrid.class);
+  @Override
+  protected void destroyTwilio() {}
+
+  @Override
+  public void sendResetPasswordEmail(String to, String changePasswordId) {
+    this.lastChangePasswordId = changePasswordId;
   }
 
-  @SneakyThrows
-  public void expectResetPassword() {
-    Mockito.doAnswer(
-            invocation -> {
-              Request request = invocation.getArgument(0, Request.class);
-              //    objectMapper.readValue(request.getBody(), )
-              changePasswordId =
-                  (String)
-                      objectMapper
-                          .readValue(request.getBody(), Mail.class)
-                          .getPersonalization()
-                          .get(0)
-                          .getDynamicTemplateData()
-                          .get("changePasswordId");
-              return new Response();
-            })
-        .when(sendGrid)
-        .api(Mockito.any());
+  @Override
+  public void sendNotificationEmail(String to, String messageText) {}
+
+  @Override
+  public void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {}
+
+  @Override
+  public void sendKybKycPassEmail(String to, String firstName) {}
+
+  @Override
+  public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {}
+
+  @Override
+  public Verification sendVerificationSms(String to) {
+    lastVerificationPhone = to;
+    return verification;
   }
 
-  public SendGrid getSendGrid() {
-    return this.sendGrid;
+  @Override
+  public Verification sendVerificationEmail(String to, BusinessProspect businessProspect) {
+    lastVerificationEmail = to;
+    return verification;
+  }
+
+  @Override
+  public VerificationCheck checkVerification(String subject, String challenge) {
+    lastOtp = challenge;
+
+    return verificationCheck;
   }
 }

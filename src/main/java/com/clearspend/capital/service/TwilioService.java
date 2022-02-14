@@ -13,7 +13,6 @@ import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
 import com.sendgrid.helpers.mail.objects.Personalization;
 import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
@@ -56,14 +55,6 @@ public class TwilioService {
   @PreDestroy
   protected void destroyTwilio() {
     Twilio.destroy();
-  }
-
-  public Message sendNotificationSms(String to, String messageText) {
-    return Message.creator(
-            new com.twilio.type.PhoneNumber(to),
-            twilioProperties.getMessageServiceId(),
-            messageText)
-        .create();
   }
 
   public void sendNotificationEmail(String to, String messageText) {

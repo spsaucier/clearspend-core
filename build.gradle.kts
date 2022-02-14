@@ -68,6 +68,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-json")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
@@ -76,7 +77,6 @@ dependencies {
     implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.4")
     runtimeOnly("org.postgresql:postgresql")
 
     //other 3rd party libs
@@ -92,11 +92,18 @@ dependencies {
 
     //client libs
     implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java
-    implementation("com.google.cloud:google-cloud-nio:0.123.17")
-    implementation("com.sendgrid:sendgrid-java:4.7.5")
+    implementation("com.google.cloud:google-cloud-nio:0.123.20")
+    implementation("com.sendgrid:sendgrid-java:4.8.3")
     implementation("com.plaid:plaid-java:9.0.0")
-    implementation("com.twilio.sdk:twilio:8.20.0")
+    implementation("com.twilio.sdk:twilio:8.25.1")
     implementation("io.fusionauth:fusionauth-java-client:1.30.2")
+
+    //snyk fixes (revisit if fixed in the next spring boot version > 2.6.3)
+    constraints {
+        implementation("org.postgresql:postgresql:24.3.2") {
+            because("https://security.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONDATATYPE-173759")
+        }
+    }
 
     //monitoring support
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
@@ -108,7 +115,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("com.github.javafaker:javafaker:1.0.1")
-    testImplementation("org.mock-server:mockserver-netty:5.11.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
     //test containers

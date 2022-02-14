@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,9 +14,7 @@ import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,17 +26,10 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final TwilioServiceMock twilioServiceMock;
 
-  @AfterEach
-  void resetSendGridMock() {
-    Mockito.reset(twilioServiceMock.getSendGrid());
-  }
-
   @Test
   @SneakyThrows
   void forgotPassword() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-
-    twilioServiceMock.expectResetPassword();
 
     ForgotPasswordRequest forgotPasswordRequest =
         new ForgotPasswordRequest(createBusinessRecord.email());
@@ -52,7 +44,7 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
         .getResponse();
 
     ResetPasswordRequest resetPasswordRequest =
-        new ResetPasswordRequest(twilioServiceMock.getChangePasswordId(), "Qwerty12345!");
+        new ResetPasswordRequest(twilioServiceMock.getLastChangePasswordId(), "Qwerty12345!");
     body = objectMapper.writeValueAsString(resetPasswordRequest);
 
     mvc.perform(
@@ -67,6 +59,10 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void emailDoesNotExist() {
+    String changePasswordId =
+        "This value should not be recreated as a result of sending reset password email";
+    twilioServiceMock.setLastChangePasswordId(changePasswordId);
+
     ForgotPasswordRequest forgotPasswordRequest =
         new ForgotPasswordRequest("no_user_with_this_email@nowhere.io");
     String body = objectMapper.writeValueAsString(forgotPasswordRequest);
@@ -79,15 +75,13 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    Mockito.verifyNoInteractions(twilioServiceMock.getSendGrid());
+    assertThat(twilioServiceMock.getLastChangePasswordId()).isEqualTo(changePasswordId);
   }
 
   @Test
   @SneakyThrows
   void invalidChangePasswordId() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-
-    twilioServiceMock.expectResetPassword();
 
     ForgotPasswordRequest forgotPasswordRequest =
         new ForgotPasswordRequest(createBusinessRecord.email());
@@ -102,7 +96,8 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
         .getResponse();
 
     ResetPasswordRequest resetPasswordRequest =
-        new ResetPasswordRequest(twilioServiceMock.getChangePasswordId() + "123", "Qwerty12345!");
+        new ResetPasswordRequest(
+            twilioServiceMock.getLastChangePasswordId() + "123", "Qwerty12345!");
     body = objectMapper.writeValueAsString(resetPasswordRequest);
 
     mvc.perform(

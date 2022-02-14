@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectData;
@@ -28,6 +29,7 @@ import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -43,12 +45,18 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   private final FusionAuthService fusionAuthService;
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessRepository businessRepository;
+  private final TwilioServiceMock twilioServiceMock;
+
+  @BeforeEach
+  void beforeEach() {
+    twilioServiceMock.setLastChangePasswordId("NONE");
+    twilioServiceMock.setLastVerificationEmail("NONE");
+    twilioServiceMock.setLastChangePasswordId("NONE");
+    twilioServiceMock.setLastOtp("NONE");
+  }
 
   @Test
   void createBusinessProspect_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
 
@@ -58,15 +66,12 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     log.info("{}", dbRecord);
     assertThat(dbRecord).isEqualTo(businessProspect);
     assertThat(dbRecord.isEmailVerified()).isFalse();
-    mockServerHelper.verifyEmailVerificationCalled(1);
+    assertThat(dbRecord.getEmail().getEncrypted())
+        .isEqualTo(twilioServiceMock.getLastVerificationEmail());
   }
 
   @Test
   void validateBusinessProspectEmail_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectEmailVerification("123456");
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
@@ -76,7 +81,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     BusinessProspect dbRecord =
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
-    mockServerHelper.verifyEmailVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("123456");
 
     testHelper.testBusinessProspectState(
         dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.EMAIL_VERIFIED);
@@ -84,12 +89,6 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void setBusinessProspectPhone_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("234567890");
-    mockServerHelper.expectPhoneVerification("766255906");
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
@@ -100,7 +99,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isFalse();
-    mockServerHelper.verifyEmailVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("234567890");
 
     testHelper.testBusinessProspectState(
         dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.EMAIL_VERIFIED);
@@ -108,12 +107,6 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void validateBusinessProspectPhone_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
@@ -124,6 +117,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isFalse();
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
 
     // when
     testHelper.setBusinessProspectPhone(businessProspect.getId());
@@ -134,8 +128,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isTrue();
-    mockServerHelper.verifyEmailVerificationCalled(1);
-    mockServerHelper.verifyPhoneVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
 
     testHelper.testBusinessProspectState(
         dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.MOBILE_VERIFIED);
@@ -160,12 +153,6 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void setBusinessProspectPassword_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
@@ -176,6 +163,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isFalse();
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
 
     // when
     testHelper.setBusinessProspectPhone(businessProspect.getId());
@@ -186,8 +174,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isTrue();
-    mockServerHelper.verifyEmailVerificationCalled(1);
-    mockServerHelper.verifyPhoneVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
 
     // when
     setBusinessProspectPassword(businessProspect.getId());
@@ -206,12 +193,6 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void convertBusinessProspect_success() throws Exception {
-    // given
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
-
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
@@ -222,6 +203,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isFalse();
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
 
     // when
     testHelper.setBusinessProspectPhone(businessProspect.getId());
@@ -232,8 +214,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
     assertThat(dbRecord.isEmailVerified()).isTrue();
     assertThat(dbRecord.isPhoneVerified()).isTrue();
-    mockServerHelper.verifyEmailVerificationCalled(1);
-    mockServerHelper.verifyPhoneVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
 
     // when
     String password = setBusinessProspectPassword(businessProspect.getId());
@@ -264,18 +245,16 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void convertBusinessProspect_HardFail() throws Exception {
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
+
     testHelper.setBusinessProspectPhone(businessProspect.getId());
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, businessProspect.getId(), "766255906");
-    mockServerHelper.verifyEmailVerificationCalled(1);
-    mockServerHelper.verifyPhoneVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
+
     String password = setBusinessProspectPassword(businessProspect.getId());
     testHelper.login(businessProspect.getEmail().getEncrypted(), password);
 
@@ -293,18 +272,16 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void convertBusinessProspect_SoftFail() throws Exception {
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
+
     testHelper.setBusinessProspectPhone(businessProspect.getId());
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, businessProspect.getId(), "766255906");
-    mockServerHelper.verifyEmailVerificationCalled(1);
-    mockServerHelper.verifyPhoneVerificationCalled(1);
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
+
     String password = setBusinessProspectPassword(businessProspect.getId());
     testHelper.login(businessProspect.getEmail().getEncrypted(), password);
 
@@ -322,18 +299,15 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
 
   @Test
   void getBusinessProspect_success() throws Exception {
-    mockServerHelper.expectOtpViaEmail();
-    mockServerHelper.expectOtpViaSms();
-    mockServerHelper.expectEmailVerification("777888999");
-    mockServerHelper.expectPhoneVerification("766255906");
-
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "777888999");
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("777888999");
 
     testHelper.setBusinessProspectPhone(businessProspect.getId());
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.PHONE, businessProspect.getId(), "766255906");
+    assertThat(twilioServiceMock.getLastOtp()).isEqualTo("766255906");
 
     String password = setBusinessProspectPassword(businessProspect.getId());
 
