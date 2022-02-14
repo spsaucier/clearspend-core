@@ -57,7 +57,7 @@ public class User extends TypedMutable<UserId> {
 
   @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash email;
 
-  @NonNull @Sensitive @Embedded private NullableEncryptedStringWithHash phone;
+  @Sensitive @Embedded private NullableEncryptedStringWithHash phone;
 
   // link to FusionAuth
   private String subjectRef;

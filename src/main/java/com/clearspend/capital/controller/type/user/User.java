@@ -4,10 +4,12 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
@@ -44,7 +46,6 @@ public class User {
   private String email;
 
   @JsonProperty("phone")
-  @NonNull
   private String phone;
 
   @JsonProperty("archived")
@@ -61,7 +62,10 @@ public class User {
     this.lastName = user.getLastName().getEncrypted();
     this.address = new Address(user.getAddress());
     this.email = user.getEmail().getEncrypted();
-    this.phone = user.getPhone().getEncrypted();
+    this.phone =
+        Optional.ofNullable(user.getPhone())
+            .map(NullableEncryptedStringWithHash::getEncrypted)
+            .orElse(null);
     this.archived = user.isArchived();
   }
 

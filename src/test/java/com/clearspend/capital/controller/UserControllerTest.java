@@ -250,7 +250,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().lastName(),
             new Address(testHelper.generateEntityAddress()),
             faker.internet().emailAddress(),
-            faker.phoneNumber().phoneNumber(),
+            null,
             true);
 
     String body = objectMapper.writeValueAsString(List.of(userRecord1, userRecord2));
@@ -298,7 +298,7 @@ class UserControllerTest extends BaseCapitalTest {
         "Last",
         testHelper.generateEntityAddress(),
         faker.internet().emailAddress(),
-        faker.phoneNumber().phoneNumber());
+        null); // CAP-519 null phone (which can happen from bulk onboarding) caused NPE
 
     MockHttpServletResponse response =
         mvc.perform(get("/users/list").contentType("application/json").cookie(authCookie))

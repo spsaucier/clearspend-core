@@ -66,8 +66,10 @@ public class UserService {
             type,
             new RequiredEncryptedStringWithHash(firstName),
             new RequiredEncryptedStringWithHash(lastName),
-            new RequiredEncryptedStringWithHash(email),
-            new NullableEncryptedStringWithHash(phone));
+            new RequiredEncryptedStringWithHash(email));
+    if (phone != null) {
+      user.setPhone(new NullableEncryptedStringWithHash(phone));
+    }
     user.setId(userId);
     user.setAddress(address);
     user.setSubjectRef(subjectRef);
@@ -94,8 +96,10 @@ public class UserService {
             type,
             new RequiredEncryptedStringWithHash(firstName),
             new RequiredEncryptedStringWithHash(lastName),
-            new RequiredEncryptedStringWithHash(email),
-            new NullableEncryptedStringWithHash(phone));
+            new RequiredEncryptedStringWithHash(email));
+    if (phone != null) {
+      user.setPhone(new NullableEncryptedStringWithHash(phone));
+    }
     user.setAddress(address);
 
     user = userRepository.save(user);

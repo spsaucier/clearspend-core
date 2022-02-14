@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
@@ -63,6 +64,7 @@ import com.stripe.param.issuing.CardholderCreateParams.Billing;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
@@ -237,7 +239,10 @@ public class StripeClient {
                     .formatted(
                         user.getFirstName().getEncrypted(), user.getLastName().getEncrypted()))
             .setEmail(user.getEmail().getEncrypted())
-            .setPhoneNumber(user.getPhone().getEncrypted())
+            .setPhoneNumber(
+                Optional.ofNullable(user.getPhone())
+                    .map(NullableEncryptedStringWithHash::getEncrypted)
+                    .orElse(null))
             .setStatus(CardholderCreateParams.Status.ACTIVE)
             .setType(CardholderCreateParams.Type.INDIVIDUAL)
             .setBilling(
