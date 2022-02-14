@@ -22,14 +22,26 @@ import com.github.javafaker.Faker;
 import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
+import com.stripe.model.Event;
 import com.stripe.model.Person;
 import com.stripe.model.SetupIntent;
+import com.stripe.model.StripeObject;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
+import com.stripe.net.ApiResource;
+import java.io.FileReader;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -43,11 +55,67 @@ public class StripeMockClient extends StripeClient {
   @Autowired private BusinessRepository businessRepository;
   @Autowired private BusinessOwnerRepository businessOwnerRepository;
 
+  public static final String PERSON = "person";
+
+  private final Resource successOnboarding;
+  private final Resource accountAddRepresentative;
+  private final Resource addressNotCorrectForPerson;
+  private final Resource addressNotCorrectForPersonAndDocumentRequired;
+  private final Resource createAccount;
+  private final Resource createAccount_secondEventFromStripe;
+  private final Resource invalidAccountAddressInvalidPersonAddressRequirePersonDocument;
+  private final Resource secondEventAfterSuccessUploadRequiredDocuments;
+  private final Resource uploadRequiredDocuments;
+  private final Resource ownersAndRepresentativeProvided;
+  private final Resource ownersAndRepresentativeProvided_event2fromStripe;
+
   public StripeMockClient(
       StripeProperties stripeProperties,
       ObjectMapper objectMapper,
-      WebClient stripeTreasuryWebClient) {
+      WebClient stripeTreasuryWebClient,
+      @Value("classpath:stripeResponses/successOnboarding.json") @NonNull
+          Resource successOnboarding,
+      @Value("classpath:stripeResponses/accountAddRepresentative.json") @NonNull
+          Resource accountAddRepresentative,
+      @Value("classpath:stripeResponses/addressNotCorrectForPerson.json") @NonNull
+          Resource addressNotCorrectForPerson,
+      @Value("classpath:stripeResponses/addressNotCorrectForPersonAndDocumentRequired.json")
+          @NonNull
+          Resource addressNotCorrectForPersonAndDocumentRequired,
+      @Value("classpath:stripeResponses/createAccount.json") @NonNull Resource createAccount,
+      @Value("classpath:stripeResponses/createAccount_secondEventFromStripe.json") @NonNull
+          Resource createAccount_secondEventFromStripe,
+      @Value(
+              "classpath:stripeResponses/invalidAccountAddressInvalidPersonAddressRequirePersonDocument.json")
+          @NonNull
+          Resource invalidAccountAddressInvalidPersonAddressRequirePersonDocument,
+      @Value("classpath:stripeResponses/secondEventAfterSuccessUploadRequiredDocuments.json")
+          @NonNull
+          Resource secondEventAfterSuccessUploadRequiredDocuments,
+      @Value("classpath:stripeResponses/uploadRequiredDocuments.json") @NonNull
+          Resource uploadRequiredDocuments,
+      @Value("classpath:stripeResponses/ownersAndRepresentativeProvided.json") @NonNull
+          Resource ownersAndRepresentativeProvided,
+      @Value("classpath:stripeResponses/ownersAndRepresentativeProvided_event2fromStripe.json")
+          @NonNull
+          Resource ownersAndRepresentativeProvided_event2fromStripe) {
     super(stripeProperties, objectMapper, stripeTreasuryWebClient);
+
+    this.createAccount = createAccount;
+    this.createAccount_secondEventFromStripe = createAccount_secondEventFromStripe;
+    this.uploadRequiredDocuments = uploadRequiredDocuments;
+    this.secondEventAfterSuccessUploadRequiredDocuments =
+        secondEventAfterSuccessUploadRequiredDocuments;
+    this.accountAddRepresentative = accountAddRepresentative;
+    this.addressNotCorrectForPerson = addressNotCorrectForPerson;
+    this.addressNotCorrectForPersonAndDocumentRequired =
+        addressNotCorrectForPersonAndDocumentRequired;
+    this.invalidAccountAddressInvalidPersonAddressRequirePersonDocument =
+        invalidAccountAddressInvalidPersonAddressRequirePersonDocument;
+    this.ownersAndRepresentativeProvided = ownersAndRepresentativeProvided;
+    this.ownersAndRepresentativeProvided_event2fromStripe =
+        ownersAndRepresentativeProvided_event2fromStripe;
+    this.successOnboarding = successOnboarding;
   }
 
   @Override
@@ -167,6 +235,48 @@ public class StripeMockClient extends StripeClient {
   }
 
   public Account retrieveAccount(String stripeAccountId) {
+    Optional<Business> byStripeAccountReference =
+        businessRepository.findByStripeAccountReference(stripeAccountId);
+    if (byStripeAccountReference.isPresent()) {
+      Business business = byStripeAccountReference.get();
+      String legalName = business.getLegalName();
+      switch (legalName) {
+        case "createAccount" -> {
+          return getAccountFromJson(createAccount, business);
+        }
+        case "createAccount_secondEventFromStripe" -> {
+          return getAccountFromJson(createAccount_secondEventFromStripe, business);
+        }
+        case "uploadRequiredDocuments" -> {
+          return getAccountFromJson(uploadRequiredDocuments, business);
+        }
+        case "secondEventAfterSuccessUploadRequiredDocuments" -> {
+          return getAccountFromJson(secondEventAfterSuccessUploadRequiredDocuments, business);
+        }
+        case "accountAddRepresentative" -> {
+          return getAccountFromJson(accountAddRepresentative, business);
+        }
+        case "addressNotCorrectForPerson" -> {
+          return getAccountFromJson(addressNotCorrectForPerson, business);
+        }
+        case "addressNotCorrectForPersonAndDocumentRequired" -> {
+          return getAccountFromJson(addressNotCorrectForPersonAndDocumentRequired, business);
+        }
+        case "invalidAccountAddressInvalidPersonAddressRequirePersonDocument" -> {
+          return getAccountFromJson(
+              invalidAccountAddressInvalidPersonAddressRequirePersonDocument, business);
+        }
+        case "ownersAndRepresentativeProvided" -> {
+          return getAccountFromJson(ownersAndRepresentativeProvided, business);
+        }
+        case "ownersAndRepresentativeProvided_event2fromStripe" -> {
+          return getAccountFromJson(ownersAndRepresentativeProvided_event2fromStripe, business);
+        }
+        case "successOnboarding" -> {
+          return getAccountFromJson(successOnboarding, business);
+        }
+      }
+    }
     return generateEntityWithId(Account.class);
   }
 
@@ -299,5 +409,41 @@ public class StripeMockClient extends StripeClient {
         amount,
         description,
         statementDescriptor);
+  }
+
+  @SneakyThrows
+  private Account getAccountFromJson(Resource resource, Business business) {
+    Event event = ApiResource.GSON.fromJson(new FileReader(resource.getFile()), Event.class);
+    StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
+    Account account = (Account) stripeObject;
+
+    Requirements accountRequirements = account.getRequirements();
+    if (accountRequirements == null) {
+      return account;
+    }
+    Set<String> accountRequiredFields = new HashSet<>();
+    accountRequiredFields.addAll(accountRequirements.getCurrentlyDue());
+    accountRequiredFields.addAll(accountRequirements.getEventuallyDue());
+    accountRequiredFields.addAll(accountRequirements.getPastDue());
+    accountRequiredFields.addAll(accountRequirements.getPendingVerification());
+
+    Set<String> personList =
+        accountRequiredFields.stream()
+            .filter(accountRequiredField -> accountRequiredField.startsWith(PERSON))
+            .map(accountRequiredField -> accountRequiredField.split("_")[1].split("\\.")[0])
+            .collect(Collectors.toSet());
+
+    List<BusinessOwner> byBusinessId = businessOwnerRepository.findByBusinessId(business.getId());
+    AtomicInteger i = new AtomicInteger();
+    personList.forEach(
+        personL -> {
+          if (byBusinessId.size() > i.get()) {
+            BusinessOwner businessOwner = byBusinessId.get(i.getAndIncrement());
+            businessOwner.setStripePersonReference(personL);
+            businessOwnerRepository.save(businessOwner);
+          }
+        });
+
+    return account;
   }
 }

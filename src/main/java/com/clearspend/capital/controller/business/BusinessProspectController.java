@@ -11,6 +11,8 @@ import com.clearspend.capital.controller.type.business.prospect.CreateBusinessPr
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
+import com.clearspend.capital.controller.type.business.prospect.ValidateIdentifierResponse;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
@@ -48,7 +50,8 @@ public class BusinessProspectController {
             request.getLastName(),
             request.getBusinessType(),
             request.getRelationshipOwner(),
-            CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE,
+            request.getBusinessType() != BusinessType.INDIVIDUAL
+                && CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE,
             request.getRelationshipExecutive(),
             request.getRelationshipDirector(),
             request.getEmail(),
@@ -59,7 +62,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
-  private void validateBusinessProspectIdentifier(
+  private ValidateIdentifierResponse validateBusinessProspectIdentifier(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -68,7 +71,7 @@ public class BusinessProspectController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ValidateBusinessProspectIdentifierRequest request) {
-    businessProspectService.validateBusinessProspectIdentifier(
+    return businessProspectService.validateBusinessProspectIdentifier(
         businessProspectId,
         request.getIdentifierType(),
         request.getOtp(),
@@ -117,7 +120,7 @@ public class BusinessProspectController {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
             request.toConvertBusinessProspect(businessProspectId),
-            httpServletRequest.getRemoteHost());
+            httpServletRequest.getRemoteAddr());
 
     return new ConvertBusinessProspectResponse(
         new Business(convertBusinessProspectRecord.business()),

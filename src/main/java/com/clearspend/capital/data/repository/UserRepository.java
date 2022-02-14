@@ -27,4 +27,6 @@ public interface UserRepository
       RequiredEncryptedStringWithHash userLastName);
 
   List<User> findByBusinessIdAndIdIn(TypedId<BusinessId> businessId, List<TypedId<UserId>> ids);
+
+  Optional<User> findByEmailHash(byte[] emailHash);
 }

@@ -51,6 +51,8 @@ public class BusinessService {
   public static final String REPRESENTATIVE_DETAILS_REQUIRED = "representative";
   public static final String PERSON = "person";
   public static final String DOCUMENT = "document";
+  public static final String COMPANY_OWNERS_PROVIDED = "company.owners_provided";
+  public static final String COMPANY = "company";
 
   private final BusinessRepository businessRepository;
 
@@ -226,6 +228,33 @@ public class BusinessService {
               && requirements.getCurrentlyDue().stream()
                   .anyMatch(
                       s ->
+                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
+                              || (s.startsWith(COMPANY) && !s.endsWith(COMPANY_OWNERS_PROVIDED))))
+          || (!CollectionUtils.isEmpty(requirements.getPastDue())
+              && requirements.getPastDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
+                              || (s.startsWith(COMPANY) && !s.endsWith(COMPANY_OWNERS_PROVIDED))))
+          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
+              && requirements.getEventuallyDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
+                              || (s.startsWith(COMPANY)
+                                  && !s.endsWith(COMPANY_OWNERS_PROVIDED))))) {
+        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
+          updateBusiness(
+              business.getId(),
+              null,
+              BusinessOnboardingStep.BUSINESS,
+              KnowYourBusinessStatus.PENDING);
+          // TODO:gb: send email for additional information required about business
+        }
+      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+              && requirements.getCurrentlyDue().stream()
+                  .anyMatch(
+                      s ->
                           s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
                               || s.startsWith(OWNERS_DETAILS_REQUIRED)
                               || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))
@@ -250,23 +279,6 @@ public class BusinessService {
               BusinessOnboardingStep.BUSINESS_OWNERS,
               KnowYourBusinessStatus.PENDING);
           // TODO:gb: send email for additional information required about business owners
-        }
-      } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))
-          || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream()
-                  .anyMatch(s -> s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
-          updateBusiness(
-              business.getId(),
-              null,
-              BusinessOnboardingStep.BUSINESS,
-              KnowYourBusinessStatus.PENDING);
-          // TODO:gb: send email for additional information required about business
         }
       } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
               && requirements.getCurrentlyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
@@ -349,6 +361,13 @@ public class BusinessService {
     return businessRepository
         .findById(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, mustExist, businessId));
+  }
+
+  public Business retrieveBusinessByEmployerIdentificationNumber(
+      String employerIdentificationNumber) {
+    return businessRepository
+        .findByEmployerIdentificationNumber(employerIdentificationNumber)
+        .orElse(null);
   }
 
   public Business retrieveBusinessByStripeFinancialAccount(String stripeFinancialAccountRef) {

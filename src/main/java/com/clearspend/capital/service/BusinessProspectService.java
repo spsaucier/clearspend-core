@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.clearspend.capital.controller.type.business.prospect.ValidateIdentifierResponse;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
@@ -41,6 +42,7 @@ public class BusinessProspectService {
   private final BusinessProspectRepository businessProspectRepository;
 
   private final BusinessService businessService;
+  private final UserService userService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
   private final FusionAuthService fusionAuthService;
@@ -142,27 +144,31 @@ public class BusinessProspectService {
   }
 
   @Transactional
-  public BusinessProspect validateBusinessProspectIdentifier(
+  public ValidateIdentifierResponse validateBusinessProspectIdentifier(
       TypedId<BusinessProspectId> businessProspectId,
       IdentifierType identifierType,
       String otp,
       Boolean live) {
     BusinessProspect businessProspect = retrieveBusinessProspectById(businessProspectId);
+    boolean emailExists = false;
 
     switch (identifierType) {
       case EMAIL -> {
         if (businessProspect.isEmailVerified()) {
           throw new InvalidRequestException("email already validated");
         }
+        String email = businessProspect.getEmail().getEncrypted();
         if (Boolean.TRUE.equals(live)) {
-          VerificationCheck verificationCheck =
-              twilioService.checkVerification(businessProspect.getEmail().getEncrypted(), otp);
+          VerificationCheck verificationCheck = twilioService.checkVerification(email, otp);
           log.debug("verificationCheck: {}", verificationCheck);
           if (Boolean.FALSE.equals(verificationCheck.getValid())) {
             throw new InvalidRequestException("email otp does not match");
           }
         }
         businessProspect.setEmailVerified(true);
+        emailExists =
+            businessOwnerService.retrieveBusinessOwnerByEmail(email).isPresent()
+                || userService.retrieveUserByEmail(email).isPresent();
       }
       case PHONE -> {
         if (!businessProspect.isEmailVerified()) {
@@ -183,7 +189,9 @@ public class BusinessProspectService {
       }
     }
 
-    return businessProspectRepository.save(businessProspect);
+    businessProspectRepository.save(businessProspect);
+
+    return new ValidateIdentifierResponse(emailExists);
   }
 
   @Transactional
@@ -227,6 +235,12 @@ public class BusinessProspectService {
 
     if (StringUtils.isBlank(businessProspect.getSubjectRef())) {
       throw new InvalidRequestException("password has not been set");
+    }
+
+    if (businessService.retrieveBusinessByEmployerIdentificationNumber(
+            convertBusinessProspect.getEmployerIdentificationNumber())
+        != null) {
+      throw new InvalidRequestException("Duplicate employer identification number.");
     }
 
     // When a business is created, a corespondent into stripe will be created too

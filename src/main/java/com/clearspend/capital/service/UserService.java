@@ -7,6 +7,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
@@ -183,6 +184,10 @@ public class UserService {
 
   public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {
     return userRepository.findByBusinessId(businessId);
+  }
+
+  public Optional<User> retrieveUserByEmail(String email) {
+    return userRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
   public List<User> retrieveUsersByUsernameForBusiness(

@@ -6,6 +6,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
+import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
@@ -169,6 +170,10 @@ public class BusinessOwnerService {
     return businessOwnerRepository
         .findById(businessOwnerId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
+  }
+
+  public Optional<BusinessOwner> retrieveBusinessOwnerByEmail(String email) {
+    return businessOwnerRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
   public Optional<BusinessOwner> retrieveBusinessOwnerNotThrowingException(

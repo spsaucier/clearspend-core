@@ -6,8 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
-import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
-import com.clearspend.capital.data.repository.business.BusinessRepository;
 import java.nio.charset.StandardCharsets;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +22,9 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
-public class ApplicationReviewControllerTest extends BaseCapitalTest {
+class ApplicationReviewControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
-
-  private final BusinessProspectRepository businessProspectRepository;
-  private final BusinessRepository businessRepository;
 
   @Test
   @SneakyThrows
