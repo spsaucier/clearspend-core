@@ -1,7 +1,6 @@
 package com.clearspend.capital.client.codat;
 
-import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.codat.ConnectionStatusResponse;
 import com.clearspend.capital.controller.type.codat.CreateCompanyResponse;
 import com.clearspend.capital.controller.type.codat.CreateIntegrationResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -62,8 +61,31 @@ public class CodatClient {
     }
   }
 
-  public CreateCompanyResponse createCodatCompanyForBusiness(
-      TypedId<BusinessId> businessId, String legalName) {
+  private <T> T getFromCodatApi(String uri, Class<T> clazz) {
+    T result = null;
+    try {
+      result =
+          codatWebClient
+              .get()
+              .uri(uri)
+              .exchangeToMono(
+                  response -> {
+                    if (response.statusCode().equals(HttpStatus.OK)) {
+                      return response.bodyToMono(clazz);
+                    }
+
+                    return response.createException().flatMap(Mono::error);
+                  })
+              .block();
+      return result;
+    } finally {
+      if (log.isInfoEnabled()) {
+        log.info("Calling Codat [%s] method. \n Response: %s".formatted(uri, result));
+      }
+    }
+  }
+
+  public CreateCompanyResponse createCodatCompanyForBusiness(String legalName) {
 
     Map<String, String> formData = Map.of("name", legalName);
 
@@ -81,5 +103,10 @@ public class CodatClient {
         String.format("/companies/%s/connections", companyId),
         "\"quickbooksonlinesandbox\"",
         CreateIntegrationResponse.class);
+  }
+
+  public ConnectionStatusResponse getConnectionsForBusiness(String companyId) {
+    return getFromCodatApi(
+        "/companies/%s/connections?page=1".formatted(companyId), ConnectionStatusResponse.class);
   }
 }

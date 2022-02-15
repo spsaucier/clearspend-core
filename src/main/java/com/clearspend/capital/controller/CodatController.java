@@ -18,4 +18,9 @@ public class CodatController {
   private String getQboConnectionLink() {
     return codatService.createQboConnectionForBusiness();
   }
+
+  @GetMapping("/connection-status")
+  private Boolean getIntegrationConnectionStatus() {
+    return codatService.getIntegrationConnectionStatus();
+  }
 }
