@@ -9,6 +9,7 @@ import lombok.ToString;
 @Getter
 @ToString
 @RequiredArgsConstructor
+@SuppressWarnings("SameNameButDifferent")
 public class PlaidError {
 
   @JsonProperty("error_code")

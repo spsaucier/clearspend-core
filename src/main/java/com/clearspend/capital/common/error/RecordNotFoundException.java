@@ -1,11 +1,7 @@
 package com.clearspend.capital.common.error;
 
 import java.util.Arrays;
-import lombok.Getter;
-import lombok.ToString;
 
-@Getter
-@ToString(callSuper = true)
 public class RecordNotFoundException extends RuntimeException {
 
   private boolean printStackTrace = true;

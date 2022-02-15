@@ -11,7 +11,6 @@ import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
-import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -62,7 +61,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord();
-      CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
+      testHelper.setCurrentUser(createBusinessRecord.user());
       childAllocation =
           testHelper.createAllocation(
               business.getId(),

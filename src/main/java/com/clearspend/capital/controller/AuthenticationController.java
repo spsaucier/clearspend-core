@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -61,6 +62,9 @@ public class AuthenticationController {
         fusionAuthService.getApplication().jwtConfiguration.refreshTokenTimeToLiveInMinutes;
   }
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
   public ResponseEntity<User> login(
       @Validated @RequestBody LoginRequest request, HttpServletRequest httpServletRequest)

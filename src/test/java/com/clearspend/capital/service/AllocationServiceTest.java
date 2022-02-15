@@ -7,7 +7,6 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
@@ -32,7 +31,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   void createAllocationCheckPermissions() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     CreateUpdateUserRecord peon = testHelper.createUser(createBusinessRecord.business());
-    CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
     assertDoesNotThrow(
         () ->
             allocationService.createAllocation(
@@ -45,12 +44,12 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 Collections.emptySet(),
                 Collections.emptySet()));
 
-    CurrentUserSwitcher.setCurrentUser(createBusinessRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
     rolesAndPermissionsService.createUserAllocationRole(
         peon.user(), createBusinessRecord.allocationRecord().allocation(), "View only");
     entityManager.flush();
 
-    CurrentUserSwitcher.setCurrentUser(peon.user());
+    testHelper.setCurrentUser(peon.user());
     assertThrows(
         AccessDeniedException.class,
         () ->

@@ -16,6 +16,8 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,6 +47,36 @@ public class UserService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
   private final StripeClient stripeClient;
+
+  /**
+   * If the user has not already been assigned a subjectRef, generate a random password and send
+   * them a welcome email to get started. This happens in some scenarios assigning a card to a user.
+   * If there is already a subjectRef on the User, this call has no effect.
+   *
+   * @param user The user to welcome
+   * @return The new User object reloaded from the repository, or the same if unchanged
+   */
+  @FusionAuthUserCreator(
+      reviewer = "jscarbor",
+      explanation = "User Service manages the sync between users and FA users")
+  User sendWelcomeEmailIfNeeded(User user) {
+    if (StringUtils.isEmpty(user.getSubjectRef())) {
+      String password = PasswordUtil.generatePassword();
+      user.setSubjectRef(
+          fusionAuthService
+              .createUser(
+                  user.getBusinessId(), user.getId(), user.getEmail().getEncrypted(), password)
+              .toString());
+
+      user = userRepository.save(user);
+
+      twilioService.sendNotificationEmail(
+          user.getEmail().getEncrypted(),
+          String.format(
+              "Welcome to ClearSpend! A card was assigned to you. Your password is %s", password));
+    }
+    return user;
+  }
 
   public record CreateUpdateUserRecord(User user, String password) {}
 
@@ -108,6 +140,9 @@ public class UserService {
   }
 
   /** Creates a new user with a corresponding fusion auth user, currently only for tests */
+  @FusionAuthUserCreator(
+      reviewer = "jscarbor",
+      explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
   public CreateUpdateUserRecord createUserAndFusionAuthRecord(
       TypedId<BusinessId> businessId,
@@ -132,6 +167,9 @@ public class UserService {
     return new CreateUpdateUserRecord(user, password);
   }
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
   public CreateUpdateUserRecord updateUser(
       TypedId<BusinessId> businessId,

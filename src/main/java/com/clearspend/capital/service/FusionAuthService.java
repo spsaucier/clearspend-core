@@ -43,6 +43,34 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FusionAuthService {
 
+  public @interface FusionAuthUserCreator {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
+  public @interface FusionAuthUserModifier {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
+  public @interface FusionAuthUserAccessor {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
+  @interface FusionAuthRoleAdministrator {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
   private static final String BUSINESS_ID = "businessId";
   private static final String CAPITAL_USER_ID = "capitalUserId";
   private static final String USER_TYPE = "userType";
@@ -55,9 +83,10 @@ public class FusionAuthService {
 
   @RestrictedApi(
       explanation = "This should only ever be used by UserService",
-      allowedOnPath =
-          "/(test/.*)|main/java/com/clearspend/capital/(?:service/UserService.java|controller/nonprod/.*)",
-      link = "")
+      allowedOnPath = "test/.*",
+      allowlistAnnotations = {FusionAuthUserCreator.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public UUID createBusinessOwner(
       TypedId<BusinessId> businessId,
       TypedId<BusinessOwnerId> businessOwnerId,
@@ -69,9 +98,10 @@ public class FusionAuthService {
 
   @RestrictedApi(
       explanation = "This should only ever be used by UserService",
-      allowedOnPath =
-          "/(test/.*)|main/java/com/clearspend/capital/(?:service/UserService.java|controller/nonprod/.*)",
-      link = "")
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {FusionAuthUserCreator.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public UUID createUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, String email, String password) {
     return createUser(businessId, userId.toUuid(), email, password, UserType.EMPLOYEE);
@@ -121,9 +151,10 @@ public class FusionAuthService {
 
   @RestrictedApi(
       explanation = "This should only ever be used by RolesAndPermissionsService",
-      allowedOnPath =
-          "/(test/.*)|main/java/com/clearspend/capital/service/RolesAndPermissionsService.java",
-      link = "")
+      allowedOnPath = "test/.*",
+      allowlistAnnotations = {FusionAuthUserAccessor.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public Set<String> getUserRoles(UUID fusionAuthUserId) {
     return getUserRoles(getUser(fusionAuthUserId));
   }
@@ -146,9 +177,10 @@ public class FusionAuthService {
    */
   @RestrictedApi(
       explanation = "This should only ever be used by RolesAndPermissionsService",
-      allowedOnPath =
-          "/(test/.*)|main/java/com/clearspend/capital/service/RolesAndPermissionsService.java",
-      link = "")
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {FusionAuthRoleAdministrator.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public boolean changeUserRole(
       @NonNull RoleChange change, @NonNull String fusionAuthUserId, @NonNull String changingRole) {
     User user = getUser(UUID.fromString(fusionAuthUserId));
@@ -161,10 +193,13 @@ public class FusionAuthService {
     return true;
   }
 
+  @FusionAuthUserAccessor(reviewer = "jscarbor", explanation = "Keeping roles consistent")
   @RestrictedApi(
       explanation = "This should only ever be used by UserService",
-      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/service/UserService.java",
-      link = "")
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {FusionAuthUserModifier.class, FusionAuthUserCreator.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public UUID updateUser(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<UserId> userId,

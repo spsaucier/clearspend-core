@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -172,7 +173,7 @@ class UserControllerTest extends BaseCapitalTest {
         .filter(u -> u.getType() == UserType.EMPLOYEE)
         .filter(u -> u.getId().equals(createdUserId))
         .findFirst()
-        .orElseThrow(); // failure here indicates created user was not found
+        .ifPresentOrElse((f) -> {}, () -> fail("User was not found"));
 
     log.info(response.getContentAsString());
   }

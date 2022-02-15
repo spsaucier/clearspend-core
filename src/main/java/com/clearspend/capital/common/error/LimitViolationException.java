@@ -7,12 +7,8 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
-import lombok.Getter;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-@Getter
-@ToString(callSuper = true)
 @Slf4j
 public class LimitViolationException extends RuntimeException {
 

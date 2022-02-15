@@ -19,8 +19,10 @@ import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeMessagesRecord;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.twilio.rest.verify.v2.service.Verification;
@@ -194,6 +196,9 @@ public class BusinessProspectService {
     return new ValidateIdentifierResponse(emailExists);
   }
 
+  @FusionAuthUserCreator(
+      reviewer = "jscarbor",
+      explanation = "Beginning of onboarding, no User object exists yet, so not UserService")
   @Transactional
   public BusinessProspect setBusinessProspectPassword(
       TypedId<BusinessProspectId> businessProspectId, String password, Boolean live) {
@@ -227,6 +232,9 @@ public class BusinessProspectService {
       User user,
       List<String> stripeAccountCreationMessages) {}
 
+  @CreatesRootAllocation(
+      reviewer = "jscarbor",
+      explanation = "This is where the business gets created")
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
       ConvertBusinessProspect convertBusinessProspect, String tosAcceptanceIp) {

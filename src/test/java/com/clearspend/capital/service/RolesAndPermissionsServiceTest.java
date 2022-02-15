@@ -18,6 +18,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUser;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
@@ -26,6 +27,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -466,6 +468,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
       }
   */
 
+  @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "for testing")
+  @FusionAuthRoleAdministrator(reviewer = "jscarbor", explanation = "For testing")
   @Test
   void testNoMixingAndMatchingBusinessesExceptBookkeepers() {
     // Bootstrap an admin user for this test
@@ -702,7 +706,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
   private void setCurrentUser(User user) {
     flush();
-    CurrentUserSwitcher.setCurrentUser(user, rolesAndPermissionsService.getGlobalRoles(user));
+    testHelper.setCurrentUser(user);
   }
 
   private void flush() {

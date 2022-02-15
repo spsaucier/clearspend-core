@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class StripeDirectHandler {
+
   private final NetworkMessageService networkMessageService;
   private final StripeProperties stripeProperties;
 
@@ -37,7 +38,7 @@ public class StripeDirectHandler {
     switch (stripeEventType) {
       case ISSUING_AUTHORIZATION_REQUEST -> {
         Authorization auth = (Authorization) stripeObject;
-        if (auth.getStatus() != "pending") {
+        if (!"pending".equals(auth.getStatus())) {
           // TODO(kuchlein): handle "closed" and "reversed" cases
         }
         common =

@@ -35,6 +35,7 @@ import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.crypto.utils.CurrentUserSwitcher;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUser;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -69,6 +70,7 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
@@ -77,6 +79,8 @@ import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -373,6 +377,10 @@ public class TestHelper {
    *
    * @param user the user who will be taking subsequent
    */
+  @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "For testing")
+  @FusionAuthUserAccessor(
+      reviewer = "jscarbor",
+      explanation = "to look up roles that would normally come on the JWT")
   public void setCurrentUser(@NonNull User user) {
     CurrentUserSwitcher.setCurrentUser(
         user, fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef())));
@@ -548,6 +556,9 @@ public class TestHelper {
     transactionLimitRepository.deleteByBusinessId(businessId);
   }
 
+  @FusionAuthUserCreator(
+      reviewer = "jscarbor",
+      explanation = "for mimicking the onboarding process")
   public BusinessOwnerAndUserRecord createBusinessOwner(
       TypedId<BusinessId> businessId, String email, String password) {
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
@@ -714,6 +725,10 @@ public class TestHelper {
     return createBusiness(businessId, 0L);
   }
 
+  @CreatesRootAllocation(
+      reviewer = "jscarbor",
+      explanation =
+          "For testing, mimics the onboarding process - but could this call convertBusinessProspect?")
   @SneakyThrows
   public CreateBusinessRecord createBusiness(TypedId<BusinessId> businessId, Long openingBalance) {
     String email = generateEmail();

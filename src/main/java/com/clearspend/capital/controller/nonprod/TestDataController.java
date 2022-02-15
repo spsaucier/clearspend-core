@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResp
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements.KycDocuments;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUser;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -35,7 +36,6 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
-import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -134,7 +134,6 @@ public class TestDataController {
   private final ApplicationReviewService applicationReviewService;
 
   private final AllocationRepository allocationRepository;
-  private final AccountActivityRepository accountActivityRepository;
   private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
@@ -170,6 +169,7 @@ public class TestDataController {
             .toList());
   }
 
+  @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "This class is for testing only")
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
   private CreateTestDataResponse createTestData() {
 
@@ -615,11 +615,10 @@ public class TestDataController {
     Faker faker = Faker.instance();
 
     Cardholder cardholder = new Cardholder();
-    if (card.getShippingAddress() != null) {
-      Billing billing = new Billing();
-      billing.setAddress(card.getShippingAddress().toStripeAddress());
-      cardholder.setBilling(billing);
-    }
+
+    Billing billing = new Billing();
+    billing.setAddress(card.getShippingAddress().toStripeAddress());
+    cardholder.setBilling(billing);
     cardholder.setCreated(user.getCreated().toEpochSecond());
     cardholder.setEmail(user.getEmail().getEncrypted());
     cardholder.setId("stripe_" + user.getId().toString());
@@ -628,9 +627,7 @@ public class TestDataController {
     individual.setLastName(user.getLastName().getEncrypted());
     cardholder.setIndividual(individual);
     cardholder.setName(card.getCardLine3());
-    if (user.getPhone() != null) {
-      cardholder.setPhoneNumber(user.getPhone().getEncrypted());
-    }
+    cardholder.setPhoneNumber(user.getPhone().getEncrypted());
     cardholder.setStatus("active");
     cardholder.setType("individual");
 

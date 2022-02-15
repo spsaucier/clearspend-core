@@ -2,10 +2,8 @@ package com.clearspend.capital.common.error;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import lombok.Getter;
-import lombok.ToString;
 
 @Getter
-@ToString(callSuper = true)
 public class IdMismatchException extends RuntimeException {
 
   public <T> IdMismatchException(IdType idType, TypedId<T> expected, TypedId<T> have) {

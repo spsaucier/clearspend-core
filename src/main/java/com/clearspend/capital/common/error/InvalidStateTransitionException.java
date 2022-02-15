@@ -1,10 +1,5 @@
 package com.clearspend.capital.common.error;
 
-import lombok.Getter;
-import lombok.ToString;
-
-@Getter
-@ToString(callSuper = true)
 public class InvalidStateTransitionException extends RuntimeException {
 
   public <T extends Enum<T>> InvalidStateTransitionException(Enum<T> from, Enum<T> to) {

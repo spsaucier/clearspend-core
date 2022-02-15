@@ -1,6 +1,5 @@
 package com.clearspend.capital.client.stripe.webhook.controller;
 
-import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -54,7 +53,6 @@ import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
-import com.github.javafaker.Faker;
 import com.google.gson.Gson;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.RequestHistory;
@@ -82,7 +80,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;
-  private final Faker faker = new Faker();
 
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AccountRepository accountRepository;
@@ -114,7 +111,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord().allocation();
-      setCurrentUser(createBusinessRecord.user());
+      testHelper.setCurrentUser(createBusinessRecord.user());
       businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
       testHelper.transactBankAccount(
           businessBankAccount, BankAccountTransactType.DEPOSIT, BigDecimal.valueOf(100L), false);

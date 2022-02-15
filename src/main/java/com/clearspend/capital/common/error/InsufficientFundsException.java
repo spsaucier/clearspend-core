@@ -4,15 +4,12 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-@Getter
-@ToString(callSuper = true)
 @Slf4j
 public class InsufficientFundsException extends RuntimeException {
+
   public <T> InsufficientFundsException(
       Account account, AdjustmentType adjustmentType, @NonNull Amount amount) {
     super(

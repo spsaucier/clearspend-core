@@ -19,10 +19,13 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.GlobalRole;
+import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
@@ -81,7 +84,7 @@ public class RolesAndPermissionsService {
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
 
     prepareUserAllocationRoleChange(grantee, allocation, newRole)
-        .map(
+        .ifPresent(
             r -> {
               throw new InvalidRequestException("Already created");
             });
@@ -117,6 +120,9 @@ public class RolesAndPermissionsService {
         .orElseThrow(() -> new InvalidRequestException("Does not exist."));
   }
 
+  @FusionAuthUserAccessor(
+      reviewer = "jscarbor",
+      explanation = "This is the service for managing user roles")
   private Optional<com.clearspend.capital.data.model.security.UserAllocationRole>
       prepareUserAllocationRoleChange(User grantee, Allocation allocation, String newRole) {
     entityManager.flush();
@@ -266,18 +272,15 @@ public class RolesAndPermissionsService {
   public void deleteUserAllocationRole(Allocation allocation, @NonNull User grantee) {
     Optional<com.clearspend.capital.data.model.security.UserAllocationRole> doomedRecord =
         prepareUserAllocationRoleChange(grantee, allocation, null);
-    doomedRecord
-        .map(
-            r -> {
-              userAllocationRoleRepository.delete(r);
-              entityManager.flush();
-              return r;
-            })
-        .orElseThrow(
+    UserAllocationRole record =
+        doomedRecord.orElseThrow(
             () ->
                 new RecordNotFoundException(
                     Table.USER_ALLOCATION_ROLE,
                     Map.of("granteeUserId", grantee.getId(), "allocationId", allocation.getId())));
+
+    userAllocationRoleRepository.delete(record);
+    userAllocationRoleRepository.flush();
   }
 
   /**
@@ -344,15 +347,24 @@ public class RolesAndPermissionsService {
     throw new ForbiddenException();
   }
 
+  @FusionAuthRoleAdministrator(
+      reviewer = "jscarbor",
+      explanation = "This is the service for managing user roles")
   public boolean grantGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
     return grantGlobalRole(entityManager.getReference(User.class, grantee), role);
   }
 
+  @FusionAuthRoleAdministrator(
+      reviewer = "jscarbor",
+      explanation = "This is the service for managing user roles")
   public boolean grantGlobalRole(@NonNull User grantee, @NonNull String role) {
     authorizeGlobalRoleChange(role);
     return fusionAuthService.changeUserRole(RoleChange.GRANT, grantee.getSubjectRef(), role);
   }
 
+  @FusionAuthRoleAdministrator(
+      reviewer = "jscarbor",
+      explanation = "This is the service for managing user roles")
   public boolean revokeGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
     authorizeGlobalRoleChange(role);
     return fusionAuthService.changeUserRole(
@@ -380,6 +392,9 @@ public class RolesAndPermissionsService {
     return getGlobalRoles(entityManager.getReference(User.class, userId));
   }
 
+  @FusionAuthUserAccessor(
+      reviewer = "jscarbor",
+      explanation = "This is the service for managing user roles")
   public Set<String> getGlobalRoles(@NonNull User user) {
     return fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef()));
   }

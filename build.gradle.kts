@@ -1,3 +1,5 @@
+import net.ltgt.gradle.errorprone.errorprone
+
 plugins {
     java
     id("org.springframework.boot") version "2.6.3"
@@ -5,6 +7,7 @@ plugins {
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
     id("com.diffplug.spotless") version "5.16.0"
+    id("net.ltgt.errorprone") version "2.0.2"
 }
 
 group = "com.clearspend.capital"
@@ -20,7 +23,7 @@ java {
 }
 
 jib {
-    from.image = "openjdk:17-jdk-alpine3.13"
+    from.image = "openjdk:17.0.2-jdk-oracle"
     to.image = "capital/core"
 }
 
@@ -36,6 +39,18 @@ snyk {
     setAutoUpdate(true)
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    //options.annotationProcessorPath = configurations.errorprone
+    options.errorprone.disableWarningsInGeneratedCode.set(true)
+    options.errorprone.excludedPaths.set(".*/build/gen.*/.*")
+    options.errorprone {
+        disable("ParameterName") // https://github.com/google/error-prone/issues/1250
+        disable("UnusedVariable") // https://github.com/google/error-prone/issues/1250
+        disable("SameNameButDifferent") // https://github.com/google/error-prone/issues/2982
+    }
+}
+
 tasks {
     compileJava {
         options.compilerArgs.add("-parameters")
@@ -43,7 +58,7 @@ tasks {
 
     test {
         jvmArgs(
-                "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
+            "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
         )
         useJUnitPlatform()
         testLogging {
@@ -62,6 +77,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testCompileOnly("org.projectlombok:lombok")
+    errorprone("com.google.errorprone:error_prone_core:2.11.0")
 
     //spring boot starters
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -114,7 +130,7 @@ dependencies {
     // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("com.github.javafaker:javafaker:1.0.1")
+    testImplementation("com.github.javafaker:javafaker:1.0.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
     //test containers

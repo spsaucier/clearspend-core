@@ -71,11 +71,19 @@ public class AllocationService {
   public record AllocationDetailsRecord(
       Allocation allocation, Account account, User owner, TransactionLimit transactionLimit) {}
 
+  public @interface CreatesRootAllocation {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
   @RestrictedApi(
       explanation = "This only happens during onboarding",
-      link = "",
-      allowedOnPath =
-          "/(test/.*)|(?:main/java/com/clearspend/capital/(?:controller/nonprod/TestDataController|service/BusinessProspectService).java)")
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "test/.*",
+      allowlistAnnotations = {CreatesRootAllocation.class})
   @Transactional
   public AllocationRecord createRootAllocation(
       TypedId<BusinessId> businessId, User user, String name) {
@@ -279,8 +287,7 @@ public class AllocationService {
     return searchBusinessAllocations(business, null);
   }
 
-  @PreAuthorize(
-      "hasPermission(#business.getId(), 'BusinessId', 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
+  @PreAuthorize("hasPermission(#business, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> searchBusinessAllocations(Business business, String name) {
     List<Allocation> allocations =
         StringUtils.isEmpty(name)

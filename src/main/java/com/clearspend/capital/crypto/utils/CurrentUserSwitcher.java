@@ -40,6 +40,13 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class CurrentUserSwitcher implements AuthenticationProvider {
 
+  public @interface SwitchesCurrentUser {
+
+    public String reviewer();
+
+    public String explanation();
+  }
+
   // Typically you'd pull the private and public keys from some secrets manager.
   private static String privateKey =
       "-----BEGIN RSA PRIVATE KEY-----\n"
@@ -83,8 +90,9 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
   @RestrictedApi(
       explanation = "This is only for manipulating the CurrentUser during testing.",
       link =
-          "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
-      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {SwitchesCurrentUser.class})
   public static void setCurrentUser(CurrentUser user) {
     SecurityContextHolder.getContext().setAuthentication(mockAuthentication(user));
   }
@@ -118,8 +126,10 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
   @RestrictedApi(
       explanation = "This is only for manipulating the CurrentUser during testing.",
       link =
-          "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
-      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "test/.*",
+      allowlistAnnotations = {SwitchesCurrentUser.class})
+  @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "delegation")
   public static void setCurrentUser(User user, Set<String> globalRoles) {
     setCurrentUser(
         new CurrentUser(user.getType(), user.getId(), user.getBusinessId(), globalRoles));
@@ -128,8 +138,10 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
   @RestrictedApi(
       explanation = "This is only for manipulating the CurrentUser during testing.",
       link =
-          "https://errorprone.info/api/latest/com/google/errorprone/annotations/RestrictedApi.html",
-      allowedOnPath = "/(test/.*)|main/java/com/clearspend/capital/TestDataController.java")
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {SwitchesCurrentUser.class})
+  @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "delegation")
   public static void setCurrentUser(User user) {
     setCurrentUser(user, Collections.emptySet());
   }
