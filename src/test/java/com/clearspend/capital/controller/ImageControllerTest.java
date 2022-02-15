@@ -71,5 +71,6 @@ class ImageControllerTest extends BaseCapitalTest {
             .getResponse();
 
     log.info("response: {}", response.getContentAsString());
+    log.info("contentType: {}", response.getContentType());
   }
 }

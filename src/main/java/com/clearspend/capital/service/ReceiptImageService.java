@@ -23,7 +23,8 @@ public class ReceiptImageService {
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<ReceiptId> receiptId,
-      byte[] receiptFile)
+      byte[] receiptFile,
+      String contentType)
       throws IOException {
 
     String receiptPath = getReceiptPath(businessId, userId, receiptId);

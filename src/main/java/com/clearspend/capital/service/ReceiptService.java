@@ -33,13 +33,18 @@ public class ReceiptService {
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
   public Receipt storeReceiptImage(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, byte[] receiptFile)
+      TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
+      byte[] receiptFile,
+      String contentType)
       throws IOException {
     Receipt receipt = new Receipt(businessId, userId);
 
     String receiptPath = getReceiptPath(businessId, userId, receipt.getId());
-    receiptImageService.storeReceiptImage(businessId, userId, receipt.getId(), receiptFile);
+    receiptImageService.storeReceiptImage(
+        businessId, userId, receipt.getId(), receiptFile, contentType);
     receipt.setPath(receiptPath);
+    receipt.setContentType(contentType);
 
     return receiptRepository.save(receipt);
   }

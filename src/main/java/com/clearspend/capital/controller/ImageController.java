@@ -10,17 +10,13 @@ import io.swagger.annotations.ApiParam;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 // NOTE: This controller is served from a different set of pods from our regular production traffic
@@ -41,7 +37,10 @@ public class ImageController {
     CurrentUser currentUser = CurrentUser.get();
     final Receipt receipt =
         receiptService.storeReceiptImage(
-            currentUser.businessId(), currentUser.userId(), receiptFile.getBytes());
+            currentUser.businessId(),
+            currentUser.userId(),
+            receiptFile.getBytes(),
+            receiptFile.getContentType());
     log.info("Stored receipt: {}", receipt);
     return new CreateReceiptResponse(receipt.getId());
   }
@@ -63,6 +62,14 @@ public class ImageController {
     headers.add("Expires", "0");
 
     CurrentUser currentUser = CurrentUser.get();
+    Receipt receipt = receiptService.getReceipt(currentUser.businessId(), receiptId);
+    if (StringUtils.isNotEmpty(receipt.getContentType())) {
+      headers.add(
+          HttpHeaders.CONTENT_TYPE,
+          String.valueOf(MediaType.parseMediaType(receipt.getContentType())));
+      log.info("headers: {}", headers);
+    }
+
     byte[] receiptImage = receiptService.getReceiptImage(currentUser.businessId(), receiptId);
     log.info(
         "returning image: businessIid {}, userId {}, receiptId {} ({} bytes)",
@@ -74,7 +81,10 @@ public class ImageController {
     return ResponseEntity.ok()
         .headers(headers)
         .contentLength(receiptImage.length)
-        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .contentType(
+            StringUtils.isNotEmpty(receipt.getContentType())
+                ? MediaType.parseMediaType(receipt.getContentType())
+                : MediaType.APPLICATION_OCTET_STREAM)
         .body(new ByteArrayResource(receiptImage));
   }
 }

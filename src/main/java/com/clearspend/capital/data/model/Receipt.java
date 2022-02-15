@@ -58,4 +58,6 @@ public class Receipt extends TypedMutable<ReceiptId> {
   @Embedded private Amount amount;
 
   private String path;
+
+  private String contentType;
 }

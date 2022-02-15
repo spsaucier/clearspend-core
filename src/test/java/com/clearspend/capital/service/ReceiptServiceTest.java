@@ -27,6 +27,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
 
   private CreateUpdateUserRecord userRecord;
   private String fileContents;
+  private String contentType;
   private Receipt receipt;
   private Receipt unlinkedReceipt;
 
@@ -37,11 +38,13 @@ class ReceiptServiceTest extends BaseCapitalTest {
       Business business = testHelper.createBusiness().business();
       userRecord = testHelper.createUser(business);
       fileContents = "Hello world " + UUID.randomUUID();
+      contentType = "application/pdf";
       receipt =
           receiptService.storeReceiptImage(
               userRecord.user().getBusinessId(),
               userRecord.user().getId(),
-              fileContents.getBytes());
+              fileContents.getBytes(),
+              contentType);
       unlinkedReceipt = new Receipt(userRecord.user().getBusinessId(), userRecord.user().getId());
       unlinkedReceipt.setPath(
           receiptImageService.getReceiptPath(
@@ -55,7 +58,10 @@ class ReceiptServiceTest extends BaseCapitalTest {
   void storeReceiptImage_success() {
     Receipt receipt =
         receiptService.storeReceiptImage(
-            userRecord.user().getBusinessId(), userRecord.user().getId(), fileContents.getBytes());
+            userRecord.user().getBusinessId(),
+            userRecord.user().getId(),
+            fileContents.getBytes(),
+            contentType);
     assertThat(receipt).isNotNull();
   }
 
