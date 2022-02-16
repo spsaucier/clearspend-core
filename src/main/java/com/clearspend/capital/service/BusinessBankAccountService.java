@@ -416,10 +416,6 @@ public class BusinessBankAccountService {
               .createFinancialAccount(business.getId(), business.getStripeAccountReference())
               .getId());
     }
-    stripeClient.enableFinancialAccountInboundTransfer(
-        business.getId(),
-        business.getStripeAccountReference(),
-        business.getStripeFinancialAccountRef());
 
     businessBankAccountRepository.save(businessBankAccount);
   }

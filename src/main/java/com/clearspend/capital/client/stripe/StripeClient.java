@@ -65,7 +65,6 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -529,6 +528,7 @@ public class StripeClient {
     MultiValueMapBuilder multiValueMapBuilder =
         MultiValueMapBuilder.builder()
             .add("supported_currencies[]", "usd")
+            .add("features[inbound_transfers][ach][requested]", "true")
             .add("features[card_issuing][requested]", "true")
             .add("features[deposit_insurance][requested]", "true")
             .add("features[financial_addresses][aba][requested]", "true")
@@ -548,25 +548,6 @@ public class StripeClient {
         multiValueMapBuilder.build(),
         accountExternalRef,
         "fa" + businessId,
-        FinancialAccount.class);
-  }
-
-  public FinancialAccount enableFinancialAccountInboundTransfer(
-      TypedId<BusinessId> businessId, String accountExternalRef, String stripeFinancialAccountRef) {
-    MultiValueMapBuilder multiValueMapBuilder =
-        MultiValueMapBuilder.builder()
-            .add("features[inbound_transfers][ach][requested]", "true")
-            .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
-
-    if (testMode) {
-      multiValueMapBuilder.add("testmode_bypass_requirements", "true");
-    }
-
-    return callStripeBetaApi(
-        "/financial_accounts/%s".formatted(stripeFinancialAccountRef),
-        multiValueMapBuilder.build(),
-        accountExternalRef,
-        "fa" + UUID.randomUUID(),
         FinancialAccount.class);
   }
 
