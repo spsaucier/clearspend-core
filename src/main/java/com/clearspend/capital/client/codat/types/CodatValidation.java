@@ -1,14 +1,15 @@
-package com.clearspend.capital.controller.type.codat;
+package com.clearspend.capital.client.codat.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class CreateIntegrationResponse {
-  @JsonProperty("linkUrl")
+public class CodatValidation {
+  @JsonProperty("errors")
   @NonNull
-  private String linkUrl;
+  private List<CodatError> errors;
 }

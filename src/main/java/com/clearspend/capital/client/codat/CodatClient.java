@@ -1,11 +1,28 @@
 package com.clearspend.capital.client.codat;
 
-import com.clearspend.capital.controller.type.codat.ConnectionStatusResponse;
-import com.clearspend.capital.controller.type.codat.CreateCompanyResponse;
-import com.clearspend.capital.controller.type.codat.CreateIntegrationResponse;
+import com.clearspend.capital.client.codat.types.CodatAccount;
+import com.clearspend.capital.client.codat.types.CodatAccountRef;
+import com.clearspend.capital.client.codat.types.CodatAllocation;
+import com.clearspend.capital.client.codat.types.CodatContactRef;
+import com.clearspend.capital.client.codat.types.CodatLineItem;
+import com.clearspend.capital.client.codat.types.CodatPaymentAllocation;
+import com.clearspend.capital.client.codat.types.CodatPaymentAllocationPayment;
+import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
+import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
+import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
+import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
+import com.clearspend.capital.client.codat.types.DirectCostRequest;
+import com.clearspend.capital.client.codat.types.GetAccountsResponse;
+import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
@@ -56,7 +73,7 @@ public class CodatClient {
         }
         log.info(
             "Calling Codat [%s] method. \n Request: %s, \n Response: %s"
-                .formatted(uri, requestStr != null ? requestStr : parameters.toString(), result));
+                .formatted(uri, requestStr != null ? requestStr : parameters, result));
       }
     }
   }
@@ -85,7 +102,8 @@ public class CodatClient {
     }
   }
 
-  public CreateCompanyResponse createCodatCompanyForBusiness(String legalName) {
+  public CreateCompanyResponse createCodatCompanyForBusiness(String legalName)
+      throws RuntimeException {
 
     Map<String, String> formData = Map.of("name", legalName);
 
@@ -93,20 +111,91 @@ public class CodatClient {
       return callCodatApi(
           "/companies", objectMapper.writeValueAsString(formData), CreateCompanyResponse.class);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
-      return null;
+      throw new RuntimeException("Failed to create company in Codat", e);
     }
   }
 
-  public CreateIntegrationResponse createQboConnectionForBusiness(String companyId) {
+  public CreateIntegrationResponse createQboConnectionForBusiness(String companyRef) {
     return callCodatApi(
-        String.format("/companies/%s/connections", companyId),
+        String.format("/companies/%s/connections", companyRef),
         "\"quickbooksonlinesandbox\"",
         CreateIntegrationResponse.class);
   }
 
-  public ConnectionStatusResponse getConnectionsForBusiness(String companyId) {
+  public ConnectionStatusResponse getConnectionsForBusiness(String companyRef) {
     return getFromCodatApi(
-        "/companies/%s/connections?page=1".formatted(companyId), ConnectionStatusResponse.class);
+        "/companies/%s/connections?page=1".formatted(companyRef), ConnectionStatusResponse.class);
+  }
+
+  public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
+    return getFromCodatApi(
+        "/companies/%s/data/suppliers".formatted(companyRef), GetSuppliersResponse.class);
+  }
+
+  public GetAccountsResponse getAccountsForBusiness(String companyRef) {
+    return getFromCodatApi(
+        "/companies/%s/data/accounts?page=1".formatted(companyRef), GetAccountsResponse.class);
+  }
+
+  public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
+      String companyRef, String connectionId, AccountActivity transaction, String currency)
+      throws RuntimeException {
+    // TODO verify that these values save properly in Codat as expense categories are added
+
+    // TODO Remove hardcoded/placeholder values. (The CodatAccountRefs and CodatContactRef)
+
+    GetSuppliersResponse suppliersResponse = getSuppliersForBusiness(companyRef);
+
+    // TODO there could be more than one page of accounts. Fix when we filter for the actual
+    // account.
+    GetAccountsResponse accountsResponse = getAccountsForBusiness(companyRef);
+    Optional<CodatAccount> checkingAccount =
+        accountsResponse.getResults().stream()
+            .filter(account -> account.getName().equalsIgnoreCase("checking"))
+            .findFirst();
+
+    if (checkingAccount.isEmpty()) {
+      return null;
+    }
+
+    List<CodatPaymentAllocation> paymentAllocations = new ArrayList<>();
+    paymentAllocations.add(
+        new CodatPaymentAllocation(
+            new CodatPaymentAllocationPayment(
+                "",
+                new CodatAccountRef(checkingAccount.get().getId(), checkingAccount.get().getName()),
+                currency),
+            new CodatAllocation(currency, transaction.getActivityTime())));
+
+    List<CodatLineItem> lineItems = new ArrayList<>();
+    lineItems.add(
+        new CodatLineItem(
+            1,
+            1,
+            new CodatAccountRef(checkingAccount.get().getId(), checkingAccount.get().getName()),
+            new CodatTaxRateRef("NON")));
+
+    CodatContactRef contactRef =
+        new CodatContactRef(suppliersResponse.getResults().get(0).getId(), "suppliers");
+
+    DirectCostRequest request =
+        new DirectCostRequest(
+            LocalDate.now(),
+            currency,
+            transaction.getAmount().getAmount().doubleValue(),
+            0,
+            transaction.getAmount().getAmount().doubleValue(),
+            paymentAllocations,
+            lineItems,
+            contactRef);
+
+    try {
+      return callCodatApi(
+          String.format("/companies/%s/connections/%s/push/directCosts", companyRef, connectionId),
+          objectMapper.writeValueAsString(request),
+          CodatSyncDirectCostResponse.class);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to sync transaction to Codat", e);
+    }
   }
 }

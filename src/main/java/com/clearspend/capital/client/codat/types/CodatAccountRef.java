@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller.type.codat;
+package com.clearspend.capital.client.codat.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -7,8 +7,12 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class CreateCompanyResponse {
+public class CodatAccountRef {
   @JsonProperty("id")
   @NonNull
   private String id;
+
+  @JsonProperty("name")
+  @NonNull
+  private String name;
 }

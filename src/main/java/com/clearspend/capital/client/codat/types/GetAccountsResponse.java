@@ -1,4 +1,4 @@
-package com.clearspend.capital.controller.type.codat;
+package com.clearspend.capital.client.codat.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class ConnectionStatusResponse {
+public class GetAccountsResponse {
   @JsonProperty("results")
   @NonNull
-  private List<ConnectionStatus> results;
+  private List<CodatAccount> results;
 }
