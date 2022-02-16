@@ -233,7 +233,8 @@ public class AllocationService {
     transactionLimitService.updateAllocationSpendLimit(
         businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
 
-    ensureAllocationOwnerPermissions(entityManager.getReference(User.class, ownerId), allocation);
+    ensureAllocationOwnerPermissions(
+        entityManager.getReference(User.class, allocation.getOwnerId()), allocation);
   }
 
   @PreAuthorize("hasPermission(#businessId, 'BusinessId', 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
