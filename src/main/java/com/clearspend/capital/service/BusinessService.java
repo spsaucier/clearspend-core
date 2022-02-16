@@ -105,6 +105,11 @@ public class BusinessService {
     // stripe account creation
     com.stripe.model.Account account = stripeClient.createAccount(business);
     business.setStripeAccountReference(account.getId());
+    // TODO hot-fix start the financial account creation process
+    business.setStripeFinancialAccountRef(
+        stripeClient
+            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
+            .getId());
 
     businessLimitService.initializeBusinessLimit(business.getId());
 
