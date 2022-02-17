@@ -23,12 +23,12 @@ public class CodatController {
 
   @PostMapping("/quickbooks-online")
   private String createQuickbooksOnlineConnectionLink() throws RuntimeException {
-    return codatService.createQboConnectionForBusiness();
+    return codatService.createQboConnectionForBusiness(CurrentUser.getBusinessId());
   }
 
   @GetMapping("/connection-status")
   private Boolean getIntegrationConnectionStatus() {
-    return codatService.getIntegrationConnectionStatus();
+    return codatService.getIntegrationConnectionStatus(CurrentUser.getBusinessId());
   }
 
   @PostMapping("/sync/{accountActivityId}")

@@ -15,6 +15,7 @@ import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,19 +27,24 @@ public class CodatService {
   private final AccountActivityService accountActivityService;
   private final BusinessService businessService;
 
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public void createCodatCompanyForBusiness(TypedId<BusinessId> businessId, String legalName)
       throws RuntimeException {
     CreateCompanyResponse response = codatClient.createCodatCompanyForBusiness(legalName);
     businessService.updateBusinessWithCodatCompanyRef(businessId, response.getId());
   }
 
-  public String getQboIntegrationLink(String companyId) {
+  private String getQboIntegrationLink(String companyId) {
     CreateIntegrationResponse response = codatClient.createQboConnectionForBusiness(companyId);
     return response.getLinkUrl();
   }
 
-  public String createQboConnectionForBusiness() throws RuntimeException {
-    Business currentBusiness = businessService.retrieveBusiness(CurrentUser.getBusinessId(), true);
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
+      throws RuntimeException {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
     if (currentBusiness.getCodatCompanyRef() == null) {
       createCodatCompanyForBusiness(currentBusiness.getId(), currentBusiness.getLegalName());
@@ -47,8 +53,10 @@ public class CodatService {
     return getQboIntegrationLink(currentBusiness.getCodatCompanyRef());
   }
 
-  public Boolean getIntegrationConnectionStatus() {
-    Business currentBusiness = businessService.retrieveBusiness(CurrentUser.getBusinessId(), true);
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public Boolean getIntegrationConnectionStatus(TypedId<BusinessId> businessId) {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
     if (currentBusiness.getCodatCompanyRef() == null) {
       return false;
@@ -60,6 +68,8 @@ public class CodatService {
         .anyMatch(connection -> connection.getStatus().equals("Linked"));
   }
 
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
       throws RuntimeException {
