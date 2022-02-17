@@ -16,7 +16,6 @@ import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
-import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.Person;
 import com.stripe.model.Person.Requirements;
@@ -96,17 +95,14 @@ public class BusinessOwnerService {
         businessOwner ->
             createOrUpdateStripePersonReference(businessOwner, stripeAccountReference));
 
-    Account updatedAccount =
-        stripeClient.triggerAccountValidationAfterPersonsProvided(
-            stripeAccountReference,
-            businessOwnersData.stream()
-                .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
-                .anyMatch(BusinessOwnerData::getRelationshipOwner),
-            businessOwnersData.stream()
-                .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
-                .anyMatch(BusinessOwnerData::getRelationshipExecutive));
-
-    businessService.updateBusinessAccordingToStripeAccountRequirements(business, updatedAccount);
+    stripeClient.triggerAccountValidationAfterPersonsProvided(
+        stripeAccountReference,
+        businessOwnersData.stream()
+            .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
+            .anyMatch(BusinessOwnerData::getRelationshipOwner),
+        businessOwnersData.stream()
+            .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
+            .anyMatch(BusinessOwnerData::getRelationshipExecutive));
 
     return businessOwners;
   }

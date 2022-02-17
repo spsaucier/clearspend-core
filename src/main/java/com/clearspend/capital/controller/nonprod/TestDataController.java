@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.nonprod;
 
 import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
+import static java.util.stream.Collectors.joining;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
@@ -89,7 +90,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -713,10 +715,30 @@ public class TestDataController {
   }
 
   private String getValidPhoneNumber() {
-    String phone = faker.phoneNumber().cellPhone();
-    while (!Pattern.matches("^(\\+\\d{1,2}\\s)?\\(?\\d{3}\\)?[\\s.-]\\d{3}[\\s.-]\\d{4}$", phone)) {
-      phone = faker.phoneNumber().cellPhone();
+    return PhoneUtil.randomPhoneNumber();
+  }
+
+  private static final class PhoneUtil {
+
+    private PhoneUtil() {}
+
+    // https://en.wikipedia.org/wiki/List_of_North_American_Numbering_Plan_area_codes#United_States
+    private static final int[] areaCodes = {
+      212, 315, 332, 347, 516, 518, 585, 607, 631, 646, 680, 716, 718, 838, 845, 914, 917, 929, 934,
+      210, 214, 254, 281, 325, 346, 361, 409, 430, 432, 469, 512, 682, 713, 726, 737, 806, 817, 830,
+      832, 903, 915, 936, 940, 956, 972, 979
+    };
+
+    public static String randomPhoneNumber() {
+      ThreadLocalRandom random = ThreadLocalRandom.current();
+      return String.format(
+          "+1%d%d%s",
+          areaCodes[random.nextInt(areaCodes.length)],
+          random.nextInt(2, 10),
+          IntStream.generate(() -> random.nextInt(10))
+              .limit(6)
+              .mapToObj(Integer::toString)
+              .collect(joining()));
     }
-    return phone;
   }
 }
