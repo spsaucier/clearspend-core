@@ -5,6 +5,7 @@ import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
@@ -101,4 +102,8 @@ public class Business extends TypedMutable<BusinessId> {
 
   // identifier of the company within Codat for this business
   private String codatCompanyRef;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private AccountingSetupStep accountingSetupStep;
 }

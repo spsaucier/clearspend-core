@@ -3,6 +3,7 @@ package com.clearspend.capital.controller.type.business;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessType;
@@ -59,6 +60,11 @@ public class Business {
   @Enumerated(EnumType.STRING)
   private BusinessStatus status;
 
+  @JsonProperty("accountingSetupStep")
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private AccountingSetupStep accountingSetupStep;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -69,6 +75,7 @@ public class Business {
         new Address(business.getClearAddress()),
         business.getOnboardingStep(),
         business.getKnowYourBusinessStatus(),
-        business.getStatus());
+        business.getStatus(),
+        business.getAccountingSetupStep());
   }
 }

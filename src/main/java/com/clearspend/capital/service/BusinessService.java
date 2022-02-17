@@ -11,6 +11,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
@@ -86,7 +87,8 @@ public class BusinessService {
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE,
             convertBusinessProspect.getMerchantType().getMcc(),
-            tosAcceptanceIp);
+            tosAcceptanceIp,
+            AccountingSetupStep.ADD_CREDIT_CARD);
     if (businessId != null) {
       business.setId(businessId);
     }
