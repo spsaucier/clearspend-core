@@ -70,6 +70,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -324,15 +325,17 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     return new AuthorizationRecord(networkCommon, authorization);
   }
 
-  private void validateStripeWebhookLog(NetworkCommon networkCommon) {
+  private void validateStripeWebhookLog(NetworkCommon common) {
+    if (common.isPostAdjustment() || common.isPostDecline() || common.isPostHold()) {
     StripeWebhookLog stripeWebhookLog =
         stripeWebhookLogRepository.findByNetworkMessageId(
-            networkCommon.getNetworkMessage().getId());
+            common.getNetworkMessage().getId());
     assertThat(stripeWebhookLog.getProcessingTimeMs()).isGreaterThan(0);
     assertThat(stripeWebhookLog.getError()).isNull();
-    assertThat(stripeWebhookLog).isEqualTo(networkCommon.getStripeWebhookLog());
+    assertThat(stripeWebhookLog).isEqualTo(common.getStripeWebhookLog());
 
     log.info("stripeWebhookLog: {}", stripeWebhookLog);
+    }
   }
 
   @SneakyThrows
@@ -426,25 +429,57 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     validateStripeWebhookLog(networkCommon);
 
+    networkCommon =
+        authorizeUpdate(
+            allocation,
+            new AuthorizationRecord(networkCommon, authorizationRequest),
+            authorizationRequest.getPendingRequest().getAmount(),
+            BigDecimal.TEN,
+            BigDecimal.TEN);
+
+    validateStripeWebhookLog(networkCommon);
+  }
+
+  @NotNull
+  private NetworkCommon authorizeUpdate(
+      Allocation allocation,
+      AuthorizationRecord authorizationRecord,
+      long updatedAmount,
+      BigDecimal ledgerBalance,
+      BigDecimal availableBalance) {
+
+    StripeEventType stripeEventType;
     stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_UPDATED;
-    Authorization authorizationUpdated = authorizationCreated;
+    Authorization authorizationUpdated = authorizationRecord.authorization;
     authorizationUpdated.setMetadata(new HashMap<>());
+    boolean amountUpdated = authorizationUpdated.getPendingRequest().getAmount() != updatedAmount;
+    authorizationUpdated.getPendingRequest().setAmount(updatedAmount);
     // TODO(kuchlein): in the StipeObject we receive there is a type called
     //  {@link com.stripe.model.EventData} that includes what's changed since between this request
     //  and the one before it. Our current implementation doesn't include these values
 
-    networkCommon =
+    NetworkCommon networkCommon =
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
-            new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorizationUpdated, stripeEventType),
+            new ParseRecord(new StripeWebhookLog(), authorizationUpdated, stripeEventType),
             true);
+    log.debug("networkCommon: {}", networkCommon);
     assertThat(networkCommon.isPostAdjustment()).isFalse();
     assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
+    assertThat(networkCommon.isPostHold()).isEqualTo(amountUpdated);
+    assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, availableBalance);
 
-    validateStripeWebhookLog(networkCommon);
+    if (amountUpdated) {
+      Hold priorHold =
+          holdRepository
+              .findById(authorizationRecord.networkCommon.getHold().getId())
+              .orElseThrow();
+      assertThat(priorHold.getStatus()).isEqualTo(HoldStatus.RELEASED);
+      assertThat(networkCommon.getHold().getAmount())
+          .isEqualTo(Amount.fromStripeAmount(Currency.USD, -updatedAmount));
+    }
+
+    return networkCommon;
   }
 
   @SneakyThrows
@@ -469,6 +504,21 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     authorize(allocation, user, card, openBalance, 927L);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_partialReversal() {
+    BigDecimal openBalance = BigDecimal.TEN;
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    AuthorizationRecord authorizationRecord = authorize(allocation, user, card, openBalance, 1000L);
+
+    NetworkCommon networkCommon =
+        authorizeUpdate(allocation, authorizationRecord, 900L, BigDecimal.TEN, BigDecimal.ONE);
   }
 
   @SneakyThrows

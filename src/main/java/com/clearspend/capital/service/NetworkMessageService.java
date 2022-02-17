@@ -88,21 +88,23 @@ public class NetworkMessageService {
           "invalid networkMessageType " + common.getNetworkMessageType());
     }
 
-    // store any data that resulted from processing the network message from Stripe
-    NetworkMessage networkMessage = common.toNetworkMessage();
+    if (common.isPostAdjustment() || common.isPostDecline() || common.isPostHold()) {
+      // store any data that resulted from processing the network message from Stripe
+      NetworkMessage networkMessage = common.toNetworkMessage();
 
-    // card may be null in the case of Stripe sending us transactions for cards that we've not
-    // issued
-    // TODO(kuchlein): determine if Stripe handle this for us or not
-    if (common.getCard() != null) {
-      networkMessage.setCardId(common.getCard().getId());
+      // card may be null in the case of Stripe sending us transactions for cards that we've not
+      // issued
+      // TODO(kuchlein): determine if Stripe handle this for us or not
+      if (common.getCard() != null) {
+        networkMessage.setCardId(common.getCard().getId());
+      }
+
+      postHold(common, networkMessage);
+      postAdjustment(common, networkMessage);
+      postDecline(common, networkMessage);
+
+      common.setNetworkMessage(networkMessageRepository.save(networkMessage));
     }
-
-    postHold(common, networkMessage);
-    postAdjustment(common, networkMessage);
-    postDecline(common, networkMessage);
-
-    common.setNetworkMessage(networkMessageRepository.save(networkMessage));
   }
 
   private void retrieveCardAndNetworkMessages(NetworkCommon common) {
@@ -269,6 +271,15 @@ public class NetworkMessageService {
     if (common.earliestNetworkMessage != null) {
       common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
       // TODO(kuchlein): handle the case when the hold amount changes
+      if (common.getPriorHold() != null
+          && common.getPriorHold().getAmount().isLessThan(common.getRequestedAmount())) {
+        releasePriorHold(common);
+        common.setApprovedAmount(common.getRequestedAmount());
+        common.setHoldAmount(common.getApprovedAmount());
+        common.setHoldExpiration(common.getPriorHold().getExpirationDate());
+        common.setPostHold(true);
+        common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
+      }
     }
   }
 
