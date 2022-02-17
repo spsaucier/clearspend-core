@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.embedded.*;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
@@ -96,6 +97,8 @@ public class AccountActivity extends TypedMutable<AccountActivityId> {
   private OffsetDateTime visibleAfter;
 
   @Embedded private MerchantDetails merchant;
+
+  @Embedded private ExpenseDetails expenseDetails;
 
   @Embedded private CardDetails card;
 

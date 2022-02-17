@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.common.CardInfo;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -53,6 +54,9 @@ public class AccountActivityResponse {
   @JsonProperty("notes")
   private String notes;
 
+  @JsonProperty("expenseDetails")
+  private ExpenseDetails expenseDetails;
+
   public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
@@ -64,5 +68,6 @@ public class AccountActivityResponse {
     this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
     this.notes = accountActivity.getNotes();
+    this.expenseDetails = ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails());
   }
 }

@@ -17,9 +17,11 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.embedded.CardDetails;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -58,6 +60,8 @@ public class AccountActivityService {
   private final CardService cardService;
 
   private final UserService userService;
+
+  private final ExpenseCategoryService expenseCategoryService;
 
   @Transactional(TxType.REQUIRED)
   public void recordBankAccountAccountActivity(
@@ -200,12 +204,20 @@ public class AccountActivityService {
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<AccountActivityId> accountActivityId,
-      String notes) {
+      String notes,
+      Integer iconRef) {
     AccountActivity accountActivity = getUserAccountActivity(businessId, userId, accountActivityId);
     if (StringUtils.isNotBlank(notes)) {
       accountActivity.setNotes(notes);
     }
-
+    ExpenseCategory expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
+    accountActivity.setExpenseDetails(
+        new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
+    log.debug(
+        "Set expense category {} to accountActivity {} ({})",
+        expenseCategory.getIconRef(),
+        accountActivity.getId(),
+        accountActivity.getExpenseDetails());
     return accountActivityRepository.save(accountActivity);
   }
 

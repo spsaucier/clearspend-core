@@ -14,4 +14,8 @@ public class UpdateAccountActivityRequest {
   @NonNull
   @NotNull(message = "notes on the account activity")
   private String notes;
+
+  /** Expense category code */
+  @JsonProperty("iconRef")
+  private Integer iconRef;
 }

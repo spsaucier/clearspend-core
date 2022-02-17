@@ -31,4 +31,10 @@ public class ExpenseCategoryService {
   public void updateExpenseCategory(Integer expenseCategoryCode, String expenseCategoryName) {
     getExpenseCategory(expenseCategoryCode).setCategoryName(expenseCategoryName);
   }
+
+  public ExpenseCategory retrieveExpenseCategory(Integer iconRef) {
+    return categoryRepository
+        .findByIconRef(iconRef)
+        .orElseThrow(() -> new RecordNotFoundException(Table.EXPENSE_CATEGORY, iconRef));
+  }
 }
