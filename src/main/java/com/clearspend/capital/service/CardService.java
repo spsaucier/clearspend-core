@@ -2,9 +2,11 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -29,6 +31,8 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AccountRepository;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
@@ -40,9 +44,11 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
@@ -60,21 +66,22 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CardService {
 
+  private final AccountRepository accountRepository;
+  private final AllocationRepository allocationRepository;
+  private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
+  private final UserRepository userRepository;
 
   private final AccountService accountService;
   private final BusinessLimitService businessLimitService;
-  private final TransactionLimitService transactionLimitService;
-  private final UserService userService;
-  private final RolesAndPermissionsService rolesAndPermissionsService;
-  private final EntityManager entityManager;
-
-  private final StripeClient stripeClient;
-
   private final FusionAuthService fusionAuthService;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final TransactionLimitService transactionLimitService;
   private final TwilioService twilioService;
-  private final UserRepository userRepository;
-  private final BusinessRepository businessRepository;
+  private final UserService userService;
+
+  private final EntityManager entityManager;
+  private final StripeClient stripeClient;
 
   public record CardRecord(Card card, Account account) {}
 
@@ -359,6 +366,82 @@ public class CardService {
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
     return card;
+  }
+
+  public List<Account> getCardAccounts(
+      @NonNull TypedId<BusinessId> businessId,
+      @NonNull TypedId<UserId> userId,
+      @NonNull TypedId<CardId> cardId,
+      AccountType type) {
+    // make sure we can look up the business
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
+    // lookup card and ensure it's owned by the user
+    Card card = retrieveCard(business.getId(), cardId);
+    if (!card.getUserId().equals(userId)) {
+      throw new DataAccessViolationException(Table.CARD, card.getId(), userId, card.getUserId());
+    }
+
+    // lookup allocation accounts for the business
+    List<Account> accounts = new ArrayList<>();
+    if (type == null || type == AccountType.ALLOCATION) {
+      accounts.addAll(
+          accountRepository.findByBusinessIdAndTypeAndLedgerBalance_Currency(
+              business.getId(), AccountType.ALLOCATION, business.getCurrency()));
+    }
+
+    // lookup account for the card (may not exist)
+    if (type == null || type == AccountType.CARD) {
+      Optional<Account> accountOptional =
+          accountRepository.findByBusinessIdAndCardId(business.getId(), cardId);
+      accountOptional.ifPresent(accounts::add);
+    }
+
+    return accounts;
+  }
+
+  @Transactional
+  public Card updateCardAccount(
+      @NonNull TypedId<BusinessId> businessId,
+      @NonNull TypedId<UserId> userId,
+      @NonNull TypedId<CardId> cardId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull TypedId<AccountId> accountId) {
+    // make sure we can look up the business
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
+    // lookup card and ensure it's owned by the user
+    Card card = retrieveCard(business.getId(), cardId);
+    if (!card.getUserId().equals(userId)) {
+      throw new DataAccessViolationException(Table.CARD, card.getId(), userId, card.getUserId());
+    }
+
+    // lookup allocation and ensure that it's owned by the business
+    Allocation allocation =
+        allocationRepository
+            .findByBusinessIdAndId(business.getId(), allocationId)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(Table.ALLOCATION, business.getId(), allocationId));
+
+    // lookup account and ensure it's owned by the business
+    Account account = accountService.retrieveAccountById(accountId, false);
+    if (!account.getBusinessId().equals(business.getId())) {
+      throw new DataAccessViolationException(
+          Table.ACCOUNT, account.getId(), business.getId(), account.getBusinessId());
+    }
+
+    // update the card with the new allocation and accounts
+    card.setAllocationId(allocation.getId());
+    card.setAccountId(account.getId());
+
+    return cardRepository.save(card);
   }
 
   @Transactional

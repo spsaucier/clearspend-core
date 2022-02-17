@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
@@ -13,6 +14,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import java.util.List;
 import lombok.SneakyThrows;
@@ -47,27 +49,15 @@ class CardServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void issueCard() {
+  void issueCard_success() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    Card card =
-        testHelper.issueCard(
-            business,
-            allocation,
-            userRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            false);
+    Card card = issueCard();
     Card foundCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(foundCard).isNotNull();
   }
 
-  @SneakyThrows
-  @Test
-  void getUserCards() {
-    log.info("allCards: {}", cardRepository.findAll());
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    testHelper.issueCard(
+  private Card issueCard() {
+    return testHelper.issueCard(
         business,
         allocation,
         userRecord.user(),
@@ -75,11 +65,46 @@ class CardServiceTest extends BaseCapitalTest {
         FundingType.POOLED,
         CardType.PHYSICAL,
         false);
-    log.info("allCards: {}", cardRepository.findAll());
-    log.info("businessId: {}, userId: {}", business.getId(), userRecord.user().getId());
+  }
+
+  @SneakyThrows
+  @Test
+  void getUserCards_success() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    issueCard();
     List<CardDetailsRecord> userCardRecords =
         cardService.getUserCards(business.getId(), userRecord.user().getId());
-    log.info("userCardRecords: {}", userCardRecords);
     assertThat(userCardRecords).hasSize(1);
+  }
+
+  @Test
+  void getCardAccounts() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Card card = issueCard();
+    List<Account> accounts =
+        cardService.getCardAccounts(
+            business.getId(), userRecord.user().getId(), card.getId(), null);
+    assertThat(accounts).hasSize(1);
+  }
+
+  @Test
+  void updateCardAccount() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Card card = issueCard();
+    AllocationRecord x =
+        testHelper.createAllocation(
+            business.getId(),
+            testHelper.generateBusinessName(),
+            allocation.getId(),
+            userRecord.user());
+
+    Card updatedCard = cardService.updateCardAccount(
+        business.getId(),
+        userRecord.user().getId(),
+        card.getId(),
+        x.allocation().getId(),
+        x.account().getId());
+    assertThat(updatedCard.getAllocationId()).isEqualTo(x.allocation().getId());
+    assertThat(updatedCard.getAccountId()).isEqualTo(x.account().getId());
   }
 }

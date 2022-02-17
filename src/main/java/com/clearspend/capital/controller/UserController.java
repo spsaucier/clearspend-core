@@ -6,12 +6,15 @@ import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.Card;
+import com.clearspend.capital.controller.type.card.CardAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.receipt.Receipt;
@@ -25,6 +28,7 @@ import com.clearspend.capital.controller.type.user.UserPageData;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -309,6 +313,49 @@ public class UserController {
             cardId,
             CardStatus.CANCELLED,
             request.getStatusReason()));
+  }
+
+  @GetMapping("/cards/{cardId}/accounts")
+  private List<CardAccount> getCardAccounts(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @RequestParam(required = false) AccountType type) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return cardService
+        .getCardAccounts(currentUser.businessId(), currentUser.userId(), cardId, type)
+        .stream()
+        .map(
+            e ->
+                new CardAccount(
+                    e.getAllocationId(), e.getId(), e.getType(), Amount.of(e.getLedgerBalance())))
+        .toList();
+  }
+
+  @PatchMapping("/cards/{cardId}/account")
+  private Card updateCardAccount(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody UpdateCardAccountRequest request) {
+    CurrentUser currentUser = CurrentUser.get();
+
+    return new Card(
+        cardService.updateCardAccount(
+            currentUser.businessId(),
+            currentUser.userId(),
+            cardId,
+            request.getAllocationId(),
+            request.getAccountId()));
   }
 
   @GetMapping("/cards/{cardId}/account-activity")

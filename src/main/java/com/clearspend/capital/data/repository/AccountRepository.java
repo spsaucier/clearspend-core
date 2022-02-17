@@ -2,6 +2,7 @@ package com.clearspend.capital.data.repository;
 
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
@@ -26,7 +27,13 @@ public interface AccountRepository extends JpaRepository<Account, TypedId<Accoun
       List<TypedId<AllocationId>> allocationIds,
       Currency currency);
 
+  Optional<Account> findByBusinessIdAndCardId(
+      TypedId<BusinessId> businessId, TypedId<CardId> cardId);
+
   List<Account> findByIdIn(Set<TypedId<AccountId>> ids);
+
+  List<Account> findByBusinessIdAndTypeAndLedgerBalance_Currency(
+      TypedId<BusinessId> businessId, AccountType accountType, Currency currency);
 
   // for deleting businesses in tests only
   void deleteByBusinessId(TypedId<BusinessId> businessId);
