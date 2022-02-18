@@ -39,6 +39,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Service
 @RequiredArgsConstructor
@@ -429,6 +430,11 @@ public class NetworkMessageService {
                   | org.hibernate.exception.ConstraintViolationException e) {
                 log.warn(
                     "NetworkMerchant already present: {} {}",
+                    common.getMerchantName(),
+                    common.getMerchantCategoryCode());
+              } catch (WebClientResponseException.NotFound w) {
+                log.error(
+                    "Merchant Logo not found at Clearbit ({} {})",
                     common.getMerchantName(),
                     common.getMerchantCategoryCode());
               } catch (Exception e) {
