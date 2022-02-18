@@ -91,20 +91,21 @@ class CardServiceTest extends BaseCapitalTest {
   void updateCardAccount() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     Card card = issueCard();
-    AllocationRecord x =
+    AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(),
             testHelper.generateBusinessName(),
             allocation.getId(),
             userRecord.user());
 
-    Card updatedCard = cardService.updateCardAccount(
-        business.getId(),
-        userRecord.user().getId(),
-        card.getId(),
-        x.allocation().getId(),
-        x.account().getId());
-    assertThat(updatedCard.getAllocationId()).isEqualTo(x.allocation().getId());
-    assertThat(updatedCard.getAccountId()).isEqualTo(x.account().getId());
+    Card updatedCard =
+        cardService.updateCardAccount(
+            business.getId(),
+            userRecord.user().getId(),
+            card.getId(),
+            allocationRecord.allocation().getId(),
+            allocationRecord.account().getId());
+    assertThat(updatedCard.getAllocationId()).isEqualTo(allocationRecord.allocation().getId());
+    assertThat(updatedCard.getAccountId()).isEqualTo(allocationRecord.account().getId());
   }
 }

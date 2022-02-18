@@ -327,14 +327,13 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   private void validateStripeWebhookLog(NetworkCommon common) {
     if (common.isPostAdjustment() || common.isPostDecline() || common.isPostHold()) {
-    StripeWebhookLog stripeWebhookLog =
-        stripeWebhookLogRepository.findByNetworkMessageId(
-            common.getNetworkMessage().getId());
-    assertThat(stripeWebhookLog.getProcessingTimeMs()).isGreaterThan(0);
-    assertThat(stripeWebhookLog.getError()).isNull();
-    assertThat(stripeWebhookLog).isEqualTo(common.getStripeWebhookLog());
+      StripeWebhookLog stripeWebhookLog =
+          stripeWebhookLogRepository.findByNetworkMessageId(common.getNetworkMessage().getId());
+      assertThat(stripeWebhookLog.getProcessingTimeMs()).isGreaterThan(0);
+      assertThat(stripeWebhookLog.getError()).isNull();
+      assertThat(stripeWebhookLog).isEqualTo(common.getStripeWebhookLog());
 
-    log.info("stripeWebhookLog: {}", stripeWebhookLog);
+      log.info("stripeWebhookLog: {}", stripeWebhookLog);
     }
   }
 
