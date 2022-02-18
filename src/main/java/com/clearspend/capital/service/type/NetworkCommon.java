@@ -17,11 +17,13 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.VerificationResultType;
 import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.MerchantData;
+import com.stripe.model.issuing.Authorization.VerificationData;
 import com.stripe.model.issuing.Transaction;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -98,6 +100,10 @@ public class NetworkCommon {
   // the amount we are approving this transaction for. Will be less than or equal to requestedAmount
   @NonNull private Amount approvedAmount;
 
+  @NonNull private VerificationResultType addressPostalCodeCheck = VerificationResultType.UNKNOWN;
+  @NonNull private VerificationResultType cvcCheck = VerificationResultType.UNKNOWN;
+  @NonNull private VerificationResultType expiryCheck = VerificationResultType.UNKNOWN;
+
   private AuthorizationMethod authorizationMethod;
 
   private String stripeAuthorizationExternalRef;
@@ -168,13 +174,21 @@ public class NetworkCommon {
       merchantName = merchantData.getName();
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
-      merchantType = MerchantType.fromString(merchantData.getCategory().toLowerCase());
+      merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
     }
 
     transactionDate =
         OffsetDateTime.ofInstant(Instant.ofEpochSecond(authorization.getCreated()), ZoneOffset.UTC);
     externalRef = authorization.getId();
     stripeAuthorizationExternalRef = authorization.getId();
+
+    VerificationData verificationData = authorization.getVerificationData();
+    if (verificationData != null) {
+      addressPostalCodeCheck =
+          VerificationResultType.fromStripe(verificationData.getAddressPostalCodeCheck());
+      cvcCheck = VerificationResultType.fromStripe(verificationData.getCvcCheck());
+      expiryCheck = VerificationResultType.fromStripe(verificationData.getExpiryCheck());
+    }
 
     stripeWebhookLog = log;
   }
@@ -196,7 +210,7 @@ public class NetworkCommon {
       merchantName = merchantData.getName();
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
-      merchantType = MerchantType.fromString(merchantData.getCategory().toLowerCase());
+      merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
     }
 
     transactionDate =

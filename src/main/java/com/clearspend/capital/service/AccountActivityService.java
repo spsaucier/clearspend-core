@@ -181,7 +181,8 @@ public class AccountActivityService {
             common.getCard().getId(),
             common.getCard().getLastFour(),
             cardOwner.getFirstName(),
-            cardOwner.getLastName()));
+            cardOwner.getLastName(),
+            common.getCard().getExternalRef()));
 
     if (adjustment != null) {
       accountActivity.setAdjustmentId(adjustment.getId());

@@ -29,4 +29,7 @@ public class CardDetails {
   @Sensitive @Embedded private RequiredEncryptedStringWithHash ownerFirstName;
 
   @Sensitive @Embedded private RequiredEncryptedStringWithHash ownerLastName;
+
+  // this is the identifier of this card at Stripe
+  private String externalRef;
 }

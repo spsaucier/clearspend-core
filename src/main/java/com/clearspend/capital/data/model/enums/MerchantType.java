@@ -488,7 +488,7 @@ public enum MerchantType {
     this.mcc = mcc;
   }
 
-  public static MerchantType fromString(String stripeMerchantType) {
+  public static MerchantType fromStripe(String stripeMerchantType) {
     MerchantType eventType = stripeMerchantTypeToMerchantTypeMap.get(stripeMerchantType);
     return eventType != null ? eventType : UNKNOWN;
   }

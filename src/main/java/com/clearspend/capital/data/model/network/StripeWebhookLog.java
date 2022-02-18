@@ -30,6 +30,8 @@ public class StripeWebhookLog extends TypedMutable<StripeWebhookLogId> {
   private String eventType;
 
   // the raw request in JSON
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
   private String request;
 
   // if not null, this contains the error Capital encountered during processing

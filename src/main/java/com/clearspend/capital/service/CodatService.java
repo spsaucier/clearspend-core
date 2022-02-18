@@ -5,7 +5,6 @@ import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
-import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -29,41 +28,30 @@ public class CodatService {
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
-  public void createCodatCompanyForBusiness(TypedId<BusinessId> businessId, String legalName)
-      throws RuntimeException {
-    CreateCompanyResponse response = codatClient.createCodatCompanyForBusiness(legalName);
-    businessService.updateBusinessWithCodatCompanyRef(businessId, response.getId());
-  }
-
-  private String getQboIntegrationLink(String companyId) {
-    CreateIntegrationResponse response = codatClient.createQboConnectionForBusiness(companyId);
-    return response.getLinkUrl();
-  }
-
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
       throws RuntimeException {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusiness(businessId, true);
 
-    if (currentBusiness.getCodatCompanyRef() == null) {
-      createCodatCompanyForBusiness(currentBusiness.getId(), currentBusiness.getLegalName());
+    if (business.getCodatCompanyRef() == null) {
+      CreateCompanyResponse response =
+          codatClient.createCodatCompanyForBusiness(business.getLegalName());
+      businessService.updateBusinessWithCodatCompanyRef(business.getId(), response.getId());
     }
 
-    return getQboIntegrationLink(currentBusiness.getCodatCompanyRef());
+    return codatClient.createQboConnectionForBusiness(business.getCodatCompanyRef()).getLinkUrl();
   }
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean getIntegrationConnectionStatus(TypedId<BusinessId> businessId) {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusiness(businessId, true);
 
-    if (currentBusiness.getCodatCompanyRef() == null) {
+    if (business.getCodatCompanyRef() == null) {
       return false;
     }
 
     ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
+        codatClient.getConnectionsForBusiness(business.getCodatCompanyRef());
     return connectionStatusResponse.getResults().stream()
         .anyMatch(connection -> connection.getStatus().equals("Linked"));
   }
@@ -73,14 +61,14 @@ public class CodatService {
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
       throws RuntimeException {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusiness(businessId, true);
 
-    if (currentBusiness.getCodatCompanyRef() == null) {
+    if (business.getCodatCompanyRef() == null) {
       return null;
     }
 
     ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
+        codatClient.getConnectionsForBusiness(business.getCodatCompanyRef());
 
     Optional<ConnectionStatus> connectionStatus =
         connectionStatusResponse.getResults().stream()
@@ -88,7 +76,6 @@ public class CodatService {
             .findFirst();
 
     // for now, use the first valid connection
-
     if (connectionStatus.isEmpty()) {
       return null;
     }
@@ -98,9 +85,9 @@ public class CodatService {
             CurrentUser.getBusinessId(), accountActivityId);
 
     return codatClient.syncTransactionAsDirectCost(
-        currentBusiness.getCodatCompanyRef(),
+        business.getCodatCompanyRef(),
         connectionStatus.get().getId(),
         accountActivity,
-        currentBusiness.getCurrency().name());
+        business.getCurrency().name());
   }
 }

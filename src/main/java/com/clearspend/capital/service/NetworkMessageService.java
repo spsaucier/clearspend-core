@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.data.model.enums.network.VerificationResultType;
 import com.clearspend.capital.data.model.network.NetworkMerchant;
 import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
@@ -292,6 +293,24 @@ public class NetworkMessageService {
   private void processAuthorizationRequest(NetworkCommon common) {
     setPaddedAmountAndHoldPeriod(common);
 
+    // decline if we have any mismatches on address, CVN or card expiration date
+    if (common.getAddressPostalCodeCheck() == VerificationResultType.MISMATCH) {
+      common.getDeclineReasons().add(DeclineReason.ADDRESS_POSTAL_CODE_MISMATCH);
+      common.setPostDecline(true);
+      return;
+    }
+    if (common.getCvcCheck() == VerificationResultType.MISMATCH) {
+      common.getDeclineReasons().add(DeclineReason.CVC_MISMATCH);
+      common.setPostDecline(true);
+      return;
+    }
+    if (common.getExpiryCheck() == VerificationResultType.MISMATCH) {
+      common.getDeclineReasons().add(DeclineReason.EXPIRY_MISMATCH);
+      common.setPostDecline(true);
+      return;
+    }
+
+    // card must be active
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
       common.setPostDecline(true);
