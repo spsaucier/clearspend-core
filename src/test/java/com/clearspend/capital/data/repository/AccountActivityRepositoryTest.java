@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import java.math.BigDecimal;
@@ -36,7 +37,8 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
-            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE));
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setReceipt(null);
     accountActivity = accountActivityRepository.save(accountActivity);
     accountActivity = accountActivityRepository.findById(accountActivity.getId()).orElseThrow();

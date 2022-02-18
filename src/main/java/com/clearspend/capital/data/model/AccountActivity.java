@@ -16,6 +16,7 @@ import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
@@ -113,4 +114,8 @@ public class AccountActivity extends TypedMutable<AccountActivityId> {
   @NonNull @Embedded private Amount amount;
 
   private String notes;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private AccountActivityIntegrationSyncStatus integrationSyncStatus;
 }

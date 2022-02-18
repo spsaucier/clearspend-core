@@ -24,6 +24,7 @@ import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
@@ -75,7 +76,8 @@ public class AccountActivityService {
             type,
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
-            adjustment.getAmount());
+            adjustment.getAmount(),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
     adjustmentAccountActivity.setAdjustmentId(adjustment.getId());
 
     if (hold != null) {
@@ -90,7 +92,8 @@ public class AccountActivityService {
               type,
               AccountActivityStatus.PENDING,
               hold.getCreated(),
-              adjustment.getAmount());
+              adjustment.getAmount(),
+              AccountActivityIntegrationSyncStatus.NOT_READY);
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
 
       accountActivityRepository.save(holdAccountActivity);
@@ -111,7 +114,8 @@ public class AccountActivityService {
             AccountActivityType.REALLOCATE,
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
-            adjustment.getAmount());
+            adjustment.getAmount(),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
 
     return accountActivityRepository.save(accountActivity);
@@ -161,7 +165,8 @@ public class AccountActivityService {
             common.getNetworkMessageType().getAccountActivityType(),
             common.getAccountActivityDetails().getAccountActivityStatus(),
             common.getAccountActivityDetails().getActivityTime(),
-            amount);
+            amount,
+            AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setUserId(common.getCard().getUserId());
 
     accountActivity.setMerchant(
