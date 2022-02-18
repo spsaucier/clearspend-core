@@ -790,7 +790,7 @@ public class StripeClient {
 
     return executeOutboundPayment(
         businessId,
-        null,
+        stripeProperties.getClearspendConnectedAccountId(),
         stripeProperties.getClearspendFinancialAccountId(),
         toStripeFinancialAccountRef,
         adjustmentId,
