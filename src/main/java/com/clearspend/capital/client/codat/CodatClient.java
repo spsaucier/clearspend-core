@@ -3,6 +3,7 @@ package com.clearspend.capital.client.codat;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountRef;
 import com.clearspend.capital.client.codat.types.CodatAllocation;
+import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatContactRef;
 import com.clearspend.capital.client.codat.types.CodatLineItem;
 import com.clearspend.capital.client.codat.types.CodatPaymentAllocation;
@@ -198,5 +199,12 @@ public class CodatClient {
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to sync transaction to Codat", e);
     }
+  }
+
+  public CodatBankAccountsResponse getBankAccountsForBusiness(
+      String companyRef, String connectionId) {
+    return getFromCodatApi(
+        "/companies/%s/connections/%s/data/bankAccounts/".formatted(companyRef, connectionId),
+        CodatBankAccountsResponse.class);
   }
 }

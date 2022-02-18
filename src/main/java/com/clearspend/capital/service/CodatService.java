@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.codat.CodatClient;
+import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -11,7 +12,10 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.service.type.CurrentUser;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -89,5 +93,30 @@ public class CodatService {
         connectionStatus.get().getId(),
         accountActivity,
         business.getCurrency().name());
+  }
+
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+
+    ConnectionStatusResponse connectionStatusResponse =
+        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
+
+    // For now, get the first Linked (active) connection. It should not really be possible for them
+    // to link multiple.
+    List<ConnectionStatus> linkedConnections =
+        connectionStatusResponse.getResults().stream()
+            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
+            .collect(Collectors.toList());
+
+    if (linkedConnections.isEmpty()) {
+      return new CodatBankAccountsResponse(new ArrayList<>());
+    }
+    CodatBankAccountsResponse bankAccounts =
+        codatClient.getBankAccountsForBusiness(
+            currentBusiness.getCodatCompanyRef(), linkedConnections.get(0).getId());
+
+    return bankAccounts;
   }
 }

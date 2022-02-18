@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -42,5 +43,10 @@ public class CodatController {
           TypedId<AccountActivityId> accountActivityId)
       throws RuntimeException {
     return codatService.syncTransactionAsDirectCost(accountActivityId, CurrentUser.getBusinessId());
+  }
+
+  @GetMapping("/bank-accounts")
+  private CodatBankAccountsResponse getBankAccountsForBusiness() {
+    return codatService.getBankAccountsForBusiness(CurrentUser.getBusinessId());
   }
 }
