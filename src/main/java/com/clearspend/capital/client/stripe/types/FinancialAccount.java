@@ -42,6 +42,9 @@ public class FinancialAccount {
   @JsonProperty("balance")
   private FinancialAccountBalance balance;
 
+  @JsonProperty("financial_addresses")
+  private List<FinancialAccountAddress> financialAddresses;
+
   @JsonProperty("livemode")
   private Boolean livemode;
 

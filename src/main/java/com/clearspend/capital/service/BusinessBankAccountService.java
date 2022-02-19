@@ -9,7 +9,6 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidStateException;
-import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
@@ -27,6 +26,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -70,7 +70,8 @@ public class BusinessBankAccountService {
 
   private final PlaidClient plaidClient;
   private final StripeClient stripeClient;
-  private final BusinessService businessService;
+  private final RetrievalService retrievalService;
+  private final PendingStripeTransferService pendingStripeTransferService;
 
   public record BusinessBankAccountRecord(
       RequiredEncryptedStringWithHash routingNumber,
@@ -105,10 +106,7 @@ public class BusinessBankAccountService {
 
   public BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
-    return businessBankAccountRepository
-        .findById(businessBankAccountId)
-        .orElseThrow(
-            () -> new RecordNotFoundException(Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    return retrievalService.retrieveBusinessBankAccount(businessBankAccountId);
   }
 
   public String getLinkToken(TypedId<BusinessId> businessId) throws IOException {
@@ -208,19 +206,13 @@ public class BusinessBankAccountService {
       Amount amount,
       boolean placeHold) {
 
-    Business business = businessService.retrieveBusiness(businessId, true);
-    if (Strings.isBlank(business.getStripeFinancialAccountRef())) {
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+    if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       throw new InvalidStateException(
           Table.BUSINESS, "Stripe Financial Account Ref missing on business " + businessId);
     }
 
-    BusinessBankAccount businessBankAccount =
-        businessBankAccountRepository
-            .findById(businessBankAccountId)
-            .orElseThrow(
-                () ->
-                    new RecordNotFoundException(
-                        Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
     if (!businessId.equals(businessBankAccount.getBusinessId())) {
       throw new IdMismatchException(
           IdType.BUSINESS_ID, businessId, businessBankAccount.getBusinessId());
@@ -251,19 +243,37 @@ public class BusinessBankAccountService {
     businessBankAccountRepository.flush();
 
     switch (bankAccountTransactType) {
-      case DEPOSIT -> stripeClient.executeInboundTransfer(
-          businessId,
-          adjustmentAndHoldRecord.adjustment().getId(),
-          adjustmentAndHoldRecord.hold() != null ? adjustmentAndHoldRecord.hold().getId() : null,
-          business.getStripeAccountReference(),
-          businessBankAccount.getStripeBankAccountRef(),
-          business.getStripeFinancialAccountRef(),
-          amount,
-          "ACH pull",
-          "clearspend.com");
+      case DEPOSIT -> {
+        if (business.getStripeData().getFinancialAccountState() == FinancialAccountState.READY) {
+          stripeClient.executeInboundTransfer(
+              businessId,
+              adjustmentAndHoldRecord.adjustment().getId(),
+              adjustmentAndHoldRecord.hold() != null
+                  ? adjustmentAndHoldRecord.hold().getId()
+                  : null,
+              business.getStripeData().getAccountRef(),
+              businessBankAccount.getStripeBankAccountRef(),
+              business.getStripeData().getFinancialAccountRef(),
+              amount,
+              "ACH pull",
+              "clearspend.com");
+        } else {
+          pendingStripeTransferService.createStripeTransfer(
+              businessId,
+              businessBankAccountId,
+              adjustmentAndHoldRecord.adjustment().getId(),
+              adjustmentAndHoldRecord.hold() != null
+                  ? adjustmentAndHoldRecord.hold().getId()
+                  : null,
+              amount,
+              "ACH pull",
+              "clearspend.com");
+        }
+      }
+
       case WITHDRAW -> stripeClient.pushFundsToConnectedFinancialAccount(
           businessId,
-          business.getStripeFinancialAccountRef(),
+          business.getStripeData().getFinancialAccountRef(),
           adjustmentAndHoldRecord.adjustment().getId(),
           amount,
           "Company [%s] ACH push funds relocation".formatted(business.getLegalName()),
@@ -302,11 +312,11 @@ public class BusinessBankAccountService {
 
       businessBankAccountRepository.flush();
 
-      Business business = businessService.retrieveBusiness(businessId, true);
+      Business business = retrievalService.retrieveBusiness(businessId, true);
       stripeClient.pushFundsToClearspendFinancialAccount(
           businessId,
-          business.getStripeAccountReference(),
-          business.getStripeFinancialAccountRef(),
+          business.getStripeData().getAccountRef(),
+          business.getStripeData().getFinancialAccountRef(),
           adjustmentId,
           amount,
           "Company [%s] ACH pull funds relocation".formatted(business.getLegalName()),
@@ -370,8 +380,8 @@ public class BusinessBankAccountService {
 
     BusinessBankAccount businessBankAccount = retrieveBusinessBankAccount(businessBankAccountId);
 
-    Business business = businessService.retrieveBusiness(businessId, true);
-    String stripeAccountId = business.getStripeAccountReference();
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+    String stripeAccountId = business.getStripeData().getAccountRef();
 
     // Get a Stripe "Bank Account Token" (btok) via Plaid
     // Attach the already-verified bank account to the connected account
@@ -410,11 +420,14 @@ public class BusinessBankAccountService {
     businessBankAccount.setStripeBankAccountRef(stripeBankAccountRef);
     businessBankAccount.setStripeSetupIntentRef(setupIntent.getId());
 
-    if (Strings.isBlank(business.getStripeFinancialAccountRef())) {
-      business.setStripeFinancialAccountRef(
-          stripeClient
-              .createFinancialAccount(business.getId(), business.getStripeAccountReference())
-              .getId());
+    if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
+      business
+          .getStripeData()
+          .setFinancialAccountRef(
+              stripeClient
+                  .createFinancialAccount(
+                      business.getId(), business.getStripeData().getAccountRef())
+                  .getId());
     }
 
     businessBankAccountRepository.save(businessBankAccount);

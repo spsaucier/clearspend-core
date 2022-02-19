@@ -3,6 +3,8 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.stripe.StripeMetadataEntry;
 import com.clearspend.capital.client.stripe.StripeProperties;
+import com.clearspend.capital.client.stripe.types.FinancialAccount;
+import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
@@ -13,8 +15,10 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.PendingStripeTransferService;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,6 +43,7 @@ public class StripeConnectHandler {
 
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
+  private final PendingStripeTransferService pendingStripeTransferService;
   private final StripeClient stripeClient;
   private final boolean placeHold;
   private final StripeProperties stripeProperties;
@@ -46,12 +51,14 @@ public class StripeConnectHandler {
   public StripeConnectHandler(
       BusinessService businessService,
       BusinessBankAccountService businessBankAccountService,
+      PendingStripeTransferService pendingStripeTransferService,
       StripeClient stripeClient,
       StripeProperties stripeProperties,
       @Value("${clearspend.ach.hold.place:true}") boolean placeHold) {
 
     this.businessService = businessService;
     this.businessBankAccountService = businessBankAccountService;
+    this.pendingStripeTransferService = pendingStripeTransferService;
     this.stripeClient = stripeClient;
     this.stripeProperties = stripeProperties;
     this.placeHold = placeHold;
@@ -131,7 +138,7 @@ public class StripeConnectHandler {
 
                     stripeClient.executeOutboundTransfer(
                         business.getId(),
-                        business.getStripeAccountReference(),
+                        business.getStripeData().getAccountRef(),
                         receivedCredit.getFinancialAccount(),
                         businessBankAccount.getStripeBankAccountRef(),
                         Amount.fromStripeAmount(
@@ -157,6 +164,45 @@ public class StripeConnectHandler {
                     receivedCredit.getNetwork());
               }
             });
+  }
+
+  public void financialAccountFeaturesUpdated(StripeObject stripeObject) {
+    parseBetaApiEvent(stripeObject, FinancialAccountEvent.class)
+        .ifPresent(
+            event -> financialAccountFeaturesUpdated(event.getBusinessId(), event.getEvent()));
+  }
+
+  public void financialAccountFeaturesUpdated(
+      TypedId<BusinessId> businessId, FinancialAccount financialAccount) {
+    if (financialAccount.getPendingFeatures().isEmpty()
+        && financialAccount.getRestrictedFeatures().isEmpty()) {
+      Business business =
+          businessService.retrieveBusinessByStripeFinancialAccount(financialAccount.getId());
+      FinancialAccountAbaAddress financialAccountAddress =
+          stripeClient
+              .getFinancialAccount(
+                  businessId,
+                  business.getStripeData().getAccountRef(),
+                  business.getStripeData().getFinancialAccountRef())
+              .getFinancialAddresses()
+              .stream()
+              .filter(a -> a.getAbaAddress() != null)
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new RuntimeException("Stripe returned 0 aba addresses for an active account"))
+              .getAbaAddress();
+
+      businessService.updateBusinessStripeData(
+          businessId,
+          null,
+          null,
+          FinancialAccountState.READY,
+          financialAccountAddress.getAccountNumber(),
+          financialAccountAddress.getRoutingNumber());
+
+      pendingStripeTransferService.executePendingStripeTransfers(businessId);
+    }
   }
 
   public void outboundTransferCreated(StripeObject stripeObject) {}
@@ -225,6 +271,14 @@ public class StripeConnectHandler {
     @Override
     protected Map<String, String> getMetadata() {
       return Map.of();
+    }
+  }
+
+  public static class FinancialAccountEvent extends StripeWebhookEventWrapper<FinancialAccount> {
+
+    @Override
+    protected Map<String, String> getMetadata() {
+      return getEvent().getMetadata();
     }
   }
 }

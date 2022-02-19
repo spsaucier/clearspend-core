@@ -94,7 +94,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     Event event = ApiResource.GSON.fromJson(new FileReader(createAccount.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(onboardBusinessRecord.business().getStripeAccountReference());
+    account.setId(onboardBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -113,7 +113,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(createAccount_secondEventFromStripe.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(onboardBusinessRecord.business().getStripeAccountReference());
+    account.setId(onboardBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -130,7 +130,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         ApiResource.GSON.fromJson(new FileReader(accountAddRepresentative.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -151,7 +151,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -169,7 +169,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(addressNotCorrectForPerson.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -187,7 +187,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(addressNotCorrectForPersonAndDocumentRequired.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -206,7 +206,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(ownersAndRepresentativeProvided.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -225,7 +225,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(ownersAndRepresentativeProvided_step2inStripe.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -243,7 +243,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
             new FileReader(secondEventAfterSuccessUploadRequiredDocuments.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -260,7 +260,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         ApiResource.GSON.fromJson(new FileReader(uploadRequiredDocuments.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =
@@ -277,7 +277,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         ApiResource.GSON.fromJson(new FileReader(successOnboarding.getFile()), Event.class);
     StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
     Account account = (Account) stripeObject;
-    account.setId(createBusinessRecord.business().getStripeAccountReference());
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
     stripeConnectHandler.accountUpdated(account);
 
     Business business =

@@ -185,7 +185,7 @@ public class CardService {
       user.setExternalRef(
           stripeClient
               .createCardholder(
-                  user, business.getClearAddress(), business.getStripeAccountReference())
+                  user, business.getClearAddress(), business.getStripeData().getAccountRef())
               .getId());
       user = userRepository.save(user);
     }

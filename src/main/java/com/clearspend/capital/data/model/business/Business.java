@@ -91,14 +91,27 @@ public class Business extends TypedMutable<BusinessId> {
   // the online presence of a business(facebook link, site, etc.) - it is required by Stripe
   private String url;
 
-  // identifier of this business (account in stripe terms) at Stripe
-  private String stripeAccountReference;
-
-  // identifier of the treasury (financial) bank account at Stripe
-  private String stripeFinancialAccountRef;
-
-  // on business creation we will collect the ip of the customer, required by Stripe
-  @NonNull private String tosAcceptanceIp;
+  @Embedded
+  @NonNull
+  @AttributeOverrides({
+    @AttributeOverride(name = "accountRef", column = @Column(name = "stripe_account_ref")),
+    @AttributeOverride(
+        name = "financialAccountRef",
+        column = @Column(name = "stripe_financial_account_ref")),
+    @AttributeOverride(
+        name = "financialAccountState",
+        column = @Column(name = "stripe_financial_account_state")),
+    @AttributeOverride(
+        name = "tosAcceptanceIp",
+        column = @Column(name = "stripe_tos_acceptance_ip")),
+    @AttributeOverride(
+        name = "bankAccountNumber.encrypted",
+        column = @Column(name = "stripe_bank_account_number_encrypted")),
+    @AttributeOverride(
+        name = "bankRoutingNumber.encrypted",
+        column = @Column(name = "stripe_bank_routing_number_encrypted"))
+  })
+  private StripeData stripeData;
 
   // identifier of the company within Codat for this business
   private String codatCompanyRef;

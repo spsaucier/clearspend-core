@@ -81,6 +81,8 @@ public class StripeWebhookController {
       case ACCOUNT_UPDATED -> stripeConnectHandler.accountUpdated((Account) stripeObject);
       case ACCOUNT_EXTERNAL_ACCOUNT_CREATED -> stripeConnectHandler.externalAccountCreated(
           stripeObject);
+      case FINANCIAL_ACCOUNT_FEATURES_STATUS_UPDATED -> stripeConnectHandler
+          .financialAccountFeaturesUpdated(stripeObject);
 
       default -> {
         String errorMessage = "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();

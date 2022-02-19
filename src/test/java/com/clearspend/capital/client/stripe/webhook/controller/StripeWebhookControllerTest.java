@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.Account;
@@ -14,6 +15,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -24,6 +26,7 @@ import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
@@ -32,6 +35,7 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
 import com.clearspend.capital.data.model.ledger.LedgerAccount;
@@ -51,6 +55,7 @@ import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.gson.Gson;
@@ -63,6 +68,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.transaction.Transactional;
@@ -96,9 +102,11 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private AccountService accountService;
   @Autowired private AllocationService allocationService;
   @Autowired private TransactionLimitService transactionLimitService;
+  @Autowired private PendingStripeTransferService pendingStripeTransferService;
 
   @Autowired StripeWebhookController stripeWebhookController;
   @Autowired StripeDirectHandler stripeDirectHandler;
+  @Autowired StripeConnectHandler stripeConnectHandler;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -1081,5 +1089,29 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         1,
         MerchantType.AIRLINES_AIR_CARRIERS,
         AuthorizationMethod.ONLINE);
+  }
+
+  @Test
+  void processFinancialAccount_featuresUpdated() {
+    // given
+    FinancialAccount financialAccount = new FinancialAccount();
+    financialAccount.setId(business.getStripeData().getFinancialAccountRef());
+    financialAccount.setPendingFeatures(List.of());
+    financialAccount.setRestrictedFeatures(List.of());
+
+    List<PendingStripeTransfer> pendingStripeTransfers =
+        pendingStripeTransferService.retrievePendingTransfers(business.getId());
+
+    assertThat(pendingStripeTransfers).hasSize(1);
+    assertThat(pendingStripeTransfers.get(0).getState())
+        .isEqualTo(PendingStripeTransferState.PENDING);
+
+    // when
+    stripeConnectHandler.financialAccountFeaturesUpdated(business.getId(), financialAccount);
+
+    // then
+    assertThat(testHelper.retrieveBusiness().getStripeData().getFinancialAccountState())
+        .isEqualTo(FinancialAccountState.READY);
+    assertThat(pendingStripeTransferService.retrievePendingTransfers(business.getId())).isEmpty();
   }
 }

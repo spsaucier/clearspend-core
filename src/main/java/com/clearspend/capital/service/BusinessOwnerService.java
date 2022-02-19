@@ -89,7 +89,7 @@ public class BusinessOwnerService {
             .toList();
 
     Business business = businessService.retrieveBusiness(businessId, true);
-    String stripeAccountReference = business.getStripeAccountReference();
+    String stripeAccountReference = business.getStripeData().getAccountRef();
 
     businessOwners.forEach(
         businessOwner ->

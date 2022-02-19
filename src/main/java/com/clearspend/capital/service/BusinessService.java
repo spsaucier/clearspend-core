@@ -8,15 +8,18 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.StripeData;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -61,6 +64,7 @@ public class BusinessService {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
+  private final RetrievalService retrievalService;
 
   private final StripeClient stripeClient;
 
@@ -87,7 +91,11 @@ public class BusinessService {
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE,
             convertBusinessProspect.getMerchantType().getMcc(),
-            tosAcceptanceIp,
+            new StripeData(
+                FinancialAccountState.NOT_READY,
+                new NullableEncryptedString(),
+                new NullableEncryptedString(),
+                tosAcceptanceIp),
             AccountingSetupStep.ADD_CREDIT_CARD);
     if (businessId != null) {
       business.setId(businessId);
@@ -106,12 +114,12 @@ public class BusinessService {
 
     // stripe account creation
     com.stripe.model.Account account = stripeClient.createAccount(business);
-    business.setStripeAccountReference(account.getId());
+    business.getStripeData().setAccountRef(account.getId());
     // TODO hot-fix start the financial account creation process
-    business.setStripeFinancialAccountRef(
-        stripeClient
-            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
-            .getId());
+    business
+        .getStripeData()
+        .setFinancialAccountRef(
+            stripeClient.createFinancialAccount(business.getId(), account.getId()).getId());
 
     businessLimitService.initializeBusinessLimit(business.getId());
 
@@ -132,13 +140,16 @@ public class BusinessService {
                 BusinessOnboardingStep.SOFT_FAIL)
             .contains(business.getOnboardingStep())) {
 
-      if (Strings.isBlank(business.getStripeFinancialAccountRef())) {
+      if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
         // TODO: The step below probably should be moved to a later phase, after KYB/KYC,
         // to be finalized after KYB/KYC part will be ready
-        business.setStripeFinancialAccountRef(
-            stripeClient
-                .createFinancialAccount(business.getId(), business.getStripeAccountReference())
-                .getId());
+        business
+            .getStripeData()
+            .setFinancialAccountRef(
+                stripeClient
+                    .createFinancialAccount(
+                        business.getId(), business.getStripeData().getAccountRef())
+                    .getId());
       }
 
       return new ArrayList<>();
@@ -344,30 +355,39 @@ public class BusinessService {
       BusinessStatus status,
       BusinessOnboardingStep onboardingStep,
       KnowYourBusinessStatus knowYourBusinessStatus) {
-    Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+    Business business = retrieveBusiness(businessId, true);
 
-    if (onboardingStep != null) {
-      business.setOnboardingStep(onboardingStep);
-    }
+    BeanUtils.setNotNull(onboardingStep, business::setOnboardingStep);
+    BeanUtils.setNotNull(status, business::setStatus);
+    BeanUtils.setNotNull(knowYourBusinessStatus, business::setKnowYourBusinessStatus);
 
-    if (status != null) {
-      business.setStatus(status);
-    }
+    return business;
+  }
 
-    if (knowYourBusinessStatus != null) {
-      business.setKnowYourBusinessStatus(knowYourBusinessStatus);
-    }
+  @Transactional
+  public Business updateBusinessStripeData(
+      TypedId<BusinessId> businessId,
+      String stripeAccountRef,
+      String stripeFinancialAccountRef,
+      FinancialAccountState stripeFinancialAccountState,
+      String stripeAccountNumber,
+      String stripeRoutringNumber) {
+    Business business = retrieveBusiness(businessId, true);
+    StripeData stripeData = business.getStripeData();
 
-    return businessRepository.save(business);
+    BeanUtils.setNotNull(stripeAccountRef, stripeData::setAccountRef);
+    BeanUtils.setNotNull(stripeFinancialAccountRef, stripeData::setFinancialAccountRef);
+    BeanUtils.setNotNull(stripeFinancialAccountState, stripeData::setFinancialAccountState);
+    BeanUtils.setNotNull(
+        stripeAccountNumber, v -> stripeData.setBankAccountNumber(new NullableEncryptedString(v)));
+    BeanUtils.setNotNull(
+        stripeRoutringNumber, v -> stripeData.setBankRoutingNumber(new NullableEncryptedString(v)));
+
+    return business;
   }
 
   public Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
-    return businessRepository
-        .findById(businessId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, mustExist, businessId));
+    return retrievalService.retrieveBusiness(businessId, mustExist);
   }
 
   public Business retrieveBusinessByEmployerIdentificationNumber(
@@ -385,7 +405,7 @@ public class BusinessService {
 
   public Business retrieveBusinessByStripeAccountReference(String stripeAccountReference) {
     return businessRepository
-        .findByStripeAccountReference(stripeAccountReference)
+        .findByStripeAccountRef(stripeAccountReference)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeAccountReference));
   }
 

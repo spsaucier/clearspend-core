@@ -2,7 +2,7 @@
   "id": "evt_1KQxJR4WgsL0t6veWd6DwQmH",
   "object": "event",
   "account": "acct_1KQxHE4WgsL0t6ve",
-  "api_version": "2020-08-27; money_flows_beta=v2",
+  "api_version": "2020-08-27; money_flows_beta=v3",
   "created": 1644340629,
   "data": {
     "object": {

@@ -180,10 +180,12 @@ public class TestDataController {
     Business business = businessRecord.business();
 
     // FIXME(kuchlein): change this to follow a proper onboarding rather than ramming it through
-    business.setStripeFinancialAccountRef(
-        stripeClient
-            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
-            .getId());
+    business
+        .getStripeData()
+        .setFinancialAccountRef(
+            stripeClient
+                .createFinancialAccount(business.getId(), business.getStripeData().getAccountRef())
+                .getId());
     business = businessRepository.save(business);
 
     createUser(business);
@@ -510,7 +512,7 @@ public class TestDataController {
             requiredDocument -> {
               Person person =
                   stripeClient.retrievePerson(
-                      requiredDocument.entityTokenId(), business.getStripeAccountReference());
+                      requiredDocument.entityTokenId(), business.getStripeData().getAccountRef());
 
               try {
                 com.stripe.model.File file =

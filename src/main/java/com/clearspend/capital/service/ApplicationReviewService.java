@@ -103,13 +103,14 @@ public class ApplicationReviewService {
       }
     }
 
-    Account account = stripeClient.retrieveAccount(business.getStripeAccountReference());
+    Account account = stripeClient.retrieveAccount(business.getStripeData().getAccountRef());
     businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
   }
 
   private void uploadDocumentToStripeForPerson(
       Business business, MultipartFile multipartFile, String entityToken) throws StripeException {
-    Person person = stripeClient.retrievePerson(entityToken, business.getStripeAccountReference());
+    Person person =
+        stripeClient.retrievePerson(entityToken, business.getStripeData().getAccountRef());
 
     File file = stripeClient.uploadFile(multipartFile, Purpose.IDENTITY_DOCUMENT);
 
@@ -126,7 +127,7 @@ public class ApplicationReviewService {
       Business business, MultipartFile multipartFile, DocumentType documentType)
       throws StripeException {
 
-    Account account = stripeClient.retrieveAccount(business.getStripeAccountReference());
+    Account account = stripeClient.retrieveAccount(business.getStripeData().getAccountRef());
     File file = stripeClient.uploadFile(multipartFile, Purpose.valueOf(documentType.toString()));
     account.update(
         AccountUpdateParams.builder()
@@ -147,7 +148,7 @@ public class ApplicationReviewService {
       TypedId<BusinessId> businessId) {
 
     Business business = businessService.retrieveBusiness(businessId, true);
-    String stripeAccountReference = business.getStripeAccountReference();
+    String stripeAccountReference = business.getStripeData().getAccountRef();
     Account account = stripeClient.retrieveAccount(stripeAccountReference);
     List<BusinessOwner> businessOwners =
         businessOwnerService.findBusinessOwnerByBusinessId(businessId);

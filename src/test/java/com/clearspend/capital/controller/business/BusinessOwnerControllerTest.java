@@ -189,7 +189,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .getResponse();
 
     Account account1 = new Account();
-    account1.setId(business.getStripeAccountReference());
+    account1.setId(business.getStripeData().getAccountRef());
     Requirements requirements = new Requirements();
     requirements.setDisabledReason("rejected.fraud");
     account1.setRequirements(requirements);
@@ -238,7 +238,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .getResponse();
 
     Account account1 = new Account();
-    account1.setId(business.getStripeAccountReference());
+    account1.setId(business.getStripeData().getAccountRef());
     Requirements requirements = new Requirements();
     Errors failed_address_match = new Errors();
     failed_address_match.setCode("verification_failed_address_match");

@@ -92,7 +92,7 @@ public class StripeClient {
   // Assumption is that in 03/2022, once the GA version will be available, we will remove or update
   // this indicator further
   private static final String STRIPE_BETA_HEADER =
-      "2020-08-27;treasury_beta=v1;financial_accounts_beta=v3;money_flows_beta=v2;transactions_beta=v3;us_bank_account_beta=v2;issuing_flows_beta=v1";
+      "2020-08-27;treasury_beta=v1;financial_accounts_beta=v3;money_flows_beta=v3;transactions_beta=v3;us_bank_account_beta=v2;issuing_flows_beta=v1";
 
   private final StripeProperties stripeProperties;
   private final ObjectMapper objectMapper;
@@ -167,7 +167,7 @@ public class StripeClient {
                 TosAcceptance.builder()
                     // TODO: identify proper values
                     .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                    .setIp(business.getTosAcceptanceIp())
+                    .setIp(business.getStripeData().getTosAcceptanceIp())
                     .build())
             .setSettings(
                 Settings.builder()
@@ -177,7 +177,7 @@ public class StripeClient {
                                 Settings.CardIssuing.TosAcceptance.builder()
                                     .setDate(
                                         TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                                    .setIp(business.getTosAcceptanceIp())
+                                    .setIp(business.getStripeData().getTosAcceptanceIp())
                                     .build())
                             .build())
                     .putExtraParam(
@@ -188,7 +188,7 @@ public class StripeClient {
                                 "date",
                                 TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
                                 "ip",
-                                business.getTosAcceptanceIp())))
+                                business.getStripeData().getTosAcceptanceIp())))
                     .build())
             .build();
 
@@ -537,6 +537,7 @@ public class StripeClient {
             .add("features[outbound_payments][us_domestic_wire][requested]", "true")
             .add("features[outbound_transfers][ach][requested]", "true")
             .add("features[outbound_transfers][us_domestic_wire][requested]", "true")
+            .add("features[inbound_transfers][ach][requested]", "true")
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
 
     if (testMode) {
@@ -548,6 +549,21 @@ public class StripeClient {
         multiValueMapBuilder.build(),
         accountExternalRef,
         "fa" + businessId,
+        FinancialAccount.class);
+  }
+
+  public FinancialAccount getFinancialAccount(
+      TypedId<BusinessId> businessId, String stripeAccountRef, String stripeFinancialAccountRef) {
+    MultiValueMapBuilder multiValueMapBuilder =
+        MultiValueMapBuilder.builder()
+            .add("expand[]", "financial_addresses.aba.account_number")
+            .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
+
+    return callStripeBetaApi(
+        "/financial_accounts/%s".formatted(stripeFinancialAccountRef),
+        multiValueMapBuilder.build(),
+        stripeAccountRef,
+        new TypedId<>().toString(),
         FinancialAccount.class);
   }
 

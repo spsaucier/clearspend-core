@@ -1,6 +1,8 @@
 package com.clearspend.capital.client.stripe;
 
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
+import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
+import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
@@ -189,7 +191,7 @@ public class StripeMockClient extends StripeClient {
       String stripeAccountId, Boolean ownersProvided, Boolean executiveProvided) {
     Account account1 = generateEntityWithId(Account.class);
     TypedId<BusinessId> id =
-        businessRepository.findByStripeAccountReference(stripeAccountId).orElseThrow().getId();
+        businessRepository.findByStripeAccountRef(stripeAccountId).orElseThrow().getId();
     List<BusinessOwner> businessOwnerByBusinessId = businessOwnerRepository.findByBusinessId(id);
     boolean fraud =
         businessOwnerByBusinessId.stream()
@@ -236,7 +238,7 @@ public class StripeMockClient extends StripeClient {
 
   public Account retrieveAccount(String stripeAccountId) {
     Optional<Business> byStripeAccountReference =
-        businessRepository.findByStripeAccountReference(stripeAccountId);
+        businessRepository.findByStripeAccountRef(stripeAccountId);
     if (byStripeAccountReference.isPresent()) {
       Business business = byStripeAccountReference.get();
       String legalName = business.getLegalName();
@@ -331,6 +333,26 @@ public class StripeMockClient extends StripeClient {
   @Override
   public Account setExternalAccount(String accountId, String btok) {
     return generateEntityWithId(Account.class);
+  }
+
+  @Override
+  public FinancialAccount getFinancialAccount(
+      TypedId<BusinessId> businessId, String stripeAccountRef, String stripeFinancialAccountRef) {
+    FinancialAccount financialAccount = new FinancialAccount();
+    financialAccount.setId(stripeFinancialAccountRef);
+
+    FinancialAccountAddress financialAccountAddress = new FinancialAccountAddress();
+    financialAccountAddress.setType("aba");
+    financialAccountAddress.setAbaAddress(
+        new FinancialAccountAbaAddress(
+            "2323",
+            faker.numerify("##########2323"),
+            faker.numerify("##############"),
+            faker.name().name()));
+
+    financialAccount.setFinancialAddresses(List.of(financialAccountAddress));
+
+    return financialAccount;
   }
 
   @Override

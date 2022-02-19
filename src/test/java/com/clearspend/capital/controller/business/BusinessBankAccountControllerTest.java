@@ -1,20 +1,29 @@
 package com.clearspend.capital.controller.business;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidProperties;
 import com.clearspend.capital.controller.type.Amount;
+import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
+import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FinancialAccountState;
+import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
+import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.PendingStripeTransferService;
 import java.math.BigDecimal;
+import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,8 +42,12 @@ import org.springframework.test.web.servlet.MockMvc;
 class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
+  private final MockMvcHelper mvcHelper;
   private final TestHelper testHelper;
   private final PlaidProperties plaidProperties;
+
+  private final PendingStripeTransferService pendingStripeTransferService;
+  private final BusinessService businessService;
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
@@ -104,5 +118,61 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
     log.info(response.getContentAsString());
+  }
+
+  @Test
+  void transact_withoutFinancialAccount() {
+    CreateBusinessRecord business = testHelper.createBusiness();
+    BusinessBankAccount businessBankAccount =
+        testHelper.createBusinessBankAccount(business.business().getId());
+
+    assertThat(business.business().getStripeData().getFinancialAccountState())
+        .isEqualTo(FinancialAccountState.NOT_READY);
+
+    Amount amount = new Amount(Currency.USD, new BigDecimal(9223));
+    mvcHelper.queryObject(
+        "/business-bank-accounts/%s/transactions".formatted(businessBankAccount.getId()),
+        HttpMethod.POST,
+        business.authCookie(),
+        new TransactBankAccountRequest(BankAccountTransactType.DEPOSIT, amount),
+        CreateAdjustmentResponse.class);
+
+    List<PendingStripeTransfer> pendingStripeTransfers =
+        pendingStripeTransferService.retrievePendingTransfers(business.business().getId());
+    assertThat(pendingStripeTransfers).hasSize(1);
+
+    PendingStripeTransfer pendingStripeTransfer = pendingStripeTransfers.get(0);
+    assertThat(pendingStripeTransfer.getAmount()).isEqualTo(amount.toAmount());
+    assertThat(pendingStripeTransfer.getState()).isEqualTo(PendingStripeTransferState.PENDING);
+  }
+
+  @Test
+  void transact_withFinancialAccount() {
+    CreateBusinessRecord business = testHelper.createBusiness();
+    BusinessBankAccount businessBankAccount =
+        testHelper.createBusinessBankAccount(business.business().getId());
+
+    businessService.updateBusinessStripeData(
+        business.business().getId(),
+        "stripeAccountRed",
+        "stripeFinancialAccountRef",
+        FinancialAccountState.READY,
+        "stripeAccountNumber",
+        "stripeRoutingNUmber");
+
+    assertThat(business.business().getStripeData().getFinancialAccountState())
+        .isEqualTo(FinancialAccountState.READY);
+
+    Amount amount = new Amount(Currency.USD, new BigDecimal(9223));
+    mvcHelper.queryObject(
+        "/business-bank-accounts/%s/transactions".formatted(businessBankAccount.getId()),
+        HttpMethod.POST,
+        business.authCookie(),
+        new TransactBankAccountRequest(BankAccountTransactType.DEPOSIT, amount),
+        CreateAdjustmentResponse.class);
+
+    List<PendingStripeTransfer> pendingStripeTransfers =
+        pendingStripeTransferService.retrievePendingTransfers(business.business().getId());
+    assertThat(pendingStripeTransfers).hasSize(0);
   }
 }

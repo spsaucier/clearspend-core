@@ -770,10 +770,12 @@ public class TestHelper {
           false);
     }
 
-    business.setStripeFinancialAccountRef(
-        stripeClient
-            .createFinancialAccount(business.getId(), business.getStripeAccountReference())
-            .getId());
+    business
+        .getStripeData()
+        .setFinancialAccountRef(
+            stripeClient
+                .createFinancialAccount(business.getId(), business.getStripeData().getAccountRef())
+                .getId());
     business = businessRepository.save(business);
 
     return new CreateBusinessRecord(

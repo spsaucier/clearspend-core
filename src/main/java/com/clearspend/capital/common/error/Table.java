@@ -19,7 +19,8 @@ public enum Table {
   SPEND_LIMIT("SpendLimit"),
   USER("user"),
   USER_ALLOCATION_ROLE("user_allocation_role"),
-  EXPENSE_CATEGORY("expense_categories");
+  EXPENSE_CATEGORY("expense_categories"),
+  PENDING_STRIPE_TRANSFER("pending_stripe_transfer");
 
   private final String name;
 
