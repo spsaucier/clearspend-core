@@ -15,7 +15,9 @@ import javax.persistence.Enumerated;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Data
 @RequiredArgsConstructor
 public class Business {
@@ -65,6 +67,12 @@ public class Business {
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;
 
+  @JsonProperty("accountNumber")
+  private String accountNumber;
+
+  @JsonProperty("routingNumber")
+  private String routingNumber;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -77,5 +85,13 @@ public class Business {
         business.getKnowYourBusinessStatus(),
         business.getStatus(),
         business.getAccountingSetupStep());
+
+    if (business.getStripeData().getBankAccountNumber() != null) {
+      this.accountNumber = business.getStripeData().getBankAccountNumber().getEncrypted();
+    }
+
+    if (business.getStripeData().getBankRoutingNumber() != null) {
+      this.routingNumber = business.getStripeData().getBankRoutingNumber().getEncrypted();
+    }
   }
 }

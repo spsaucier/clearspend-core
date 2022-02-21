@@ -1,7 +1,7 @@
 package com.clearspend.capital.data.model.business;
 
 import com.clearspend.capital.common.masking.annotation.Sensitive;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
@@ -30,9 +30,9 @@ public class StripeData {
   @Enumerated(EnumType.STRING)
   private FinancialAccountState financialAccountState;
 
-  @NonNull @Sensitive @Embedded private NullableEncryptedString bankAccountNumber;
+  @Sensitive @Embedded private RequiredEncryptedString bankAccountNumber;
 
-  @NonNull @Sensitive @Embedded private NullableEncryptedString bankRoutingNumber;
+  @Sensitive @Embedded private RequiredEncryptedString bankRoutingNumber;
 
   // on business creation we will collect the ip of the customer, required by Stripe
   @NonNull private String tosAcceptanceIp;

@@ -10,7 +10,6 @@ import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.TypeMismatchException;
 import com.inversoft.error.Errors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -33,8 +32,7 @@ public class GlobalControllerExceptionHandler {
     CurrencyMismatchException.class,
     IdMismatchException.class,
     InsufficientFundsException.class,
-    InvalidRequestException.class,
-    TypeMismatchException.class
+    InvalidRequestException.class
   })
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);

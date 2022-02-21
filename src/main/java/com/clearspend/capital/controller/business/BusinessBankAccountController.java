@@ -7,7 +7,6 @@ import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentRespons
 import com.clearspend.capital.controller.type.business.bankaccount.BankAccount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
-import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -23,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -118,14 +118,10 @@ public class BusinessBankAccountController {
     return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }
 
-  /**
-   * New endpoint for frontend to be used for initial onboarding transaction. It will create and
-   * link bank account, execute transaction itself, and will mark the business as fully active
-   */
   @PostMapping(
-      value = "/{businessBankAccountId}/onboard",
+      value = "/{businessBankAccountId}/register",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateAdjustmentResponse onboard(
+  private ResponseEntity<?> register(
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,
@@ -133,30 +129,15 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
-      @RequestBody @Validated TransactBankAccountRequest request,
       HttpServletRequest httpServletRequest) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
-    // TODO: 3 calls below will have to be moved to either a dedicated "onboarding service"
-    // or to one of existing services, care should be taken then to not introduce circular
-    // dependencies
     businessBankAccountService.registerExternalBank(
         businessId,
         businessBankAccountId,
         httpServletRequest.getRemoteAddr(),
         httpServletRequest.getHeader("User-Agent"));
 
-    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
-        businessBankAccountService.transactBankAccount(
-            businessId,
-            businessBankAccountId,
-            BankAccountTransactType.DEPOSIT,
-            request.getAmount().toAmount(),
-            placeHold);
-
-    businessService.updateBusiness(
-        businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
-
-    return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
+    return ResponseEntity.ok().build();
   }
 }

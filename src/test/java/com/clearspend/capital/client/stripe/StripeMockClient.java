@@ -24,7 +24,9 @@ import com.github.javafaker.Faker;
 import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
+import com.stripe.model.BankAccount;
 import com.stripe.model.Event;
+import com.stripe.model.ExternalAccountCollection;
 import com.stripe.model.Person;
 import com.stripe.model.SetupIntent;
 import com.stripe.model.StripeObject;
@@ -332,7 +334,16 @@ public class StripeMockClient extends StripeClient {
 
   @Override
   public Account setExternalAccount(String accountId, String btok) {
-    return generateEntityWithId(Account.class);
+    Account account = generateEntityWithId(Account.class);
+
+    ExternalAccountCollection externalAccounts = new ExternalAccountCollection();
+    account.setExternalAccounts(externalAccounts);
+
+    BankAccount bankAccount = new BankAccount();
+    bankAccount.setId(faker.letterify("????????????????"));
+    externalAccounts.setData(List.of(bankAccount));
+
+    return account;
   }
 
   @Override
@@ -361,7 +372,10 @@ public class StripeMockClient extends StripeClient {
       String bankAccountId,
       String customerAcceptanceIpAddress,
       String customerAcceptanceUserAgent) {
-    return generateEntityWithId(SetupIntent.class);
+    SetupIntent setupIntent = generateEntityWithId(SetupIntent.class);
+    setupIntent.setStatus("succeeded");
+
+    return setupIntent;
   }
 
   @SneakyThrows

@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.type.user;
 
+import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,6 +19,7 @@ public class CreateUserResponse {
   @NotNull(message = "userId required")
   private TypedId<UserId> userId;
 
+  @Sensitive
   @JsonProperty("password")
   @Schema(title = "Flag to indicate whether a password should be created for the user")
   private String password;

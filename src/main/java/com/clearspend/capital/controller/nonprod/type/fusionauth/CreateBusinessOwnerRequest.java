@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.nonprod.type.fusionauth;
 
+import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
@@ -18,6 +19,7 @@ public class CreateBusinessOwnerRequest {
   @JsonProperty("username")
   String username;
 
+  @Sensitive
   @JsonProperty("password")
   String password;
 }

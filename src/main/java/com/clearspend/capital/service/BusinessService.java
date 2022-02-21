@@ -8,7 +8,6 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.business.Business;
@@ -91,11 +90,7 @@ public class BusinessService {
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE,
             convertBusinessProspect.getMerchantType().getMcc(),
-            new StripeData(
-                FinancialAccountState.NOT_READY,
-                new NullableEncryptedString(),
-                new NullableEncryptedString(),
-                tosAcceptanceIp),
+            new StripeData(FinancialAccountState.NOT_READY, tosAcceptanceIp),
             AccountingSetupStep.ADD_CREDIT_CARD);
     if (businessId != null) {
       business.setId(businessId);
@@ -379,9 +374,9 @@ public class BusinessService {
     BeanUtils.setNotNull(stripeFinancialAccountRef, stripeData::setFinancialAccountRef);
     BeanUtils.setNotNull(stripeFinancialAccountState, stripeData::setFinancialAccountState);
     BeanUtils.setNotNull(
-        stripeAccountNumber, v -> stripeData.setBankAccountNumber(new NullableEncryptedString(v)));
+        stripeAccountNumber, v -> stripeData.setBankAccountNumber(new RequiredEncryptedString(v)));
     BeanUtils.setNotNull(
-        stripeRoutringNumber, v -> stripeData.setBankRoutingNumber(new NullableEncryptedString(v)));
+        stripeRoutringNumber, v -> stripeData.setBankRoutingNumber(new RequiredEncryptedString(v)));
 
     return business;
   }

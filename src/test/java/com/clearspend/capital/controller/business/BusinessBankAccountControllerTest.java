@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
+import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import java.math.BigDecimal;
@@ -48,6 +49,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private final PendingStripeTransferService pendingStripeTransferService;
   private final BusinessService businessService;
+  private final BusinessBankAccountService businessBankAccountService;
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
@@ -174,5 +176,26 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     List<PendingStripeTransfer> pendingStripeTransfers =
         pendingStripeTransferService.retrievePendingTransfers(business.business().getId());
     assertThat(pendingStripeTransfers).hasSize(0);
+  }
+
+  @Test
+  @SneakyThrows
+  void registerBankAccount() {
+    BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
+
+    assertThat(businessBankAccount.getStripeBankAccountRef()).isNull();
+    assertThat(businessBankAccount.getStripeSetupIntentRef()).isNull();
+
+    mvc.perform(
+            post(String.format("/business-bank-accounts/%s/register", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    businessBankAccount =
+        businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
+    assertThat(businessBankAccount.getStripeBankAccountRef()).isNotNull();
+    assertThat(businessBankAccount.getStripeSetupIntentRef()).isNotNull();
   }
 }

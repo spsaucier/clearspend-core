@@ -23,11 +23,15 @@ import com.clearspend.capital.controller.type.business.reallocation.BusinessFund
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.BusinessService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.util.List;
@@ -56,6 +60,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final MockMvcHelper mvcHelper;
   private final TestHelper testHelper;
 
+  private final BusinessService businessService;
   private final UserRepository userRepository;
 
   private final AccountService accountService;
@@ -358,5 +363,28 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     assertThat(businessLimit.getIssuedPhysicalCardsLimit()).isEqualTo(10);
     assertThat(businessLimit.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+  }
+
+  @Test
+  @SneakyThrows
+  void completeOnboarding() {
+    businessService.updateBusiness(
+        createBusinessRecord.business().getId(),
+        BusinessStatus.ONBOARDING,
+        BusinessOnboardingStep.LINK_ACCOUNT,
+        KnowYourBusinessStatus.PASS);
+
+    mvc.perform(
+            post("/businesses/complete-onboarding")
+                .contentType("application/json")
+                .cookie(authCookie))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
+
+    Business business =
+        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+    assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.COMPLETE);
+    assertThat(business.getStatus()).isEqualTo(BusinessStatus.ACTIVE);
   }
 }
