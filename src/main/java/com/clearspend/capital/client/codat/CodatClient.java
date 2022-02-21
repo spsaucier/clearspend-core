@@ -5,6 +5,8 @@ import com.clearspend.capital.client.codat.types.CodatAccountRef;
 import com.clearspend.capital.client.codat.types.CodatAllocation;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatContactRef;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatLineItem;
 import com.clearspend.capital.client.codat.types.CodatPaymentAllocation;
 import com.clearspend.capital.client.codat.types.CodatPaymentAllocationPayment;
@@ -206,5 +208,20 @@ public class CodatClient {
     return getFromCodatApi(
         "/companies/%s/connections/%s/data/bankAccounts/".formatted(companyRef, connectionId),
         CodatBankAccountsResponse.class);
+  }
+
+  public CodatCreateBankAccountResponse createBankAccountForBusiness(
+      String companyRef,
+      String connectionId,
+      CodatCreateBankAccountRequest createBankAccountRequest)
+      throws RuntimeException {
+    try {
+      return callCodatApi(
+          "/companies/%s/connections/%s/push/bankAccounts".formatted(companyRef, connectionId),
+          objectMapper.writeValueAsString(createBankAccountRequest),
+          CodatCreateBankAccountResponse.class);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to sync transaction to Codat", e);
+    }
   }
 }

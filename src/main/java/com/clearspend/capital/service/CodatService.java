@@ -1,7 +1,11 @@
 package com.clearspend.capital.service;
 
+import static java.util.stream.Collectors.toList;
+
 import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -15,7 +19,6 @@ import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -108,7 +111,7 @@ public class CodatService {
     List<ConnectionStatus> linkedConnections =
         connectionStatusResponse.getResults().stream()
             .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
-            .collect(Collectors.toList());
+            .collect(toList());
 
     if (linkedConnections.isEmpty()) {
       return new CodatBankAccountsResponse(new ArrayList<>());
@@ -118,5 +121,31 @@ public class CodatService {
             currentBusiness.getCodatCompanyRef(), linkedConnections.get(0).getId());
 
     return bankAccounts;
+  }
+
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatCreateBankAccountResponse createBankAccountForBusiness(
+      TypedId<BusinessId> businessId, CodatCreateBankAccountRequest createBankAccountRequest)
+      throws RuntimeException {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+
+    ConnectionStatusResponse connectionStatusResponse =
+        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
+
+    // For now, get the first Linked (active) connection. It should not really be possible for them
+    // to link multiple.
+    List<ConnectionStatus> linkedConnections =
+        connectionStatusResponse.getResults().stream()
+            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
+            .collect(toList());
+
+    if (linkedConnections.isEmpty()) {
+      throw new RuntimeException("Failed to get connection for business");
+    }
+    return codatClient.createBankAccountForBusiness(
+        currentBusiness.getCodatCompanyRef(),
+        linkedConnections.get(0).getId(),
+        createBankAccountRequest);
   }
 }

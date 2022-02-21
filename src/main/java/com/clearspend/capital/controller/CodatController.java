@@ -1,6 +1,8 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -9,9 +11,11 @@ import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -48,5 +52,11 @@ public class CodatController {
   @GetMapping("/bank-accounts")
   private CodatBankAccountsResponse getBankAccountsForBusiness() {
     return codatService.getBankAccountsForBusiness(CurrentUser.getBusinessId());
+  }
+
+  @PostMapping("/bank-accounts")
+  private CodatCreateBankAccountResponse createBankAccountForBusiness(
+      @Validated @RequestBody CodatCreateBankAccountRequest request) {
+    return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
   }
 }
