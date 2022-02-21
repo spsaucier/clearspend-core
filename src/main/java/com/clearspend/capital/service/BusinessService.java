@@ -8,9 +8,11 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.StripeData;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
@@ -20,6 +22,7 @@ import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
+import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
@@ -54,28 +57,32 @@ public class BusinessService {
   public static final String REPRESENTATIVE_DETAILS_REQUIRED = "representative";
   public static final String PERSON = "person";
   public static final String DOCUMENT = "document";
+  public static final String SSN_LAST_4 = ".ssn_last_4";
   public static final String COMPANY_OWNERS_PROVIDED = "company.owners_provided";
   public static final String COMPANY = "company";
 
   private final BusinessRepository businessRepository;
+  private final BusinessOwnerRepository businessOwnerRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
+  private final TwilioService twilioService;
   private final RetrievalService retrievalService;
 
   private final StripeClient stripeClient;
 
   public record BusinessRecord(Business business, Account businessAccount) {}
 
-  public record BusinessAndStripeMessagesRecord(
-      Business business, List<String> stripeAccountCreationMessages) {}
+  public record BusinessAndStripeAccount(
+      Business business, com.stripe.model.Account stripeAccount) {}
 
   @Transactional
-  public BusinessAndStripeMessagesRecord createBusiness(
+  public BusinessAndStripeAccount createBusiness(
       TypedId<BusinessId> businessId,
       BusinessType businessType,
+      String businessEmail,
       ConvertBusinessProspect convertBusinessProspect,
       String tosAcceptanceIp) {
     Business business =
@@ -99,6 +106,7 @@ public class BusinessService {
     business.setDescription(convertBusinessProspect.getDescription());
     business.setBusinessPhone(
         new RequiredEncryptedString(convertBusinessProspect.getBusinessPhone()));
+    business.setBusinessEmail(new RequiredEncryptedString(businessEmail));
     // for SMB without online presence we will set a default as ClearSpend URL
     business.setUrl(
         StringUtils.isEmpty(convertBusinessProspect.getUrl())
@@ -118,11 +126,7 @@ public class BusinessService {
 
     businessLimitService.initializeBusinessLimit(business.getId());
 
-    // validate and update business based on stripe account requirements
-    List<String> stripeAccountErrorMessages =
-        updateBusinessAccordingToStripeAccountRequirements(business, account);
-
-    return new BusinessAndStripeMessagesRecord(business, stripeAccountErrorMessages);
+    return new BusinessAndStripeAccount(business, account);
   }
 
   @Transactional
@@ -197,7 +201,22 @@ public class BusinessService {
     if (applicationRejected) {
       if (business.getStatus() != BusinessStatus.CLOSED) {
         updateBusiness(business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
-        // TODO:gb: send email for fail application
+        BusinessOwner businessOwner =
+            businessOwnerRepository
+                .findByBusinessIdAndEmailHash(
+                    business.getId(),
+                    HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                .orElse(
+                    businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                        .findAny()
+                        .orElseThrow());
+
+        List<String> reasons = extractErrorMessages(requirements);
+        twilioService.sendKybKycFailEmail(
+            business.getBusinessEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted(),
+            reasons);
+        return reasons;
       }
 
       return extractErrorMessages(requirements);
@@ -206,15 +225,25 @@ public class BusinessService {
     boolean applicationReadyForNextStep =
         noOtherCheckRequiredForKYCStep && activeAccountCapabilities;
     if (applicationReadyForNextStep) {
-      if (business.getOnboardingStep() != BusinessOnboardingStep.LINK_ACCOUNT
-          || business.getOnboardingStep() != BusinessOnboardingStep.TRANSFER_MONEY
-          || business.getOnboardingStep() != BusinessOnboardingStep.COMPLETE) {
+      if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT)) {
         updateBusiness(
             business.getId(),
             null,
             BusinessOnboardingStep.LINK_ACCOUNT,
             KnowYourBusinessStatus.PASS);
-        // TODO:gb: send email for success application KYC
+        BusinessOwner businessOwner =
+            businessOwnerRepository
+                .findByBusinessIdAndEmailHash(
+                    business.getId(),
+                    HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                .orElse(
+                    businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                        .findAny()
+                        .orElseThrow());
+
+        twilioService.sendKybKycPassEmail(
+            business.getBusinessEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted());
       }
 
       return extractErrorMessages(requirements);
@@ -223,10 +252,25 @@ public class BusinessService {
     boolean applicationIsInReviewState =
         !activeAccountCapabilities && noOtherCheckRequiredForKYCStep;
     if (applicationIsInReviewState) {
-      if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
+      if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW)) {
         updateBusiness(
             business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
         // TODO:gb: send email for REVIEW state
+        BusinessOwner businessOwner =
+            businessOwnerRepository
+                .findByBusinessIdAndEmailHash(
+                    business.getId(),
+                    HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                .orElse(
+                    businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                        .findAny()
+                        .orElseThrow());
+
+        List<String> reasons = extractErrorMessages(requirements);
+        twilioService.sendKybKycReviewStateEmail(
+            business.getBusinessEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted());
+        return reasons;
       }
 
       return extractErrorMessages(requirements);
@@ -239,59 +283,67 @@ public class BusinessService {
       // we will move business onboarding status depending on the stripe required information
       if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
               && requirements.getCurrentlyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
-                              || (s.startsWith(COMPANY) && !s.endsWith(COMPANY_OWNERS_PROVIDED))))
+                  .anyMatch(this::businessOrCompanyRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getPastDue())
               && requirements.getPastDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
-                              || (s.startsWith(COMPANY) && !s.endsWith(COMPANY_OWNERS_PROVIDED))))
+                  .anyMatch(this::businessOrCompanyRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
               && requirements.getEventuallyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
-                              || (s.startsWith(COMPANY)
-                                  && !s.endsWith(COMPANY_OWNERS_PROVIDED))))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS) {
+                  .anyMatch(this::businessOrCompanyRequirementsMatch))) {
+        if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS)) {
           updateBusiness(
               business.getId(),
               null,
               BusinessOnboardingStep.BUSINESS,
               KnowYourBusinessStatus.PENDING);
           // TODO:gb: send email for additional information required about business
+          BusinessOwner businessOwner =
+              businessOwnerRepository
+                  .findByBusinessIdAndEmailHash(
+                      business.getId(),
+                      HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                  .orElse(
+                      businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                          .findAny()
+                          .orElseThrow());
+
+          List<String> reasons = extractErrorMessages(requirements);
+          twilioService.sendKybKycRequireAdditionalInfoEmail(
+              business.getBusinessEmail().getEncrypted(),
+              businessOwner.getFirstName().getEncrypted(),
+              reasons);
+          return reasons;
         }
       } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)
-                              || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))
+              && requirements.getCurrentlyDue().stream().anyMatch(this::personRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)
-                              || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))
+              && requirements.getPastDue().stream().anyMatch(this::personRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
               && requirements.getEventuallyDue().stream()
-                  .anyMatch(
-                      s ->
-                          s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
-                              || s.startsWith(OWNERS_DETAILS_REQUIRED)
-                              || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT))))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
+                  .anyMatch(this::personRequirementsMatch))) {
+        if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS_OWNERS)) {
           updateBusiness(
               business.getId(),
               null,
               BusinessOnboardingStep.BUSINESS_OWNERS,
               KnowYourBusinessStatus.PENDING);
           // TODO:gb: send email for additional information required about business owners
+          BusinessOwner businessOwner =
+              businessOwnerRepository
+                  .findByBusinessIdAndEmailHash(
+                      business.getId(),
+                      HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                  .orElse(
+                      businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                          .findAny()
+                          .orElseThrow());
+
+          List<String> reasons = extractErrorMessages(requirements);
+          twilioService.sendKybKycRequireAdditionalInfoEmail(
+              business.getBusinessEmail().getEncrypted(),
+              businessOwner.getFirstName().getEncrypted(),
+              reasons);
+          return reasons;
         }
       } else if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
               && requirements.getCurrentlyDue().stream().anyMatch(s -> s.endsWith(DOCUMENT)))
@@ -302,19 +354,50 @@ public class BusinessService {
           || (!CollectionUtils.isEmpty(requirements.getPendingVerification())
               && requirements.getPendingVerification().stream()
                   .anyMatch(s -> s.endsWith(DOCUMENT)))) {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.SOFT_FAIL) {
+        if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.SOFT_FAIL)) {
           updateBusiness(
               business.getId(),
               null,
               BusinessOnboardingStep.SOFT_FAIL,
               KnowYourBusinessStatus.REVIEW);
           // TODO:gb: send email for required documents to review
+          BusinessOwner businessOwner =
+              businessOwnerRepository
+                  .findByBusinessIdAndEmailHash(
+                      business.getId(),
+                      HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                  .orElse(
+                      businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                          .findAny()
+                          .orElseThrow());
+
+          List<String> reasons = extractErrorMessages(requirements);
+          twilioService.sendKybKycRequireDocumentsEmail(
+              business.getBusinessEmail().getEncrypted(),
+              businessOwner.getFirstName().getEncrypted(),
+              reasons);
+          return reasons;
         }
       } else {
-        if (business.getOnboardingStep() != BusinessOnboardingStep.REVIEW) {
+        if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW)) {
           updateBusiness(
               business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
           // TODO:gb: send email for review application KYC
+          BusinessOwner businessOwner =
+              businessOwnerRepository
+                  .findByBusinessIdAndEmailHash(
+                      business.getId(),
+                      HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+                  .orElse(
+                      businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                          .findAny()
+                          .orElseThrow());
+
+          List<String> reasons = extractErrorMessages(requirements);
+          twilioService.sendKybKycReviewStateEmail(
+              business.getBusinessEmail().getEncrypted(),
+              businessOwner.getFirstName().getEncrypted());
+          return reasons;
         }
       }
 
@@ -326,6 +409,17 @@ public class BusinessService {
     // TODO:gb: check if is possible to arrive on unknown state
 
     return extractErrorMessages(requirements);
+  }
+
+  private Boolean businessOrCompanyRequirementsMatch(String s) {
+    return s.startsWith(BUSINESS_PROFILE_DETAILS_REQUIRED)
+        || (s.startsWith(COMPANY) && !s.endsWith(COMPANY_OWNERS_PROVIDED));
+  }
+
+  private Boolean personRequirementsMatch(String s) {
+    return s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
+        || s.startsWith(OWNERS_DETAILS_REQUIRED)
+        || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT) && !s.endsWith(SSN_LAST_4));
   }
 
   private List<String> extractErrorMessages(Requirements requirements) {
@@ -436,5 +530,21 @@ public class BusinessService {
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
+  }
+
+  @Transactional
+  public void triggerAccountValidationAfterPersonsProvided(
+      List<BusinessOwner> businessOwners, Business business, String stripeAccountReference) {
+    com.stripe.model.Account updatedAccount =
+        stripeClient.triggerAccountValidationAfterPersonsProvided(
+            stripeAccountReference,
+            businessOwners.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
+                .anyMatch(BusinessOwner::getRelationshipOwner),
+            businessOwners.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
+                .anyMatch(BusinessOwner::getRelationshipExecutive));
+
+    updateBusinessAccordingToStripeAccountRequirements(business, updatedAccount);
   }
 }

@@ -82,6 +82,9 @@ client:
     onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-3215eacb40784ac6b6a96217196b17fe}
     kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-d27553e5452f4e3e9f7b097acb1b9738}
     kyb-kyc-fail-email-template-id: ${SENDGRID_KYB_KYC_FAIL_EMAIL_TEMPLATE_ID:d-b139358de5fe4f52ab3f4d7ce3306582}
+    kyb-kyc-review-state-template-id: ${SENDGRID_KYB_KYC_REVIEW_STATE_TEMPLATE_ID:d-e80e529babfe486cae273287ea997764}
+    kyb-kyc-require-additional-info-template-id: ${SENDGRID_KYB_KYC_REQUIRE_ADDITIONAL_INFO_TEMPLATE_ID:d-a1851b46169f482788e10f1e85c5e95d}
+    kyb-kyc-require-doc-template-id: ${SENDGRID_KYB_KYC_REQUIRE_ADDITIONAL_INFO_TEMPLATE_ID:d-33f66fa9021f47d8a5b2811c4d967546}
     forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-0c078e558102456a9a492ad59a6d16f9}
     env-url: ${SENDGRID_ENV_URL:https://capital.dev.clearspend.com}
   stripe:

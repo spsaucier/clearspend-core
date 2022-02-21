@@ -52,7 +52,6 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> {
 
   @Sensitive @NonNull @Embedded private RequiredEncryptedString lastName;
 
-  @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessType businessType;
 

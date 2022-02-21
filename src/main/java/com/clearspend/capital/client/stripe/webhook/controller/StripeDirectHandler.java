@@ -143,7 +143,7 @@ public class StripeDirectHandler {
     if (common.getAllocation() != null && common.getAllocation().getId() != null) {
       metadata.put("accountId", common.getAllocation().getId().toString());
     }
-    if (common.getDeclineReasons() != null && common.getDeclineReasons().size() > 0) {
+    if (common.getDeclineReasons() != null && !common.getDeclineReasons().isEmpty()) {
       metadata.put(
           "declineReasons",
           common.getDeclineReasons().stream().map(Enum::toString).collect(Collectors.joining(",")));

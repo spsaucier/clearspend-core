@@ -40,6 +40,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
   private final Resource secondEventAfterSuccessUploadRequiredDocuments;
   private final Resource uploadRequiredDocuments;
   private final Resource ownersAndRepresentativeProvided;
+  private final Resource requiredDocumentsForPersonAndSSNLast4;
   private final Resource ownersAndRepresentativeProvided_step2inStripe;
 
   StripeConnectHandler_UpdateAccountTest(
@@ -66,6 +67,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
           Resource uploadRequiredDocuments,
       @Value("classpath:stripeResponses/ownersAndRepresentativeProvided.json") @NonNull
           Resource ownersAndRepresentativeProvided,
+      @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
+          Resource requiredDocumentsForPersonAndSSNLast4,
       @Value("classpath:stripeResponses/ownersAndRepresentativeProvided_event2fromStripe.json")
           @NonNull
           Resource ownersAndRepresentativeProvided_step2inStripe) {
@@ -84,6 +87,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     this.ownersAndRepresentativeProvided = ownersAndRepresentativeProvided;
     this.ownersAndRepresentativeProvided_step2inStripe =
         ownersAndRepresentativeProvided_step2inStripe;
+    this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
     this.successOnboarding = successOnboarding;
   }
 
@@ -267,6 +271,24 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
+  }
+
+  @Test
+  @SneakyThrows
+  void accountUpdate_receiveFromStripeRequiredDocAndSSNLast4_expectedStepSoftFail() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Event event =
+        ApiResource.GSON.fromJson(
+            new FileReader(requiredDocumentsForPersonAndSSNLast4.getFile()), Event.class);
+    StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
+    Account account = (Account) stripeObject;
+    account.setId(createBusinessRecord.business().getStripeData().getAccountRef());
+    stripeConnectHandler.accountUpdated(account);
+
+    Business business =
+        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+
+    Assertions.assertEquals(BusinessOnboardingStep.SOFT_FAIL, business.getOnboardingStep());
   }
 
   @Test

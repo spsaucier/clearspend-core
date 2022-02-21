@@ -111,7 +111,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                 .getTypeFactory()
                 .constructParametricType(List.class, CreateBusinessOwnerResponse.class));
 
-    Assertions.assertNull(createBusinessOwnerResponse.get(0).getErrorMessage());
+    Assertions.assertNull(createBusinessOwnerResponse.get(0).getErrorMessages());
   }
 
   @SneakyThrows
@@ -139,7 +139,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     String body = objectMapper.writeValueAsString(request);
 
     mvc.perform(
-            patch("/business-owners")
+            patch("/business-owners/update")
                 .contentType("application/json")
                 .content(body)
                 .cookie(onboardBusinessRecord.cookie()))

@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -16,6 +17,7 @@ import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.Person;
 import com.stripe.model.Person.Requirements;
@@ -48,6 +50,11 @@ public class BusinessOwnerService {
   public record BusinessOwnerAndUserRecord(BusinessOwner businessOwner, User user) {}
 
   public record StripePersonAndErrorMessages(Person person, List<String> errorMessages) {}
+
+  public record BusinessOwnerAndStripePersonRecord(
+      BusinessOwner businessOwner, StripePersonAndErrorMessages personReport) {}
+
+  public record BusinessAndAccountErrorMessages(Business business, List<String> errorMessages) {}
 
   @Transactional
   public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
@@ -105,6 +112,83 @@ public class BusinessOwnerService {
             .anyMatch(BusinessOwnerData::getRelationshipExecutive));
 
     return businessOwners;
+  }
+
+  public BusinessAndAccountErrorMessages allOwnersProvided(TypedId<BusinessId> businessId) {
+    Business business = businessService.retrieveBusiness(businessId, true);
+    List<BusinessOwner> businessOwners = findBusinessOwnerByBusinessId(business.getId());
+    Account updatedAccount =
+        stripeClient.triggerAccountValidationAfterPersonsProvided(
+            business.getStripeData().getAccountRef(),
+            businessOwners.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
+                .anyMatch(BusinessOwner::getRelationshipOwner),
+            businessOwners.stream()
+                .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
+                .anyMatch(BusinessOwner::getRelationshipExecutive));
+
+    List<String> stripeAccountMessages =
+        businessService.updateBusinessAccordingToStripeAccountRequirements(
+            business, updatedAccount);
+
+    return new BusinessAndAccountErrorMessages(
+        businessService.retrieveBusiness(businessId, true), stripeAccountMessages);
+  }
+
+  @Transactional
+  public BusinessOwnerAndStripePersonRecord createBusinessOwnerAndStripePerson(
+      TypedId<BusinessId> businessId, BusinessOwnerData businessOwnerData) {
+
+    Assert.notNull(businessOwnerData);
+    // TODO:gb: In case this will be updated not on the onboarding
+    // what will be the flow to validate email and phone before this method
+    BusinessOwner businessOwner = createBusinessOwner(businessOwnerData);
+
+    Business business = businessService.retrieveBusiness(businessId, true);
+    String stripeAccountReference = business.getStripeData().getAccountRef();
+
+    Person stripePerson;
+    stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
+    businessOwner.setStripePersonReference(stripePerson.getId());
+
+    List<String> stripePersonErrorMessages =
+        updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
+
+    // TODO:gb: return this to UI after a discussion will clarify this
+    StripePersonAndErrorMessages stripePersonAndErrorMessages =
+        new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
+
+    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePersonAndErrorMessages);
+  }
+
+  @Transactional
+  public BusinessOwnerAndStripePersonRecord updateBusinessOwnerAndStripePerson(
+      TypedId<BusinessId> businessId, BusinessOwnerData businessOwnerData) {
+
+    Assert.notNull(businessOwnerData);
+    // TODO:gb: In case this will be updated not on the onboarding
+    // what will be the flow to validate email and phone before this method
+    BusinessOwner businessOwner = updateBusinessOwner(businessOwnerData);
+
+    Business business = businessService.retrieveBusiness(businessId, true);
+    String stripeAccountReference = business.getStripeData().getAccountRef();
+
+    Person stripePerson;
+    if (businessOwner.getStripePersonReference() != null) {
+      stripePerson = stripeClient.updatePerson(businessOwner, stripeAccountReference);
+    } else {
+      stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
+      businessOwner.setStripePersonReference(stripePerson.getId());
+    }
+
+    List<String> stripePersonErrorMessages =
+        updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
+
+    // TODO:gb: return this to UI after a discussion will clarify this
+    StripePersonAndErrorMessages stripePersonAndErrorMessages =
+        new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
+
+    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePersonAndErrorMessages);
   }
 
   @Transactional
@@ -269,6 +353,10 @@ public class BusinessOwnerService {
 
     if (businessOwnerData.getRelationshipDirector() != null) {
       businessOwner.setRelationshipDirector(businessOwnerData.getRelationshipDirector());
+    }
+
+    if (businessOwnerData.getPhone() != null) {
+      businessOwner.setPhone(new RequiredEncryptedString(businessOwnerData.getPhone()));
     }
 
     BusinessOwner owner = businessOwnerRepository.save(businessOwner);

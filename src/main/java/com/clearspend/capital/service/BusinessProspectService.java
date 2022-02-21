@@ -21,7 +21,7 @@ import com.clearspend.capital.data.repository.business.BusinessProspectRepositor
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
-import com.clearspend.capital.service.BusinessService.BusinessAndStripeMessagesRecord;
+import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
@@ -60,7 +60,7 @@ public class BusinessProspectService {
       BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}
 
   @Transactional
-  public BusinessProspectRecord createBusinessProspect(
+  public BusinessProspectRecord createOrUpdateBusinessProspect(
       String firstName,
       String lastName,
       BusinessType businessType,
@@ -79,8 +79,8 @@ public class BusinessProspectService {
                       new BusinessProspect(
                           new RequiredEncryptedString(firstName),
                           new RequiredEncryptedString(lastName),
-                          businessType,
                           new RequiredEncryptedStringWithHash(email));
+                  entity.setBusinessType(businessType);
                   entity.setRelationshipOwner(relationshipOwner);
                   entity.setRelationshipRepresentative(relationshipRepresentative);
                   entity.setRelationshipExecutive(relationshipExecutive);
@@ -95,6 +95,27 @@ public class BusinessProspectService {
 
     if (!Objects.equals(businessProspect.getLastName().getEncrypted(), lastName)) {
       businessProspect.setLastName(new RequiredEncryptedString(lastName));
+    }
+
+    if (!Objects.equals(businessProspect.getBusinessType(), businessType)) {
+      businessProspect.setBusinessType(businessType);
+    }
+
+    if (!Objects.equals(businessProspect.getRelationshipOwner(), relationshipOwner)) {
+      businessProspect.setRelationshipOwner(relationshipOwner);
+    }
+
+    if (!Objects.equals(
+        businessProspect.getRelationshipRepresentative(), relationshipRepresentative)) {
+      businessProspect.setRelationshipRepresentative(relationshipRepresentative);
+    }
+
+    if (!Objects.equals(businessProspect.getRelationshipExecutive(), relationshipExecutive)) {
+      businessProspect.setRelationshipExecutive(relationshipExecutive);
+    }
+
+    if (!Objects.equals(businessProspect.getRelationshipDirector(), relationshipDirector)) {
+      businessProspect.setRelationshipDirector(relationshipDirector);
     }
 
     // calculating the prospect status
@@ -152,7 +173,6 @@ public class BusinessProspectService {
       String otp,
       Boolean live) {
     BusinessProspect businessProspect = retrieveBusinessProspectById(businessProspectId);
-    boolean emailExists = false;
 
     switch (identifierType) {
       case EMAIL -> {
@@ -160,6 +180,12 @@ public class BusinessProspectService {
           throw new InvalidRequestException("email already validated");
         }
         String email = businessProspect.getEmail().getEncrypted();
+        boolean emailExists =
+            businessOwnerService.retrieveBusinessOwnerByEmail(email).isPresent()
+                || userService.retrieveUserByEmail(email).isPresent();
+        if (emailExists) {
+          return new ValidateIdentifierResponse(true);
+        }
         if (Boolean.TRUE.equals(live)) {
           VerificationCheck verificationCheck = twilioService.checkVerification(email, otp);
           log.debug("verificationCheck: {}", verificationCheck);
@@ -168,9 +194,6 @@ public class BusinessProspectService {
           }
         }
         businessProspect.setEmailVerified(true);
-        emailExists =
-            businessOwnerService.retrieveBusinessOwnerByEmail(email).isPresent()
-                || userService.retrieveUserByEmail(email).isPresent();
       }
       case PHONE -> {
         if (!businessProspect.isEmailVerified()) {
@@ -193,7 +216,7 @@ public class BusinessProspectService {
 
     businessProspectRepository.save(businessProspect);
 
-    return new ValidateIdentifierResponse(emailExists);
+    return new ValidateIdentifierResponse(false);
   }
 
   @FusionAuthUserCreator(
@@ -252,10 +275,11 @@ public class BusinessProspectService {
     }
 
     // When a business is created, a corespondent into stripe will be created too
-    BusinessAndStripeMessagesRecord businessAndStripeMessagesRecord =
+    BusinessAndStripeAccount businessAndStripeAccount =
         businessService.createBusiness(
             businessProspect.getBusinessId(),
             businessProspect.getBusinessType(),
+            businessProspect.getEmail().getEncrypted(),
             convertBusinessProspect,
             tosAcceptanceIp);
 
@@ -268,17 +292,22 @@ public class BusinessProspectService {
     // delete the business prospect so that the owner of the email could register a new business
     businessProspectRepository.delete(businessProspect);
 
-    Business business = businessAndStripeMessagesRecord.business();
+    Business business = businessAndStripeAccount.business();
     AllocationRecord allocationRecord =
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName() + " - root");
+
+    // validate and update business based on stripe account requirements
+    List<String> stripeAccountErrorMessages =
+        businessService.updateBusinessAccordingToStripeAccountRequirements(
+            business, businessAndStripeAccount.stripeAccount());
 
     return new ConvertBusinessProspectRecord(
         business,
         allocationRecord,
         businessOwner.businessOwner(),
         businessOwner.user(),
-        businessAndStripeMessagesRecord.stripeAccountCreationMessages());
+        stripeAccountErrorMessages);
   }
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {

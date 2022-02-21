@@ -6,8 +6,8 @@ import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectData;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
-import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
+import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
@@ -43,9 +43,9 @@ public class BusinessProspectController {
 
   @PostMapping("")
   private CreateBusinessProspectResponse createBusinessProspect(
-      @Validated @RequestBody CreateBusinessProspectRequest request) {
-    BusinessProspectRecord record =
-        businessProspectService.createBusinessProspect(
+      @Validated @RequestBody CreateOrUpdateBusinessProspectRequest request) {
+    BusinessProspectRecord businessProspect =
+        businessProspectService.createOrUpdateBusinessProspect(
             request.getFirstName(),
             request.getLastName(),
             request.getBusinessType(),
@@ -53,12 +53,12 @@ public class BusinessProspectController {
             request.getBusinessType() != BusinessType.INDIVIDUAL
                 && CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE,
             request.getRelationshipExecutive(),
-            request.getRelationshipDirector(),
+            false, // for now we decide to ignore director option
             request.getEmail(),
             onboardingEmailPhoneValidation);
 
     return new CreateBusinessProspectResponse(
-        record.businessProspect().getId(), record.businessProspectStatus());
+        businessProspect.businessProspect().getId(), businessProspect.businessProspectStatus());
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")

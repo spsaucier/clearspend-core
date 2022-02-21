@@ -54,6 +54,17 @@ public class TwilioServiceMock extends TwilioService {
   public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {}
 
   @Override
+  public void sendKybKycReviewStateEmail(String to, String firstName) {}
+
+  @Override
+  public void sendKybKycRequireAdditionalInfoEmail(
+      String to, String firstName, List<String> reasons) {}
+
+  @Override
+  public void sendKybKycRequireDocumentsEmail(
+      String to, String firstName, List<String> requiredDocuments) {}
+
+  @Override
   public Verification sendVerificationSms(String to) {
     lastVerificationPhone = to;
     return verification;

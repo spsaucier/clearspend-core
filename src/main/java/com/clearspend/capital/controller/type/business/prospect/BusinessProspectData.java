@@ -38,7 +38,6 @@ public class BusinessProspectData {
   private String lastName;
 
   @JsonProperty("businessType")
-  @NonNull
   @Schema(title = "The Business type", required = true, example = "SINGLE_MEMBER_LLC")
   private BusinessType businessType;
 
@@ -63,8 +62,8 @@ public class BusinessProspectData {
         new BusinessProspectData(
             businessProspect.getEmail().getEncrypted(),
             businessProspect.getFirstName().getEncrypted(),
-            businessProspect.getLastName().getEncrypted(),
-            businessProspect.getBusinessType());
+            businessProspect.getLastName().getEncrypted());
+    businessProspectData.setBusinessType(businessProspect.getBusinessType());
     businessProspectData.setRelationshipDirector(businessProspect.getRelationshipDirector());
     businessProspectData.setRelationshipExecutive(businessProspect.getRelationshipExecutive());
     businessProspectData.setRelationshipOwner(businessProspect.getRelationshipOwner());

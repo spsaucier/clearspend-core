@@ -25,8 +25,8 @@ import com.clearspend.capital.controller.type.allocation.CreateAllocationRespons
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
-import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
+import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
@@ -359,7 +359,7 @@ public class TestHelper {
 
   public void testBusinessProspectState(String email, BusinessProspectStatus status) {
     BusinessProspectRecord record =
-        businessProspectService.createBusinessProspect(
+        businessProspectService.createOrUpdateBusinessProspect(
             generateFirstName(),
             generateLastName(),
             BusinessType.MULTI_MEMBER_LLC,
@@ -445,14 +445,13 @@ public class TestHelper {
   }
 
   public BusinessProspect createBusinessProspect() throws Exception {
-    CreateBusinessProspectRequest request =
-        new CreateBusinessProspectRequest(
+    CreateOrUpdateBusinessProspectRequest request =
+        new CreateOrUpdateBusinessProspectRequest(
             generateEmail(),
             generateFirstName(),
             generateLastName(),
             BusinessType.MULTI_MEMBER_LLC,
             true,
-            false,
             false,
             false);
     String body = objectMapper.writeValueAsString(request);
@@ -518,7 +517,7 @@ public class TestHelper {
             generateEmployerIdentificationNumber(),
             generatePhone(),
             generateApiAddress(),
-            7311,
+            "7311",
             "Business default description.");
     String body = objectMapper.writeValueAsString(request);
 
@@ -739,6 +738,7 @@ public class TestHelper {
             .createBusiness(
                 businessId,
                 BusinessType.SINGLE_MEMBER_LLC,
+                email,
                 new ConvertBusinessProspect(
                     null,
                     legalName.length() > 100 ? legalName.substring(0, 100) : legalName,

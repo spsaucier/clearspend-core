@@ -391,7 +391,7 @@ public class TestDataController {
       @PathVariable(value = "type") BusinessType businessType) {
 
     BusinessProspectRecord businessProspect =
-        businessProspectService.createBusinessProspect(
+        businessProspectService.createOrUpdateBusinessProspect(
             faker.name().firstName(),
             faker.name().lastName(),
             businessType,

@@ -34,4 +34,21 @@ public class TwilioDemoController {
     twilioService.sendKybKycFailEmail(
         request.getTo(), request.getFirstName(), request.getReasons());
   }
+
+  @PostMapping(value = "/kyc-review", produces = MediaType.APPLICATION_JSON_VALUE)
+  private void kycReview(@RequestBody @Validated KycPassRequest request) {
+    twilioService.sendKybKycReviewStateEmail(request.getTo(), request.getFirstName());
+  }
+
+  @PostMapping(value = "/kyc-additional-info", produces = MediaType.APPLICATION_JSON_VALUE)
+  private void kycAdditionalInfo(@RequestBody @Validated KycFailRequest request) {
+    twilioService.sendKybKycRequireAdditionalInfoEmail(
+        request.getTo(), request.getFirstName(), request.getReasons());
+  }
+
+  @PostMapping(value = "/kyc-required-documents", produces = MediaType.APPLICATION_JSON_VALUE)
+  private void kycRequiredDocuments(@RequestBody @Validated KycFailRequest request) {
+    twilioService.sendKybKycRequireDocumentsEmail(
+        request.getTo(), request.getFirstName(), request.getReasons());
+  }
 }

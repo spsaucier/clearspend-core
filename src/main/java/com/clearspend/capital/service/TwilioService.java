@@ -32,6 +32,7 @@ public class TwilioService {
 
   private final String FIRST_NAME_KEY = "first_name";
   private final String REASONS_KEY = "reasons";
+  private final String DOCS_LIST = "docs_list";
   private final String ENV_URL = "env-url";
   private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "changePasswordId";
 
@@ -103,6 +104,64 @@ public class TwilioService {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(REASONS_KEY, reasons);
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  public void sendKybKycReviewStateEmail(String to, String firstName) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getKybKycReviewStateTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  public void sendKybKycRequireAdditionalInfoEmail(
+      String to, String firstName, List<String> additionalRequirements) {
+
+    if (additionalRequirements.isEmpty()) {
+      log.warn("Kyc Require documents Email can't be send. RequiredDocuments list is empty.");
+      return;
+    }
+
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getKybKycRequireAdditionalInfoTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(REASONS_KEY, additionalRequirements);
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+
+    send(mail);
+  }
+
+  public void sendKybKycRequireDocumentsEmail(
+      String to, String firstName, List<String> requiredDocuments) {
+
+    if (requiredDocuments.isEmpty()) {
+      log.warn("Kyc Require documents Email can't be send. RequiredDocuments list is empty.");
+      return;
+    }
+
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(sendGridProperties.getKybKycRequireDocTemplateId());
+
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(DOCS_LIST, requiredDocuments);
     personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     personalization.addTo(new Email(to));
     mail.addPersonalization(personalization);

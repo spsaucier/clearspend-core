@@ -86,7 +86,7 @@ public class Business extends TypedMutable<BusinessId> {
   private String description;
 
   // merchant category code - saved and send to Stripe - mandatory field
-  @NonNull private Integer mcc;
+  @NonNull private String mcc;
 
   // the online presence of a business(facebook link, site, etc.) - it is required by Stripe
   private String url;

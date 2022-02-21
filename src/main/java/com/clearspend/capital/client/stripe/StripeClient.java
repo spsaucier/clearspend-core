@@ -323,12 +323,12 @@ public class StripeClient {
     // TODO request this in case is mandatory for big company
     // TODO setFullSSN to stripe person
     if (businessOwner.getTaxIdentificationNumber() != null) {
+      builder.setIdNumber(businessOwner.getTaxIdentificationNumber().getEncrypted());
       builder.setSsnLast4(
           businessOwner
               .getTaxIdentificationNumber()
               .getEncrypted()
               .substring(businessOwner.getTaxIdentificationNumber().getEncrypted().length() - 4));
-      builder.setIdNumber(businessOwner.getTaxIdentificationNumber().getEncrypted());
     }
 
     PersonCollectionCreateParams personParameters = builder.build();
@@ -376,14 +376,6 @@ public class StripeClient {
 
     Person person = retrievePerson(businessOwner.getStripePersonReference(), stripeAccountId);
 
-    person.setFirstName(businessOwner.getFirstName().getEncrypted());
-    person.setLastName(businessOwner.getLastName().getEncrypted());
-    person.setEmail(businessOwner.getEmail().getEncrypted());
-
-    if (businessOwner.getPhone() != null) {
-      person.setPhone(businessOwner.getPhone().getEncrypted());
-    }
-
     PersonUpdateParams.Address.Builder addressBuilder =
         PersonUpdateParams.Address.builder()
             .setLine1(businessOwner.getAddress().getStreetLine1().getEncrypted())
@@ -398,6 +390,19 @@ public class StripeClient {
     // TODO check if id number is mandatory to get from UI
     PersonUpdateParams.Builder builder = PersonUpdateParams.builder();
     builder.setAddress(addressBuilder.build());
+    if (!businessOwner.getFirstName().getEncrypted().equals(person.getFirstName())) {
+      builder.setFirstName(businessOwner.getFirstName().getEncrypted());
+    }
+    if (!businessOwner.getLastName().getEncrypted().equals(person.getLastName())) {
+      builder.setLastName(businessOwner.getLastName().getEncrypted());
+    }
+    if (!businessOwner.getEmail().getEncrypted().equals(person.getEmail())) {
+      builder.setEmail(businessOwner.getEmail().getEncrypted());
+    }
+    if (businessOwner.getPhone() != null
+        && !businessOwner.getPhone().getEncrypted().equals(person.getPhone())) {
+      builder.setPhone(businessOwner.getPhone().getEncrypted());
+    }
 
     PersonUpdateParams.Relationship.Builder builderRelationShip =
         PersonUpdateParams.Relationship.builder();

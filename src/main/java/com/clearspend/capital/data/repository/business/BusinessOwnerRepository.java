@@ -20,4 +20,7 @@ public interface BusinessOwnerRepository
   Optional<BusinessOwner> findByStripePersonReference(String stripePersonReference);
 
   Optional<BusinessOwner> findByEmailHash(byte[] emailHash);
+
+  Optional<BusinessOwner> findByBusinessIdAndEmailHash(
+      TypedId<BusinessId> businessId, byte[] emailHash);
 }

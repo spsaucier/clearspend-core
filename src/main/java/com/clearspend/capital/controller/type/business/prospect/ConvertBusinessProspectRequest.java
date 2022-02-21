@@ -49,12 +49,12 @@ public class ConvertBusinessProspectRequest {
   @JsonProperty("mcc")
   @NonNull
   @NotNull(message = "Mcc is required")
-  private Integer mcc;
+  private String mcc;
 
   @JsonProperty("description")
   @NonNull
   @NotNull(message = "Business Description is required")
-  @Schema(title = "Phone number in e.164 format", example = "+1234567890")
+  @Schema(title = "Description", example = "Business small description")
   private String description;
 
   public ConvertBusinessProspect toConvertBusinessProspect(

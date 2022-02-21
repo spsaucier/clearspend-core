@@ -217,7 +217,7 @@ public class ApplicationReviewService {
         // TODO:gb: what are all the correct document type required by Stripe for account
         .map(
             accountRequiredField -> {
-              String entityTokenId = accountRequiredField.split("_")[1].split("\\.")[0];
+              String entityTokenId = accountRequiredField.split("\\.")[0];
               Optional<BusinessOwner> first =
                   businessOwners.stream()
                       .filter(

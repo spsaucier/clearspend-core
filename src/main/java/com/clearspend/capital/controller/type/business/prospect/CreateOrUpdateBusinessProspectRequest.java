@@ -17,7 +17,7 @@ import lombok.NonNull;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateBusinessProspectRequest {
+public class CreateOrUpdateBusinessProspectRequest {
 
   @Sensitive
   @JsonProperty("email")
@@ -43,9 +43,7 @@ public class CreateBusinessProspectRequest {
   private String lastName;
 
   @JsonProperty("businessType")
-  @NonNull
-  @NotNull(message = "businessType required")
-  @Schema(title = "The Business type", required = true, example = "SINGLE_MEMBER_LLC")
+  @Schema(title = "The Business type", example = "SINGLE_MEMBER_LLC")
   private BusinessType businessType;
 
   @JsonProperty("relationshipOwner")
@@ -59,8 +57,4 @@ public class CreateBusinessProspectRequest {
   @JsonProperty("relationshipExecutive")
   @Schema(title = "Relationship to business Executive", example = "true")
   private Boolean relationshipExecutive;
-
-  @JsonProperty("relationshipDirector")
-  @Schema(title = "Relationship to business Director", example = "true")
-  private Boolean relationshipDirector;
 }

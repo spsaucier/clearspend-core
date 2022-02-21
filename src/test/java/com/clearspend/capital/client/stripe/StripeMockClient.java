@@ -72,6 +72,7 @@ public class StripeMockClient extends StripeClient {
   private final Resource uploadRequiredDocuments;
   private final Resource ownersAndRepresentativeProvided;
   private final Resource ownersAndRepresentativeProvided_event2fromStripe;
+  private final Resource requiredDocumentsForPersonAndSSNLast4;
 
   public StripeMockClient(
       StripeProperties stripeProperties,
@@ -102,7 +103,9 @@ public class StripeMockClient extends StripeClient {
           Resource ownersAndRepresentativeProvided,
       @Value("classpath:stripeResponses/ownersAndRepresentativeProvided_event2fromStripe.json")
           @NonNull
-          Resource ownersAndRepresentativeProvided_event2fromStripe) {
+          Resource ownersAndRepresentativeProvided_event2fromStripe,
+      @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
+          Resource requiredDocumentsForPersonAndSSNLast4) {
     super(stripeProperties, objectMapper, stripeTreasuryWebClient);
 
     this.createAccount = createAccount;
@@ -119,6 +122,7 @@ public class StripeMockClient extends StripeClient {
     this.ownersAndRepresentativeProvided = ownersAndRepresentativeProvided;
     this.ownersAndRepresentativeProvided_event2fromStripe =
         ownersAndRepresentativeProvided_event2fromStripe;
+    this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
     this.successOnboarding = successOnboarding;
   }
 
@@ -150,6 +154,28 @@ public class StripeMockClient extends StripeClient {
 
   @Override
   public Person createPerson(BusinessOwner businessOwner, String stripeAccountId) {
+    Person person = generateEntityWithId(Person.class);
+    if (businessOwner.getTitle() != null) {
+      if ("Review".equals(businessOwner.getTitle())) {
+        Person.Requirements requirements = new Person.Requirements();
+        Errors failed_address_match = new Errors();
+        failed_address_match.setCode("verification_document_id_number_mismatch");
+        requirements.setErrors(List.of(failed_address_match));
+        requirements.setPastDue(List.of("verification.document"));
+        person.setRequirements(requirements);
+      } else if ("Fraud".equals(businessOwner.getTitle())) {
+        Person.Requirements requirements = new Person.Requirements();
+        Errors failed_address_match = new Errors();
+        failed_address_match.setCode("verification_failed_other");
+        requirements.setErrors(List.of(failed_address_match));
+        person.setRequirements(requirements);
+      }
+    }
+    return person;
+  }
+
+  @Override
+  public Person updatePerson(BusinessOwner businessOwner, String stripeAccountId) {
     Person person = generateEntityWithId(Person.class);
     if (businessOwner.getTitle() != null) {
       if ("Review".equals(businessOwner.getTitle())) {
@@ -275,6 +301,9 @@ public class StripeMockClient extends StripeClient {
         }
         case "ownersAndRepresentativeProvided_event2fromStripe" -> {
           return getAccountFromJson(ownersAndRepresentativeProvided_event2fromStripe, business);
+        }
+        case "requiredDocumentsForPersonAndSSNLast4" -> {
+          return getAccountFromJson(requiredDocumentsForPersonAndSSNLast4, business);
         }
         case "successOnboarding" -> {
           return getAccountFromJson(successOnboarding, business);
@@ -466,7 +495,7 @@ public class StripeMockClient extends StripeClient {
     Set<String> personList =
         accountRequiredFields.stream()
             .filter(accountRequiredField -> accountRequiredField.startsWith(PERSON))
-            .map(accountRequiredField -> accountRequiredField.split("_")[1].split("\\.")[0])
+            .map(accountRequiredField -> accountRequiredField.split("\\.")[0])
             .collect(Collectors.toSet());
 
     List<BusinessOwner> byBusinessId = businessOwnerRepository.findByBusinessId(business.getId());
