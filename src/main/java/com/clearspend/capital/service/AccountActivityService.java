@@ -213,15 +213,16 @@ public class AccountActivityService {
       String notes,
       Integer iconRef) {
     AccountActivity accountActivity = getUserAccountActivity(businessId, userId, accountActivityId);
-    if (StringUtils.isNotBlank(notes)) {
-      accountActivity.setNotes(notes);
+    String note = StringUtils.isNotEmpty(notes) ? notes : "";
+    accountActivity.setNotes(note);
+    ExpenseCategory expenseCategory;
+    if (null != iconRef && iconRef != 0) {
+      expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
+      accountActivity.setExpenseDetails(
+          new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
     }
-    ExpenseCategory expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
-    accountActivity.setExpenseDetails(
-        new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
     log.debug(
         "Set expense category {} to accountActivity {} ({})",
-        expenseCategory.getIconRef(),
         accountActivity.getId(),
         accountActivity.getExpenseDetails());
     return accountActivityRepository.save(accountActivity);

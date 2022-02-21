@@ -14,18 +14,18 @@ import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommo
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
-import com.clearspend.capital.data.model.enums.AccountActivityType;
-import com.clearspend.capital.data.model.enums.BankAccountTransactType;
-import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.enums.*;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +46,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Autowired TestHelper testHelper;
   @Autowired AccountActivityRepository accountActivityRepository;
+  @Autowired ExpenseCategoryService expenseCategoryService;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -251,5 +252,35 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     assertThrows(
         RecordNotFoundException.class,
         () -> accountActivityService.findByReceiptId(new TypedId<>(), new TypedId<>()));
+  }
+
+  @Test
+  void updateAccountActivity_success() {
+    CreateBusinessRecord businessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(businessRecord.user());
+    AccountActivity accountActivity =
+        new AccountActivity(
+            businessRecord.business().getId(),
+            businessRecord.allocationRecord().allocation().getId(),
+            businessRecord.allocationRecord().allocation().getName(),
+            businessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    log.info("AccountActivity: {}", accountActivity);
+    accountActivity.setNotes("");
+    ExpenseCategory expenseCategory;
+    Integer iconRef = 0;
+    if (null != iconRef && iconRef != 0) {
+      expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
+      accountActivity.setExpenseDetails(
+          new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
+    }
+    accountActivityRepository.save(accountActivity);
+    AccountActivity accountActivityResult =
+        accountActivityRepository.findById(accountActivity.getId()).orElseThrow();
+    log.info(String.valueOf(accountActivityResult));
   }
 }
