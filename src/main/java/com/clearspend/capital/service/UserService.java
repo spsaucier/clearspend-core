@@ -13,6 +13,7 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -59,7 +60,7 @@ public class UserService {
   @FusionAuthUserCreator(
       reviewer = "jscarbor",
       explanation = "User Service manages the sync between users and FA users")
-  User sendWelcomeEmailIfNeeded(User user) {
+  User sendWelcomeEmailIfNeeded(User user, CardType cardType) {
     if (StringUtils.isEmpty(user.getSubjectRef())) {
       String password = PasswordUtil.generatePassword();
       user.setSubjectRef(
@@ -70,10 +71,18 @@ public class UserService {
 
       user = userRepository.save(user);
 
-      twilioService.sendNotificationEmail(
-          user.getEmail().getEncrypted(),
-          String.format(
-              "Welcome to ClearSpend! A card was assigned to you. Your password is %s", password));
+      switch (cardType) {
+        case PHYSICAL -> twilioService.sendCardIssuedPhysicalNotifyUserEmail(
+            user.getEmail().getEncrypted(),
+            user.getFirstName().getEncrypted(),
+            businessRepository.getById(user.getBusinessId()).getLegalName(),
+            password);
+        case VIRTUAL -> twilioService.sendCardIssuedVirtualNotifyUserEmail(
+            user.getEmail().getEncrypted(),
+            user.getFirstName().getEncrypted(),
+            businessRepository.getById(user.getBusinessId()).getLegalName(),
+            password);
+      }
     }
     return user;
   }

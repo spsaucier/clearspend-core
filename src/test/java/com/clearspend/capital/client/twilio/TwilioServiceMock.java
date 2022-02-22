@@ -82,4 +82,57 @@ public class TwilioServiceMock extends TwilioService {
 
     return verificationCheck;
   }
+
+  @Override
+  public void sendPasswordResetSuccessEmail(String to, String firstName) {}
+
+  @Override
+  public void sendWelcomeByInviteOnlyEmail(String to, String firstName) {}
+
+  @Override
+  public void sendKybKycDocsReceivedEmail(String to, String firstName) {}
+
+  @Override
+  public void sendBankDetailsAddedEmail(String to, String firstName) {}
+
+  @Override
+  public void sendBankFundsAvailableEmail(String to, String firstName) {}
+
+  @Override
+  public void sendBankDetailsRemovedEmail(String to, String firstName) {}
+
+  @Override
+  public void sendBankFundsReturnEmail(String to, String firstName) {}
+
+  @Override
+  public void sendBankFundsWithdrawalEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardIssuedNotifyOwnerEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardIssuedVirtualNotifyUserEmail(
+      String to, String firstName, String companyName, String password) {}
+
+  @Override
+  public void sendCardIssuedPhysicalNotifyUserEmail(
+      String to, String firstName, String companyName, String password) {}
+
+  @Override
+  public void sendCardShippedNotifyUserEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardStartActivationEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardActivationCompletedEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardFrozenEmail(String to, String firstName) {}
+
+  @Override
+  public void sendCardUnfrozenEmail(String to, String firstName) {}
+
+  @Override
+  public void sendUserDetailsUpdatedEmail(String to, String firstName) {}
 }

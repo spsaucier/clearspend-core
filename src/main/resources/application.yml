@@ -87,6 +87,24 @@ client:
     kyb-kyc-require-doc-template-id: ${SENDGRID_KYB_KYC_REQUIRE_ADDITIONAL_INFO_TEMPLATE_ID:d-33f66fa9021f47d8a5b2811c4d967546}
     forgot-password-email-template-id: ${SENDGRID_FORGOT_PASSWORD_EMAIL_TEMPLATE_ID:d-0c078e558102456a9a492ad59a6d16f9}
     env-url: ${SENDGRID_ENV_URL:https://capital.dev.clearspend.com}
+    password-reset-success-template-id: ${SENDGRID_PASSWORD_RESET_SUCCESS_EMAIL_TEMPLATE_ID:d-71d1284b1ec347ddb82249078c4edf76}
+    welcome-invite-only-template-id: ${SENDGRID_WELCOME_INVITE_ONLY_EMAIL_TEMPLATE_ID:d-391f46e5b79248f293377162fe50b818}
+    kyb-kyc-docs-received-template-id: ${SENDGRID_KYB_KYC_DOCS_RECEIVED_EMAIL_TEMPLATE_ID:d-fbd177a8de2a43ec8c50bbb58ea65fdb}
+    onboarding-bank-details-added-template-id: ${SENDGRID_ONBOARDING_BANK_DETAILS_ADDED_TEMPLATE_ID:d-044986ffaf204424a8fc10f2b526fe73}
+    onboarding-bank-funds-available-template-id: ${SENDGRID_ONBOARDING_BANK_FUNDS_AVAILABLE_TEMPLATE_ID:d-6067636fa5d14c509adc47a4a274fa71}
+    onboarding-bank-details-removed-template-id: ${SENDGRID_ONBOARDING_BANK_DETAILS_REMOVED_TEMPLATE_ID:d-34483e8234504cb19bd11eb36375d15a}
+    onboarding-bank-funds-return-template-id: ${SENDGRID_ONBOARDING_BANK_FUNDS_RETURN_TEMPLATE_ID:d-ca472219db95445c94498f4d09e28ee4}
+    onboarding-bank-funds-withdrawal-template-id: ${SENDGRID_ONBOARDING_BANK_FUNDS_WITHDRAWAL_TEMPLATE_ID:d-ca472219db95445c94498f4d09e28ee4}
+    card-issued-notify-owner-template-id: ${SENDGRID_CARD_ISSUED_NOTIFY_OWNER_TEMPLATE_ID:d-c383489d5e114c80953b2a1527c4533a}
+    card-issued-virtual-notify-user-template-id: ${SENDGRID_CARD_ISSUED_VIRTUAL_NOTIFY_USER_TEMPLATE_ID:d-a7bf2b56108e4f9e8675ef36c24ad4fa}
+    card-issued-physical-notify-user-template-id: ${SENDGRID_CARD_ISSUED_PHYSICAL_NOTIFY_USER_TEMPLATE_ID:d-4af0d801e7d542bbae3ca15d0a93c721}
+    card-shipped-notify-user-template-id: ${SENDGRID_CARD_SHIPPED_NOTIFY_USER_TEMPLATE_ID:d-daa03219d41c4a28bedc7a2607d29109}
+    card-start-activation-template-id: ${SENDGRID_CARD_ACTIVATE_START_TEMPLATE_ID:d-766c4fb9c2fb4974828add3c94e8a9ff}
+    card-activation-completed-template-id: ${SENDGRID_CARD_ACTIVATION_COMPLETED_TEMPLATE_ID:d-852d5c75ec7644cca7535b2f4fbf7286}
+    card-frozen-template-id: ${SENDGRID_CARD_FROZEN_TEMPLATE_ID:d-7fdf02b4c08b4f54bb73c4c977652321}
+    card-unfrozen-template-id: ${SENDGRID_CARD_UNFROZEN_TEMPLATE_ID:d-8aa17f4296c74c50bf86786540fab6d3}
+    user-details-updated-template-id: ${SENDGRID_USER_DETAILS_UPDATED_TEMPLATE_ID:d-dedcc52329e1403f90986802aefeb6c6}
+
   stripe:
     # secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     issuing-secret: ${STRIPE_ISSUING_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}

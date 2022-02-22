@@ -34,7 +34,9 @@ public class TwilioService {
   private final String REASONS_KEY = "reasons";
   private final String DOCS_LIST = "docs_list";
   private final String ENV_URL = "env-url";
-  private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "changePasswordId";
+  private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "change_password_id";
+  private final String COMPANY_NAME_KEY = "company_name";
+  private final String PASSWORD_KEY = "password";
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -226,5 +228,188 @@ public class TwilioService {
     return VerificationCheck.creator(twilioProperties.getVerifyServiceId(), challenge)
         .setTo(subject)
         .create();
+  }
+
+  private Mail initMailWithTemplate(String templateId, String to, Personalization personalization) {
+    Mail mail = new Mail();
+    mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
+    mail.setTemplateId(templateId);
+    personalization.addTo(new Email(to));
+    mail.addPersonalization(personalization);
+    return mail;
+  }
+
+  /* Login: Password Reset Success */
+  public void sendPasswordResetSuccessEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getPasswordResetSuccessTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Welcome Invite only */
+  public void sendWelcomeByInviteOnlyEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getWelcomeInviteOnlyTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: KYB/KYC docs received */
+  public void sendKybKycDocsReceivedEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getKybKycDocsReceivedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Details Added */
+  public void sendBankDetailsAddedEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getOnboardingBankDetailsAddedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Funds Available */
+  public void sendBankFundsAvailableEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getOnboardingBankFundsAvailableTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Details Removed */
+  public void sendBankDetailsRemovedEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getOnboardingBankDetailsRemovedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Funds Available */
+  public void sendBankFundsReturnEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getOnboardingBankFundsReturnTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Funds Withdrawal */
+  public void sendBankFundsWithdrawalEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getOnboardingBankFundsReturnTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Card issued Owner Notification */
+  public void sendCardIssuedNotifyOwnerEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardIssuedNotifyOwnerTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Virtual Card issued to Employee Notification */
+  public void sendCardIssuedVirtualNotifyUserEmail(
+      String to, String firstName, String companyName, String password) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(COMPANY_NAME_KEY, companyName);
+    personalization.addDynamicTemplateData(PASSWORD_KEY, password);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardIssuedVirtualNotifyUserTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Physical Card issued to Employee Notification */
+  public void sendCardIssuedPhysicalNotifyUserEmail(
+      String to, String firstName, String companyName, String password) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(COMPANY_NAME_KEY, companyName);
+    personalization.addDynamicTemplateData(PASSWORD_KEY, password);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardIssuedPhysicalNotifyUserTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Physical Card Shipped to Employee Notification */
+  public void sendCardShippedNotifyUserEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardShippedNotifyUserTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Physical Card Activation Email */
+  public void sendCardStartActivationEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardStartActivationTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Physical Card Activation Completed email */
+  public void sendCardActivationCompletedEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getCardActivationCompletedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Card Freeze email */
+  public void sendCardFrozenEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(sendGridProperties.getCardFrozenTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Card : Card Unfreeze email */
+  public void sendCardUnfrozenEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(sendGridProperties.getCardUnfrozenTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Update : Employee Update Phone number or email or Address email */
+  public void sendUserDetailsUpdatedEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getUserDetailsUpdatedTemplateId(), to, personalization);
+    send(mail);
   }
 }

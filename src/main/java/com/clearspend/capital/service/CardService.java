@@ -193,7 +193,7 @@ public class CardService {
     // If FusionAuth record was never created for the current user, we will create it now
     // This usually happens for new employees, created after the main user was created,
     // for whom the cards were not issued yet
-    user = userService.sendWelcomeEmailIfNeeded(user);
+    user = userService.sendWelcomeEmailIfNeeded(user, card.getType());
 
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {

@@ -35,4 +35,38 @@ public class SendGridProperties {
   @NotBlank private String kybKycRequireDocTemplateId;
 
   @NotBlank private String forgotPasswordEmailTemplateId;
+
+  @NotBlank private String passwordResetSuccessTemplateId;
+
+  @NotBlank private String welcomeInviteOnlyTemplateId;
+
+  @NotBlank private String kybKycDocsReceivedTemplateId;
+
+  @NotBlank private String onboardingBankDetailsAddedTemplateId;
+
+  @NotBlank private String onboardingBankFundsAvailableTemplateId;
+
+  @NotBlank private String onboardingBankDetailsRemovedTemplateId;
+
+  @NotBlank private String onboardingBankFundsReturnTemplateId;
+
+  @NotBlank private String onboardingBankFundsWithdrawalTemplateId;
+
+  @NotBlank private String cardIssuedNotifyOwnerTemplateId;
+
+  @NotBlank private String cardIssuedVirtualNotifyUserTemplateId;
+
+  @NotBlank private String cardIssuedPhysicalNotifyUserTemplateId;
+
+  @NotBlank private String cardShippedNotifyUserTemplateId;
+
+  @NotBlank private String cardStartActivationTemplateId;
+
+  @NotBlank private String cardActivationCompletedTemplateId;
+
+  @NotBlank private String cardFrozenTemplateId;
+
+  @NotBlank private String cardUnfrozenTemplateId;
+
+  @NotBlank private String userDetailsUpdatedTemplateId;
 }
