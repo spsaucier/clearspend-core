@@ -439,6 +439,16 @@ public class BusinessService {
   }
 
   @Transactional
+  public Business updateBusinessAccountingSetupStep(
+      TypedId<BusinessId> businessId, AccountingSetupStep accountingSetupStep) {
+    Business business = retrieveBusiness(businessId, true);
+
+    business.setAccountingSetupStep(accountingSetupStep);
+
+    return businessRepository.save(business);
+  }
+
+  @Transactional
   public Business updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,
