@@ -11,6 +11,7 @@ pipelines:
     - step:
         name: Build and test application
         image: openjdk:17.0.2-jdk-oracle
+        size: 2x
         artifacts:
           - build/libs/*.jar
         caches:
@@ -42,6 +43,7 @@ pipelines:
       - step:
           name: Build and test application
           image: openjdk:17.0.2-jdk-oracle
+          size: 2x
           artifacts:
             - build/libs/*.jar
           caches:
