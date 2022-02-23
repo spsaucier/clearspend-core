@@ -53,10 +53,13 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
+  private BusinessBankAccount businessBankAccount;
 
   @BeforeEach
   void init() {
-    createBusinessRecord = testHelper.init();
+    createBusinessRecord = testHelper.createBusiness(100_000L);
+    businessBankAccount =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     this.authCookie = createBusinessRecord.authCookie();
   }
 
@@ -101,8 +104,6 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void transact_success() {
-    BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
-
     TransactBankAccountRequest request =
         new TransactBankAccountRequest(
             BankAccountTransactType.DEPOSIT, new Amount(Currency.USD, BigDecimal.TEN));
@@ -181,8 +182,6 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void registerBankAccount() {
-    BusinessBankAccount businessBankAccount = testHelper.retrieveBusinessBankAccount();
-
     assertThat(businessBankAccount.getStripeBankAccountRef()).isNull();
     assertThat(businessBankAccount.getStripeSetupIntentRef()).isNull();
 
@@ -197,5 +196,99 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
     assertThat(businessBankAccount.getStripeBankAccountRef()).isNotNull();
     assertThat(businessBankAccount.getStripeSetupIntentRef()).isNotNull();
+  }
+
+  @Test
+  @SneakyThrows
+  void transact_withinAchDepositOperationLimit() {
+    TransactBankAccountRequest request =
+        new TransactBankAccountRequest(
+            BankAccountTransactType.DEPOSIT, new Amount(Currency.USD, BigDecimal.TEN));
+
+    String body = objectMapper.writeValueAsString(request);
+    // default operation amount is 2 initial balance gets one operation so we can only perform 1
+    // more
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie)
+                .content(body))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie)
+                .content(body))
+        .andExpect(status().isBadRequest())
+        .andReturn();
+  }
+
+  @Test
+  @SneakyThrows
+  void transact_withinAchWithdrawOperationLimit() {
+    TransactBankAccountRequest request =
+        new TransactBankAccountRequest(
+            BankAccountTransactType.WITHDRAW, new Amount(Currency.USD, BigDecimal.TEN));
+
+    String body = objectMapper.writeValueAsString(request);
+    for (int i = 0; i < 2; i++) {
+      mvc.perform(
+              post(String.format(
+                      "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                  .contentType("application/json")
+                  .cookie(authCookie)
+                  .content(body))
+          .andExpect(status().isOk())
+          .andReturn();
+    }
+
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie)
+                .content(body))
+        .andExpect(status().isBadRequest())
+        .andReturn();
+  }
+
+  @Test
+  @SneakyThrows
+  void transact_withinAchDepositLimit() {
+    TransactBankAccountRequest request =
+        new TransactBankAccountRequest(
+            BankAccountTransactType.DEPOSIT, new Amount(Currency.USD, new BigDecimal(10_001)));
+
+    String body = objectMapper.writeValueAsString(request);
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie)
+                .content(body))
+        .andExpect(status().isBadRequest())
+        .andReturn();
+  }
+
+  @Test
+  @SneakyThrows
+  void transact_withinAchWithdrawLimit() {
+    TransactBankAccountRequest request =
+        new TransactBankAccountRequest(
+            BankAccountTransactType.WITHDRAW, new Amount(Currency.USD, new BigDecimal(10_001)));
+
+    String body = objectMapper.writeValueAsString(request);
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie)
+                .content(body))
+        .andExpect(status().isBadRequest())
+        .andReturn();
   }
 }

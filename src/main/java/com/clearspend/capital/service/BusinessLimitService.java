@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InsufficientFundsException;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -44,12 +45,6 @@ public class BusinessLimitService {
                       LimitPeriod.DAILY,
                       BigDecimal.valueOf(10000),
                       LimitPeriod.MONTHLY,
-                      BigDecimal.valueOf(30000)),
-              LimitType.ACH_PULL_OUT,
-                  Map.of(
-                      LimitPeriod.DAILY,
-                      BigDecimal.valueOf(10000),
-                      LimitPeriod.MONTHLY,
                       BigDecimal.valueOf(30000))));
 
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>>
@@ -58,9 +53,7 @@ public class BusinessLimitService {
               Currency.USD,
               Map.of(
                   LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6),
-                  LimitType.ACH_WITHDRAW, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6),
-                  LimitType.ACH_PUSH_IN, Map.of(LimitPeriod.DAILY, 0, LimitPeriod.MONTHLY, 0),
-                  LimitType.ACH_PULL_OUT, Map.of(LimitPeriod.DAILY, 0, LimitPeriod.MONTHLY, 0)));
+                  LimitType.ACH_WITHDRAW, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6)));
 
   private final BusinessLimitRepository businessLimitRepository;
   private final AdjustmentService adjustmentService;
@@ -109,6 +102,14 @@ public class BusinessLimitService {
             .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
 
     // evaluate limits
+    withinOperationLimits(
+        businessId,
+        LimitType.ACH_DEPOSIT,
+        adjustments,
+        limit
+            .getOperationLimits()
+            .getOrDefault(amount.getCurrency(), Map.of())
+            .get(LimitType.ACH_DEPOSIT));
     withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
@@ -128,6 +129,14 @@ public class BusinessLimitService {
             .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
 
     // evaluate limits
+    withinOperationLimits(
+        businessId,
+        LimitType.ACH_WITHDRAW,
+        adjustments,
+        limit
+            .getOperationLimits()
+            .getOrDefault(amount.getCurrency(), Map.of())
+            .get(LimitType.ACH_WITHDRAW));
     withinLimit(
         businessId,
         AdjustmentType.WITHDRAW,
@@ -159,6 +168,30 @@ public class BusinessLimitService {
 
         if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
           throw new InsufficientFundsException("Business", businessId, type, amount);
+        }
+      }
+    }
+  }
+
+  void withinOperationLimits(
+      TypedId<BusinessId> businessId,
+      LimitType limitType,
+      List<Adjustment> adjustments,
+      Map<LimitPeriod, Integer> limits) {
+    if (limits != null) {
+      for (Entry<LimitPeriod, Integer> limit : limits.entrySet()) {
+        long operationAmount =
+            adjustments.stream()
+                .filter(
+                    adjustment ->
+                        adjustment
+                            .getEffectiveDate()
+                            .isAfter(OffsetDateTime.now().minus(limit.getKey().getDuration())))
+                .count();
+        if (operationAmount >= limit.getValue()) {
+          throw new InvalidRequestException(
+              "Business %s exceeded allowed operation amount of limitType %s for period %s"
+                  .formatted(businessId, limitType, limit.getKey()));
         }
       }
     }
