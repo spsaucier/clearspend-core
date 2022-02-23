@@ -108,3 +108,5 @@ definitions:
         POSTGRES_DB: 'capital'
         POSTGRES_USER: 'postgres'
         POSTGRES_PASSWORD: 'docker'
+    docker:
+      memory: 2048
