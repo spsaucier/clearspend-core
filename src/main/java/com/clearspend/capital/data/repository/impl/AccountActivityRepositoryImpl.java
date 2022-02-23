@@ -129,7 +129,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           .value(likeSearchString)
           .noEscape()
           .where("accountActivity.merchant.name")
-          .like()
+          .like(false)
           .value(likeSearchString)
           .noEscape()
           .where("CAST_STRING(accountActivity.amount.amount)")
