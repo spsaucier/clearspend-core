@@ -1,17 +1,18 @@
 package com.clearspend.capital.controller.type.review;
 
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.service.ApplicationReviewService.RequiredDocumentsForStripe;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class ApplicationReviewRequirements {
 
   public record RequiredDocument(String documentName, String type, String entityTokenId) {}
@@ -19,19 +20,30 @@ public class ApplicationReviewRequirements {
   public record KycDocuments(String owner, List<RequiredDocument> documents) {}
 
   @JsonProperty("kybRequiredFields")
-  List<String> kybRequiredFields;
+  private final List<String> kybRequiredFields;
 
   @JsonProperty("kycRequiredFields")
-  List<String> kycRequiredFields;
+  private final Map<TypedId<BusinessOwnerId>, List<String>> kycRequiredFields;
 
   @JsonProperty("kybRequiredDocuments")
-  List<RequiredDocument> kybRequiredDocuments;
+  private final List<RequiredDocument> kybRequiredDocuments;
 
   @JsonProperty("kycRequiredDocuments")
-  List<KycDocuments> kycRequiredDocuments;
+  private final List<KycDocuments> kycRequiredDocuments;
 
-  public ApplicationReviewRequirements(RequiredDocumentsForStripe requiredDocumentsForStripe) {
-    this.kybRequiredDocuments =
+  @JsonProperty("requireOwner")
+  private final Boolean requireOwner;
+
+  @JsonProperty("requireRepresentative")
+  private final Boolean requireRepresentative;
+
+  public static ApplicationReviewRequirements from(
+      List<String> businessRequiredFields,
+      Map<TypedId<BusinessOwnerId>, List<String>> personRequiredFields,
+      RequiredDocumentsForStripe requiredDocumentsForStripe,
+      Boolean requireOwner,
+      Boolean requireRepresentative) {
+    List<RequiredDocument> kybRequiredDocuments =
         requiredDocumentsForStripe.kybDocuments() != null
             ? requiredDocumentsForStripe.kybDocuments().kybErrorCodeList().stream()
                 .map(
@@ -48,7 +60,7 @@ public class ApplicationReviewRequirements {
                 .distinct()
                 .toList()
             : Collections.emptyList();
-    this.kycRequiredDocuments =
+    List<KycDocuments> kycRequiredDocuments =
         requiredDocumentsForStripe.kycDocuments().stream()
             .map(
                 kycOwnerDocuments ->
@@ -70,5 +82,13 @@ public class ApplicationReviewRequirements {
                             .toList()))
             .distinct()
             .toList();
+
+    return new ApplicationReviewRequirements(
+        businessRequiredFields,
+        personRequiredFields,
+        kybRequiredDocuments,
+        kycRequiredDocuments,
+        requireOwner,
+        requireRepresentative);
   }
 }

@@ -3,13 +3,16 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.controller.type.review.DocumentType;
 import com.clearspend.capital.controller.type.review.KybErrorCode;
 import com.clearspend.capital.controller.type.review.KycErrorCode;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.common.base.Splitter;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements;
@@ -21,14 +24,16 @@ import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonUpdateParams;
 import com.stripe.param.PersonUpdateParams.Verification;
 import com.stripe.param.PersonUpdateParams.Verification.Document;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +55,9 @@ public class ApplicationReviewService {
   public static final String REPRESENTATIVE = "representative";
   public static final String OWNERS = "owners";
   public static final String COMPANY = "company";
+  public static final String COMPANY_OWNERS_PROVIDED = "company.owners_provided";
+  public static final String BUSINESS_PROFILE = "business_profile";
+  public static final String INDIVIDUAL = "individual";
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final FileStoreService fileStoreService;
@@ -74,11 +82,11 @@ public class ApplicationReviewService {
       String originalFileName =
           Objects.requireNonNull(
               multipartFile.getOriginalFilename(), "Required values for original file name");
-      String[] strings = originalFileName.split("\\|");
+      List<String> strings = Splitter.on("|").splitToList(originalFileName);
 
-      DocumentType documentType = DocumentType.valueOf(strings[1]);
-      String entityToken = strings[0];
-      String fileName = strings[2];
+      DocumentType documentType = DocumentType.valueOf(strings.get(1));
+      String entityToken = strings.get(0);
+      String fileName = strings.get(2);
 
       MultipartBodyBuilder builder = new MultipartBodyBuilder();
       builder.part(DEFAULT_FILE_RESOURCE_NAME, multipartFile.getResource());
@@ -152,39 +160,33 @@ public class ApplicationReviewService {
     Account account = stripeClient.retrieveAccount(stripeAccountReference);
     List<BusinessOwner> businessOwners =
         businessOwnerService.findBusinessOwnerByBusinessId(businessId);
+    businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
 
     List<KycOwnerDocuments> kycDocuments =
         extractStripeRequiredDocumentsForPerson(account, businessOwners);
     List<KybErrorCode> kybErrorCodeList =
         extractStripeRequiredDocumentsForAccount(account).stream().toList();
 
-    businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
-
     KybEntityTokenAndErrorCode kybEntityTokenAndErrorCode =
         new KybEntityTokenAndErrorCode(account.getId(), kybErrorCodeList);
 
-    ApplicationReviewRequirements applicationReviewRequirements =
-        new ApplicationReviewRequirements(
-            new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments));
-
-    List<String> kycRequirements = extractStripeRequirementsForPersons(account);
+    Map<TypedId<BusinessOwnerId>, List<String>> kycRequirements =
+        extractStripeRequirementsForPersons(account);
     List<String> kybRequirements = extractStripeRequirementsForAccount(account);
 
-    applicationReviewRequirements.setKybRequiredFields(kybRequirements);
-    applicationReviewRequirements.setKycRequiredFields(kycRequirements);
-
-    return applicationReviewRequirements;
+    return ApplicationReviewRequirements.from(
+        kybRequirements,
+        kycRequirements,
+        new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments),
+        business.getType() == BusinessType.INDIVIDUAL
+            ? requiredRelationShipToBusiness(account, INDIVIDUAL)
+            : requiredRelationShipToBusiness(account, OWNERS),
+        requiredRelationShipToBusiness(account, REPRESENTATIVE));
   }
 
   private Set<KybErrorCode> extractStripeRequiredDocumentsForAccount(Account account) {
-    if (account.getRequirements() == null) {
-      return new HashSet<>();
-    }
-    Set<String> accountRequiredFields = new HashSet<>();
-    accountRequiredFields.addAll(account.getRequirements().getCurrentlyDue());
-    accountRequiredFields.addAll(account.getRequirements().getEventuallyDue());
-    accountRequiredFields.addAll(account.getRequirements().getPastDue());
-    accountRequiredFields.addAll(account.getRequirements().getPendingVerification());
+
+    Set<String> accountRequiredFields = getAccountRequiredFields(account);
 
     return accountRequiredFields.stream()
         .filter(
@@ -200,21 +202,12 @@ public class ApplicationReviewService {
   private List<KycOwnerDocuments> extractStripeRequiredDocumentsForPerson(
       Account account, List<BusinessOwner> businessOwners) {
 
-    Requirements accountRequirements = account.getRequirements();
-    if (accountRequirements == null) {
-      return Collections.emptyList();
-    }
-    Set<String> accountRequiredFields = new HashSet<>();
-    accountRequiredFields.addAll(accountRequirements.getCurrentlyDue());
-    accountRequiredFields.addAll(accountRequirements.getEventuallyDue());
-    accountRequiredFields.addAll(accountRequirements.getPastDue());
-    accountRequiredFields.addAll(accountRequirements.getPendingVerification());
+    Set<String> accountRequiredFields = getAccountRequiredFields(account);
 
     return accountRequiredFields.stream()
         .filter(
             accountRequiredField ->
                 accountRequiredField.startsWith(PERSON) && accountRequiredField.endsWith(DOCUMENT))
-        // TODO:gb: what are all the correct document type required by Stripe for account
         .map(
             accountRequiredField -> {
               String entityTokenId = accountRequiredField.split("\\.")[0];
@@ -230,50 +223,65 @@ public class ApplicationReviewService {
               return new KycOwnerDocuments(
                   first.get().getFirstName() + " " + first.get().getLastName(),
                   entityTokenId,
-                  List.of(KycErrorCode.NAME_NOT_VERIFIED));
+                  List.of(KycErrorCode.IDENTITY_DOCUMENT));
             })
         .filter(Objects::nonNull)
         .toList();
   }
 
   private List<String> extractStripeRequirementsForAccount(Account account) {
-    List<String> kybRequirements = new ArrayList<>();
-    if (account.getRequirements() != null) {
-      Set<String> accountRequiredFields = new HashSet<>();
-      accountRequiredFields.addAll(account.getRequirements().getCurrentlyDue());
-      accountRequiredFields.addAll(account.getRequirements().getEventuallyDue());
-      accountRequiredFields.addAll(account.getRequirements().getPastDue());
-      accountRequiredFields.addAll(account.getRequirements().getPendingVerification());
-      accountRequiredFields.forEach(
-          accountFieldRequired -> {
-            if (!accountFieldRequired.endsWith(DOCUMENT)
-                && !accountFieldRequired.startsWith(PERSON)
-                && !accountFieldRequired.equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)) {
-              kybRequirements.add(accountFieldRequired);
-            }
-          });
-    }
-
-    return kybRequirements;
+    return getAccountRequiredFields(account).stream()
+        .filter(
+            accountFieldRequired ->
+                (!accountFieldRequired.endsWith(DOCUMENT)
+                    && !accountFieldRequired.startsWith(PERSON)
+                    && !accountFieldRequired.startsWith(OWNERS)
+                    && !accountFieldRequired.startsWith(REPRESENTATIVE)
+                    && !accountFieldRequired.startsWith(COMPANY_OWNERS_PROVIDED)
+                    && (accountFieldRequired.startsWith(BUSINESS_PROFILE)
+                        || accountFieldRequired.startsWith(COMPANY))
+                    && !accountFieldRequired.equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)))
+        .map(field -> field.substring(field.indexOf(".") + 1))
+        .toList();
   }
 
-  private List<String> extractStripeRequirementsForPersons(Account account) {
-
+  private Set<String> getAccountRequiredFields(Account account) {
     Requirements accountRequirements = account.getRequirements();
     if (accountRequirements == null) {
-      return Collections.emptyList();
+      return Collections.emptySet();
     }
-    Set<String> accountRequiredFields = new HashSet<>();
-    accountRequiredFields.addAll(accountRequirements.getCurrentlyDue());
-    accountRequiredFields.addAll(accountRequirements.getEventuallyDue());
-    accountRequiredFields.addAll(accountRequirements.getPastDue());
-    accountRequiredFields.addAll(accountRequirements.getPendingVerification());
+    return Stream.of(
+            accountRequirements.getCurrentlyDue(),
+            accountRequirements.getEventuallyDue(),
+            accountRequirements.getPastDue(),
+            accountRequirements.getPendingVerification())
+        .flatMap(Collection::stream)
+        .collect(Collectors.toSet());
+  }
+
+  private Boolean requiredRelationShipToBusiness(Account account, final String mark) {
+    Set<String> accountRequiredFields = getAccountRequiredFields(account);
 
     return accountRequiredFields.stream()
+        .anyMatch(accountFieldRequired -> accountFieldRequired.startsWith(mark));
+  }
+
+  private Map<TypedId<BusinessOwnerId>, List<String>> extractStripeRequirementsForPersons(
+      Account account) {
+    Map<String, TypedId<BusinessOwnerId>> businessOwnerIdByStripeReference = new HashMap<>();
+    return getAccountRequiredFields(account).stream()
         .filter(
             accountRequiredField ->
                 accountRequiredField.startsWith(PERSON) && !accountRequiredField.endsWith(DOCUMENT))
-        // TODO:gb: what are all the correct document type required by Stripe for account
-        .toList();
+        .collect(
+            Collectors.groupingBy(
+                s ->
+                    businessOwnerIdByStripeReference.computeIfAbsent(
+                        Splitter.on(".").splitToList(s).get(0),
+                        stripeReferenceId ->
+                            businessOwnerService
+                                .findBusinessOwnerByStripePersonReference(stripeReferenceId)
+                                .getId()),
+                Collectors.mapping(s -> s.substring(s.indexOf(".") + 1), Collectors.toList())));
   }
 }

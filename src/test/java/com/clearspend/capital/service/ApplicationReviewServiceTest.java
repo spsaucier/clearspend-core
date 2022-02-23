@@ -7,6 +7,7 @@ import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import javax.transaction.Transactional;
@@ -68,10 +69,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
         businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
-    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().size() > 0);
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireOwner());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireRepresentative());
   }
 
   @Test
@@ -93,8 +96,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
     Assertions.assertEquals(1, stripeApplicationRequirements.getKycRequiredDocuments().size());
-    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().size() > 0);
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireOwner());
+    Assertions.assertFalse(stripeApplicationRequirements.getRequireRepresentative());
   }
 
   @Test
@@ -231,5 +236,52 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
+  }
+
+  @Test
+  @SneakyThrows
+  void ownerRepresentativeAditionaCompanyAndSettingDetailsRequired() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business1 = createBusinessRecord.business();
+    business1.setLegalName("ownerRepresentativeAditionaCompanyAndSettingDetailsRequired");
+    businessRepository.save(business1);
+    businessRepository.flush();
+
+    ApplicationReviewRequirements stripeApplicationRequirements =
+        applicationReviewService.getStripeApplicationRequirements(business1.getId());
+
+    Business business = businessService.retrieveBusiness(business1.getId(), true);
+
+    Assertions.assertEquals(BusinessOnboardingStep.BUSINESS, business.getOnboardingStep());
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
+    Assertions.assertFalse(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
+    Assertions.assertFalse(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
+    Assertions.assertFalse(stripeApplicationRequirements.getRequireRepresentative());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireOwner());
+  }
+
+  @Test
+  @SneakyThrows
+  void individualDetailsRequired() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business1 = createBusinessRecord.business();
+    business1.setType(BusinessType.INDIVIDUAL);
+    business1.setLegalName("individualDetailsRequired");
+    businessRepository.save(business1);
+    businessRepository.flush();
+
+    ApplicationReviewRequirements stripeApplicationRequirements =
+        applicationReviewService.getStripeApplicationRequirements(business1.getId());
+
+    Business business = businessService.retrieveBusiness(business1.getId(), true);
+
+    Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
+    Assertions.assertFalse(stripeApplicationRequirements.getRequireRepresentative());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireOwner());
   }
 }

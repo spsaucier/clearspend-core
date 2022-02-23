@@ -9,6 +9,7 @@ import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
+import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.controller.type.business.accounting.UpdateBusinessAccountingStepRequest;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
@@ -133,6 +134,12 @@ public class BusinessController {
     }
 
     return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/update")
+  private ResponseEntity<?> updateBusinessDetails(@RequestBody @Validated UpdateBusiness request) {
+    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    return ResponseEntity.ok(businessService.updateBusiness(businessId, request));
   }
 
   @PostMapping("/accounting-step")

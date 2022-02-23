@@ -8,7 +8,7 @@ public enum KycDocuments {
   TAX_RETURN("Tax Return", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
   PROCESSED_SS4("Processed SS4", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
   MANUAL_THIRD_PARTY_REVIEW(null, null),
-  UNEXPIRED_GOVERNMENT_ISSUED_ID("Unexpired Government Issued ID", DocumentType.IDENTITY_DOCUMENT);
+  IDENTITY_DOCUMENT("Identity document", DocumentType.IDENTITY_DOCUMENT);
 
   DocumentType documentType;
   String documentName;

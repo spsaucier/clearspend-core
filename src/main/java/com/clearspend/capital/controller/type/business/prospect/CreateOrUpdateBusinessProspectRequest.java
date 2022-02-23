@@ -50,10 +50,6 @@ public class CreateOrUpdateBusinessProspectRequest {
   @Schema(title = "Relationship to business Owner", example = "true")
   private Boolean relationshipOwner;
 
-  @JsonProperty("relationshipRepresentative")
-  @Schema(title = "Relationship to business Representative", example = "true")
-  private Boolean relationshipRepresentative;
-
   @JsonProperty("relationshipExecutive")
   @Schema(title = "Relationship to business Executive", example = "true")
   private Boolean relationshipExecutive;

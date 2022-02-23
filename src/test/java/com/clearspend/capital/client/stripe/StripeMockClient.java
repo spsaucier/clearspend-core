@@ -73,6 +73,12 @@ public class StripeMockClient extends StripeClient {
   private final Resource ownersAndRepresentativeProvided;
   private final Resource ownersAndRepresentativeProvided_event2fromStripe;
   private final Resource requiredDocumentsForPersonAndSSNLast4;
+  private final Resource ownerRepresentativeAditionaCompanyAndSettingDetailsRequired;
+  private final Resource personRelationShipTitleRequired;
+  private final Resource documentVerificationForTwoPersons;
+  private final Resource individualDetailsRequired;
+  private final Resource ivalidAddressPoBoxesDisallowed;
+  private final Resource LLC_ownersRequired;
 
   public StripeMockClient(
       StripeProperties stripeProperties,
@@ -105,7 +111,21 @@ public class StripeMockClient extends StripeClient {
           @NonNull
           Resource ownersAndRepresentativeProvided_event2fromStripe,
       @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
-          Resource requiredDocumentsForPersonAndSSNLast4) {
+          Resource requiredDocumentsForPersonAndSSNLast4,
+      @Value("classpath:stripeResponses/personRelationShipTitleRequired.json") @NonNull
+          Resource personRelationShipTitleRequired,
+      @Value("classpath:stripeResponses/documentVerificationForTwoPersons.json") @NonNull
+          Resource documentVerificationForTwoPersons,
+      @Value("classpath:stripeResponses/individualDetailsRequired.json") @NonNull
+          Resource individualDetailsRequired,
+      @Value("classpath:stripeResponses/ivalidAddressPoBoxesDisallowed.json") @NonNull
+          Resource ivalidAddressPoBoxesDisallowed,
+      @Value("classpath:stripeResponses/LLC_ownersRequired.json") @NonNull
+          Resource LLC_ownersRequired,
+      @Value(
+              "classpath:stripeResponses/ownerRepresentativeAditionaCompanyAndSettingDetailsRequired.json")
+          @NonNull
+          Resource ownerRepresentativeAditionaCompanyAndSettingDetailsRequired) {
     super(stripeProperties, objectMapper, stripeTreasuryWebClient);
 
     this.createAccount = createAccount;
@@ -124,6 +144,13 @@ public class StripeMockClient extends StripeClient {
         ownersAndRepresentativeProvided_event2fromStripe;
     this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
     this.successOnboarding = successOnboarding;
+    this.ownerRepresentativeAditionaCompanyAndSettingDetailsRequired =
+        ownerRepresentativeAditionaCompanyAndSettingDetailsRequired;
+    this.personRelationShipTitleRequired = personRelationShipTitleRequired;
+    this.documentVerificationForTwoPersons = documentVerificationForTwoPersons;
+    this.individualDetailsRequired = individualDetailsRequired;
+    this.ivalidAddressPoBoxesDisallowed = ivalidAddressPoBoxesDisallowed;
+    this.LLC_ownersRequired = LLC_ownersRequired;
   }
 
   @Override
@@ -308,6 +335,25 @@ public class StripeMockClient extends StripeClient {
         case "successOnboarding" -> {
           return getAccountFromJson(successOnboarding, business);
         }
+        case "personRelationShipTitleRequired" -> {
+          return getAccountFromJson(personRelationShipTitleRequired, business);
+        }
+        case "documentVerificationForTwoPersons" -> {
+          return getAccountFromJson(documentVerificationForTwoPersons, business);
+        }
+        case "individualDetailsRequired" -> {
+          return getAccountFromJson(individualDetailsRequired, business);
+        }
+        case "ivalidAddressPoBoxesDisallowed" -> {
+          return getAccountFromJson(ivalidAddressPoBoxesDisallowed, business);
+        }
+        case "LLC_ownersRequired" -> {
+          return getAccountFromJson(LLC_ownersRequired, business);
+        }
+        case "ownerRepresentativeAditionaCompanyAndSettingDetailsRequired" -> {
+          return getAccountFromJson(
+              ownerRepresentativeAditionaCompanyAndSettingDetailsRequired, business);
+        }
       }
     }
     return generateEntityWithId(Account.class);
@@ -478,9 +524,14 @@ public class StripeMockClient extends StripeClient {
 
   @SneakyThrows
   private Account getAccountFromJson(Resource resource, Business business) {
-    Event event = ApiResource.GSON.fromJson(new FileReader(resource.getFile()), Event.class);
-    StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
-    Account account = (Account) stripeObject;
+    Account account = null;
+    try {
+      Event event = ApiResource.GSON.fromJson(new FileReader(resource.getFile()), Event.class);
+      StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();
+      account = (Account) stripeObject;
+    } catch (Exception e) {
+      account = ApiResource.GSON.fromJson(new FileReader(resource.getFile()), Account.class);
+    }
 
     Requirements accountRequirements = account.getRequirements();
     if (accountRequirements == null) {

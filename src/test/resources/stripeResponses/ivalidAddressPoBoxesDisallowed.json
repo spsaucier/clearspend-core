@@ -1,0 +1,175 @@
+{
+  "id": "acct_1KTomJQExiKx0h1T",
+  "object": "account",
+  "business_profile": {
+    "mcc": "7623",
+    "name": "abc",
+    "product_description": "hjhghjgjhg",
+    "support_address": null,
+    "support_email": null,
+    "support_phone": null,
+    "support_url": null,
+    "url": "https://www.clearspend.com/"
+  },
+  "business_type": "company",
+  "capabilities": {
+    "card_issuing": "inactive",
+    "card_payments": "inactive",
+    "transfers": "inactive",
+    "treasury": "inactive",
+    "us_bank_account_ach_payments": "inactive"
+  },
+  "charges_enabled": false,
+  "company": {
+    "address": {
+      "city": "LYNDHURST",
+      "country": "US",
+      "line1": "553 2ND AVE",
+      "line2": null,
+      "postal_code": "07071",
+      "state": "NJ"
+    },
+    "directors_provided": false,
+    "executives_provided": false,
+    "name": "abc",
+    "owners_provided": true,
+    "phone": "+17687687687",
+    "structure": "private_partnership",
+    "tax_id_provided": true,
+    "verification": {
+      "document": {
+        "back": null,
+        "details": null,
+        "details_code": null,
+        "front": null
+      }
+    }
+  },
+  "country": "US",
+  "created": 1645022808,
+  "default_currency": "usd",
+  "details_submitted": true,
+  "email": null,
+  "external_accounts": {
+    "object": "list",
+    "data": [
+      {
+        "id": "ba_1KTorLQExiKx0h1T7DyRRxF3",
+        "object": "bank_account",
+        "account": "acct_1KTomJQExiKx0h1T",
+        "account_holder_name": null,
+        "account_holder_type": null,
+        "account_type": null,
+        "available_payout_methods": [
+          "standard"
+        ],
+        "bank_name": "STRIPE TEST BANK",
+        "country": "US",
+        "currency": "usd",
+        "default_for_currency": true,
+        "fingerprint": "CZASnSeSNMw5xbbW",
+        "last4": "6789",
+        "metadata": {},
+        "routing_number": "110000000",
+        "status": "verified"
+      }
+    ],
+    "has_more": false,
+    "total_count": 1,
+    "url": "/v1/accounts/acct_1KTomJQExiKx0h1T/external_accounts"
+  },
+  "future_requirements": {
+    "alternatives": [],
+    "current_deadline": null,
+    "currently_due": [],
+    "disabled_reason": null,
+    "errors": [],
+    "eventually_due": [],
+    "past_due": [],
+    "pending_verification": []
+  },
+  "metadata": {},
+  "payouts_enabled": false,
+  "requirements": {
+    "alternatives": [],
+    "current_deadline": null,
+    "currently_due": [
+      "person_4KTonT00oopGneIn.address.line1",
+      "person_4KTonT00oopGneIn.verification.document"
+    ],
+    "disabled_reason": "requirements.past_due",
+    "errors": [
+      {
+        "code": "invalid_address_po_boxes_disallowed",
+        "reason": "Invalid address. Your business address must be a valid physical address from which you conduct business and cannot be a P.O. Box. This address is not shared publicly and can be your personal address. You may use a P.O. Box as your customer support address. Please correct the following: 6566 PO BOX",
+        "requirement": "person_4KTonT00oopGneIn.address.line1"
+      },
+      {
+        "code": "verification_failed_keyed_identity",
+        "reason": "The identity information you entered cannot be verified. Please correct any errors or upload a document that matches the identity fields (e.g., name and date of birth) that you entered.",
+        "requirement": "person_4KTonT00oopGneIn.verification.document"
+      }
+    ],
+    "eventually_due": [
+      "person_4KTonT00oopGneIn.address.line1",
+      "person_4KTonT00oopGneIn.verification.document"
+    ],
+    "past_due": [
+      "person_4KTonT00oopGneIn.address.line1",
+      "person_4KTonT00oopGneIn.verification.document"
+    ],
+    "pending_verification": []
+  },
+  "settings": {
+    "bacs_debit_payments": {},
+    "branding": {
+      "icon": null,
+      "logo": null,
+      "primary_color": null,
+      "secondary_color": null
+    },
+    "card_issuing": {
+      "tos_acceptance": {
+        "date": 1645022807,
+        "ip": "10.10.132.29"
+      }
+    },
+    "card_payments": {
+      "decline_on": {
+        "avs_failure": false,
+        "cvc_failure": false
+      },
+      "statement_descriptor_prefix": null
+    },
+    "dashboard": {
+      "display_name": "Clearspend",
+      "timezone": "Etc/UTC"
+    },
+    "payments": {
+      "statement_descriptor": "WWW.CLEARSPEND.COM",
+      "statement_descriptor_kana": null,
+      "statement_descriptor_kanji": null
+    },
+    "payouts": {
+      "debit_negative_balances": false,
+      "schedule": {
+        "delay_days": 2,
+        "interval": "daily"
+      },
+      "statement_descriptor": null
+    },
+    "sepa_debit_payments": {},
+    "treasury": {
+      "tos_acceptance": {
+        "date": 1645022807,
+        "ip": "10.10.132.29"
+      }
+    }
+  },
+  "tos_acceptance": {
+    "date": 1645022807,
+    "ip": "10.10.132.29",
+    "user_agent": null
+  },
+  "type": "custom"
+}

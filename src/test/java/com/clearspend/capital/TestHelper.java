@@ -452,7 +452,6 @@ public class TestHelper {
             generateLastName(),
             BusinessType.MULTI_MEMBER_LLC,
             true,
-            false,
             false);
     String body = objectMapper.writeValueAsString(request);
 
@@ -756,7 +755,7 @@ public class TestHelper {
     setCurrentUser(businessOwner.user());
     AllocationRecord rootAllocation =
         allocationService.createRootAllocation(
-            business.getId(), businessOwner.user(), business.getLegalName() + " - root");
+            business.getId(), businessOwner.user(), business.getLegalName());
 
     log.debug("Created business {} with owner and root allocation.", businessId);
 

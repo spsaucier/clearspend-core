@@ -1,0 +1,241 @@
+{
+  "id": "acct_1KPUxZ4T1p5TpbGn",
+  "object": "account",
+  "business_profile": {
+    "mcc": null,
+    "name": "CompanyName123",
+    "product_description": null,
+    "support_address": null,
+    "support_email": null,
+    "support_phone": null,
+    "support_url": null,
+    "url": null
+  },
+  "business_type": "company",
+  "capabilities": {
+    "card_issuing": "inactive",
+    "card_payments": "inactive",
+    "transfers": "inactive",
+    "treasury": "inactive",
+    "us_bank_account_ach_payments": "inactive"
+  },
+  "charges_enabled": false,
+  "company": {
+    "address": {
+      "city": "KISSIMMEE",
+      "country": "US",
+      "line1": "2510 CORAL AVE",
+      "line2": null,
+      "postal_code": "34741",
+      "state": "FL"
+    },
+    "directors_provided": false,
+    "executives_provided": false,
+    "name": "CompanyName123",
+    "owners_provided": false,
+    "phone": "+13213474518",
+    "tax_id_provided": true,
+    "verification": {
+      "document": {
+        "back": null,
+        "details": null,
+        "details_code": null,
+        "front": null
+      }
+    }
+  },
+  "country": "US",
+  "created": 1643993313,
+  "default_currency": "usd",
+  "details_submitted": false,
+  "email": "nikita.bogdanov+45@clearspend.com",
+  "external_accounts": {
+    "object": "list",
+    "data": [
+      {
+        "id": "ba_1KPUyn4T1p5TpbGnFBb5J2Wy",
+        "object": "bank_account",
+        "account": "acct_1KPUxZ4T1p5TpbGn",
+        "account_holder_name": null,
+        "account_holder_type": null,
+        "account_type": null,
+        "available_payout_methods": [
+          "standard"
+        ],
+        "bank_name": "STRIPE TEST BANK",
+        "country": "US",
+        "currency": "usd",
+        "default_for_currency": true,
+        "fingerprint": "CZASnSeSNMw5xbbW",
+        "last4": "6789",
+        "metadata": {},
+        "routing_number": "110000000",
+        "status": "verified"
+      }
+    ],
+    "has_more": false,
+    "total_count": 1,
+    "url": "/v1/accounts/acct_1KPUxZ4T1p5TpbGn/external_accounts"
+  },
+  "future_requirements": {
+    "alternatives": [],
+    "current_deadline": null,
+    "currently_due": [],
+    "disabled_reason": null,
+    "errors": [],
+    "eventually_due": [],
+    "past_due": [],
+    "pending_verification": []
+  },
+  "metadata": {},
+  "payouts_enabled": false,
+  "requirements": {
+    "alternatives": [],
+    "current_deadline": null,
+    "currently_due": [
+      "business_profile.mcc",
+      "business_profile.product_description",
+      "business_profile.url",
+      "company.owners_provided",
+      "owners.address.city",
+      "owners.address.line1",
+      "owners.address.postal_code",
+      "owners.address.state",
+      "owners.dob.day",
+      "owners.dob.month",
+      "owners.dob.year",
+      "owners.email",
+      "owners.first_name",
+      "owners.id_number",
+      "owners.last_name",
+      "owners.phone",
+      "owners.relationship.percent_ownership",
+      "owners.relationship.title",
+      "person_4KPUxi00rBGD7npg.dob.day",
+      "person_4KPUxi00rBGD7npg.dob.month",
+      "person_4KPUxi00rBGD7npg.dob.year",
+      "person_4KPUxi00rBGD7npg.id_number",
+      "person_4KPUxi00rBGD7npg.relationship.percent_ownership",
+      "person_4KPUxi00rBGD7npg.relationship.title",
+      "settings.card_issuing.tos_acceptance.date",
+      "settings.card_issuing.tos_acceptance.ip",
+      "settings.treasury.tos_acceptance.date",
+      "settings.treasury.tos_acceptance.ip"
+    ],
+    "disabled_reason": "requirements.past_due",
+    "errors": [],
+    "eventually_due": [
+      "business_profile.mcc",
+      "business_profile.product_description",
+      "business_profile.url",
+      "company.owners_provided",
+      "owners.address.city",
+      "owners.address.line1",
+      "owners.address.postal_code",
+      "owners.address.state",
+      "owners.dob.day",
+      "owners.dob.month",
+      "owners.dob.year",
+      "owners.email",
+      "owners.first_name",
+      "owners.id_number",
+      "owners.last_name",
+      "owners.phone",
+      "owners.relationship.percent_ownership",
+      "owners.relationship.title",
+      "person_4KPUxi00rBGD7npg.dob.day",
+      "person_4KPUxi00rBGD7npg.dob.month",
+      "person_4KPUxi00rBGD7npg.dob.year",
+      "person_4KPUxi00rBGD7npg.id_number",
+      "person_4KPUxi00rBGD7npg.relationship.percent_ownership",
+      "person_4KPUxi00rBGD7npg.relationship.title",
+      "settings.card_issuing.tos_acceptance.date",
+      "settings.card_issuing.tos_acceptance.ip",
+      "settings.treasury.tos_acceptance.date",
+      "settings.treasury.tos_acceptance.ip"
+    ],
+    "past_due": [
+      "business_profile.mcc",
+      "business_profile.product_description",
+      "business_profile.url",
+      "company.owners_provided",
+      "owners.address.city",
+      "owners.address.line1",
+      "owners.address.postal_code",
+      "owners.address.state",
+      "owners.dob.day",
+      "owners.dob.month",
+      "owners.dob.year",
+      "owners.email",
+      "owners.first_name",
+      "owners.id_number",
+      "owners.last_name",
+      "owners.phone",
+      "owners.relationship.percent_ownership",
+      "owners.relationship.title",
+      "person_4KPUxi00rBGD7npg.dob.day",
+      "person_4KPUxi00rBGD7npg.dob.month",
+      "person_4KPUxi00rBGD7npg.dob.year",
+      "person_4KPUxi00rBGD7npg.id_number",
+      "person_4KPUxi00rBGD7npg.relationship.percent_ownership",
+      "person_4KPUxi00rBGD7npg.relationship.title",
+      "settings.card_issuing.tos_acceptance.date",
+      "settings.card_issuing.tos_acceptance.ip",
+      "settings.treasury.tos_acceptance.date",
+      "settings.treasury.tos_acceptance.ip"
+    ],
+    "pending_verification": []
+  },
+  "settings": {
+    "bacs_debit_payments": {},
+    "branding": {
+      "icon": null,
+      "logo": null,
+      "primary_color": null,
+      "secondary_color": null
+    },
+    "card_issuing": {
+      "tos_acceptance": {
+        "date": null,
+        "ip": null
+      }
+    },
+    "card_payments": {
+      "decline_on": {
+        "avs_failure": false,
+        "cvc_failure": false
+      },
+      "statement_descriptor_prefix": null
+    },
+    "dashboard": {
+      "display_name": null,
+      "timezone": "Etc/UTC"
+    },
+    "payments": {
+      "statement_descriptor": null,
+      "statement_descriptor_kana": null,
+      "statement_descriptor_kanji": null
+    },
+    "payouts": {
+      "debit_negative_balances": false,
+      "schedule": {
+        "delay_days": 2,
+        "interval": "daily"
+      },
+      "statement_descriptor": null
+    },
+    "sepa_debit_payments": {},
+    "treasury": {
+      "tos_acceptance": {
+        "date": null,
+        "ip": null
+      }
+    }
+  },
+  "tos_acceptance": {
+    "date": 1643993312,
+    "ip": "35.172.94.1",
+    "user_agent": null
+  },
+  "type": "custom"
+}

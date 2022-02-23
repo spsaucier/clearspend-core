@@ -1,6 +1,8 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.common.error.DeleteBusinessOwnerNotAllowedException;
+import com.clearspend.capital.common.error.InvalidKycDataException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -13,6 +15,8 @@ import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
@@ -133,6 +137,72 @@ public class BusinessOwnerService {
 
     return new BusinessAndAccountErrorMessages(
         businessService.retrieveBusiness(businessId, true), stripeAccountMessages);
+  }
+
+  public void validateOwner(BusinessOwnerData businessOwnerData) {
+
+    Assert.notNull(businessOwnerData);
+
+    Business business = businessService.retrieveBusiness(businessOwnerData.getBusinessId(), true);
+
+    List<BusinessOwner> ownersForBusinessId =
+        businessOwnerRepository.findByBusinessId(businessOwnerData.getBusinessId());
+
+    if (business.getType() != BusinessType.INDIVIDUAL) {
+      if (ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipRepresentative)
+          && Boolean.TRUE.equals(businessOwnerData.getRelationshipRepresentative())) {
+        throw new InvalidKycDataException(
+            businessOwnerData.getFirstName() + businessOwnerData.getLastName(),
+            "Only one representative is allowed.");
+      }
+
+    } else {
+      if (!ownersForBusinessId.isEmpty()
+          && businessOwnerRepository.findById(businessOwnerData.getBusinessOwnerId()).isEmpty()) {
+        throw new InvalidKycDataException(
+            businessOwnerData.getFirstName() + businessOwnerData.getLastName(),
+            String.format("Only one owner is allowed for business %s.", business.getLegalName()));
+      }
+
+      if (Boolean.FALSE.equals(businessOwnerData.getRelationshipOwner())) {
+        throw new InvalidKycDataException(
+            businessOwnerData.getFirstName() + businessOwnerData.getLastName(),
+            String.format(
+                "Please provide owner details for business %s.", business.getLegalName()));
+      }
+    }
+  }
+
+  public void validateBusinessOwners(TypedId<BusinessId> businessId) {
+
+    Business business = businessService.retrieveBusiness(businessId, true);
+
+    List<BusinessOwner> ownersForBusinessId = businessOwnerRepository.findByBusinessId(businessId);
+
+    if (List.of(
+            BusinessType.MULTI_MEMBER_LLC,
+            BusinessType.PRIVATE_PARTNERSHIP,
+            BusinessType.PRIVATE_CORPORATION,
+            BusinessType.INCORPORATED_NON_PROFIT)
+        .contains(business.getType())) {
+      if (ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipExecutive)) {
+        throw new InvalidKycDataException(
+            String.format(
+                "Please provide the executive for business %s.", business.getLegalName()));
+      }
+    }
+
+    if (List.of(
+            BusinessType.MULTI_MEMBER_LLC,
+            BusinessType.PRIVATE_PARTNERSHIP,
+            BusinessType.PRIVATE_CORPORATION)
+        .contains(business.getType())) {
+      if (ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipOwner)) {
+        throw new InvalidKycDataException(
+            String.format(
+                "Please provide owner details for business %s.", business.getLegalName()));
+      }
+    }
   }
 
   @Transactional
@@ -379,5 +449,24 @@ public class BusinessOwnerService {
         .findByStripePersonReference(stripePersonReference)
         .orElseThrow(
             () -> new RecordNotFoundException(Table.BUSINESS_OWNER, stripePersonReference));
+  }
+
+  @Transactional
+  public void deleteBusinessOwner(
+      TypedId<BusinessOwnerId> businessOwnerId, TypedId<BusinessId> businessId) {
+    Business business = businessService.getBusiness(businessId).business();
+    if (business.getOnboardingStep() != BusinessOnboardingStep.BUSINESS_OWNERS) {
+      throw new DeleteBusinessOwnerNotAllowedException(
+          "You can delete owners just at onboarding stage.");
+    }
+    Optional<BusinessOwner> businessOwner = businessOwnerRepository.findById(businessOwnerId);
+    if (businessOwner.isPresent()) {
+      String stripePersonReference = businessOwner.get().getStripePersonReference();
+      if (stripePersonReference != null) {
+
+        stripeClient.deletePerson(businessOwner.get(), business.getStripeData().getAccountRef());
+      }
+      businessOwnerRepository.deleteById(businessOwnerId);
+    }
   }
 }

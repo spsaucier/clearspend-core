@@ -25,9 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BusinessOwnerData {
 
-  private TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
+  private TypedId<BusinessOwnerId> businessOwnerId;
 
-  private TypedId<BusinessId> businessId = new TypedId<>();
+  private TypedId<BusinessId> businessId;
 
   private String firstName;
 

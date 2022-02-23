@@ -44,6 +44,7 @@ import com.stripe.param.AccountCreateParams.Settings;
 import com.stripe.param.AccountCreateParams.TosAcceptance;
 import com.stripe.param.AccountCreateParams.Type;
 import com.stripe.param.AccountUpdateParams;
+import com.stripe.param.AccountUpdateParams.Company.Structure;
 import com.stripe.param.FileCreateParams;
 import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonCollectionCreateParams;
@@ -193,6 +194,83 @@ public class StripeClient {
         "createAccount",
         accountCreateParams,
         () -> Account.create(accountCreateParams, getRequestOptionsBetaApi(new TypedId<>(), null)));
+  }
+
+  public Account updateAccount(Business business) {
+
+    Account account = retrieveAccount(business.getStripeData().getAccountRef());
+
+    AccountUpdateParams.Company.Builder companyBuilder =
+        AccountUpdateParams.Company.builder()
+            .setName(business.getLegalName())
+            .setTaxId(business.getEmployerIdentificationNumber())
+            .setStructure(Structure.valueOf(business.getType().getStripeValue().getValue()));
+
+    AccountUpdateParams.Builder accountBuilder =
+        AccountUpdateParams.builder()
+            .setBusinessType(business.getType().getStripeBusinessType().getValue())
+            .setBusinessProfile(
+                AccountUpdateParams.BusinessProfile.builder()
+                    .setMcc(business.getMcc())
+                    .setProductDescription(business.getDescription())
+                    .setUrl(business.getUrl())
+                    .build());
+
+    AccountUpdateParams.Company.Address.Builder addressBuilder =
+        AccountUpdateParams.Company.Address.builder()
+            .setLine1(business.getClearAddress().getStreetLine1())
+            .setPostalCode(business.getClearAddress().getPostalCode())
+            .setCity(business.getClearAddress().getLocality())
+            .setState(business.getClearAddress().getRegion())
+            .setCountry(business.getClearAddress().getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(business.getClearAddress().getStreetLine2())) {
+      addressBuilder.setLine2(business.getClearAddress().getStreetLine2());
+    }
+
+    companyBuilder
+        .setPhone(business.getBusinessPhone().getEncrypted())
+        .setAddress(addressBuilder.build());
+
+    accountBuilder.setCompany(companyBuilder.build());
+
+    AccountUpdateParams accountUpdateParams =
+        accountBuilder
+            .setTosAcceptance(
+                AccountUpdateParams.TosAcceptance.builder()
+                    .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
+                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                    .build())
+            .setSettings(
+                AccountUpdateParams.Settings.builder()
+                    .setCardIssuing(
+                        AccountUpdateParams.Settings.CardIssuing.builder()
+                            .setTosAcceptance(
+                                AccountUpdateParams.Settings.CardIssuing.TosAcceptance.builder()
+                                    .setDate(
+                                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
+                                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                                    .build())
+                            .build())
+                    .putExtraParam(
+                        "treasury",
+                        Map.of(
+                            "tos_acceptance",
+                            Map.of(
+                                "date",
+                                TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
+                                "ip",
+                                business.getStripeData().getTosAcceptanceIp())))
+                    .build())
+            .build();
+
+    return callStripe(
+        "updateAccount",
+        accountUpdateParams,
+        () ->
+            account.update(
+                accountUpdateParams,
+                getRequestOptions(
+                    new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId())));
   }
 
   public Account retrieveAccount(String stripeAccountId) {
@@ -434,6 +512,16 @@ public class StripeClient {
     }
 
     return person.update(builder.build());
+  }
+
+  @SneakyThrows
+  public Person deletePerson(BusinessOwner businessOwner, String stripeAccountId) {
+
+    Person person = new Person();
+    person.setId(businessOwner.getStripePersonReference());
+    person.setAccount(stripeAccountId);
+
+    return person.delete();
   }
 
   public Card updateCard(String stripeCardId, CardStatus cardStatus) {

@@ -8,6 +8,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
@@ -60,6 +61,7 @@ public class BusinessService {
   public static final String SSN_LAST_4 = ".ssn_last_4";
   public static final String COMPANY_OWNERS_PROVIDED = "company.owners_provided";
   public static final String COMPANY = "company";
+  public static final String IDENTITY = "individual";
 
   private final BusinessRepository businessRepository;
   private final BusinessOwnerRepository businessOwnerRepository;
@@ -419,6 +421,7 @@ public class BusinessService {
   private Boolean personRequirementsMatch(String s) {
     return s.startsWith(REPRESENTATIVE_DETAILS_REQUIRED)
         || s.startsWith(OWNERS_DETAILS_REQUIRED)
+        || s.startsWith(IDENTITY)
         || (s.startsWith(PERSON) && !s.endsWith(DOCUMENT) && !s.endsWith(SSN_LAST_4));
   }
 
@@ -459,6 +462,33 @@ public class BusinessService {
     BeanUtils.setNotNull(onboardingStep, business::setOnboardingStep);
     BeanUtils.setNotNull(status, business::setStatus);
     BeanUtils.setNotNull(knowYourBusinessStatus, business::setKnowYourBusinessStatus);
+
+    return business;
+  }
+
+  @Transactional
+  public Business updateBusiness(TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
+    Business business = retrieveBusiness(businessId, true);
+
+    BeanUtils.setNotNull(updateBusiness.getBusinessType(), business::setType);
+    BeanUtils.setNotNull(updateBusiness.getLegalName(), business::setLegalName);
+    BeanUtils.setNotNull(
+        updateBusiness.getEmployerIdentificationNumber(),
+        business::setEmployerIdentificationNumber);
+    BeanUtils.setNotNull(updateBusiness.getDescription(), business::setDescription);
+    BeanUtils.setNotNull(updateBusiness.getUrl(), business::setUrl);
+
+    if (updateBusiness.getMerchantType() != null) {
+      business.setMcc(updateBusiness.getMerchantType().getMcc());
+    }
+
+    if (updateBusiness.getAddress() != null) {
+      business.setClearAddress(ClearAddress.of(updateBusiness.getAddress().toAddress()));
+    }
+
+    businessRepository.save(business);
+
+    stripeClient.updateAccount(business);
 
     return business;
   }

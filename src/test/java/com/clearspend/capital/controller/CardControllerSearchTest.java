@@ -194,8 +194,9 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void searchByAllocationName() {
+    String name = rootAllocation.allocation().getName();
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
-    request.setSearchText("ROOT");
+    request.setSearchText(name);
 
     PagedData<SearchCardData> result = callSearchCards(request, 2);
 

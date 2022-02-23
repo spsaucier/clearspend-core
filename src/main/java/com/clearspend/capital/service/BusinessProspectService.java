@@ -137,7 +137,7 @@ public class BusinessProspectService {
       if (!"pending".equals(verification.getStatus())) {
         throw new InvalidRequestException(
             String.format(
-                "expected pending, got %s for business proepsct id %s",
+                "expected pending, got %s for business prospect id %s",
                 verification.getStatus(), businessProspect.getId()));
       }
     }
@@ -180,18 +180,19 @@ public class BusinessProspectService {
           throw new InvalidRequestException("email already validated");
         }
         String email = businessProspect.getEmail().getEncrypted();
-        boolean emailExists =
-            businessOwnerService.retrieveBusinessOwnerByEmail(email).isPresent()
-                || userService.retrieveUserByEmail(email).isPresent();
-        if (emailExists) {
-          return new ValidateIdentifierResponse(true);
-        }
+
         if (Boolean.TRUE.equals(live)) {
           VerificationCheck verificationCheck = twilioService.checkVerification(email, otp);
           log.debug("verificationCheck: {}", verificationCheck);
           if (Boolean.FALSE.equals(verificationCheck.getValid())) {
             throw new InvalidRequestException("email otp does not match");
           }
+        }
+        boolean emailExists =
+            businessOwnerService.retrieveBusinessOwnerByEmail(email).isPresent()
+                || userService.retrieveUserByEmail(email).isPresent();
+        if (emailExists) {
+          return new ValidateIdentifierResponse(true);
         }
         businessProspect.setEmailVerified(true);
       }
@@ -295,7 +296,7 @@ public class BusinessProspectService {
     Business business = businessAndStripeAccount.business();
     AllocationRecord allocationRecord =
         allocationService.createRootAllocation(
-            business.getId(), businessOwner.user(), business.getLegalName() + " - root");
+            business.getId(), businessOwner.user(), business.getLegalName());
 
     // validate and update business based on stripe account requirements
     List<String> stripeAccountErrorMessages =

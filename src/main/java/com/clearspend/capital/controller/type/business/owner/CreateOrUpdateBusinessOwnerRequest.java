@@ -53,17 +53,9 @@ public class CreateOrUpdateBusinessOwnerRequest {
   @Schema(title = "Relationship to business Owner", example = "true")
   private Boolean relationshipOwner;
 
-  @JsonProperty("relationshipRepresentative")
-  @Schema(title = "Relationship to business Representative", example = "true")
-  private Boolean relationshipRepresentative;
-
   @JsonProperty("relationshipExecutive")
   @Schema(title = "Relationship to business Executive", example = "true")
   private Boolean relationshipExecutive;
-
-  @JsonProperty("relationshipDirector")
-  @Schema(title = "Relationship to business Director", example = "true")
-  private Boolean relationshipDirector;
 
   @JsonProperty("percentageOwnership")
   @Schema(title = "Percentage Ownership from business", example = "25")
@@ -125,9 +117,9 @@ public class CreateOrUpdateBusinessOwnerRequest {
         dateOfBirth,
         taxIdentificationNumber,
         relationshipOwner,
-        relationshipRepresentative,
+        false,
         relationshipExecutive,
-        relationshipDirector,
+        false,
         percentageOwnership,
         title,
         address.toAddress(),

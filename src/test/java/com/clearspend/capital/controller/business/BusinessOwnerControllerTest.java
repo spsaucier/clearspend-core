@@ -1,6 +1,8 @@
 package com.clearspend.capital.controller.business;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,6 +12,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeConnectHandler;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.controller.type.business.owner.BusinessOwnerInfo;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
@@ -81,9 +84,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                 testHelper.generateFirstName(),
                 testHelper.generateLastName(),
                 businessOwner.getRelationshipOwner(),
-                businessOwner.getRelationshipRepresentative(),
                 businessOwner.getRelationshipExecutive(),
-                businessOwner.getRelationshipDirector(),
                 BigDecimal.valueOf(40),
                 "CEO",
                 LocalDate.of(1900, 1, 1),
@@ -127,8 +128,6 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
             null,
             null,
             null,
-            null,
-            null,
             testHelper.generateDateOfBirth(),
             testHelper.generateTaxIdentificationNumber(),
             businessProspect.getEmail().getEncrypted(),
@@ -166,9 +165,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                 businessOwner.getFirstName().getEncrypted(),
                 businessOwner.getLastName().getEncrypted(),
                 businessOwner.getRelationshipOwner(),
-                businessOwner.getRelationshipRepresentative(),
                 businessOwner.getRelationshipExecutive(),
-                businessOwner.getRelationshipDirector(),
                 BigDecimal.valueOf(50),
                 "Fraud",
                 LocalDate.of(1900, 1, 1),
@@ -215,9 +212,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                 businessOwner.getFirstName().getEncrypted(),
                 businessOwner.getLastName().getEncrypted(),
                 businessOwner.getRelationshipOwner(),
-                businessOwner.getRelationshipRepresentative(),
                 businessOwner.getRelationshipExecutive(),
-                businessOwner.getRelationshipDirector(),
                 BigDecimal.valueOf(40),
                 "Review",
                 LocalDate.of(1900, 1, 1),
@@ -252,5 +247,52 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
     assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.REVIEW);
+  }
+
+  @SneakyThrows
+  @Test
+  void listBusinessOwners() {
+    MockHttpServletResponse response =
+        mvc.perform(get("/business-owners/list").cookie(onboardBusinessRecord.cookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    List<BusinessOwnerInfo> businessOwnerList =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(List.class, BusinessOwnerInfo.class));
+
+    Assertions.assertEquals(1, businessOwnerList.size());
+  }
+
+  @SneakyThrows
+  @Test
+  void listBusinessOwners_forABusinessWithNoOwners() {
+
+    mvc.perform(
+            delete(
+                    String.format(
+                        "/business-owners/%s", onboardBusinessRecord.businessOwner().getId()))
+                .cookie(onboardBusinessRecord.cookie()))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
+    MockHttpServletResponse response =
+        mvc.perform(get("/business-owners/list").cookie(onboardBusinessRecord.cookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    List<BusinessOwnerInfo> businessOwnerList =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(List.class, BusinessOwnerInfo.class));
+
+    Assertions.assertEquals(0, businessOwnerList.size());
   }
 }
