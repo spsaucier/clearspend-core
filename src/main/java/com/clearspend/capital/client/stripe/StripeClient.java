@@ -97,7 +97,6 @@ public class StripeClient {
   private final StripeProperties stripeProperties;
   private final ObjectMapper objectMapper;
   private final WebClient stripeTreasuryWebClient;
-  private final boolean testMode;
 
   public StripeClient(
       StripeProperties stripeProperties,
@@ -106,8 +105,6 @@ public class StripeClient {
     this.stripeProperties = stripeProperties;
     this.objectMapper = objectMapper;
     this.stripeTreasuryWebClient = stripeTreasuryWebClient;
-
-    testMode = StringUtils.startsWith(stripeProperties.getApiKey(), "sk_test");
   }
 
   private interface StripeProducer<T extends ApiResource> {
@@ -544,10 +541,6 @@ public class StripeClient {
             .add("features[outbound_transfers][us_domestic_wire][requested]", "true")
             .add("features[inbound_transfers][ach][requested]", "true")
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId);
-
-    if (testMode) {
-      multiValueMapBuilder.add("testmode_bypass_requirements", "true");
-    }
 
     return callStripeBetaApi(
         "/financial_accounts",
