@@ -10,6 +10,9 @@ import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatLineItem;
 import com.clearspend.capital.client.codat.types.CodatPaymentAllocation;
 import com.clearspend.capital.client.codat.types.CodatPaymentAllocationPayment;
+import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
+import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
+import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -26,7 +29,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
@@ -142,45 +144,30 @@ public class CodatClient {
   }
 
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
-      String companyRef, String connectionId, AccountActivity transaction, String currency)
+      String companyRef,
+      String connectionId,
+      AccountActivity transaction,
+      String currency,
+      CodatSupplier supplier,
+      CodatAccount codatAccount)
       throws RuntimeException {
-    // TODO verify that these values save properly in Codat as expense categories are added
-
-    // TODO Remove hardcoded/placeholder values. (The CodatAccountRefs and CodatContactRef)
-
-    GetSuppliersResponse suppliersResponse = getSuppliersForBusiness(companyRef);
-
-    // TODO there could be more than one page of accounts. Fix when we filter for the actual
-    // account.
-    GetAccountsResponse accountsResponse = getAccountsForBusiness(companyRef);
-    Optional<CodatAccount> checkingAccount =
-        accountsResponse.getResults().stream()
-            .filter(account -> account.getName().equalsIgnoreCase("checking"))
-            .findFirst();
-
-    if (checkingAccount.isEmpty()) {
-      return null;
-    }
 
     List<CodatPaymentAllocation> paymentAllocations = new ArrayList<>();
     paymentAllocations.add(
         new CodatPaymentAllocation(
             new CodatPaymentAllocationPayment(
-                "",
-                new CodatAccountRef(checkingAccount.get().getId(), checkingAccount.get().getName()),
-                currency),
+                "", new CodatAccountRef(codatAccount.getId(), codatAccount.getName()), currency),
             new CodatAllocation(currency, transaction.getActivityTime())));
 
     List<CodatLineItem> lineItems = new ArrayList<>();
     lineItems.add(
         new CodatLineItem(
+            transaction.getAmount().getAmount().doubleValue(),
             1,
-            1,
-            new CodatAccountRef(checkingAccount.get().getId(), checkingAccount.get().getName()),
+            new CodatAccountRef(codatAccount.getId(), codatAccount.getName()),
             new CodatTaxRateRef("NON")));
 
-    CodatContactRef contactRef =
-        new CodatContactRef(suppliersResponse.getResults().get(0).getId(), "suppliers");
+    CodatContactRef contactRef = new CodatContactRef(supplier.getId(), "suppliers");
 
     DirectCostRequest request =
         new DirectCostRequest(
@@ -223,5 +210,23 @@ public class CodatClient {
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to sync transaction to Codat", e);
     }
+  }
+
+  public CodatPushDataResponse syncSupplierToCodat(
+      String companyRef, String connectionId, CodatSupplier supplier) {
+    try {
+      return callCodatApi(
+          "/companies/%s/connections/%s/push/suppliers".formatted(companyRef, connectionId),
+          objectMapper.writeValueAsString(supplier),
+          CodatPushDataResponse.class);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to sync transaction to Codat", e);
+    }
+  }
+
+  public CodatPushStatusResponse getPushStatus(String pushOperationKey, String companyRef) {
+    return getFromCodatApi(
+        "/companies/%s/push/%s".formatted(companyRef, pushOperationKey),
+        CodatPushStatusResponse.class);
   }
 }

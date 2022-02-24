@@ -130,6 +130,7 @@ client:
   codat:
     auth-token: ${CODAT_AUTH_TOKEN:NkJKUHVRZnBIYzdhY3VkUGhRVDFNM3FZWjdhTkE3UWFyeEJ2OE5YbA==}
     base-url: ${CODAT_BASE_URL:https://api.codat.io}
+    auth-secret: ${CODAT_AUTH_SECRET:eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ}
 
 logging:
   level:

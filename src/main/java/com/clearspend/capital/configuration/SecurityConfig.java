@@ -25,6 +25,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/business-prospects/*/validate-identifier",
             "/non-production/**",
             "/stripe/webhook/**",
+            "/codat-webhook/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/**");

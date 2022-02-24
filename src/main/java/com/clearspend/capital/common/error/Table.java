@@ -20,7 +20,8 @@ public enum Table {
   USER("user"),
   USER_ALLOCATION_ROLE("user_allocation_role"),
   EXPENSE_CATEGORY("expense_categories"),
-  PENDING_STRIPE_TRANSFER("pending_stripe_transfer");
+  PENDING_STRIPE_TRANSFER("pending_stripe_transfer"),
+  TRANSACTION_SYNC_LOG("transaction_sync_log");
 
   private final String name;
 
