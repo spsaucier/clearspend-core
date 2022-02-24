@@ -41,7 +41,7 @@ public class CodatService {
   private final CodatClient codatClient;
   private final AccountActivityService accountActivityService;
   private final BusinessService businessService;
-  private TransactionSyncLogRepository transactionSyncLogRepository;
+  private final TransactionSyncLogRepository transactionSyncLogRepository;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
