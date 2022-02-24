@@ -131,6 +131,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
@@ -523,6 +524,7 @@ public class TestHelper {
     MockHttpServletResponse response =
         mvc.perform(
                 post(String.format("/business-prospects/%s/convert", businessProspectId))
+                    .header(HttpHeaders.USER_AGENT, faker.internet().userAgentAny())
                     .contentType("application/json")
                     .content(body)
                     .cookie(defaultAuthCookie))
@@ -747,7 +749,8 @@ public class TestHelper {
                     MerchantType.AGRICULTURAL_COOPERATIVE,
                     MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
                     faker.internet().url()),
-                faker.internet().ipV4Address())
+                faker.internet().ipV4Address(),
+                faker.internet().userAgentAny())
             .business();
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);

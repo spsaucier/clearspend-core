@@ -86,7 +86,8 @@ public class BusinessService {
       BusinessType businessType,
       String businessEmail,
       ConvertBusinessProspect convertBusinessProspect,
-      String tosAcceptanceIp) {
+      String tosAcceptanceIp,
+      String userAgent) {
     Business business =
         new Business(
             convertBusinessProspect.getLegalName(),
@@ -99,7 +100,7 @@ public class BusinessService {
             BusinessStatus.ONBOARDING,
             BusinessStatusReason.NONE,
             convertBusinessProspect.getMerchantType().getMcc(),
-            new StripeData(FinancialAccountState.NOT_READY, tosAcceptanceIp),
+            new StripeData(FinancialAccountState.NOT_READY, tosAcceptanceIp, userAgent),
             AccountingSetupStep.ADD_CREDIT_CARD);
     if (businessId != null) {
       business.setId(businessId);

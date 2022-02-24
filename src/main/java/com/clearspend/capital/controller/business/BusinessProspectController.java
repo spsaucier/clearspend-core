@@ -17,14 +17,17 @@ import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -50,7 +53,9 @@ public class BusinessProspectController {
             request.getLastName(),
             request.getBusinessType(),
             request.getRelationshipOwner(),
-            request.getBusinessType() != BusinessType.INDIVIDUAL
+            request.getBusinessType() != null
+                && !List.of(BusinessType.INDIVIDUAL, BusinessType.SOLE_PROPRIETORSHIP)
+                    .contains(request.getBusinessType())
                 && CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE,
             request.getRelationshipExecutive(),
             false, // for now we decide to ignore director option
@@ -116,11 +121,13 @@ public class BusinessProspectController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
       @Validated @RequestBody ConvertBusinessProspectRequest request,
+      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
       HttpServletRequest httpServletRequest) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
             request.toConvertBusinessProspect(businessProspectId),
-            httpServletRequest.getRemoteAddr());
+            httpServletRequest.getRemoteAddr(),
+            userAgent);
 
     return new ConvertBusinessProspectResponse(
         new Business(convertBusinessProspectRecord.business()),

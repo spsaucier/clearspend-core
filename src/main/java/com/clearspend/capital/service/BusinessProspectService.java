@@ -261,7 +261,7 @@ public class BusinessProspectService {
       explanation = "This is where the business gets created")
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
-      ConvertBusinessProspect convertBusinessProspect, String tosAcceptanceIp) {
+      ConvertBusinessProspect convertBusinessProspect, String tosAcceptanceIp, String userAgent) {
     BusinessProspect businessProspect =
         retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
 
@@ -282,7 +282,8 @@ public class BusinessProspectService {
             businessProspect.getBusinessType(),
             businessProspect.getEmail().getEncrypted(),
             convertBusinessProspect,
-            tosAcceptanceIp);
+            tosAcceptanceIp,
+            userAgent);
 
     BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
 

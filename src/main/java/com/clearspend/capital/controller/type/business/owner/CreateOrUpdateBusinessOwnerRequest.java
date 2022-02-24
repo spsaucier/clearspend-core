@@ -63,7 +63,7 @@ public class CreateOrUpdateBusinessOwnerRequest {
 
   @JsonProperty("title")
   @Schema(title = "Title on business", example = "CEO")
-  @Size(max = 20, message = "The title should not be more than 20 characters.")
+  @Size(max = 50, message = "The title should not be more than 50 characters.")
   private String title;
 
   @Sensitive
@@ -117,9 +117,9 @@ public class CreateOrUpdateBusinessOwnerRequest {
         dateOfBirth,
         taxIdentificationNumber,
         relationshipOwner,
-        false,
+        null,
         relationshipExecutive,
-        false,
+        null,
         percentageOwnership,
         title,
         address.toAddress(),

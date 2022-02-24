@@ -12,6 +12,8 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
+import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.google.common.base.Splitter;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
@@ -241,7 +243,10 @@ public class ApplicationReviewService {
                     && (accountFieldRequired.startsWith(BUSINESS_PROFILE)
                         || accountFieldRequired.startsWith(COMPANY))
                     && !accountFieldRequired.equals(EXTERNAL_ACCOUNT_CODE_REQUIREMENT)))
-        .map(field -> field.substring(field.indexOf(".") + 1))
+        .map(
+            field ->
+                StripeAccountFieldsToClearspendBusinessFields.fromStripeField(
+                    field.substring(field.indexOf(".") + 1)))
         .toList();
   }
 
@@ -282,6 +287,10 @@ public class ApplicationReviewService {
                             businessOwnerService
                                 .findBusinessOwnerByStripePersonReference(stripeReferenceId)
                                 .getId()),
-                Collectors.mapping(s -> s.substring(s.indexOf(".") + 1), Collectors.toList())));
+                Collectors.mapping(
+                    s ->
+                        StripePersonFieldsToClearspendOwnerFields.fromStripeField(
+                            s.substring(s.indexOf(".") + 1)),
+                    Collectors.toList())));
   }
 }

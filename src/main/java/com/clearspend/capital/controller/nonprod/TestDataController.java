@@ -422,7 +422,8 @@ public class TestDataController {
                 MerchantType.TELECOMMUNICATION_EQUIPMENT_AND_TELEPHONE_SALES,
                 "Description of business",
                 faker.internet().url()),
-            faker.internet().ipV4Address());
+            faker.internet().ipV4Address(),
+            faker.internet().userAgentAny());
 
     Business business = convertBusinessProspectRecord.business();
 

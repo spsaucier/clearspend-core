@@ -105,6 +105,9 @@ public class Business extends TypedMutable<BusinessId> {
         name = "tosAcceptanceIp",
         column = @Column(name = "stripe_tos_acceptance_ip")),
     @AttributeOverride(
+        name = "tosAcceptanceUserAgent",
+        column = @Column(name = "stripe_tos_acceptance_user_agent")),
+    @AttributeOverride(
         name = "bankAccountNumber.encrypted",
         column = @Column(name = "stripe_bank_account_number_encrypted")),
     @AttributeOverride(

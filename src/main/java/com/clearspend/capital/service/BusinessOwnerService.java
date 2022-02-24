@@ -179,30 +179,28 @@ public class BusinessOwnerService {
 
     List<BusinessOwner> ownersForBusinessId = businessOwnerRepository.findByBusinessId(businessId);
 
-    if (List.of(
-            BusinessType.MULTI_MEMBER_LLC,
-            BusinessType.PRIVATE_PARTNERSHIP,
-            BusinessType.PRIVATE_CORPORATION,
-            BusinessType.INCORPORATED_NON_PROFIT)
-        .contains(business.getType())) {
-      if (ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipExecutive)) {
-        throw new InvalidKycDataException(
-            String.format(
-                "Please provide the executive for business %s.", business.getLegalName()));
-      }
-    }
+    assert List.of(BusinessType.SOLE_PROPRIETORSHIP, BusinessType.INDIVIDUAL)
+                .contains(business.getType())
+            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipRepresentative)
+        : String.format(
+            "Please provide at least one representative for %s.", business.getLegalName());
 
-    if (List.of(
-            BusinessType.MULTI_MEMBER_LLC,
-            BusinessType.PRIVATE_PARTNERSHIP,
-            BusinessType.PRIVATE_CORPORATION)
-        .contains(business.getType())) {
-      if (ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipOwner)) {
-        throw new InvalidKycDataException(
-            String.format(
-                "Please provide owner details for business %s.", business.getLegalName()));
-      }
-    }
+    assert !List.of(
+                    BusinessType.MULTI_MEMBER_LLC,
+                    BusinessType.PRIVATE_PARTNERSHIP,
+                    BusinessType.PRIVATE_CORPORATION,
+                    BusinessType.INCORPORATED_NON_PROFIT)
+                .contains(business.getType())
+            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipExecutive)
+        : String.format("Please provide the executive for business %s.", business.getLegalName());
+
+    assert !List.of(
+                    BusinessType.MULTI_MEMBER_LLC,
+                    BusinessType.PRIVATE_PARTNERSHIP,
+                    BusinessType.PRIVATE_CORPORATION)
+                .contains(business.getType())
+            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipOwner)
+        : String.format("Please provide owner details for business %s.", business.getLegalName());
   }
 
   @Transactional
