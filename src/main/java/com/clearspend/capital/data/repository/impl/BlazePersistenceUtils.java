@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.util.CollectionUtils;
 
 @UtilityClass
 public class BlazePersistenceUtils {
@@ -61,8 +62,18 @@ public class BlazePersistenceUtils {
       Stream.of(constructorParameters).forEach(p -> builder.select(p.getName()));
     }
 
-    // TODO: build order by based on PageToken
-    builder.orderByAsc(constructorParameters[0].getName() + ".id");
+    if (!CollectionUtils.isEmpty(pageToken.getOrderBy())) {
+      pageToken
+          .getOrderBy()
+          .forEach(
+              orderBy -> {
+                switch (orderBy.getDirection()) {
+                  case ASC -> builder.orderByAsc(orderBy.getItem());
+                  case DESC -> builder.orderByDesc(orderBy.getItem());
+                }
+              });
+    }
+    builder.orderByDesc(constructorParameters[0].getName() + ".id");
 
     int pageNumber = pageToken.getPageNumber();
     int pageSize = pageToken.getPageSize();

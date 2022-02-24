@@ -19,7 +19,9 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.type.PageToken.OrderBy;
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -128,6 +131,38 @@ public class CardControllerSearchTest extends BaseCapitalTest {
                     childCardA,
                     childAllocation.allocation(),
                     childAllocation.account(),
+                    userA.user())));
+  }
+
+  @SneakyThrows
+  @Test
+  void orderByCreatedDesc() {
+    PageRequest pageRequest = new PageRequest(0, 10);
+    pageRequest.setOrderBy(
+        List.of(OrderBy.builder().item("created").direction(Direction.DESC).build()));
+    SearchCardRequest request = new SearchCardRequest(pageRequest);
+
+    PagedData<SearchCardData> result = callSearchCards(request, 3);
+
+    assertThat(result.getContent())
+        .containsExactlyInAnyOrder(
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    childCardA,
+                    childAllocation.allocation(),
+                    childAllocation.account(),
+                    userA.user())),
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    rootCardB,
+                    rootAllocation.allocation(),
+                    rootAllocation.account(),
+                    userB.user())),
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    rootCardA,
+                    rootAllocation.allocation(),
+                    rootAllocation.account(),
                     userA.user())));
   }
 
