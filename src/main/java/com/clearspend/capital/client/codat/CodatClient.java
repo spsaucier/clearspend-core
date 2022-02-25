@@ -13,6 +13,7 @@ import com.clearspend.capital.client.codat.types.CodatPaymentAllocationPayment;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
+import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -213,7 +214,7 @@ public class CodatClient {
   }
 
   public CodatPushDataResponse syncSupplierToCodat(
-      String companyRef, String connectionId, CodatSupplier supplier) {
+      String companyRef, String connectionId, CodatSupplierRequest supplier) {
     try {
       return callCodatApi(
           "/companies/%s/connections/%s/push/suppliers".formatted(companyRef, connectionId),

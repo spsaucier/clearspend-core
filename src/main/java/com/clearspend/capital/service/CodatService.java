@@ -11,6 +11,7 @@ import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
+import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -132,7 +133,8 @@ public class CodatService {
               accountActivityId,
               supplier.getId(), // TODO look back at this
               TransactionSyncStatus.IN_PROGRESS,
-              syncResponse.getPushOperationKey()));
+              syncResponse.getPushOperationKey(),
+              business.getCodatCompanyRef()));
 
       return new SyncTransactionResponse("IN_PROGRESS", syncResponse);
     } else {
@@ -141,11 +143,8 @@ public class CodatService {
       codatClient.syncSupplierToCodat(
           business.getCodatCompanyRef(),
           connectionId,
-          new CodatSupplier(
-              "CS-" + accountActivity.getMerchant().getMerchantNumber(),
-              accountActivity.getMerchant().getName(),
-              "ACTIVE",
-              business.getCurrency().name()));
+          new CodatSupplierRequest(
+              accountActivity.getMerchant().getName(), "ACTIVE", business.getCurrency().name()));
 
       transactionSyncLogRepository.save(
           new TransactionSyncLog(
@@ -153,7 +152,8 @@ public class CodatService {
               accountActivityId,
               "CS-" + accountActivity.getMerchant().getMerchantNumber(), // TODO look back at this
               TransactionSyncStatus.AWAITING_SUPPLIER,
-              ""));
+              "",
+              business.getCodatCompanyRef()));
 
       return new SyncTransactionResponse("WAITING_FOR_SUPPLIER");
     }
@@ -299,9 +299,10 @@ public class CodatService {
         .orElse(null);
   }
 
-  public void syncTransactionsAwaitingSupplier() {
+  public void syncTransactionsAwaitingSupplierForCompany(String companyRef) {
     List<TransactionSyncLog> transactionsWaitingForSupplier =
-        transactionSyncLogRepository.findByStatus(TransactionSyncStatus.AWAITING_SUPPLIER);
+        transactionSyncLogRepository.findByStatusAndCodatCompanyRef(
+            TransactionSyncStatus.AWAITING_SUPPLIER, companyRef);
 
     transactionsWaitingForSupplier.stream()
         .forEach(
@@ -347,7 +348,8 @@ public class CodatService {
                 accountActivity.getId(),
                 supplier.getId(), // TODO look back at this
                 TransactionSyncStatus.IN_PROGRESS,
-                syncResponse.getPushOperationKey());
+                syncResponse.getPushOperationKey(),
+                business.getCodatCompanyRef());
 
         updatedLog.setId(transaction.getId());
 
@@ -362,9 +364,7 @@ public class CodatService {
         suppliers.stream()
             .filter(
                 supplier ->
-                    supplier
-                        .getId()
-                        .equals("CS-" + accountActivity.getMerchant().getMerchantNumber()))
+                    supplier.getSupplierName().equals(accountActivity.getMerchant().getName()))
             .findFirst();
 
     if (matchingSupplier.isEmpty()) {
@@ -391,9 +391,10 @@ public class CodatService {
     return connectionStatus.get().getId();
   }
 
-  public void updateSyncedTransactionsInLog() {
+  public void updateSyncedTransactionsInLog(String companyRef) {
     List<TransactionSyncLog> transactionsWaitingForSupplier =
-        transactionSyncLogRepository.findByStatus(TransactionSyncStatus.IN_PROGRESS);
+        transactionSyncLogRepository.findByStatusAndCodatCompanyRef(
+            TransactionSyncStatus.IN_PROGRESS, companyRef);
     ;
 
     transactionsWaitingForSupplier.stream()

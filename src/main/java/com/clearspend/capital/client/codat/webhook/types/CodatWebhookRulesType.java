@@ -1,7 +1,7 @@
 package com.clearspend.capital.client.codat.webhook.types;
 
 public enum CodatWebhookRulesType {
-  DATA_SYNC_COMPLETE("Data sync completed");
+  DATASET_CHANGED("Dataset data changed");
 
   private String key;
 

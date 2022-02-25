@@ -51,4 +51,6 @@ public class TransactionSyncLog extends TypedMutable<TransactionSyncLogId> {
   private TransactionSyncStatus status;
 
   @NonNull private String directCostPushOperationKey;
+
+  @NonNull private String codatCompanyRef;
 }

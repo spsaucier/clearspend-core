@@ -12,5 +12,6 @@ public interface TransactionSyncLogRepository
     extends JpaRepository<TransactionSyncLog, TypedId<TransactionSyncLogId>>,
         JpaSpecificationExecutor<TransactionSyncLog> {
 
-  List<TransactionSyncLog> findByStatus(TransactionSyncStatus status);
+  List<TransactionSyncLog> findByStatusAndCodatCompanyRef(
+      TransactionSyncStatus status, String codatCompanyRef);
 }

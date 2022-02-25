@@ -1,0 +1,1 @@
+alter table transaction_sync_log add column if not exists codat_company_ref varchar(36);
