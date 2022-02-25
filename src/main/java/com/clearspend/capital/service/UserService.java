@@ -17,6 +17,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.FusionAuthService.CapitalChangePasswordReason;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import java.io.ByteArrayOutputStream;
@@ -66,7 +67,12 @@ public class UserService {
       user.setSubjectRef(
           fusionAuthService
               .createUser(
-                  user.getBusinessId(), user.getId(), user.getEmail().getEncrypted(), password)
+                  user.getBusinessId(),
+                  user.getId(),
+                  user.getEmail().getEncrypted(),
+                  password,
+                  UserType.EMPLOYEE,
+                  Optional.of(CapitalChangePasswordReason.Validation))
               .toString());
 
       user = userRepository.save(user);
@@ -186,7 +192,7 @@ public class UserService {
       String firstName,
       String lastName,
       @Nullable Address address,
-      String email,
+      @NonNull String email,
       String phone,
       boolean generatePassword) {
 
@@ -213,7 +219,12 @@ public class UserService {
       user.setSubjectRef(
           fusionAuthService
               .updateUser(
-                  businessId, user.getId(), email, password, user.getType(), user.getSubjectRef())
+                  businessId,
+                  user.getId(),
+                  Optional.of(email),
+                  Optional.of(password),
+                  user.getType(),
+                  user.getSubjectRef())
               .toString());
       twilioService.sendNotificationEmail(
           user.getEmail().getEncrypted(),

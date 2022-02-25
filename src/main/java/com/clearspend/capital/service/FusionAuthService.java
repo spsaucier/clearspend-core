@@ -16,13 +16,18 @@ import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import io.fusionauth.domain.Application;
+import io.fusionauth.domain.ChangePasswordReason;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.UserRegistration;
 import io.fusionauth.domain.api.ApplicationResponse;
 import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
+import io.fusionauth.domain.api.TwoFactorRequest;
+import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
+import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
 import io.fusionauth.domain.api.user.ChangePasswordRequest;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
@@ -31,8 +36,11 @@ import io.fusionauth.domain.api.user.RegistrationResponse;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.validation.constraints.NotNull;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,7 +101,12 @@ public class FusionAuthService {
       String username,
       String password) {
     return createUser(
-        businessId, businessOwnerId.toUuid(), username, password, UserType.BUSINESS_OWNER);
+        businessId,
+        new TypedId<UserId>(businessOwnerId.toUuid()),
+        username,
+        password,
+        UserType.BUSINESS_OWNER,
+        Optional.empty());
   }
 
   @RestrictedApi(
@@ -104,28 +117,51 @@ public class FusionAuthService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public UUID createUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, String email, String password) {
-    return createUser(businessId, userId.toUuid(), email, password, UserType.EMPLOYEE);
+    return createUser(businessId, userId, email, password, UserType.EMPLOYEE, Optional.empty());
   }
 
-  private UUID createUser(
+  /**
+   * 1:1 mapping to the FusionAuth ChangePasswordReason, in case we want to change out FusionAuth
+   * later or to isolate from FA changes.
+   */
+  @Getter
+  public enum CapitalChangePasswordReason {
+    Administrative(ChangePasswordReason.Administrative),
+    Breached(ChangePasswordReason.Breached),
+    Expired(ChangePasswordReason.Expired),
+    Validation(ChangePasswordReason.Validation);
+
+    public final ChangePasswordReason fusionAuthReason;
+
+    CapitalChangePasswordReason(ChangePasswordReason fusionAuthReason) {
+      this.fusionAuthReason = fusionAuthReason;
+    }
+  }
+
+  UUID createUser(
       TypedId<BusinessId> businessId,
-      UUID userId,
+      TypedId<UserId> userId,
       String email,
       String password,
-      UserType userType) {
+      UserType userType,
+      Optional<CapitalChangePasswordReason> changePasswordReason) {
 
     UUID fusionAuthId = UUID.randomUUID();
 
     RegistrationRequest request =
         new RegistrationRequest(
-            getUser(email, password, fusionAuthId),
-            getUserRegistration(
-                businessId, userId, userType, fusionAuthId, Collections.emptySet()));
+            userFactory(
+                email,
+                password,
+                fusionAuthId,
+                changePasswordReason.map(CapitalChangePasswordReason::getFusionAuthReason)),
+            userRegistrationFactory(
+                businessId, userId.toUuid(), userType, fusionAuthId, Collections.emptySet()));
     validateResponse(client.register(fusionAuthId, request));
     return fusionAuthId;
   }
 
-  private UserRegistration getUserRegistration(
+  private UserRegistration userRegistrationFactory(
       TypedId<BusinessId> businessId,
       UUID userId,
       UserType userType,
@@ -141,11 +177,40 @@ public class FusionAuthService {
     return registration;
   }
 
-  private User getUser(String email, String password, UUID fusionAuthId) {
+  private static User userFactory(
+      Optional<String> email, Optional<String> password, UUID fusionAuthId) {
+    return userFactory(email, password, fusionAuthId, Optional.empty());
+  }
+
+  private static User userFactory(
+      @NonNull String email,
+      @NonNull String password,
+      @NonNull UUID fusionAuthId,
+      @NonNull Optional<ChangePasswordReason> changePasswordReason) {
+    return userFactory(
+        Optional.of(email), Optional.of(password), fusionAuthId, changePasswordReason);
+  }
+
+  private static User userFactory(
+      Optional<String> email,
+      Optional<String> password,
+      @NonNull UUID fusionAuthId,
+      Optional<ChangePasswordReason> changePasswordReason) {
     User user = new User();
-    user.id = fusionAuthId;
-    user.email = email;
-    user.password = password;
+
+    if (fusionAuthId != null) {
+      user.id = fusionAuthId;
+    }
+
+    email.ifPresent(s -> user.email = s);
+    password.ifPresent(s -> user.password = s);
+
+    changePasswordReason.ifPresent(
+        r -> {
+          user.passwordChangeRequired = true;
+          user.passwordChangeReason = r;
+        });
+
     return user;
   }
 
@@ -162,6 +227,53 @@ public class FusionAuthService {
   @SuppressWarnings("unchecked")
   private Set<String> getUserRoles(User user) {
     return Set.copyOf((List<String>) user.data.getOrDefault(ROLES, Collections.emptyList()));
+  }
+
+  public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
+    final ClientResponse<LoginResponse, Errors> response = client.twoFactorLogin(request);
+    validateResponse(response);
+    return response;
+  }
+
+  public enum TwoFactorAuthenticationMethod {
+    email,
+    sms,
+    authenticator
+  }
+
+  public void sendInitialTwoFactorCode(
+      @NonNull UUID fusionAuthUserId,
+      @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
+      @NotNull String destination) {
+
+    TwoFactorSendRequest request = new TwoFactorSendRequest();
+    request.method = method.name();
+    switch (method) {
+      case email -> request.email = destination;
+      case sms -> request.mobilePhone = destination;
+      case authenticator -> throw new InvalidRequestException(
+          "Authenticator does not support sending");
+    }
+    request.userId = fusionAuthUserId;
+
+    validateResponse(client.sendTwoFactorCodeForEnableDisable(request));
+  }
+
+  public TwoFactorResponse validateFirstTwoFactorCode(
+      @NonNull UUID fusionAuthUserId,
+      @NonNull String code,
+      @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
+      @NonNull String destination) {
+
+    TwoFactorRequest request = new TwoFactorRequest();
+    request.code = code;
+    request.method = method.name();
+    switch (method) {
+      case email -> request.email = destination;
+      case sms -> request.mobilePhone = destination;
+      case authenticator -> request.secret = destination;
+    }
+    return validateResponse(client.enableTwoFactor(fusionAuthUserId, request));
   }
 
   public enum RoleChange {
@@ -193,6 +305,15 @@ public class FusionAuthService {
     return true;
   }
 
+  /**
+   * @param businessId the user's business
+   * @param userId capital's number
+   * @param email null for no change, correct value will be persisted
+   * @param password null for no change, correct value will be persisted
+   * @param userType the compiler will tell you if this is wrong.
+   * @param fusionAuthUserIdStr fusionAuth's UUID for the user (subjectRef)
+   * @return the FusionAuth UUID for the user
+   */
   @FusionAuthUserAccessor(reviewer = "jscarbor", explanation = "Keeping roles consistent")
   @RestrictedApi(
       explanation = "This should only ever be used by UserService",
@@ -203,24 +324,27 @@ public class FusionAuthService {
   public UUID updateUser(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<UserId> userId,
-      String email,
-      @Sensitive String password,
+      @NonNull Optional<String> email,
+      @NonNull @Sensitive Optional<String> password,
       UserType userType,
       String fusionAuthUserIdStr) {
     UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
 
-    User user = getUser(email, password, fusionAuthUserId);
-    final ClientResponse<UserResponse, Errors> response =
-        client.updateUser(fusionAuthUserId, new UserRequest(user));
+    User user = userFactory(email, password, fusionAuthUserId);
+    if (email != null && password != null) {
 
-    validateResponse(response);
+      final ClientResponse<UserResponse, Errors> response =
+          client.updateUser(fusionAuthUserId, new UserRequest(user));
+
+      validateResponse(response);
+    }
 
     final ClientResponse<RegistrationResponse, Errors> response1 =
         client.updateRegistration(
             fusionAuthUserId,
             new RegistrationRequest(
                 user,
-                getUserRegistration(
+                userRegistrationFactory(
                     businessId,
                     userId.toUuid(),
                     userType,
@@ -309,6 +433,11 @@ public class FusionAuthService {
   public ClientResponse<LoginResponse, Errors> login(String loginId, @Sensitive String password) {
     LoginRequest request = new LoginRequest(getApplicationId(), loginId, password);
     return client.login(request);
+  }
+
+  public void sendTwoFactorCodeForLoginUsingMethod(String twoFactorId, String methodId) {
+    TwoFactorSendRequest request = new TwoFactorSendRequest(methodId);
+    validateResponse(client.sendTwoFactorCodeForLoginUsingMethod(twoFactorId, request));
   }
 
   public UUID getApplicationId() {

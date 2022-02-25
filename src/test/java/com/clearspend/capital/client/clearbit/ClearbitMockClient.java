@@ -15,6 +15,7 @@ public class ClearbitMockClient extends ClearbitClient {
     super(webClient);
   }
 
+  @Override
   public String getLogo(String companyName) {
     log.info("Mock Clearbit call request name: [%s]".formatted(companyName));
     return "https://clearbit.com/%s.png".formatted(companyName);
