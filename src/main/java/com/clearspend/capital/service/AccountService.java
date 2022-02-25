@@ -29,6 +29,7 @@ import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import javax.transaction.Transactional;
@@ -100,7 +101,7 @@ public class AccountService {
                   rootAllocationAccount.getId(),
                   HoldStatus.PLACED,
                   amount.negate(),
-                  OffsetDateTime.now().plusDays(5)));
+                  OffsetDateTime.now(ZoneOffset.UTC).plusDays(5)));
       log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
     }
 
@@ -202,7 +203,7 @@ public class AccountService {
     if (fetchHolds) {
       account.setHolds(
           holdRepository.findByAccountIdAndStatusAndExpirationDateAfter(
-              account.getId(), HoldStatus.PLACED, OffsetDateTime.now()));
+              account.getId(), HoldStatus.PLACED, OffsetDateTime.now(ZoneOffset.UTC)));
     }
   }
 

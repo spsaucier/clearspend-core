@@ -2,6 +2,7 @@ package com.clearspend.capital.common.data.model;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
@@ -24,11 +25,13 @@ public abstract class TypedImmutable<T> {
   private OffsetDateTime created;
 
   @PrePersist
+  @SuppressWarnings("UnusedMethod")
   private void onPrePersist() {
-    setCreated(OffsetDateTime.now());
+    setCreated(OffsetDateTime.now(ZoneOffset.UTC));
   }
 
   @PreUpdate
+  @SuppressWarnings("UnusedMethod")
   private void onPreUpdate() {
     throw new UnsupportedOperationException(
         String.format("Immutable object %s cannot be updated in db", this.getClass().getName()));

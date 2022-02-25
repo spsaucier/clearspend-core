@@ -84,6 +84,7 @@ public class PlaidClient {
   public record AccountsResponse(
       String accessToken, List<AccountBase> accounts, List<NumbersACH> achList) {}
 
+  @SuppressWarnings("MissingCasesInEnumSwitch")
   public String createLinkToken(TypedId<BusinessId> businessId) throws IOException {
     /* The Plaid documentation suggests that we can use
      * <a href="https://plaid.com/docs/api/items/#itemget">/item/get</a> to find out
@@ -97,6 +98,7 @@ public class PlaidClient {
       return createLinkToken(businessId, Arrays.asList(Products.AUTH, Products.IDENTITY));
     } catch (PlaidClientException e) {
       switch (e.getErrorCode()) {
+          // These are the only cases that warrant special handling
         case PRODUCTS_NOT_SUPPORTED,
             PRODUCT_NOT_ENABLED,
             PRODUCT_NOT_READY,
@@ -148,7 +150,8 @@ public class PlaidClient {
    * Validate that the given response was successful and return its decoded body.
    *
    * @param <T> The type of response expected
-   * @param businessId
+   * @param businessId The business for which validation will be performed, for recording the
+   *     results
    * @param response A response to analyze for success
    * @return the body of the response, decoded
    * @throws IOException if there is a problem making a string out of the errorBody

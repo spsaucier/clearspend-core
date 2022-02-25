@@ -48,6 +48,8 @@ tasks.withType<JavaCompile>().configureEach {
         disable("ParameterName") // https://github.com/google/error-prone/issues/1250
         disable("UnusedVariable") // https://github.com/google/error-prone/issues/1250
         disable("SameNameButDifferent") // https://github.com/google/error-prone/issues/2982
+        disable("MissingOverride") // Lombok equals and hash code
+        disable("DefaultCharset") // We set UTF-8 when the JVM starts
     }
 }
 
@@ -58,6 +60,7 @@ tasks {
 
     test {
         jvmArgs(
+            "-Dfile.encoding=UTF-8",
             "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
         )
         useJUnitPlatform()

@@ -29,6 +29,7 @@ import org.hibernate.annotations.Type;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
+@SuppressWarnings("MissingOverride")
 @NoArgsConstructor
 @RequiredArgsConstructor
 @DynamicUpdate

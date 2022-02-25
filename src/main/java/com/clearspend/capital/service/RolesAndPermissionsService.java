@@ -286,6 +286,8 @@ public class RolesAndPermissionsService {
   }
 
   /**
+   * Throw an exception if the user doesn't have the requisite permissions.
+   *
    * @param allocationId The allocation for which permission is requested, null if the permission is
    *     global
    * @param allocationPermission Each allocation permission that would be sufficient
