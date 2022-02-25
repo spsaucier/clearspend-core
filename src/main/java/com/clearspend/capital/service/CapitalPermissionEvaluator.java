@@ -10,11 +10,7 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.PermissionEvaluator;
@@ -68,24 +64,26 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
             ? rolesAndPermissionsService.getUserRolesAndPermissionsAtRootAllocation(businessId)
             : rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId);
 
-    if (userPermissions == null) {
+    if (userPermissions == null
+        || (userPermissions.allocationPermissions().isEmpty()
+            && userPermissions.globalUserPermissions().isEmpty())) {
       return false;
     }
 
     RequiredPermissions overlapPermissions = resolvePermission(String.valueOf(permission));
 
-    overlapPermissions.allocationPermisions.retainAll(userPermissions.allocationPermissions());
+    overlapPermissions.allocationPermissions.retainAll(userPermissions.allocationPermissions());
     overlapPermissions.globalUserPermissions.retainAll(userPermissions.globalUserPermissions());
 
-    return !overlapPermissions.allocationPermisions.isEmpty()
+    return !overlapPermissions.allocationPermissions.isEmpty()
         || !overlapPermissions.globalUserPermissions.isEmpty();
   }
 
   private record RequiredPermissions(
-      EnumSet<AllocationPermission> allocationPermisions,
+      EnumSet<AllocationPermission> allocationPermissions,
       EnumSet<GlobalUserPermission> globalUserPermissions) {}
 
-  private static final Map<String, AllocationPermission> allocationPermisisons =
+  private static final Map<String, AllocationPermission> allocationPermissions =
       EnumSet.allOf(AllocationPermission.class).stream()
           .collect(Collectors.toMap(AllocationPermission::name, e -> e));
 
@@ -100,8 +98,8 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
         enumSet(
             AllocationPermission.class,
             permissionStrings.stream()
-                .filter(allocationPermisisons::containsKey)
-                .map(allocationPermisisons::get)
+                .filter(allocationPermissions::containsKey)
+                .map(allocationPermissions::get)
                 .collect(Collectors.toSet())),
         enumSet(
             GlobalUserPermission.class,

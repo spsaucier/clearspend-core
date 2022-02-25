@@ -73,6 +73,32 @@ class RolesAndPermissionsControllerTest extends BaseCapitalTest {
     assertTrue(userRolesAndPermissionsRecord.getGlobalUserPermissions().isEmpty());
   }
 
+  @Test
+  @SneakyThrows
+  public void testGettingEmptyPermissionsRecords() {
+    CreateBusinessRecord createBusinessRecord = testHelper.init();
+
+    CreateBusinessRecord secondBusinessRecord = testHelper.createBusiness();
+    final Cookie secondCookie = secondBusinessRecord.authCookie();
+
+    UserRolesAndPermissionsRecord userRolesAndPermissionsRecord =
+        getRoles(
+            "/roles-and-permissions/allocation/%s"
+                .formatted(
+                    createBusinessRecord
+                        .allocationRecord()
+                        .allocation()
+                        .getId()
+                        .toUuid()
+                        .toString()),
+            secondCookie);
+
+    assertEquals(
+        secondBusinessRecord.user().getId(), userRolesAndPermissionsRecord.getUser().getUserId());
+    assertTrue(userRolesAndPermissionsRecord.getAllocationPermissions().isEmpty());
+    assertTrue(userRolesAndPermissionsRecord.getGlobalUserPermissions().isEmpty());
+  }
+
   private UserRolesAndPermissionsRecord getRoles(String url, Cookie cookie) throws Exception {
     MockHttpServletResponse response =
         mvc.perform(get(url).contentType("application/json").cookie(cookie))

@@ -322,11 +322,14 @@ public class RolesAndPermissionsService {
     }
   }
 
+  @NonNull
   public UserRolesAndPermissions getUserRolesAndPermissionsForAllocation(
       TypedId<AllocationId> allocationId) {
     CurrentUser currentUser = CurrentUser.get();
-    return userAllocationRoleRepository.getUserPermissionAtAllocation(
-        currentUser.businessId(), allocationId, currentUser.userId(), currentUser.roles());
+    return ensureNonNullPermissions(
+        userAllocationRoleRepository.getUserPermissionAtAllocation(
+            currentUser.businessId(), allocationId, currentUser.userId(), currentUser.roles()),
+        allocationId);
   }
 
   public Map<TypedId<UserId>, UserRolesAndPermissions> getAllRolesAndPermissionsForAllocation(
@@ -399,11 +402,14 @@ public class RolesAndPermissionsService {
     return fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef()));
   }
 
+  @NonNull
   public UserRolesAndPermissions getUserRolesAndPermissionsAtRootAllocation(
       TypedId<BusinessId> businessId) {
     CurrentUser user = CurrentUser.get();
-    return userAllocationRoleRepository.getUserPermissionAtBusiness(
-        businessId, user.userId(), user.roles());
+    return ensureNonNullPermissions(
+        userAllocationRoleRepository.getUserPermissionAtBusiness(
+            businessId, user.userId(), user.roles()),
+        null);
   }
 
   public void ensureMinimumAllocationPermissions(
@@ -421,7 +427,9 @@ public class RolesAndPermissionsService {
                       .map(AllocationRolePermissions::getPermissions)
                       .findFirst()
                       .orElseThrow()));
-      if (existingRole == null) {
+      if (existingRole == null
+          || (existingRole.allocationPermissions().isEmpty()
+              && existingRole.globalUserPermissions().isEmpty())) {
         createUserAllocationRole(user, allocation, defaultRole);
       } else {
         if (!existingRole.allocationPermissions().containsAll(minimumPermissions)) {
@@ -433,6 +441,28 @@ public class RolesAndPermissionsService {
         }
       }
     }
+  }
+
+  @NonNull
+  private UserRolesAndPermissions ensureNonNullPermissions(
+      UserRolesAndPermissions target, TypedId<AllocationId> allocationId) {
+    UserRolesAndPermissions result = target;
+    if (target == null) {
+      CurrentUser user = CurrentUser.get();
+      result =
+          new UserRolesAndPermissions(
+              null,
+              "",
+              "",
+              user.userType(),
+              user.userId(),
+              allocationId,
+              false,
+              null,
+              EnumSet.noneOf(AllocationPermission.class),
+              EnumSet.noneOf(GlobalUserPermission.class));
+    }
+    return result;
   }
 
   // TODO list businesses available to a user (bookkeeper, customer service)

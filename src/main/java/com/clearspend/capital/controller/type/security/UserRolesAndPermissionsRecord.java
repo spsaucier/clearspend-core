@@ -12,10 +12,12 @@ import java.util.List;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class UserRolesAndPermissionsRecord {
 
   /** Null for new or root allocation owner / business owner */
@@ -32,7 +34,6 @@ public class UserRolesAndPermissionsRecord {
   @JsonProperty("user")
   private UserData user;
 
-  @NonNull
   @JsonProperty("allocationRole")
   private String allocationRole;
 

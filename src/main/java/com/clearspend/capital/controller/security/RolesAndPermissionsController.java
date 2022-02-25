@@ -31,6 +31,7 @@ public class RolesAndPermissionsController {
               description = "ID of the allocation record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
+
     return new UserRolesAndPermissionsRecord(
         rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId));
   }
