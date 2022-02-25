@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
@@ -58,5 +59,15 @@ public class CodatController {
   private CodatCreateBankAccountResponse createBankAccountForBusiness(
       @Validated @RequestBody CodatCreateBankAccountRequest request) {
     return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
+  }
+
+  @GetMapping("/chart-of-accounts")
+  private CodatAccountNestedResponse getChartOfAccountsForBusiness() {
+    return codatService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId());
+  }
+
+  @GetMapping("/chart-of-accounts/expense")
+  private CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
+    return codatService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId(), "Expense");
   }
 }

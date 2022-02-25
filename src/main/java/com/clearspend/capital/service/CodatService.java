@@ -4,6 +4,8 @@ import static java.util.stream.Collectors.toList;
 
 import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.CodatAccount;
+import com.clearspend.capital.client.codat.types.CodatAccountNested;
+import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
@@ -26,6 +28,7 @@ import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -164,7 +167,8 @@ public class CodatService {
     ConnectionStatusResponse connectionStatusResponse =
         codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
 
-    // For now, get the first Linked (active) connection. It should not really be possible for them
+    // For now, get the first Linked (active) connection. It should not really be
+    // possible for them
     // to link multiple.
     List<ConnectionStatus> linkedConnections =
         connectionStatusResponse.getResults().stream()
@@ -183,6 +187,34 @@ public class CodatService {
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatAccountNestedResponse getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+
+    GetAccountsResponse chartOfAccounts =
+        codatClient.getAccountsForBusiness(currentBusiness.getCodatCompanyRef());
+
+    return new CodatAccountNestedResponse(nestCodatAccounts(chartOfAccounts.getResults()));
+  }
+
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatAccountNestedResponse getChartOfAccountsForBusiness(
+      TypedId<BusinessId> businessId, String type) {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+
+    GetAccountsResponse chartOfAccounts =
+        codatClient.getAccountsForBusiness(currentBusiness.getCodatCompanyRef());
+
+    List<CodatAccount> response =
+        chartOfAccounts.getResults().stream()
+            .filter(account -> account.getType().equals(type))
+            .collect(toList());
+
+    return new CodatAccountNestedResponse(nestCodatAccounts(response));
+  }
+
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CodatCreateBankAccountRequest createBankAccountRequest)
       throws RuntimeException {
@@ -191,7 +223,8 @@ public class CodatService {
     ConnectionStatusResponse connectionStatusResponse =
         codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
 
-    // For now, get the first Linked (active) connection. It should not really be possible for them
+    // For now, get the first Linked (active) connection. It should not really be
+    // possible for them
     // to link multiple.
     List<ConnectionStatus> linkedConnections =
         connectionStatusResponse.getResults().stream()
@@ -205,6 +238,65 @@ public class CodatService {
         currentBusiness.getCodatCompanyRef(),
         linkedConnections.get(0).getId(),
         createBankAccountRequest);
+  }
+
+  // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
+  // their end.
+  private List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
+    List<CodatAccountNested> base = new ArrayList<CodatAccountNested>();
+    accounts.stream()
+        .forEach(
+            account -> {
+              CodatAccountNested currentAccount = null;
+
+              // Get rid of fluff
+              String[] baseElements = account.getQualifiedName().split("\\.");
+              String[] elements = Arrays.copyOfRange(baseElements, 1, baseElements.length);
+              for (String element : elements) {
+                if (currentAccount == null) {
+                  currentAccount = findAccountInList(base, element);
+                  if (currentAccount == null) {
+                    currentAccount = createNestedAccountFromAccount(account, element);
+                    base.add(currentAccount);
+                  }
+                } else {
+                  CodatAccountNested newAccount =
+                      findAccountInList(currentAccount.getChildren(), element);
+                  if (newAccount == null) {
+                    newAccount = createNestedAccountFromAccount(account, element);
+                    currentAccount.getChildren().add(newAccount);
+                  }
+                  currentAccount = newAccount;
+                }
+              }
+              if (currentAccount != null) {
+                // reorient leaf node
+                currentAccount.setId(account.getId());
+                currentAccount.setName(account.getName());
+                currentAccount.setStatus(account.getStatus());
+                currentAccount.setCategory(account.getCategory());
+                currentAccount.setQualifiedName(account.getQualifiedName());
+                currentAccount.setType(account.getType());
+              }
+            });
+
+    return base;
+  }
+
+  private CodatAccountNested createNestedAccountFromAccount(CodatAccount account, String id) {
+    CodatAccountNested newAccount = new CodatAccountNested(id, id);
+    newAccount.setStatus(account.getStatus());
+    newAccount.setCategory(account.getCategory());
+    newAccount.setQualifiedName(id);
+    newAccount.setType(account.getType());
+    return newAccount;
+  }
+
+  private CodatAccountNested findAccountInList(List<CodatAccountNested> accounts, String search) {
+    return accounts.stream()
+        .filter(account -> account.getId().equals(search))
+        .findFirst()
+        .orElse(null);
   }
 
   public void syncTransactionsAwaitingSupplier() {
