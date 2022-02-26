@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
-import java.nio.charset.StandardCharsets;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -49,10 +48,7 @@ class ApplicationReviewControllerTest extends BaseCapitalTest {
     TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     MockMultipartFile mockMultipartFile =
         new MockMultipartFile(
-            "documentList",
-            "P-token|license|documentName.png",
-            "image/png",
-            "test.txt".getBytes(StandardCharsets.UTF_8));
+            "documentList", "P-token|license|documentName.png", "image/png", "test.txt".getBytes());
     MockMultipartHttpServletRequestBuilder multipartRequest =
         MockMvcRequestBuilders.multipart("/application-review/document");
 

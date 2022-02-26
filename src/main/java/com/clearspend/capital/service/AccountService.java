@@ -80,6 +80,19 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public AdjustmentRecord manualAdjustment(Account account, Amount amount) {
+    if (amount.isNegative() && account.getAvailableBalance().add(amount).isLessThanZero()) {
+      throw new InsufficientFundsException(account, AdjustmentType.MANUAL, amount);
+    }
+
+    AdjustmentService.AdjustmentRecord adjustmentRecord =
+        adjustmentService.recordManualAdjustment(account, amount);
+
+    return new AdjustmentRecord(
+        account, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());
+  }
+
+  @Transactional(TxType.REQUIRED)
   public AdjustmentAndHoldRecord depositFunds(
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,

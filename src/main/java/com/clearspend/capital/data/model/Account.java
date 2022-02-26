@@ -2,6 +2,8 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
+import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -69,6 +71,15 @@ public class Account extends TypedMutable<AccountId> {
   private TypedId<CardId> cardId;
 
   @NonNull @Embedded private Amount ledgerBalance;
+
+  public void setAvailableBalance(Amount availableBalance) {
+    if (availableBalance == null) {
+      throw new InvalidStateException(
+          Table.ACCOUNT, "Available balance not set on account " + getBusinessId());
+    }
+
+    this.availableBalance = availableBalance;
+  }
 
   @Transient private Amount availableBalance;
   @Transient private List<Hold> holds;

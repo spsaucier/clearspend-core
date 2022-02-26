@@ -16,7 +16,12 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 // NOTE: This controller is served from a different set of pods from our regular production traffic
@@ -32,7 +37,7 @@ public class ImageController {
   private final ReceiptService receiptService;
 
   @PostMapping(value = "/receipts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  private CreateReceiptResponse storeReceiptImage(@RequestPart("receipt") MultipartFile receiptFile)
+  CreateReceiptResponse storeReceiptImage(@RequestPart("receipt") MultipartFile receiptFile)
       throws IOException {
     CurrentUser currentUser = CurrentUser.get();
     final Receipt receipt =
@@ -46,7 +51,7 @@ public class ImageController {
   }
 
   @GetMapping("/receipts/{receiptId}")
-  private ResponseEntity<Resource> getReceiptImage(
+  ResponseEntity<Resource> getReceiptImage(
       @PathVariable(value = "receiptId")
           @ApiParam(
               required = true,

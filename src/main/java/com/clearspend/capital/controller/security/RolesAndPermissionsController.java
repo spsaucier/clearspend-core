@@ -23,7 +23,7 @@ public class RolesAndPermissionsController {
   private final RolesAndPermissionsService rolesAndPermissionsService;
 
   @GetMapping("/allocation/{allocationId}")
-  private UserRolesAndPermissionsRecord getUserAllocationRoles(
+  UserRolesAndPermissionsRecord getUserAllocationRoles(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -37,7 +37,7 @@ public class RolesAndPermissionsController {
   }
 
   @GetMapping("/business/{businessId}")
-  private UserRolesAndPermissionsRecord getUserAllocationRolesForBusiness(
+  UserRolesAndPermissionsRecord getUserAllocationRolesForBusiness(
       @PathVariable(value = "businessId")
           @Parameter(
               required = true,
@@ -50,7 +50,7 @@ public class RolesAndPermissionsController {
   }
 
   @GetMapping("/")
-  private UserRolesAndPermissionsRecord getUserAllocationRolesForOwnBusiness() {
+  UserRolesAndPermissionsRecord getUserAllocationRolesForOwnBusiness() {
     return getUserAllocationRolesForBusiness(CurrentUser.get().businessId());
   }
 }

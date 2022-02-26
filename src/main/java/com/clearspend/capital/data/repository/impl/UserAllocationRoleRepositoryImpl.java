@@ -17,11 +17,14 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepositoryCustom;
-import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
-import java.util.*;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import lombok.NonNull;
@@ -208,10 +211,8 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
     return new UserRolesAndPermissions(
         getTypedId(resultSet, "user_allocation_role_id"),
-        new String(
-            crypto.decrypt(resultSet.getBytes("first_name_encrypted")), StandardCharsets.UTF_8),
-        new String(
-            crypto.decrypt(resultSet.getBytes("last_name_encrypted")), StandardCharsets.UTF_8),
+        new String(crypto.decrypt(resultSet.getBytes("first_name_encrypted"))),
+        new String(crypto.decrypt(resultSet.getBytes("last_name_encrypted"))),
         UserType.valueOf(resultSet.getString("user_type")),
         getTypedId(resultSet, "user_id"),
         getTypedId(resultSet, "allocation_id"),

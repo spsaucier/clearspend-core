@@ -11,6 +11,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -113,6 +114,8 @@ public class NetworkCommon {
   private Allocation allocation;
 
   private Card card;
+
+  private User user;
 
   private Account account;
 

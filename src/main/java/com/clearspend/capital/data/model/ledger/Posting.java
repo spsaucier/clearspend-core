@@ -18,6 +18,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString.Exclude;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
@@ -33,6 +34,7 @@ public class Posting extends TypedMutable<PostingId> {
 
   @NonNull
   @JsonIgnore
+  @Exclude
   @ManyToOne(cascade = CascadeType.ALL)
   private JournalEntry journalEntry;
 

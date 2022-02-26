@@ -47,5 +47,7 @@ public interface AccountActivityRepository
   Optional<AccountActivity> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> id);
 
-  Optional<AccountActivity> findByHoldId(TypedId<HoldId> holdId);
+  List<AccountActivity> findByAdjustmentId(TypedId<AdjustmentId> adjustmentId);
+
+  List<AccountActivity> findByHoldId(TypedId<HoldId> holdId);
 }

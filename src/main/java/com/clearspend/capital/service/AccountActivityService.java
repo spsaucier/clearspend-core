@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
@@ -40,6 +41,7 @@ import java.io.PrintWriter;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
@@ -122,15 +124,10 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkHoldAccountActivity(NetworkCommon common, Hold hold) {
-    recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
-  }
-
-  @Transactional(TxType.REQUIRED)
   public void recordHoldReleaseAccountActivity(Hold hold) {
     AccountActivity accountActivity =
-        accountActivityRepository
-            .findByHoldId(hold.getId())
+        accountActivityRepository.findByHoldId(hold.getId()).stream()
+            .min(Comparator.comparing(Versioned::getCreated))
             .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, hold.getId()));
 
     accountActivity.setHideAfter(OffsetDateTime.now());
@@ -143,8 +140,33 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public AccountActivity recordManualAdjustmentActivity(
+      Allocation allocation, Adjustment adjustment, String notes) {
+    final AccountActivity accountActivity =
+        new AccountActivity(
+            adjustment.getBusinessId(),
+            allocation.getId(),
+            allocation.getName(),
+            adjustment.getAccountId(),
+            AccountActivityType.MANUAL,
+            AccountActivityStatus.PROCESSED,
+            adjustment.getEffectiveDate(),
+            adjustment.getAmount(),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setNotes(notes);
+
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  @Transactional(TxType.REQUIRED)
   public void recordNetworkAdjustmentAccountActivity(NetworkCommon common, Adjustment adjustment) {
     recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public void recordNetworkHoldAccountActivity(NetworkCommon common, Hold hold) {
+    recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
   }
 
   @Transactional(TxType.REQUIRED)

@@ -1,11 +1,14 @@
 package com.clearspend.capital.service;
 
+import static com.clearspend.capital.common.ValidationHelper.ensureMatchingIds;
+
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
@@ -32,7 +35,9 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
+import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -56,14 +61,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AllocationService {
 
-  private final UserRepository userRepository;
   private final AllocationRepository allocationRepository;
+  private final BusinessRepository businessRepository;
+  private final UserRepository userRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardService cardService;
-  private final TransactionLimitService transactionLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final TransactionLimitService transactionLimitService;
+
   private final EntityManager entityManager;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
@@ -371,5 +378,40 @@ public class AllocationService {
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
+  }
+
+  @Transactional
+  @PreAuthorize("hasPermission(#allocationId, 'CUSTOMER_SERVICE_MANAGER')")
+  public AdjustmentRecord updateAllocationBalance(
+      @NonNull TypedId<BusinessId> businessId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @NonNull Amount amount,
+      @NonNull String notes) {
+
+    Amount maxAmount = Amount.of(amount.getCurrency(), 1000);
+    if (amount.abs().isGreaterThan(maxAmount)) {
+      throw new InvalidRequestException(
+          "Amounts in excess of +/- %s not allowed".formatted(maxAmount));
+    }
+
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, true, businessId));
+
+    Allocation allocation = retrieveAllocation(business.getId(), allocationId);
+    ensureMatchingIds(business.getId(), allocation.getBusinessId());
+
+    Account account =
+        accountService.retrieveAllocationAccount(
+            business.getId(), business.getCurrency(), allocation.getId());
+    ensureMatchingIds(business.getId(), account.getBusinessId());
+    ensureMatchingIds(allocation.getId(), account.getAllocationId());
+
+    AdjustmentRecord adjustmentRecord = accountService.manualAdjustment(account, amount);
+    accountActivityService.recordManualAdjustmentActivity(
+        allocation, adjustmentRecord.adjustment(), notes);
+
+    return adjustmentRecord;
   }
 }

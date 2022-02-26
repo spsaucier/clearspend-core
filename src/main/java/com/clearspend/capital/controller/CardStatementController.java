@@ -24,7 +24,7 @@ public class CardStatementController {
   private final CardStatementService cardStatementService;
 
   @PostMapping("")
-  private ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request)
+  ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request)
       throws IOException {
 
     CardStatementRecord result = cardStatementService.generatePdf(request);

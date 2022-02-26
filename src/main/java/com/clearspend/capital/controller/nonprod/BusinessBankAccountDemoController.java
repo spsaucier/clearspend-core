@@ -33,7 +33,7 @@ public class BusinessBankAccountDemoController {
   @PostMapping(
       value = "/business-bank-accounts/{businessBankAccountId}/transactions",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateAdjustmentResponse transact(
+  CreateAdjustmentResponse transact(
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,

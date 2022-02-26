@@ -80,7 +80,7 @@ public class UserController {
   private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("")
-  private CreateUserResponse createUser(@RequestBody CreateUserRequest request) {
+  CreateUserResponse createUser(@RequestBody CreateUserRequest request) {
 
     CreateUpdateUserRecord userServiceUser =
         userService.createUser(
@@ -96,7 +96,7 @@ public class UserController {
   }
 
   @PatchMapping("/{userId}")
-  private UpdateUserResponse updateUser(
+  UpdateUserResponse updateUser(
       @PathVariable(value = Common.USER_ID)
           @Parameter(
               required = true,
@@ -121,7 +121,7 @@ public class UserController {
   }
 
   @PostMapping("/bulk")
-  private List<CreateUserResponse> bulkCreateUser(@RequestBody List<CreateUserRequest> request) {
+  List<CreateUserResponse> bulkCreateUser(@RequestBody List<CreateUserRequest> request) {
 
     List<CreateUserResponse> response = new ArrayList<>(request.size());
     for (CreateUserRequest createUserRequest : request) {
@@ -144,7 +144,7 @@ public class UserController {
   }
 
   @GetMapping("/{userId}")
-  private User getUser(
+  User getUser(
       @PathVariable(value = Common.USER_ID)
           @Parameter(
               required = true,
@@ -156,7 +156,7 @@ public class UserController {
   }
 
   @GetMapping
-  public User currentUser() {
+  User currentUser() {
     CurrentUser currentUser = CurrentUser.get();
     return switch (currentUser.userType()) {
       case EMPLOYEE -> new User(userService.retrieveUser(currentUser.userId()));
@@ -175,14 +175,13 @@ public class UserController {
   }
 
   @GetMapping(value = "/list")
-  private List<User> getUsersByUserName() {
+  List<User> getUsersByUserName() {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     return userService.retrieveUsersForBusiness(businessId).stream().map(User::new).toList();
   }
 
   @PostMapping(value = "/search")
-  private PagedData<UserPageData> retrieveUsersPageData(
-      @Validated @RequestBody SearchUserRequest request) {
+  PagedData<UserPageData> retrieveUsersPageData(@Validated @RequestBody SearchUserRequest request) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     var userPage = userService.retrieveUserPage(businessId, new UserFilterCriteria(request));
 
@@ -190,7 +189,7 @@ public class UserController {
   }
 
   @GetMapping("/cards")
-  private List<CardDetailsResponse> getUserCards() {
+  List<CardDetailsResponse> getUserCards() {
     CurrentUser currentUser = CurrentUser.get();
 
     return cardService.getUserCards(currentUser.businessId(), currentUser.userId()).stream()
@@ -199,7 +198,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}")
-  private CardDetailsResponse getUserCard(
+  CardDetailsResponse getUserCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -215,7 +214,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/{cardId}/block")
-  private Card blockCard(
+  Card blockCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -237,7 +236,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/{cardId}/activate")
-  private Card activateCard(
+  Card activateCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -259,7 +258,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/activate")
-  private Card activateCards(@Validated @RequestBody ActivateCardRequest request) {
+  Card activateCards(@Validated @RequestBody ActivateCardRequest request) {
     CurrentUser currentUser = CurrentUser.get();
 
     return new Card(
@@ -272,7 +271,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/{cardId}/unblock")
-  private Card unblockCard(
+  Card unblockCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -294,7 +293,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/{cardId}/retire")
-  private Card retireCard(
+  Card retireCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -316,7 +315,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}/accounts")
-  private List<CardAccount> getCardAccounts(
+  List<CardAccount> getCardAccounts(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -338,7 +337,7 @@ public class UserController {
   }
 
   @PatchMapping("/cards/{cardId}/account")
-  private Card updateCardAccount(
+  Card updateCardAccount(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -359,7 +358,7 @@ public class UserController {
   }
 
   @GetMapping("/cards/{cardId}/account-activity")
-  private PagedData<AccountActivityResponse> getCardAccountActivity(
+  PagedData<AccountActivityResponse> getCardAccountActivity(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -387,7 +386,7 @@ public class UserController {
   }
 
   @GetMapping("/account-activity/{accountActivityId}")
-  private AccountActivityResponse getAccountActivity(
+  AccountActivityResponse getAccountActivity(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -403,7 +402,7 @@ public class UserController {
   }
 
   @PatchMapping("/account-activity/{accountActivityId}")
-  private AccountActivityResponse updateAccountActivity(
+  AccountActivityResponse updateAccountActivity(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -424,7 +423,7 @@ public class UserController {
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")
-  private void linkReceipt(
+  void linkReceipt(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -446,7 +445,7 @@ public class UserController {
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/unlink")
-  private void unlinkReceipt(
+  void unlinkReceipt(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -468,7 +467,7 @@ public class UserController {
   }
 
   @GetMapping("/receipts")
-  private List<Receipt> getReceipts() {
+  List<Receipt> getReceipts() {
     CurrentUser currentUser = CurrentUser.get();
 
     return receiptService.getReceipts(currentUser.businessId(), currentUser.userId()).stream()
@@ -477,7 +476,7 @@ public class UserController {
   }
 
   @DeleteMapping("/receipts/{receiptId}/delete")
-  private void deleteReceipt(
+  void deleteReceipt(
       @PathVariable(value = "receiptId")
           @Parameter(
               required = true,
@@ -491,7 +490,7 @@ public class UserController {
   }
 
   @PatchMapping("/{userId}/archive")
-  private boolean archiveUser(
+  boolean archiveUser(
       @PathVariable(value = Common.USER_ID)
           @Parameter(
               required = true,
@@ -504,7 +503,7 @@ public class UserController {
   }
 
   @PostMapping(value = "/export-csv")
-  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchUserRequest request)
+  ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchUserRequest request)
       throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 

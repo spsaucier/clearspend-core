@@ -48,7 +48,7 @@ public class CardStatementService {
   private static final DateTimeFormatter dateFormatterFileName =
       DateTimeFormatter.ofPattern("MM_dd_yyyy");
 
-  private class PdfPCellLeft extends PdfPCell {
+  private static class PdfPCellLeft extends PdfPCell {
 
     public PdfPCellLeft(Paragraph paragraph) {
       super(paragraph);
@@ -57,7 +57,7 @@ public class CardStatementService {
     }
   }
 
-  private class PDFCellActivitiesLeft extends PdfPCell {
+  private static class PDFCellActivitiesLeft extends PdfPCell {
 
     public PDFCellActivitiesLeft(Paragraph paragraph) {
       super(paragraph);
@@ -70,7 +70,7 @@ public class CardStatementService {
     }
   }
 
-  private class PdfCellActivitiesRight extends PdfPCell {
+  private static class PdfCellActivitiesRight extends PdfPCell {
 
     public PdfCellActivitiesRight(Paragraph paragraph) {
       super(paragraph);
@@ -84,7 +84,7 @@ public class CardStatementService {
     }
   }
 
-  private class PdfPCellRight extends PdfPCell {
+  private static class PdfPCellRight extends PdfPCell {
 
     public PdfPCellRight(Paragraph paragraph) {
       super(paragraph);

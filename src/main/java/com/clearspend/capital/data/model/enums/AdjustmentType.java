@@ -2,7 +2,8 @@ package com.clearspend.capital.data.model.enums;
 
 public enum AdjustmentType {
   DEPOSIT, // an ACH deposit
-  REALLOCATE, // a transfer between business <-> allocation, allocation <-> card accounts
+  MANUAL, // a manual credit/debit of an allocation account (typically customer service credits)
   NETWORK, // a card payment via network message
+  REALLOCATE, // a transfer between allocation <-> allocation, allocation <-> card accounts
   WITHDRAW, // an ACH withdrawal
 }

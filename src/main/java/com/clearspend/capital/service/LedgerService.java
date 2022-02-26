@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -12,7 +13,9 @@ import com.clearspend.capital.data.model.ledger.LedgerAccount;
 import com.clearspend.capital.data.model.ledger.Posting;
 import com.clearspend.capital.data.repository.ledger.JournalEntryRepository;
 import com.clearspend.capital.data.repository.ledger.LedgerAccountRepository;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +33,40 @@ public class LedgerService {
   public record BankJournalEntry(
       JournalEntry journalEntry, Posting bankPosting, Posting accountPosting) {}
 
+  public record ManualAdjustmentJournalEntry(
+      JournalEntry journalEntry, Posting manualAdjustmentPosting, Posting accountPosting) {}
+
   public record NetworkJournalEntry(
       JournalEntry journalEntry, Posting networkPosting, Posting accountPosting) {}
 
   public record ReallocationJournalEntry(
       JournalEntry journalEntry, Posting fromPosting, Posting toPosting) {}
+
+  // TODO(kuchlien): work out a way to do this in the JournalEntry class. I did try adding
+  //  @PrePersist but was told that we already had one in Versioned. This is a poor mans solution
+  private JournalEntry save(JournalEntry journalEntry) {
+    // ensure that the sum of the postings on a journal entry total zero
+    BigDecimal sum =
+        journalEntry.getPostings().stream()
+            .map(e -> e.getAmount().getAmount())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    if (sum.compareTo(BigDecimal.ZERO) != 0) {
+      throw new InvalidStateException(
+          Table.JOURNAL_ENTRY, "Sum of postings not equal to zero, got " + sum);
+    }
+
+    // ensure that each ledgerAccountId in postings is unique
+    if (journalEntry.getPostings().size()
+        != journalEntry.getPostings().stream()
+            .map(Posting::getLedgerAccountId)
+            .collect(Collectors.toSet())
+            .size()) {
+      throw new InvalidStateException(
+          Table.JOURNAL_ENTRY, "LedgerAccountId's must be unique in JournalEntry");
+    }
+
+    return journalEntryRepository.save(journalEntry);
+  }
 
   // this method will create a new account for an allocation, a business or a card
   public LedgerAccount createLedgerAccount(LedgerAccountType type, Currency currency) {
@@ -75,7 +107,7 @@ public class LedgerService {
     Posting bankPosting = new Posting(journalEntry, bankAccount.getId(), amount.negate());
 
     journalEntry.setPostings(List.of(bankPosting, accountPosting));
-    journalEntry = journalEntryRepository.save(journalEntry);
+    journalEntry = save(journalEntry);
 
     return new BankJournalEntry(journalEntry, bankPosting, accountPosting);
   }
@@ -99,9 +131,27 @@ public class LedgerService {
     Posting toPosting = new Posting(journalEntry, toLedgerAccount.getId(), amount);
 
     journalEntry.setPostings(List.of(fromPosting, toPosting));
-    journalEntryRepository.save(journalEntry);
+    journalEntry = save(journalEntry);
 
     return new ReallocationJournalEntry(journalEntry, fromPosting, toPosting);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public ManualAdjustmentJournalEntry recordManualAdjustment(
+      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+    LedgerAccount manualAdjustmentLedgerAccount =
+        getOrCreateLedgerAccount(LedgerAccountType.MANUAL, amount.getCurrency());
+    LedgerAccount ledgerAccount = getLedgerAccount(ledgerAccountId);
+
+    JournalEntry journalEntry = new JournalEntry();
+    Posting manualAdjustmentPosting =
+        new Posting(journalEntry, manualAdjustmentLedgerAccount.getId(), amount.negate());
+    Posting accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
+
+    journalEntry.setPostings(List.of(manualAdjustmentPosting, accountPosting));
+    journalEntry = save(journalEntry);
+
+    return new ManualAdjustmentJournalEntry(journalEntry, manualAdjustmentPosting, accountPosting);
   }
 
   @Transactional(TxType.REQUIRED)
@@ -117,7 +167,7 @@ public class LedgerService {
     Posting accountPosting = new Posting(journalEntry, ledgerAccount.getId(), amount);
 
     journalEntry.setPostings(List.of(networkPosting, accountPosting));
-    journalEntryRepository.save(journalEntry);
+    journalEntry = save(journalEntry);
 
     return new NetworkJournalEntry(journalEntry, networkPosting, accountPosting);
   }

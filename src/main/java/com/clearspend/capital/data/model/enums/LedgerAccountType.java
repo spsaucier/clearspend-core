@@ -7,6 +7,7 @@ public enum LedgerAccountType {
   ALLOCATION,
   BANK,
   CARD,
+  MANUAL,
   NETWORK;
 
   public static final Set<LedgerAccountType> createOnlySet =

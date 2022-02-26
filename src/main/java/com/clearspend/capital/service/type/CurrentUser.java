@@ -64,6 +64,6 @@ public record CurrentUser(
   private static Map<String, Object> getClaims() {
     // TODO https://github.com/fusionauth/fusionauth-jwt#verify-and-decode-a-jwt-using-hmac
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    return (((JwtAuthenticationToken) authentication).getToken().getClaims());
+    return ((JwtAuthenticationToken) authentication).getToken().getClaims();
   }
 }

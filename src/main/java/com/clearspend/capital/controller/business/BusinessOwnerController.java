@@ -44,7 +44,7 @@ public class BusinessOwnerController {
       value = "",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
-  private List<CreateBusinessOwnerResponse> createOrUpdateBusinessOwners(
+  List<CreateBusinessOwnerResponse> createOrUpdateBusinessOwners(
       @Validated @RequestBody List<CreateOrUpdateBusinessOwnerRequest> request) {
 
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
@@ -64,7 +64,7 @@ public class BusinessOwnerController {
       value = "/create",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
-  private CreateBusinessOwnerResponse createBusinessOwner(
+  CreateBusinessOwnerResponse createBusinessOwner(
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
     log.info("Create business owner. {}", request);
@@ -83,7 +83,7 @@ public class BusinessOwnerController {
       value = "/update",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
-  private CreateBusinessOwnerResponse updateBusinessOwner(
+  CreateBusinessOwnerResponse updateBusinessOwner(
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
     log.info("Update business owner. {}", request);
@@ -99,7 +99,7 @@ public class BusinessOwnerController {
   }
 
   @DeleteMapping(value = "/{businessOwnerId}")
-  private ResponseEntity<?> deleteBusinessOwner(
+  ResponseEntity<?> deleteBusinessOwner(
       @PathVariable(value = "businessOwnerId")
           @Parameter(
               required = true,
@@ -116,7 +116,7 @@ public class BusinessOwnerController {
   }
 
   @GetMapping(value = "/list")
-  private List<BusinessOwnerInfo> getBusinessOwnersForCurrentLoggedBusiness() {
+  List<BusinessOwnerInfo> getBusinessOwnersForCurrentLoggedBusiness() {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     return businessOwnerService.findBusinessOwnerByBusinessId(businessId).stream()
         .map(BusinessOwnerInfo::fromBusinessOwner)
@@ -124,7 +124,7 @@ public class BusinessOwnerController {
   }
 
   @GetMapping("/trigger-all-owners-provided")
-  private OwnersProvidedResponse allOwnersProvided(
+  OwnersProvidedResponse allOwnersProvided(
       @Validated @RequestBody(required = false) Boolean ignoreValidation) {
 
     log.info("Trigger end of onboarding owners process.");

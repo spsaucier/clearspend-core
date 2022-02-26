@@ -19,7 +19,7 @@ public class FusionAuthDemoController {
   private final FusionAuthService fusionAuthService;
 
   @PostMapping("/create-business-owner")
-  private String createBusinessOwner(@RequestBody CreateBusinessOwnerRequest request) {
+  String createBusinessOwner(@RequestBody CreateBusinessOwnerRequest request) {
     return fusionAuthService
         .createBusinessOwner(
             request.getBusinessId(),
@@ -30,7 +30,7 @@ public class FusionAuthDemoController {
   }
 
   @PostMapping("/create-user")
-  private String createUser(@RequestBody CreateUserRequest request) {
+  String createUser(@RequestBody CreateUserRequest request) {
     return fusionAuthService
         .createUser(
             request.getBusinessId(),

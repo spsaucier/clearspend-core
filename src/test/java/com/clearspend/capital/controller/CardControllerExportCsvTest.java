@@ -73,7 +73,6 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
     boolean foundLine = false;
 
     for (String line : csvResult.split("\n")) {
-
       line = line.trim();
       if (StringUtils.isEmpty(line)) {
         continue;
@@ -84,6 +83,7 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
         foundLine = true;
       }
     }
+
     Assertions.assertTrue(foundHeader);
     Assertions.assertTrue(foundLine);
   }

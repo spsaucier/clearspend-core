@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional

@@ -11,17 +11,19 @@ public enum Table {
   BUSINESS_OWNER("BusinessOwner"),
   BUSINESS_PROSPECT("BusinessProspect"),
   CARD("Card"),
+  EXPENSE_CATEGORY("expense_categories"),
   FILE_STORE("FileStore"),
   HOLD("Hold"),
+  JOURNAL_ENTRY("JournalEntry"),
   LEDGER_ACCOUNT("LedgerAccount"),
   NETWORK_MESSAGE("NetworkMessage"),
+  PENDING_STRIPE_TRANSFER("pending_stripe_transfer"),
+  POSTING("Posting"),
   RECEIPT("Receipt"),
   SPEND_LIMIT("SpendLimit"),
+  TRANSACTION_SYNC_LOG("transaction_sync_log"),
   USER("user"),
-  USER_ALLOCATION_ROLE("user_allocation_role"),
-  EXPENSE_CATEGORY("expense_categories"),
-  PENDING_STRIPE_TRANSFER("pending_stripe_transfer"),
-  TRANSACTION_SYNC_LOG("transaction_sync_log");
+  USER_ALLOCATION_ROLE("user_allocation_role");
 
   private final String name;
 

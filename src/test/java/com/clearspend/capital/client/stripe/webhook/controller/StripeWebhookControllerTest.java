@@ -2,6 +2,8 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.clearspend.capital.AssertionHelper;
+import com.clearspend.capital.AssertionHelper.AuthorizationRecord;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
@@ -10,18 +12,13 @@ import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookCont
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
-import com.clearspend.capital.data.model.enums.AccountActivityStatus;
-import com.clearspend.capital.data.model.enums.AccountActivityType;
-import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -29,7 +26,6 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
-import com.clearspend.capital.data.model.enums.LedgerAccountType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
@@ -37,20 +33,10 @@ import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.ledger.JournalEntry;
-import com.clearspend.capital.data.model.ledger.LedgerAccount;
-import com.clearspend.capital.data.model.ledger.Posting;
-import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
-import com.clearspend.capital.data.repository.AdjustmentRepository;
-import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
-import com.clearspend.capital.data.repository.ledger.JournalEntryRepository;
-import com.clearspend.capital.data.repository.ledger.LedgerAccountRepository;
-import com.clearspend.capital.data.repository.ledger.PostingRepository;
-import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
@@ -81,22 +67,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
 public class StripeWebhookControllerTest extends BaseCapitalTest {
 
+  @Autowired private AssertionHelper assertionHelper;
   @Autowired private TestHelper testHelper;
 
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AccountRepository accountRepository;
-  @Autowired private AdjustmentRepository adjustmentRepository;
-  @Autowired private DeclineRepository declineRepository;
   @Autowired private HoldRepository holdRepository;
-  @Autowired private JournalEntryRepository journalEntryRepository;
-  @Autowired private LedgerAccountRepository ledgerAccountRepository;
-  @Autowired private NetworkMessageRepository networkMessageRepository;
-  @Autowired private PostingRepository postingRepository;
   @Autowired private StripeWebhookLogRepository stripeWebhookLogRepository;
 
   @Autowired private AccountService accountService;
@@ -132,7 +114,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     }
   }
 
-  private void setBalance(Allocation allocation, BigDecimal balance) {
+  private void unused_setBalance(Allocation allocation, BigDecimal balance) {
     Account allocationAccount =
         accountService.retrieveAllocationAccount(
             business.getId(), business.getCurrency(), allocation.getId());
@@ -158,21 +140,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   private String generateStripeId(String prefix) {
     return prefix + RandomStringUtils.randomAlphanumeric(24);
-  }
-
-  private void assertBalance(
-      Allocation allocation,
-      Account account,
-      BigDecimal ledgerBalance,
-      BigDecimal availableBalance) {
-    Account foundAccount =
-        accountService.retrieveAllocationAccount(
-            business.getId(), business.getCurrency(), allocation.getId());
-    assertThat(foundAccount.getLedgerBalance().getAmount()).isEqualByComparingTo(ledgerBalance);
-    assertThat(foundAccount.getAvailableBalance().getAmount())
-        .isEqualByComparingTo(availableBalance);
-    assertThat(foundAccount.getLedgerBalance()).isEqualTo(account.getLedgerBalance());
-    assertThat(foundAccount.getAvailableBalance()).isEqualTo(account.getAvailableBalance());
   }
 
   record UserRecord(User user, Card card, Allocation allocation, Account account) {}
@@ -202,8 +169,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     return new UserRecord(user, card, allocationRecord.allocation(), allocationRecord.account());
   }
 
-  record AuthorizationRecord(NetworkCommon networkCommon, Authorization authorization) {}
-
   private AuthorizationRecord authorize(
       Allocation allocation, User user, Card card, BigDecimal openingBalance, long amount) {
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
@@ -225,10 +190,9 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorization, stripeEventType),
             true);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isTrue();
-    assertBalance(
+    testHelper.assertPost(networkCommon, false, false, true);
+    assertionHelper.assertBalance(
+        business,
         allocation,
         networkCommon.getAccount(),
         openingBalance,
@@ -237,53 +201,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     validateStripeWebhookLog(networkCommon);
 
-    AccountActivity accountActivity =
-        accountActivityRepository
-            .findById(networkCommon.getAccountActivity().getId())
-            .orElseThrow();
-    Hold hold =
-        holdRepository.findById(networkCommon.getNetworkMessage().getHoldId()).orElseThrow();
-    NetworkMessage networkMessage =
-        networkMessageRepository.findById(networkCommon.getNetworkMessage().getId()).orElseThrow();
-    log.info("accountActivity: {}", accountActivity);
-    log.info("hold: {}", hold);
-
-    assertThat(accountActivity.getBusinessId()).isEqualTo(business.getId());
-    assertThat(accountActivity.getAllocationId()).isEqualTo(allocation.getId());
-    assertThat(accountActivity.getAllocationName()).isEqualTo(allocation.getName());
-    assertThat(accountActivity.getUserId()).isEqualTo(user.getId());
-    assertThat(accountActivity.getAccountId()).isEqualTo(allocation.getAccountId());
-    assertThat(accountActivity.getAdjustmentId()).isNull();
-    assertThat(accountActivity.getHoldId())
-        .isEqualTo(networkCommon.getNetworkMessage().getHoldId());
-    assertThat(accountActivity.getType()).isEqualTo(AccountActivityType.NETWORK_AUTHORIZATION);
-    assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
-    assertThat(accountActivity.getHideAfter()).isEqualTo(hold.getExpirationDate());
-    assertThat(accountActivity.getVisibleAfter()).isNull();
-    assertThat(accountActivity.getMerchant()).isNotNull();
-    assertThat(accountActivity.getMerchant().getMerchantNumber())
-        .isEqualTo(authorization.getMerchantData().getNetworkId());
-    assertThat(accountActivity.getMerchant().getName())
-        .isEqualTo(authorization.getMerchantData().getName());
-    assertThat(accountActivity.getMerchant().getMerchantCategoryCode())
-        .isEqualTo(networkCommon.getMerchantCategoryCode());
-    assertThat(accountActivity.getMerchant().getMerchantCategoryGroup())
-        .isEqualTo(MccGroup.fromMcc(networkCommon.getMerchantCategoryCode()));
-    assertThat(accountActivity.getCard()).isNotNull();
-    assertThat(accountActivity.getCard().getCardId()).isEqualTo(card.getId());
-    assertThat(accountActivity.getCard().getOwnerFirstName()).isEqualTo(user.getFirstName());
-    assertThat(accountActivity.getCard().getOwnerLastName()).isEqualTo(user.getLastName());
-    assertThat(accountActivity.getReceipt()).isNull();
-    assertThat(accountActivity.getActivityTime()).isEqualTo(hold.getCreated());
-    assertThat(accountActivity.getAmount())
-        .isEqualTo(Amount.fromStripeAmount(business.getCurrency(), -amount));
-
-    assertThat(hold.getBusinessId()).isEqualTo(accountActivity.getBusinessId());
-    assertThat(hold.getAccountId()).isEqualTo(accountActivity.getAccountId());
-    assertThat(hold.getStatus()).isEqualTo(HoldStatus.PLACED);
-    assertThat(hold.getAmount()).isEqualTo(accountActivity.getAmount());
-
-    assertThat(networkMessage.getExternalRef()).isEqualTo(authorization.getId());
+    assertionHelper.assertNetworkMessageRequestAccountActivity(networkCommon, authorization, user);
 
     return new AuthorizationRecord(networkCommon, authorization);
   }
@@ -320,13 +238,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorization, stripeEventType),
             true);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isTrue();
-    assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), openingBalance, openingBalance);
-    assertThat(networkCommon.getDecline()).isNotNull();
-    assertThat(networkCommon.getDecline().getId())
-        .isEqualTo(networkCommon.getNetworkMessage().getDeclineId());
+    testHelper.assertPost(networkCommon, false, true, false);
+    assertionHelper.assertBalance(
+        business, allocation, networkCommon.getAccount(), openingBalance, openingBalance);
+    assertionHelper.assertNetworkMessageRequestAccountActivity(networkCommon, authorization, user);
 
     validateStripeWebhookLog(networkCommon);
 
@@ -357,7 +272,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
     String stripeId = generateStripeId("iauth_");
-    Authorization authorizationRequest =
+    Authorization authorization =
         testHelper.getAuthorization(
             business,
             user,
@@ -372,30 +287,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorizationRequest, stripeEventType),
+                new StripeWebhookLog(), authorization, stripeEventType),
             true);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isTrue();
-    assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
-    assertThat(networkCommon.getDecline()).isNotNull();
-    assertThat(networkCommon.getDecline().getId())
-        .isEqualTo(networkCommon.getNetworkMessage().getDeclineId());
+    testHelper.assertPost(networkCommon, false, true, false);
+    assertionHelper.assertBalance(
+        business, allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
+    assertionHelper.assertNetworkMessageRequestAccountActivity(networkCommon, authorization, user);
 
     validateStripeWebhookLog(networkCommon);
-
-    Decline decline =
-        declineRepository.findById(networkCommon.getNetworkMessage().getDeclineId()).orElseThrow();
-    //    assertThat(decline.getDeclineReasons()).isSameAs(networkCommon.getDeclineReasons());
-
-    AccountActivity accountActivity =
-        accountActivityRepository
-            .findById(networkCommon.getAccountActivity().getId())
-            .orElseThrow();
-    assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
-    assertThat(accountActivity.getType()).isEqualTo(AccountActivityType.NETWORK_AUTHORIZATION);
-    assertThat(accountActivity.getAmount())
-        .isEqualTo(Amount.fromStripeAmount(business.getCurrency(), -amount));
 
     stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_CREATED;
     Authorization authorizationCreated =
@@ -412,13 +311,12 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     authorizationCreated.setMetadata(stripeDirectHandler.getMetadata(networkCommon));
     ArrayList<RequestHistory> requestHistoryArrayList = new ArrayList<>();
     RequestHistory requestHistory = new RequestHistory();
-    requestHistory.setAmount(authorizationRequest.getPendingRequest().getAmount());
+    requestHistory.setAmount(authorization.getPendingRequest().getAmount());
     requestHistory.setApproved(false);
-    requestHistory.setCreated(authorizationRequest.getCreated());
-    requestHistory.setCurrency(authorizationRequest.getCurrency());
-    requestHistory.setMerchantAmount(authorizationRequest.getPendingRequest().getMerchantAmount());
-    requestHistory.setMerchantCurrency(
-        authorizationRequest.getPendingRequest().getMerchantCurrency());
+    requestHistory.setCreated(authorization.getCreated());
+    requestHistory.setCurrency(authorization.getCurrency());
+    requestHistory.setMerchantAmount(authorization.getPendingRequest().getMerchantAmount());
+    requestHistory.setMerchantCurrency(authorization.getPendingRequest().getMerchantCurrency());
     requestHistory.setReason("webhook_declined");
     requestHistoryArrayList.add(requestHistory);
     authorizationCreated.setRequestHistory(requestHistoryArrayList);
@@ -429,18 +327,19 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorizationCreated, stripeEventType),
             true);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
+    testHelper.assertPost(networkCommon, false, false, false);
+    assertionHelper.assertBalance(
+        business, allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
+    assertionHelper.assertNetworkMessageCreatedAccountActivity(
+        networkCommon, authorizationCreated, user);
 
     validateStripeWebhookLog(networkCommon);
 
     networkCommon =
         authorizeUpdate(
             allocation,
-            new AuthorizationRecord(networkCommon, authorizationRequest),
-            authorizationRequest.getPendingRequest().getAmount(),
+            new AuthorizationRecord(networkCommon, authorization),
+            authorization.getPendingRequest().getAmount(),
             BigDecimal.TEN,
             BigDecimal.TEN);
 
@@ -457,7 +356,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     StripeEventType stripeEventType;
     stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_UPDATED;
-    Authorization authorizationUpdated = authorizationRecord.authorization;
+    Authorization authorizationUpdated = authorizationRecord.authorization();
     authorizationUpdated.setMetadata(new HashMap<>());
     boolean amountUpdated = authorizationUpdated.getPendingRequest().getAmount() != updatedAmount;
     authorizationUpdated.getPendingRequest().setAmount(updatedAmount);
@@ -471,15 +370,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new ParseRecord(new StripeWebhookLog(), authorizationUpdated, stripeEventType),
             true);
     log.debug("networkCommon: {}", networkCommon);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isEqualTo(amountUpdated);
-    assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, availableBalance);
+    testHelper.assertPost(networkCommon, false, false, amountUpdated);
+    assertionHelper.assertBalance(
+        business, allocation, networkCommon.getAccount(), ledgerBalance, availableBalance);
 
     if (amountUpdated) {
       Hold priorHold =
           holdRepository
-              .findById(authorizationRecord.networkCommon.getHold().getId())
+              .findById(authorizationRecord.networkCommon().getHold().getId())
               .orElseThrow();
       assertThat(priorHold.getStatus()).isEqualTo(HoldStatus.RELEASED);
       assertThat(networkCommon.getHold().getAmount())
@@ -614,8 +512,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       Card card,
       long amount,
       BigDecimal ledgerBalance) {
-    OffsetDateTime hideAfter =
-        authorize != null ? authorize.networkCommon.getAccountActivity().getHideAfter() : null;
 
     Transaction transaction = new Transaction();
     transaction.setId(generateStripeId("ipi_"));
@@ -627,14 +523,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     transaction.setBalanceTransaction(generateStripeId("txn_"));
     if (authorize != null) {
       amountDetails.setAtmFee(
-          authorize.authorization.getPendingRequest().getAmountDetails().getAtmFee());
-      transaction.setAuthorization(authorize.authorization.getId());
+          authorize.authorization().getPendingRequest().getAmountDetails().getAtmFee());
+      transaction.setAuthorization(authorize.authorization().getId());
     }
     transaction.setCard(card.getExternalRef());
     transaction.setCardholder(user.getExternalRef());
     transaction.setMerchantData(
         authorize != null
-            ? authorize.authorization.getMerchantData()
+            ? authorize.authorization().getMerchantData()
             : testHelper.getMerchantData(MerchantType.ADVERTISING_SERVICES));
     transaction.setCreated(OffsetDateTime.now().toEpochSecond());
     transaction.setCurrency(business.getCurrency().toStripeCurrency());
@@ -656,129 +552,20 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     log.debug("capture networkCommon\n{}", networkCommon);
 
-    assertThat(networkCommon.isPostAdjustment()).isTrue();
-    assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isFalse();
-    assertBalance(allocation, networkCommon.getAccount(), ledgerBalance, ledgerBalance);
+    testHelper.assertPost(networkCommon, true, false, false);
+    assertionHelper.assertBalance(
+        business, allocation, networkCommon.getAccount(), ledgerBalance, ledgerBalance);
+    assertionHelper.assertNetworkMessageCaptureAccountActivity(
+        networkCommon, authorize, transaction, user, card);
 
     validateStripeWebhookLog(networkCommon);
-
-    NetworkMessage networkMessage =
-        networkMessageRepository.findById(networkCommon.getNetworkMessage().getId()).orElseThrow();
-    AccountActivity accountActivity =
-        accountActivityRepository
-            .findById(networkCommon.getAccountActivity().getId())
-            .orElseThrow();
-    Adjustment adjustment =
-        adjustmentRepository
-            .findById(networkCommon.getNetworkMessage().getAdjustmentId())
-            .orElseThrow();
-    Account account = accountRepository.findById(adjustment.getAccountId()).orElseThrow();
-    LedgerAccount ledgerAccount =
-        ledgerAccountRepository.findById(account.getLedgerAccountId()).orElseThrow();
-    Posting posting =
-        postingRepository
-            .findById(networkCommon.getAdjustmentRecord().adjustment().getPostingId())
-            .orElseThrow();
-    JournalEntry journalEntry =
-        journalEntryRepository
-            .findById(networkCommon.getAdjustmentRecord().journalEntry().getId())
-            .orElseThrow();
-
-    assertThat(accountActivity.getBusinessId()).isEqualTo(business.getId());
-    assertThat(accountActivity.getAllocationId()).isEqualTo(allocation.getId());
-    assertThat(accountActivity.getAllocationName()).isEqualTo(allocation.getName());
-    assertThat(accountActivity.getUserId()).isEqualTo(user.getId());
-    assertThat(accountActivity.getAccountId()).isEqualTo(allocation.getAccountId());
-    assertThat(accountActivity.getAdjustmentId())
-        .isEqualTo(networkCommon.getNetworkMessage().getAdjustmentId());
-    assertThat(accountActivity.getHoldId()).isNull();
-    assertThat(accountActivity.getType()).isEqualTo(AccountActivityType.NETWORK_CAPTURE);
-    assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.APPROVED);
-    log.debug("accountActivity: {}", accountActivity);
-    assertThat(accountActivity.getHideAfter()).isNull();
-    assertThat(accountActivity.getVisibleAfter()).isNull();
-    assertThat(accountActivity.getMerchant()).isNotNull();
-    assertThat(accountActivity.getMerchant().getMerchantNumber())
-        .isEqualTo(transaction.getMerchantData().getNetworkId());
-    assertThat(accountActivity.getMerchant().getName())
-        .isEqualTo(transaction.getMerchantData().getName());
-    assertThat(accountActivity.getMerchant().getMerchantCategoryCode())
-        .isEqualTo(networkCommon.getMerchantCategoryCode());
-    assertThat(accountActivity.getMerchant().getMerchantCategoryGroup())
-        .isEqualTo(MccGroup.fromMcc(networkCommon.getMerchantCategoryCode()));
-    assertThat(accountActivity.getCard()).isNotNull();
-    assertThat(accountActivity.getCard().getCardId()).isEqualTo(card.getId());
-    assertThat(accountActivity.getCard().getOwnerFirstName()).isEqualTo(user.getFirstName());
-    assertThat(accountActivity.getCard().getOwnerLastName()).isEqualTo(user.getLastName());
-    assertThat(accountActivity.getReceipt()).isNull();
-    assertThat(accountActivity.getActivityTime()).isEqualTo(adjustment.getCreated());
-    assertThat(accountActivity.getAmount())
-        .isEqualTo(Amount.fromStripeAmount(business.getCurrency(), amount));
-
-    if (authorize != null) {
-      AccountActivity priorAccountActivity =
-          accountActivityRepository
-              .findById(authorize.networkCommon.getAccountActivity().getId())
-              .orElseThrow();
-      Hold priorHold =
-          holdRepository.findById(authorize.networkCommon.getHold().getId()).orElseThrow();
-      log.debug("x: {}", authorize.networkCommon.getAccountActivity());
-      log.debug("priorAccountActivity: {}", priorAccountActivity);
-      assertThat(priorAccountActivity.getHideAfter()).isNotEqualTo(hideAfter);
-      assertThat(priorAccountActivity.getHideAfter()).isNotNull();
-      log.debug("priorHold: {}", priorHold);
-      assertThat(priorHold.getStatus()).isEqualTo(HoldStatus.RELEASED);
-    }
-
-    networkCommon
-        .getUpdatedHolds()
-        .forEach(
-            hold -> {
-              AccountActivity holdAccountActivity =
-                  accountActivityRepository.findByHoldId(hold.getId()).orElseThrow();
-              log.debug("hold accountActivity: {}", holdAccountActivity);
-            });
-
-    assertThat(adjustment.getBusinessId()).isEqualTo(accountActivity.getBusinessId());
-    assertThat(adjustment.getAccountId()).isEqualTo(accountActivity.getAccountId());
-    assertThat(adjustment.getType()).isEqualTo(AdjustmentType.NETWORK);
-    assertThat(adjustment.getAmount()).isEqualTo(accountActivity.getAmount());
-
-    assertThat(networkMessage.getExternalRef()).isEqualTo(transaction.getId());
-
-    assertThat(
-            networkMessageRepository.countByNetworkMessageGroupId(
-                networkMessage.getNetworkMessageGroupId()))
-        .isEqualTo(authorize != null ? 2 : 1);
-
-    assertThat(posting.getAmount()).isEqualTo(accountActivity.getAmount());
-
-    assertThat(ledgerAccount.getType()).isEqualTo(LedgerAccountType.ALLOCATION);
-
-    assertThat(journalEntry.getReversalJournalEntryId()).isNull();
-    assertThat(journalEntry.getReversedJournalEntryId()).isNull();
-    assertThat(journalEntry.getPostings()).hasSize(2);
-    assertThat(
-            journalEntry.getPostings().stream()
-                .map(e -> e.getAmount().getAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add))
-        .isEqualByComparingTo(BigDecimal.ZERO);
-    Posting networkPosting =
-        journalEntry.getPostings().stream()
-            .filter(e -> !e.getLedgerAccountId().equals(ledgerAccount.getId()))
-            .findFirst()
-            .orElseThrow();
-    LedgerAccount networkLedgerAccount =
-        ledgerAccountRepository.findById(networkPosting.getLedgerAccountId()).orElseThrow();
-    assertThat(networkLedgerAccount.getType()).isEqualTo(LedgerAccountType.NETWORK);
   }
 
   @SneakyThrows
   @Test
   void processIncrementalAuthorization() {
     BigDecimal openingBalance = BigDecimal.TEN;
-    BigDecimal closingBalance = BigDecimal.ONE;
+    BigDecimal closingBalance;
     UserRecord userRecord = createUser(openingBalance);
     Allocation allocation = userRecord.allocation;
     User user = userRecord.user;
@@ -798,14 +585,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       BigDecimal ledgerBalance,
       BigDecimal availableBalance) {
 
-    OffsetDateTime hideAfter = authorize.networkCommon.getAccountActivity().getHideAfter();
+    OffsetDateTime hideAfter = authorize.networkCommon().getAccountActivity().getHideAfter();
 
     Gson gson = new Gson();
     Authorization incrementalAuthorization =
-        gson.fromJson(gson.toJson(authorize.authorization), Authorization.class);
+        gson.fromJson(gson.toJson(authorize.authorization()), Authorization.class);
     incrementalAuthorization.setAmount(
-        authorize.authorization.getAmount()
-            + authorize.authorization.getPendingRequest().getAmount());
+        authorize.authorization().getAmount()
+            + authorize.authorization().getPendingRequest().getAmount());
     incrementalAuthorization.setStatus("approved");
     incrementalAuthorization.getPendingRequest().setAmount(incrementalAmount);
     incrementalAuthorization.getPendingRequest().setIsAmountControllable(false);
@@ -820,24 +607,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             true);
 
     log.debug("incrementalAuthorization\n{}", networkCommon);
-    assertThat(networkCommon.isPostAdjustment()).isFalse();
-    assertThat(networkCommon.isPostDecline()).isFalse();
-    assertThat(networkCommon.isPostHold()).isTrue();
-    assertBalance(
-        authorize.networkCommon.getAllocation(),
+    testHelper.assertPost(networkCommon, false, false, true);
+    assertionHelper.assertBalance(
+        business,
+        authorize.networkCommon().getAllocation(),
         networkCommon.getAccount(),
         ledgerBalance,
         availableBalance);
 
     AccountActivity priorAccountActivity =
         accountActivityRepository
-            .findById(authorize.networkCommon.getAccountActivity().getId())
+            .findById(authorize.networkCommon().getAccountActivity().getId())
             .orElseThrow();
     Hold priorHold =
-        holdRepository.findById(authorize.networkCommon.getHold().getId()).orElseThrow();
+        holdRepository.findById(authorize.networkCommon().getHold().getId()).orElseThrow();
 
     log.debug("priorAccountActivity: {}", priorAccountActivity);
-    log.debug("priorAccountActivity2: {}", authorize.networkCommon.getAccountActivity());
+    log.debug("priorAccountActivity2: {}", authorize.networkCommon().getAccountActivity());
     log.debug("priorHold: {}", priorHold);
     assertThat(priorAccountActivity.getHideAfter()).isNotNull();
     assertThat(priorAccountActivity.getHideAfter()).isBefore(hideAfter);

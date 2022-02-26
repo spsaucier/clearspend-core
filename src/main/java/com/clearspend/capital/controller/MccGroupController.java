@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MccGroupController {
 
   @GetMapping
-  private Set<MccGroup> getGroups() {
+  Set<MccGroup> getGroups() {
     return EnumSet.allOf(MccGroup.class);
   }
 }

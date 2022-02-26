@@ -54,6 +54,7 @@ public class NetworkMessageService {
   private final AllocationService allocationService;
   private final CardService cardService;
   private final TransactionLimitService transactionLimitService;
+  private final UserService userService;
 
   public final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -126,6 +127,7 @@ public class NetworkMessageService {
 
     common.setBusinessId(cardRecord.card().getBusinessId());
     common.setCard(cardRecord.card());
+    common.setUser(userService.retrieveUser(cardRecord.card().getUserId()));
 
     // get any prior network messages as we'll need to pull the allocationId and accountId from them
     // as the one of the card record may have been updated
@@ -222,7 +224,7 @@ public class NetworkMessageService {
       common.setDecline(decline);
       networkMessage.setDeclineId(decline.getId());
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
-      common.getAccountActivityDetails().setActivityTime(OffsetDateTime.now());
+      common.getAccountActivityDetails().setActivityTime(decline.getCreated());
       accountActivityService.recordNetworkDeclineAccountActivity(common);
       log.warn(
           "networkMessage {} for {} declined (available {} / ledger {})",
@@ -298,30 +300,29 @@ public class NetworkMessageService {
     if (common.getAddressPostalCodeCheck() == VerificationResultType.MISMATCH) {
       common.getDeclineReasons().add(DeclineReason.ADDRESS_POSTAL_CODE_MISMATCH);
       common.setPostDecline(true);
-      return;
     }
     if (common.getCvcCheck() == VerificationResultType.MISMATCH) {
       common.getDeclineReasons().add(DeclineReason.CVC_MISMATCH);
       common.setPostDecline(true);
-      return;
     }
     if (common.getExpiryCheck() == VerificationResultType.MISMATCH) {
       common.getDeclineReasons().add(DeclineReason.EXPIRY_MISMATCH);
       common.setPostDecline(true);
-      return;
     }
 
     // card must be active
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
       common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
       common.setPostDecline(true);
-      return;
     }
 
     // account has no money at all
     if (common.getAccount().getAvailableBalance().isLessThanOrEqualToZero()) {
       common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
       common.setPostDecline(true);
+    }
+
+    if (!common.getDeclineReasons().isEmpty()) {
       return;
     }
 

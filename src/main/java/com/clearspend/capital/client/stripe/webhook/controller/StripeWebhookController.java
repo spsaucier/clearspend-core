@@ -40,7 +40,7 @@ public class StripeWebhookController {
   private final StripeDirectHandler stripeDirectHandler;
 
   @PostMapping("/webhook/connect")
-  private void connectWebhook(HttpServletRequest request) {
+  void connectWebhook(HttpServletRequest request) {
     Instant start = Instant.now();
 
     ParseRecord parseRecord = parseRequest("connect", request, stripeProperties.getConnectSecret());
@@ -98,7 +98,7 @@ public class StripeWebhookController {
   }
 
   @PostMapping("/webhook/issuing")
-  private void directWebhook(HttpServletRequest request) {
+  void directWebhook(HttpServletRequest request) {
     handleDirectRequest(
         Instant.now(),
         parseRequest("issuing", request, stripeProperties.getIssuingSecret()),
@@ -106,6 +106,7 @@ public class StripeWebhookController {
   }
 
   @VisibleForTesting
+  @SuppressWarnings("CatchAndPrintStackTrace")
   NetworkCommon handleDirectRequest(Instant start, ParseRecord parseRecord, boolean isTest) {
     NetworkCommon networkCommon = null;
     try {

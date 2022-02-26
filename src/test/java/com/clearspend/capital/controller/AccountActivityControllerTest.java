@@ -47,6 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
@@ -273,7 +274,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         accountActivityRepository
             .findById(pagedDataContent.get(0).getAccountActivityId())
             .orElse(null);
-    assert accountActivity != null;
+    assertThat(accountActivity).isNotNull();
     assertTrue(accountActivity.getHideAfter().isAfter(OffsetDateTime.now()));
     assertEquals(2, accountActivityRepository.findAll().size());
     log.info(response.getContentAsString());
@@ -341,7 +342,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         accountActivityRepository
             .findById(pagedDataContent.get(0).getAccountActivityId())
             .orElse(null);
-    assert accountActivity != null;
+    assertThat(accountActivity).isNotNull();
     assertTrue(accountActivity.getVisibleAfter().isBefore(OffsetDateTime.now()));
     assertEquals(2, accountActivityRepository.findAll().size());
     log.info(response.getContentAsString());

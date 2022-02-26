@@ -12,7 +12,6 @@ import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Transaction;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.issuing.AuthorizationApproveParams;
-import com.stripe.param.issuing.AuthorizationApproveParams.Builder;
 import com.stripe.param.issuing.AuthorizationDeclineParams;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +33,7 @@ public class StripeDirectHandler {
     StripeEventType stripeEventType = parseRecord.stripeEventType();
     StripeObject stripeObject = parseRecord.stripeObject();
 
-    NetworkCommon common = null;
+    NetworkCommon common;
     switch (stripeEventType) {
       case ISSUING_AUTHORIZATION_REQUEST -> {
         Authorization auth = (Authorization) stripeObject;
@@ -66,7 +65,7 @@ public class StripeDirectHandler {
           }
         } else {
           auth.setApproved(true);
-          Builder authorizationApproveParams =
+          AuthorizationApproveParams.Builder authorizationApproveParams =
               AuthorizationApproveParams.builder().setMetadata(metadata);
           if (common.isAllowPartialApproval()) {
             // amounts going back to Stripe for authorizations should be positive
@@ -102,9 +101,10 @@ public class StripeDirectHandler {
                 NetworkMessageType.AUTH_UPDATED, auth, parseRecord.stripeWebhookLog());
         networkMessageService.processNetworkMessage(common);
       }
+      default -> throw new RuntimeException("Unhandled Stripe event " + stripeEventType);
     }
 
-    if (common != null && common.getNetworkMessage() != null) {
+    if (common.getNetworkMessage() != null) {
       parseRecord.stripeWebhookLog().setNetworkMessageId(common.getNetworkMessage().getId());
     }
 

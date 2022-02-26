@@ -654,8 +654,8 @@ public enum StripeEventType {
       "Occurs whenever a transfer's description or metadata is updated. [data.object is a transfer]"),
   ;
 
-  private String stripeEventType;
-  private String description;
+  private final String stripeEventType;
+  private final String description;
 
   private static Map<String, StripeEventType> map = initializeMap();
 

@@ -194,9 +194,9 @@ public class CardControllerTest extends BaseCapitalTest {
     assertThat(cardDetailsResponse.getLimits())
         .containsExactlyInAnyOrderElementsOf(updateCardRequest.getLimits());
     assertThat(cardDetailsResponse.getDisabledMccGroups())
-        .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledMccGroups()));
+        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledMccGroups());
     assertThat(cardDetailsResponse.getDisabledPaymentTypes())
-        .containsExactlyInAnyOrderElementsOf((updateCardRequest.getDisabledPaymentTypes()));
+        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledPaymentTypes());
   }
 
   @SneakyThrows

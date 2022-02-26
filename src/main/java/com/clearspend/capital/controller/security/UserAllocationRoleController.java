@@ -34,7 +34,7 @@ public class UserAllocationRoleController {
   private final EntityManager entityManager;
 
   @GetMapping("/allocation/{allocationId}")
-  private UserAllocationRolesResponse getUsersWithAllocationPermissions(
+  UserAllocationRolesResponse getUsersWithAllocationPermissions(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -53,7 +53,7 @@ public class UserAllocationRoleController {
 
   @PostMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
-  private void createUserAllocationPermission(
+  void createUserAllocationPermission(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -77,7 +77,7 @@ public class UserAllocationRoleController {
 
   @PutMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
-  private void updateUserAllocationPermission(
+  void updateUserAllocationPermission(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -101,7 +101,7 @@ public class UserAllocationRoleController {
 
   @DeleteMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
-  private void deleteUserAllocationPermission(
+  void deleteUserAllocationPermission(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,

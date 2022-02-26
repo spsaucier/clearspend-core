@@ -30,11 +30,12 @@ import org.springframework.stereotype.Component;
 // https://github.com/FusionAuth/fusionauth-example-java-jwt/blob/12ab95e98724d6080bf77ab47fb7e58b861b84fb/src/main/java/io/fusionauth/example/jwt/Rsa.java
 
 /**
- * Set the current user for tests that call services directly. For tests using MockMvc, see {@link
- * TestHelper#login(...)}
+ * Set the current user for tests that call services directly. For tests using MockMvc, see {link
+ * com.clearspend.capital.TestHelper#login(...)}
  *
- * <p>This class is in /src/main instead of /src/test because {@link
- * TestDataControllerTest#createTestData} needs to be able to set the current user this way.
+ * <p>This class is in /src/main instead of /src/test because {link
+ * com.clearspend.capital.TestDataControllerTest#createTestData} needs to be able to set the current
+ * user this way.
  */
 @Component
 @Profile("test")

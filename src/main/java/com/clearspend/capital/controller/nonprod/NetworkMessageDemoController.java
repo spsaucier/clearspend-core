@@ -43,7 +43,7 @@ public class NetworkMessageDemoController {
   private final NetworkMessageService networkMessageService;
 
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
-  private NetworkMessageResponse processNetworkMessage(
+  NetworkMessageResponse processNetworkMessage(
       @RequestBody @Validated NetworkMessageRequest request) throws JsonProcessingException {
 
     Card card = cardRepository.findById(request.getCardId()).orElseThrow();

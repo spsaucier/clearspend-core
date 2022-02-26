@@ -48,7 +48,7 @@ public class CardController {
   private final StripeClient stripeClient;
 
   @GetMapping("/{cardId}")
-  private CardDetailsResponse getCard(
+  CardDetailsResponse getCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -61,7 +61,7 @@ public class CardController {
   }
 
   @PostMapping("")
-  private List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
+  List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     String businessLegalName = businessService.retrieveBusiness(businessId, true).getLegalName();
@@ -98,7 +98,7 @@ public class CardController {
   }
 
   @PatchMapping("/{cardId}")
-  private CardDetailsResponse updateCard(
+  CardDetailsResponse updateCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -120,7 +120,7 @@ public class CardController {
   }
 
   @PostMapping("/search")
-  private PagedData<SearchCardData> search(@Validated @RequestBody SearchCardRequest request) {
+  PagedData<SearchCardData> search(@Validated @RequestBody SearchCardRequest request) {
     // TODO: Implement proper security restrictions based on the outcome of CAP-202
     return PagedData.of(
         cardService.filterCards(new CardFilterCriteria(CurrentUser.get().businessId(), request)),
@@ -128,7 +128,7 @@ public class CardController {
   }
 
   @PostMapping("/reveal")
-  private RevealCardResponse reveal(@RequestBody @Validated RevealCardRequest request) {
+  RevealCardResponse reveal(@RequestBody @Validated RevealCardRequest request) {
     CardDetailsRecord cardDetailsRecord =
         cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
     String ephemeralKey =
@@ -137,7 +137,7 @@ public class CardController {
   }
 
   @PostMapping("/export-csv")
-  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request) {
+  ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchCardRequest request) {
 
     // export must return all records, regardless if pagination is set in "view records" mode
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));

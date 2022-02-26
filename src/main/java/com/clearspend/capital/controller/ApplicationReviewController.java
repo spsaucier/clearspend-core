@@ -22,13 +22,13 @@ public class ApplicationReviewController {
   private final ApplicationReviewService applicationReviewService;
 
   @GetMapping("/requirement")
-  public ApplicationReviewRequirements getApplicationReviewRequirements() {
+  ApplicationReviewRequirements getApplicationReviewRequirements() {
     return applicationReviewService.getStripeApplicationRequirements(
         CurrentUser.get().businessId());
   }
 
   @PostMapping("/document")
-  public String uploadDocuments(@RequestParam(name = "documentList") List<MultipartFile> files) {
+  String uploadDocuments(@RequestParam(name = "documentList") List<MultipartFile> files) {
 
     applicationReviewService.uploadStripeRequiredDocuments(files);
 

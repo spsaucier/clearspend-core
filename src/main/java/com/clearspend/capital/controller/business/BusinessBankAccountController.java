@@ -51,7 +51,7 @@ public class BusinessBankAccountController {
   }
 
   @GetMapping("/link-token")
-  private LinkTokenResponse linkToken() throws IOException {
+  LinkTokenResponse linkToken() throws IOException {
     return new LinkTokenResponse(
         businessBankAccountService.getLinkToken(CurrentUser.get().businessId()));
   }
@@ -59,8 +59,7 @@ public class BusinessBankAccountController {
   @GetMapping(
       value = "/link-token/{linkToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private List<BankAccount> linkBusinessBankAccounts(@PathVariable String linkToken)
-      throws IOException {
+  List<BankAccount> linkBusinessBankAccounts(@PathVariable String linkToken) throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
     List<BankAccount> bankAccounts =
@@ -88,7 +87,7 @@ public class BusinessBankAccountController {
   }
 
   @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
-  private List<BankAccount> getBusinessBankAccounts() {
+  List<BankAccount> getBusinessBankAccounts() {
     return toListBankAccount(
         businessBankAccountService.getBusinessBankAccounts(CurrentUser.get().businessId(), true));
   }
@@ -96,7 +95,7 @@ public class BusinessBankAccountController {
   @PostMapping(
       value = "/{businessBankAccountId}/transactions",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateAdjustmentResponse transact(
+  CreateAdjustmentResponse transact(
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,
@@ -121,7 +120,7 @@ public class BusinessBankAccountController {
   @PostMapping(
       value = "/{businessBankAccountId}/register",
       produces = MediaType.APPLICATION_JSON_VALUE)
-  private ResponseEntity<?> register(
+  ResponseEntity<?> register(
       @PathVariable(value = "businessBankAccountId")
           @Parameter(
               required = true,

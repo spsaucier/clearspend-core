@@ -28,17 +28,17 @@ public class CodatController {
   private final CodatService codatService;
 
   @PostMapping("/quickbooks-online")
-  private String createQuickbooksOnlineConnectionLink() throws RuntimeException {
+  String createQuickbooksOnlineConnectionLink() throws RuntimeException {
     return codatService.createQboConnectionForBusiness(CurrentUser.getBusinessId());
   }
 
   @GetMapping("/connection-status")
-  private Boolean getIntegrationConnectionStatus() {
+  Boolean getIntegrationConnectionStatus() {
     return codatService.getIntegrationConnectionStatus(CurrentUser.getBusinessId());
   }
 
   @PostMapping("/sync/{accountActivityId}")
-  private SyncTransactionResponse syncTransactionToCodat(
+  SyncTransactionResponse syncTransactionToCodat(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -51,12 +51,12 @@ public class CodatController {
   }
 
   @GetMapping("/bank-accounts")
-  private CodatBankAccountsResponse getBankAccountsForBusiness() {
+  CodatBankAccountsResponse getBankAccountsForBusiness() {
     return codatService.getBankAccountsForBusiness(CurrentUser.getBusinessId());
   }
 
   @PostMapping("/bank-accounts")
-  private CodatCreateBankAccountResponse createBankAccountForBusiness(
+  CodatCreateBankAccountResponse createBankAccountForBusiness(
       @Validated @RequestBody CodatCreateBankAccountRequest request) {
     return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
   }

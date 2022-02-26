@@ -45,7 +45,7 @@ public class BusinessProspectController {
   private final BusinessProspectService businessProspectService;
 
   @PostMapping("")
-  private CreateBusinessProspectResponse createBusinessProspect(
+  CreateBusinessProspectResponse createBusinessProspect(
       @Validated @RequestBody CreateOrUpdateBusinessProspectRequest request) {
     BusinessProspectRecord businessProspect =
         businessProspectService.createOrUpdateBusinessProspect(
@@ -67,7 +67,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")
-  private ValidateIdentifierResponse validateBusinessProspectIdentifier(
+  ValidateIdentifierResponse validateBusinessProspectIdentifier(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -84,7 +84,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/phone")
-  private void setBusinessProspectPhone(
+  void setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -98,7 +98,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/password")
-  private void setBusinessProspectPassword(
+  void setBusinessProspectPassword(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -112,7 +112,7 @@ public class BusinessProspectController {
   }
 
   @PostMapping("/{businessProspectId}/convert")
-  private ConvertBusinessProspectResponse convertBusinessProspect(
+  ConvertBusinessProspectResponse convertBusinessProspect(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -135,7 +135,7 @@ public class BusinessProspectController {
   }
 
   @GetMapping("/{businessProspectId}")
-  private BusinessProspectData getBusinessProspectData(
+  BusinessProspectData getBusinessProspectData(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,

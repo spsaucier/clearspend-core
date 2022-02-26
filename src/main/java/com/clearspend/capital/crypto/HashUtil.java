@@ -6,7 +6,6 @@ import static org.apache.commons.lang3.StringUtils.stripAccents;
 
 import com.clearspend.capital.crypto.data.ByteString;
 import com.google.common.io.BaseEncoding;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -91,10 +90,10 @@ public class HashUtil {
     }
 
     MessageDigest digest512 = getSha512Digest();
-    digest512.update(salt.getBytes(StandardCharsets.UTF_8));
+    digest512.update(salt.getBytes());
 
     // hash the input
-    byte[] encodedHash = digest512.digest(clearText.getBytes(StandardCharsets.UTF_8));
+    byte[] encodedHash = digest512.digest(clearText.getBytes());
 
     StringBuilder sb = new StringBuilder();
     for (byte hash : encodedHash) {

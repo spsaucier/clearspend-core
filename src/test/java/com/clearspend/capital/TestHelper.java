@@ -113,6 +113,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -137,6 +138,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 @Transactional
 @Component
 @RequiredArgsConstructor
@@ -316,7 +318,7 @@ public class TestHelper {
   }
 
   public LocalDate generateDateOfBirth() {
-    return new java.sql.Date(faker.date().birthday(18, 100).getTime()).toLocalDate();
+    return faker.date().birthday(18, 100).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
   }
 
   public String generateBusinessName() {
@@ -985,17 +987,20 @@ public class TestHelper {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(user, card, account, amount);
     networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
-    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    assertPost(networkCommonAuthorization.networkCommon(), false, false, true);
 
     NetworkCommon common =
         TestDataController.generateCaptureNetworkCommon(
             business, networkCommonAuthorization.authorization());
     networkMessageService.processNetworkMessage(common);
-    assertThat(common.isPostAdjustment()).isTrue();
-    assertThat(common.isPostDecline()).isFalse();
-    assertThat(common.isPostHold()).isFalse();
+    assertPost(common, true, false, false);
+  }
+
+  public void assertPost(
+      NetworkCommon networkCommon, boolean postAdjustment, boolean postDecline, boolean postHold) {
+    assertThat(networkCommon.isPostAdjustment()).isEqualTo(postAdjustment);
+    assertThat(networkCommon.isPostDecline()).isEqualTo(postDecline);
+    assertThat(networkCommon.isPostHold()).isEqualTo(postHold);
   }
 
   private com.stripe.model.issuing.Card getStripeCard(Business business, User user, Card card) {

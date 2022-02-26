@@ -25,12 +25,12 @@ public class TwilioDemoController {
   private final TwilioService twilioService;
 
   @PostMapping(value = "/kyc-pass", produces = MediaType.APPLICATION_JSON_VALUE)
-  private void kycFail(@RequestBody @Validated KycPassRequest request) {
+  void kycFail(@RequestBody @Validated KycPassRequest request) {
     twilioService.sendKybKycPassEmail(request.getTo(), request.getFirstName());
   }
 
   @PostMapping(value = "/kyc-fail", produces = MediaType.APPLICATION_JSON_VALUE)
-  private void kycFail(@RequestBody @Validated KycFailRequest request) {
+  void kycFail(@RequestBody @Validated KycFailRequest request) {
     twilioService.sendKybKycFailEmail(
         request.getTo(), request.getFirstName(), request.getReasons());
   }

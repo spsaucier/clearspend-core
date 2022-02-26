@@ -131,6 +131,7 @@ public class CryptoTest {
   }
 
   @Test
+  @SuppressWarnings("ArrayAsKeyOfSetOrMap")
   public void testCrypto() {
     // start with an empty repo
     Mockito.when(keyRepository.findAll()).thenReturn(Collections.emptyList());

@@ -108,6 +108,7 @@ import org.springframework.web.bind.annotation.RestController;
  * do things that they normally wouldn't be able to do.
  */
 @Profile("!prod")
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 @RestController
 @RequestMapping("/non-production/test-data")
 @RequiredArgsConstructor
@@ -147,12 +148,12 @@ public class TestDataController {
       Business business, List<BusinessOwner> businessOwners, User user, Allocation allocation) {}
 
   @GetMapping("/db-content")
-  private CreateTestDataResponse getDbContent() {
+  CreateTestDataResponse getDbContent() {
     return getAllData(null);
   }
 
   @GetMapping("/business/{businessId}")
-  private CreateTestDataResponse getBusiness(
+  CreateTestDataResponse getBusiness(
       @PathVariable(value = "businessId")
           @Parameter(
               required = true,
@@ -164,7 +165,7 @@ public class TestDataController {
   }
 
   @GetMapping("/business")
-  private GetBusinessesResponse getBusinesses() {
+  GetBusinessesResponse getBusinesses() {
     return new GetBusinessesResponse(
         businessRepository.findAll().stream()
             .map(com.clearspend.capital.controller.type.business.Business::new)
@@ -173,7 +174,7 @@ public class TestDataController {
 
   @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "This class is for testing only")
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
-  private CreateTestDataResponse createTestData() {
+  CreateTestDataResponse createTestData() {
 
     // create a new business
     BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
@@ -387,8 +388,7 @@ public class TestDataController {
   // This test data method is used to simulate an onboarding flow as in UI ,
   // and upload test documents provided by Stripe for application review.
   @GetMapping("/business/{type}/onboard")
-  private BusinessRecord onboardNewBusiness(
-      @PathVariable(value = "type") BusinessType businessType) {
+  BusinessRecord onboardNewBusiness(@PathVariable(value = "type") BusinessType businessType) {
 
     BusinessProspectRecord businessProspect =
         businessProspectService.createOrUpdateBusinessProspect(
@@ -531,7 +531,7 @@ public class TestDataController {
                         .build());
 
               } catch (StripeException | IOException e) {
-                e.printStackTrace();
+                log.error("Exception uploading identity document", e);
               }
             });
   }

@@ -50,6 +50,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
+@SuppressWarnings("StringSplitter")
 @Component
 @Profile("test")
 public class StripeMockClient extends StripeClient {
@@ -242,6 +243,7 @@ public class StripeMockClient extends StripeClient {
     return account1;
   }
 
+  @Override
   public Account triggerAccountValidationAfterPersonsProvided(
       String stripeAccountId, Boolean ownersProvided, Boolean executiveProvided) {
     Account account1 = generateEntityWithId(Account.class);
@@ -274,6 +276,7 @@ public class StripeMockClient extends StripeClient {
     return generateEntityWithId(Person.class);
   }
 
+  @Override
   public Person retrievePerson(String businessOwnerExternalRef, String businessExternalRef) {
     return generateEntityWithId(Person.class);
   }
@@ -291,6 +294,7 @@ public class StripeMockClient extends StripeClient {
     return person1;
   }
 
+  @Override
   public Account retrieveAccount(String stripeAccountId) {
     Optional<Business> byStripeAccountReference =
         businessRepository.findByStripeAccountRef(stripeAccountId);
@@ -524,7 +528,7 @@ public class StripeMockClient extends StripeClient {
 
   @SneakyThrows
   private Account getAccountFromJson(Resource resource, Business business) {
-    Account account = null;
+    Account account;
     try {
       Event event = ApiResource.GSON.fromJson(new FileReader(resource.getFile()), Event.class);
       StripeObject stripeObject = event.getDataObjectDeserializer().deserializeUnsafe();

@@ -15,7 +15,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.ToString.Exclude;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
@@ -40,7 +39,6 @@ public class JournalEntry extends TypedMutable<JournalEntryId> {
   private TypedId<JournalEntryId> reversalJournalEntryId;
 
   @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-  @Exclude
   @EqualsAndHashCode.Exclude
   @NonNull
   private List<Posting> postings;

@@ -49,7 +49,7 @@ public class AccountActivityController {
   private final AccountActivityRepository accountActivityRepository;
 
   @PostMapping("")
-  private PagedData<AccountActivityResponse> retrieveAccountActivityPage(
+  PagedData<AccountActivityResponse> retrieveAccountActivityPage(
       @Validated @RequestBody AccountActivityRequest request) {
     Page<AccountActivity> accountActivities =
         accountActivityRepository.find(
@@ -68,7 +68,7 @@ public class AccountActivityController {
   }
 
   @GetMapping("/{accountActivityId}")
-  private AccountActivityResponse getAccountActivity(
+  AccountActivityResponse getAccountActivity(
       @PathVariable(value = "accountActivityId")
           @Parameter(
               required = true,
@@ -84,8 +84,7 @@ public class AccountActivityController {
   }
 
   @PostMapping("/graph-data")
-  private DashboardGraphData retrieveDashboardGraphData(
-      @Validated @RequestBody GraphDataRequest request) {
+  DashboardGraphData retrieveDashboardGraphData(@Validated @RequestBody GraphDataRequest request) {
     DashboardData dashboardData =
         accountActivityRepository.findDataForLineGraph(
             CurrentUser.get().businessId(),
@@ -119,8 +118,7 @@ public class AccountActivityController {
   }
 
   @PostMapping("/category-spend")
-  private ChartDataResponse getResultSpendByCategory(
-      @Validated @RequestBody ChartDataRequest request) {
+  ChartDataResponse getResultSpendByCategory(@Validated @RequestBody ChartDataRequest request) {
     return new ChartDataResponse(
         accountActivityRepository.findDataForChart(
             CurrentUser.get().businessId(), new ChartFilterCriteria(request)),
@@ -128,7 +126,7 @@ public class AccountActivityController {
   }
 
   @PostMapping("/export-csv")
-  private ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request)
+  ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request)
       throws IOException {
 
     // export must return all records, regardless if pagination is set in "view records" mode

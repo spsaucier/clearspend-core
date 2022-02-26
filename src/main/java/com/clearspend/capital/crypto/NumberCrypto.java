@@ -72,17 +72,18 @@ public class NumberCrypto {
     return Integer.parseInt(formatPreservingEncryption.encrypt(clearText, tweak));
   }
 
-  private Integer fpeDecrypt(byte[] key, byte[] tweak, Integer cipherText) {
-    FormatPreservingEncryption formatPreservingEncryption =
-        FormatPreservingEncryptionBuilder.ff1Implementation()
-            .withDomain(
-                new GenericDomain(
-                    alphabet,
-                    new GenericTransformations(alphabet.availableCharacters()),
-                    new GenericTransformations(alphabet.availableCharacters())))
-            .withPseudoRandomFunction(new DefaultPseudoRandomFunction(key))
-            .withLengthRange(new LengthRange(6, 16))
-            .build();
-    return Integer.parseInt(formatPreservingEncryption.decrypt(cipherText.toString(), tweak));
-  }
+  // Left in place in case this is needed later
+  //  private Integer fpeDecrypt(byte[] key, byte[] tweak, Integer cipherText) {
+  //    FormatPreservingEncryption formatPreservingEncryption =
+  //        FormatPreservingEncryptionBuilder.ff1Implementation()
+  //            .withDomain(
+  //                new GenericDomain(
+  //                    alphabet,
+  //                    new GenericTransformations(alphabet.availableCharacters()),
+  //                    new GenericTransformations(alphabet.availableCharacters())))
+  //            .withPseudoRandomFunction(new DefaultPseudoRandomFunction(key))
+  //            .withLengthRange(new LengthRange(6, 16))
+  //            .build();
+  //    return Integer.parseInt(formatPreservingEncryption.decrypt(cipherText.toString(), tweak));
+  //  }
 }

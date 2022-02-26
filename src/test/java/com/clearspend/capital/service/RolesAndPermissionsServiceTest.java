@@ -361,112 +361,114 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 grantee, allocation, ALLOCATION_VIEW_ONLY),
         msg);
   }
-  /*
-      // test if a user has permission on a parent allocation rather than the given allocation
-      @Test
-      void testInheritingPermissionFromParent() {
-        CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
-        User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
-        User testUser = newUser.user();
 
-        // The allocation owner gives someone else manage permission
-        roleService.grantAllocationPermission(
-            allocationOwner, testUser, rootAllocation, AllocationPermission.MANAGE);
-        assertUserHasPermission(testUser, rootAllocation, AllocationPermission.MANAGE);
-
-        // Allocation owner makes a child allocation
-        Amount amt = new Amount(Currency.USD, new BigDecimal(100));
-        Allocation childAllocation =
-            allocationService
-                .createAllocation(
-                    rootAllocation.getBusinessId(),
-                    rootAllocation.getId(),
-                    "Child Allocation",
-                    allocationOwner,
-                    amt,
-                    Collections.emptyMap(),
-                    Collections.emptyList(),
-                    Collections.emptySet())
-                .allocation();
-
-        // Now see that the user has manage permission
-        assertUserHasPermission(testUser, childAllocation, AllocationPermission.MANAGE);
-      }
-
-      // test if a user has permission on a grandparent allocation
-      @Test
-      void testAncestorPermission() {
-        // When the user doesn't have permission on the given allocation, it should
-        // fall back to the permission of the first ancestor allocation for which the user has
-        // permission.
-        CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
-        User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
-        User testUser = newUser.user();
-
-        // Set up a chain of 4 child allocations
-        List<Allocation> childAllocations = new ArrayList<>();
-        BigDecimal childAllocationAmount = new BigDecimal(512);
-        Allocation parent = rootAllocation;
-        for (int i = 0; i < 6; i++) {
-          Amount amt = new Amount(Currency.USD, childAllocationAmount);
-          Allocation childAllocation =
-              allocationService
-                  .createAllocation(
-                      rootAllocation.getBusinessId(),
-                      parent.getId(),
-                      "Child " + i,
-                      allocationOwner,
-                      amt,
-                      Collections.emptyMap(),
-                      Collections.emptyList(),
-                      Collections.emptySet())
-                  .allocation();
-          childAllocations.add(childAllocation);
-          childAllocationAmount = childAllocationAmount.divide(TWO);
-          parent = childAllocation;
-        }
-
-        // * Roles will be
-        // * Root    READ
-        // * Child 0 READ
-        // * Child 1 CODE
-        // * Child 2 CODE
-        // * Child 3 NONE Like a gift card, for example
-        // * Child 3 NONE
-        // * Child 3 NONE
-
-        // Assign expected globalUserPermissions
-        roleService.grantAllocationPermission(
-            allocationOwner, testUser, rootAllocation, AllocationPermission.READ);
-        roleService.grantAllocationPermission(
-            allocationOwner, testUser, childAllocations.get(1), AllocationPermission.CODE);
-        roleService.grantAllocationPermission(
-            allocationOwner, testUser, childAllocations.get(3), AllocationPermission.NONE);
-
-        // verify permissions
-        assertUserHasPermission(testUser, rootAllocation, AllocationPermission.READ);
-        assertUserHasPermission(testUser, childAllocations.get(0), AllocationPermission.READ);
-        assertUserHasPermission(testUser, childAllocations.get(1), AllocationPermission.CODE);
-        assertUserHasPermission(testUser, childAllocations.get(2), AllocationPermission.CODE);
-        assertUserHasPermission(testUser, childAllocations.get(3), AllocationPermission.NONE);
-        assertUserHasPermission(testUser, childAllocations.get(4), AllocationPermission.NONE);
-        assertUserHasPermission(testUser, childAllocations.get(5), AllocationPermission.NONE);
-
-        // Archived user has no permissions
-        testUser.setArchived(true);
-        assertUserLacksPermission(testUser, rootAllocation, AllocationPermission.MANAGE_PERMISSIONS);
-        for (Allocation allocation : childAllocations) {
-          assertUserLacksPermission(testUser, allocation, AllocationPermission.MANAGE_PERMISSIONS);
-        }
-
-        // archived Grantee results in InvalidRequestException
-        assertThrows(
-            InvalidRequestException.class,
-            () ->
-                roleService.grantAllocationPermission(
-                    allocationOwner, testUser, childAllocations.get(3), AllocationPermission.MANAGE));
-      }
-  */
+  //      // test if a user has permission on a parent allocation rather than the given allocation
+  //      @Test
+  //      void testInheritingPermissionFromParent() {
+  //        CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
+  //        User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
+  //        User testUser = newUser.user();
+  //
+  //        // The allocation owner gives someone else manage permission
+  //        roleService.grantAllocationPermission(
+  //            allocationOwner, testUser, rootAllocation, AllocationPermission.MANAGE);
+  //        assertUserHasPermission(testUser, rootAllocation, AllocationPermission.MANAGE);
+  //
+  //        // Allocation owner makes a child allocation
+  //        Amount amt = new Amount(Currency.USD, new BigDecimal(100));
+  //        Allocation childAllocation =
+  //            allocationService
+  //                .createAllocation(
+  //                    rootAllocation.getBusinessId(),
+  //                    rootAllocation.getId(),
+  //                    "Child Allocation",
+  //                    allocationOwner,
+  //                    amt,
+  //                    Collections.emptyMap(),
+  //                    Collections.emptyList(),
+  //                    Collections.emptySet())
+  //                .allocation();
+  //
+  //        // Now see that the user has manage permission
+  //        assertUserHasPermission(testUser, childAllocation, AllocationPermission.MANAGE);
+  //      }
+  //
+  //      // test if a user has permission on a grandparent allocation
+  //      @Test
+  //      void testAncestorPermission() {
+  //        // When the user doesn't have permission on the given allocation, it should
+  //        // fall back to the permission of the first ancestor allocation for which the user has
+  //        // permission.
+  //        CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
+  //        User allocationOwner = userService.retrieveUser(rootAllocation.getOwner().getId());
+  //        User testUser = newUser.user();
+  //
+  //        // Set up a chain of 4 child allocations
+  //        List<Allocation> childAllocations = new ArrayList<>();
+  //        BigDecimal childAllocationAmount = new BigDecimal(512);
+  //        Allocation parent = rootAllocation;
+  //        for (int i = 0; i < 6; i++) {
+  //          Amount amt = new Amount(Currency.USD, childAllocationAmount);
+  //          Allocation childAllocation =
+  //              allocationService
+  //                  .createAllocation(
+  //                      rootAllocation.getBusinessId(),
+  //                      parent.getId(),
+  //                      "Child " + i,
+  //                      allocationOwner,
+  //                      amt,
+  //                      Collections.emptyMap(),
+  //                      Collections.emptyList(),
+  //                      Collections.emptySet())
+  //                  .allocation();
+  //          childAllocations.add(childAllocation);
+  //          childAllocationAmount = childAllocationAmount.divide(TWO);
+  //          parent = childAllocation;
+  //        }
+  //
+  //        // * Roles will be
+  //        // * Root    READ
+  //        // * Child 0 READ
+  //        // * Child 1 CODE
+  //        // * Child 2 CODE
+  //        // * Child 3 NONE Like a gift card, for example
+  //        // * Child 3 NONE
+  //        // * Child 3 NONE
+  //
+  //        // Assign expected globalUserPermissions
+  //        roleService.grantAllocationPermission(
+  //            allocationOwner, testUser, rootAllocation, AllocationPermission.READ);
+  //        roleService.grantAllocationPermission(
+  //            allocationOwner, testUser, childAllocations.get(1), AllocationPermission.CODE);
+  //        roleService.grantAllocationPermission(
+  //            allocationOwner, testUser, childAllocations.get(3), AllocationPermission.NONE);
+  //
+  //        // verify permissions
+  //        assertUserHasPermission(testUser, rootAllocation, AllocationPermission.READ);
+  //        assertUserHasPermission(testUser, childAllocations.get(0), AllocationPermission.READ);
+  //        assertUserHasPermission(testUser, childAllocations.get(1), AllocationPermission.CODE);
+  //        assertUserHasPermission(testUser, childAllocations.get(2), AllocationPermission.CODE);
+  //        assertUserHasPermission(testUser, childAllocations.get(3), AllocationPermission.NONE);
+  //        assertUserHasPermission(testUser, childAllocations.get(4), AllocationPermission.NONE);
+  //        assertUserHasPermission(testUser, childAllocations.get(5), AllocationPermission.NONE);
+  //
+  //        // Archived user has no permissions
+  //        testUser.setArchived(true);
+  //        assertUserLacksPermission(testUser, rootAllocation,
+  // AllocationPermission.MANAGE_PERMISSIONS);
+  //        for (Allocation allocation : childAllocations) {
+  //          assertUserLacksPermission(testUser, allocation,
+  // AllocationPermission.MANAGE_PERMISSIONS);
+  //        }
+  //
+  //        // archived Grantee results in InvalidRequestException
+  //        assertThrows(
+  //            InvalidRequestException.class,
+  //            () ->
+  //                roleService.grantAllocationPermission(
+  //                    allocationOwner, testUser, childAllocations.get(3),
+  // AllocationPermission.MANAGE));
+  //      }
 
   @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "for testing")
   @FusionAuthRoleAdministrator(reviewer = "jscarbor", explanation = "For testing")

@@ -43,7 +43,7 @@ public class AllocationController {
   private final UserService userService;
 
   @PostMapping("")
-  private CreateAllocationResponse createAllocation(
+  CreateAllocationResponse createAllocation(
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
@@ -60,7 +60,7 @@ public class AllocationController {
   }
 
   @GetMapping("/{allocationId}")
-  private AllocationDetailsResponse getAllocation(
+  AllocationDetailsResponse getAllocation(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -76,7 +76,7 @@ public class AllocationController {
   }
 
   @PatchMapping("/{allocationId}")
-  private AllocationDetailsResponse updateAllocation(
+  AllocationDetailsResponse updateAllocation(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -105,7 +105,7 @@ public class AllocationController {
   }
 
   @GetMapping("/{allocationId}/children")
-  private List<Allocation> getAllocationChildren(
+  List<Allocation> getAllocationChildren(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,
@@ -128,7 +128,7 @@ public class AllocationController {
   }
 
   @PostMapping("/{allocationId}/transactions")
-  private AllocationFundCardResponse reallocateAllocationFunds(
+  AllocationFundCardResponse reallocateAllocationFunds(
       @PathVariable(value = "allocationId")
           @Parameter(
               required = true,

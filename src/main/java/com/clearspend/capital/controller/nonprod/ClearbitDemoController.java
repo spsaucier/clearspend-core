@@ -19,7 +19,7 @@ public class ClearbitDemoController {
   private final ClearbitClient clearbitClient;
 
   @PostMapping("/search-merchant-logo")
-  private String createUser(@RequestBody String merchantName) {
+  String createUser(@RequestBody String merchantName) {
     return clearbitClient.getLogo(merchantName);
   }
 }

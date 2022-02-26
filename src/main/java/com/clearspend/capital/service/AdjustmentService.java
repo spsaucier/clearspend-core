@@ -12,6 +12,7 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.service.LedgerService.BankJournalEntry;
+import com.clearspend.capital.service.LedgerService.ManualAdjustmentJournalEntry;
 import com.clearspend.capital.service.LedgerService.NetworkJournalEntry;
 import com.clearspend.capital.service.LedgerService.ReallocationJournalEntry;
 import java.time.OffsetDateTime;
@@ -108,6 +109,30 @@ public class AdjustmentService {
                 amount));
 
     return new ReallocateFundsRecord(bankJournalEntry, fromAdjustment, toAdjustment);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AdjustmentRecord recordManualAdjustment(Account account, Amount amount) {
+    ManualAdjustmentJournalEntry manualAdjustmentJournalEntry =
+        ledgerService.recordManualAdjustment(account.getLedgerAccountId(), amount);
+
+    Adjustment adjustment =
+        adjustmentRepository.save(
+            new Adjustment(
+                account.getBusinessId(),
+                account.getAllocationId(),
+                account.getId(),
+                account.getLedgerAccountId(),
+                manualAdjustmentJournalEntry.journalEntry().getId(),
+                manualAdjustmentJournalEntry.accountPosting().getId(),
+                AdjustmentType.MANUAL,
+                OffsetDateTime.now(),
+                manualAdjustmentJournalEntry.accountPosting().getAmount()));
+
+    account.setLedgerBalance(account.getLedgerBalance().add(amount));
+    account.recalculateAvailableBalance();
+
+    return new AdjustmentRecord(manualAdjustmentJournalEntry.journalEntry(), adjustment);
   }
 
   @Transactional(TxType.REQUIRED)

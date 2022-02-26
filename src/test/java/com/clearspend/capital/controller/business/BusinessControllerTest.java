@@ -1,6 +1,5 @@
 package com.clearspend.capital.controller.business;
 
-import static java.math.BigDecimal.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -133,7 +132,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             allocationRecord.allocation().getId(),
             com.clearspend.capital.controller.type.Amount.of(
-                new Amount(Currency.USD, valueOf(100))));
+                new Amount(Currency.USD, BigDecimal.valueOf(100))));
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -165,7 +164,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             allocationRecord.allocation().getId(),
             createBusinessRecord.allocationRecord().allocation().getId(),
             com.clearspend.capital.controller.type.Amount.of(
-                new Amount(Currency.USD, valueOf(90))));
+                new Amount(Currency.USD, BigDecimal.valueOf(90))));
 
     body = objectMapper.writeValueAsString(request);
 

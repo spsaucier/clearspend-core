@@ -261,7 +261,7 @@ public enum Country {
   ZWE("ZW"), // Zimbabwe
   ;
 
-  @Getter private String twoCharacterCode;
+  @Getter private final String twoCharacterCode;
 
   private static Map<String, Country> map = initializeMap();
 

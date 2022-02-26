@@ -69,7 +69,7 @@ public class AuthenticationController {
       reviewer = "jscarbor",
       explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
-  public ResponseEntity<User> login(@Validated @RequestBody LoginRequest request)
+  ResponseEntity<User> login(@Validated @RequestBody LoginRequest request)
       throws ParseException, LoginException, TwoFactorAuthenticationRequired {
     ClientResponse<LoginResponse, Errors> loginResponse;
     try {
@@ -85,7 +85,6 @@ public class AuthenticationController {
     if (!loginResponse.wasSuccessful()) {
       throw new LoginException(loginResponse.status, loginResponse.errorResponse);
     }
-    LoginResponse response = loginResponse.successResponse;
 
     if (loginResponse.status == 242) {
       fusionAuthService.sendTwoFactorCodeForLoginUsingMethod(
@@ -168,7 +167,7 @@ public class AuthenticationController {
   }
 
   @PostMapping("/two-factor/login")
-  public ResponseEntity<User> twoFactorLogin(@Validated @RequestBody TwoFactorLoginRequest request)
+  ResponseEntity<User> twoFactorLogin(@Validated @RequestBody TwoFactorLoginRequest request)
       throws ParseException {
     ClientResponse<LoginResponse, Errors> loginResponse = fusionAuthService.twoFactorLogin(request);
     return finalizeLogin(loginResponse);
@@ -178,7 +177,7 @@ public class AuthenticationController {
       UUID userId, String destination, TwoFactorAuthenticationMethod method) {}
 
   @PostMapping("/two-factor/first/send")
-  public void firstTwoFactorSend(
+  void firstTwoFactorSend(
       @Validated @RequestBody FirstTwoFactorSendRequest firstTwoFactorSendRequest) {
     fusionAuthService.sendInitialTwoFactorCode(
         firstTwoFactorSendRequest.userId,
@@ -190,7 +189,7 @@ public class AuthenticationController {
       UUID userId, String code, TwoFactorAuthenticationMethod method, String destination) {}
 
   @PostMapping("/two-factor/first/validate")
-  public TwoFactorResponse firstTwoFactorValidate(
+  TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
     return fusionAuthService.validateFirstTwoFactorCode(
         firstTwoFactorValidateRequest.userId,
@@ -200,7 +199,7 @@ public class AuthenticationController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<?> logout() {
+  ResponseEntity<?> logout() {
     // Looks like we cannot just revoke token from Fusion Auth so might need some revoked
     // tokens storage some time later to keep tokens before they actually expire
     return ResponseEntity.ok()
@@ -212,16 +211,16 @@ public class AuthenticationController {
   }
 
   @PostMapping("/forgot-password")
-  public void forgotPassword(@Validated @RequestBody ForgotPasswordRequest request) {
+  void forgotPassword(@Validated @RequestBody ForgotPasswordRequest request) {
     fusionAuthService.forgotPassword(request);
   }
 
   @PostMapping("/reset-password")
-  public void resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
+  void resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
     fusionAuthService.resetPassword(request);
   }
 
-  private String createCookie(String name, String value, long ttl) {
+  String createCookie(String name, String value, long ttl) {
     HttpCookie authTokenCookie =
         ResponseCookie.from(name, value)
             .path("/")

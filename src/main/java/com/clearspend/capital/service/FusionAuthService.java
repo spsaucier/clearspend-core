@@ -52,31 +52,23 @@ import org.springframework.stereotype.Component;
 public class FusionAuthService {
 
   public @interface FusionAuthUserCreator {
-
-    public String reviewer();
-
-    public String explanation();
+    String reviewer();
+    String explanation();
   }
 
   public @interface FusionAuthUserModifier {
-
-    public String reviewer();
-
-    public String explanation();
+    String reviewer();
+    String explanation();
   }
 
   public @interface FusionAuthUserAccessor {
-
-    public String reviewer();
-
-    public String explanation();
+    String reviewer();
+    String explanation();
   }
 
   @interface FusionAuthRoleAdministrator {
-
-    public String reviewer();
-
-    public String explanation();
+    String reviewer();
+    String explanation();
   }
 
   private static final String BUSINESS_ID = "businessId";
@@ -282,9 +274,9 @@ public class FusionAuthService {
   }
 
   /**
-   * @param change GRANT or REVOKE
-   * @param fusionAuthUserId the FusionAuth user ID to change
-   * @param changingRole the role to change
+   * @param change Either GRANT or REVOKE.
+   * @param fusionAuthUserId the FusionAuth user ID to change.
+   * @param changingRole the role to change.
    * @return true if the role is granted, false if it was already there
    */
   @RestrictedApi(

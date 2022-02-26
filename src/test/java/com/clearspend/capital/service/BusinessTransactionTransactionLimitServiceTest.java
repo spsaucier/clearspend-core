@@ -25,6 +25,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@SuppressWarnings("JavaTimeDefaultTimeZone")
 class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
   @Autowired private BusinessLimitService businessLimitService;
