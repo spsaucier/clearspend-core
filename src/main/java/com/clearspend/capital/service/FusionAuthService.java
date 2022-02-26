@@ -53,21 +53,25 @@ public class FusionAuthService {
 
   public @interface FusionAuthUserCreator {
     String reviewer();
+
     String explanation();
   }
 
   public @interface FusionAuthUserModifier {
     String reviewer();
+
     String explanation();
   }
 
   public @interface FusionAuthUserAccessor {
     String reviewer();
+
     String explanation();
   }
 
   @interface FusionAuthRoleAdministrator {
     String reviewer();
+
     String explanation();
   }
 
