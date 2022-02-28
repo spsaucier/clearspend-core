@@ -4,6 +4,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
@@ -28,6 +29,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @Autowired private BusinessRepository businessRepository;
   @Autowired private BusinessService businessService;
   @Autowired private ApplicationReviewService applicationReviewService;
+  @Autowired private StripeClient stripeClient;
 
   @Test
   @SneakyThrows
@@ -110,7 +112,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("invalidAccountAddressInvalidPersonAddressRequirePersonDocument");
     businessRepository.save(business1);
     businessRepository.flush();
-
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -179,7 +182,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownersAndRepresentativeProvided");
     businessRepository.save(business1);
     businessRepository.flush();
-
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -202,7 +206,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownersAndRepresentativeProvided_event2fromStripe");
     businessRepository.save(business1);
     businessRepository.flush();
-
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -225,7 +230,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("successOnboarding");
     businessRepository.save(business1);
     businessRepository.flush();
-
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 
@@ -246,7 +252,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownerRepresentativeAditionaCompanyAndSettingDetailsRequired");
     businessRepository.save(business1);
     businessRepository.flush();
-
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 

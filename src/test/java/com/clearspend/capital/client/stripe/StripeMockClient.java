@@ -224,25 +224,6 @@ public class StripeMockClient extends StripeClient {
     return person;
   }
 
-  public Account updateAccount(Account account, BusinessOwner owner) {
-    Account account1 = generateEntityWithId(Account.class);
-    if (owner.getTitle() != null) {
-      if ("Fraud".equals(owner.getTitle())) {
-        Requirements requirements = new Requirements();
-        requirements.setDisabledReason("rejected.fraud");
-        account1.setRequirements(requirements);
-      } else if ("Review".equals(owner.getTitle())) {
-        Requirements requirements = new Requirements();
-        Errors failed_address_match = new Errors();
-        failed_address_match.setCode("verification_failed_address_match");
-        requirements.setErrors(List.of(failed_address_match));
-        requirements.setPastDue(List.of("verification.document"));
-        account1.setRequirements(requirements);
-      }
-    }
-    return account1;
-  }
-
   @Override
   public Account triggerAccountValidationAfterPersonsProvided(
       String stripeAccountId, Boolean ownersProvided, Boolean executiveProvided) {
@@ -281,20 +262,6 @@ public class StripeMockClient extends StripeClient {
     return generateEntityWithId(Person.class);
   }
 
-  public Person updatePerson(Person person, BusinessOwner businessOwner) {
-    Person person1 = generateEntityWithId(Person.class);
-    if (businessOwner.getTitle() != null && "Review".equals(businessOwner.getTitle())) {
-      Person.Requirements requirements = new Person.Requirements();
-      Errors failed_address_match = new Errors();
-      failed_address_match.setCode("verification_document_id_number_mismatch");
-      requirements.setErrors(List.of(failed_address_match));
-      requirements.setPastDue(List.of("verification.document"));
-      person1.setRequirements(requirements);
-    }
-    return person1;
-  }
-
-  @Override
   public Account retrieveAccount(String stripeAccountId) {
     Optional<Business> byStripeAccountReference =
         businessRepository.findByStripeAccountRef(stripeAccountId);
@@ -357,6 +324,23 @@ public class StripeMockClient extends StripeClient {
         case "ownerRepresentativeAditionaCompanyAndSettingDetailsRequired" -> {
           return getAccountFromJson(
               ownerRepresentativeAditionaCompanyAndSettingDetailsRequired, business);
+        }
+        case "Review" -> {
+          Account account = new Account();
+          Requirements requirements = new Requirements();
+          Errors failed_address_match = new Errors();
+          failed_address_match.setCode("verification_failed_address_match");
+          requirements.setErrors(List.of(failed_address_match));
+          requirements.setPastDue(List.of("verification.document"));
+          account.setRequirements(requirements);
+          return account;
+        }
+        case "Denied" -> {
+          Account account = new Account();
+          Requirements requirements = new Requirements();
+          requirements.setDisabledReason("rejected.other");
+          account.setRequirements(requirements);
+          return account;
         }
       }
     }

@@ -1,5 +1,7 @@
 package com.clearspend.capital.service;
 
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
+
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.error.DeleteBusinessOwnerNotAllowedException;
 import com.clearspend.capital.common.error.InvalidKycDataException;
@@ -21,7 +23,6 @@ import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
-import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.Person;
 import com.stripe.model.Person.Requirements;
@@ -106,37 +107,27 @@ public class BusinessOwnerService {
         businessOwner ->
             createOrUpdateStripePersonReference(businessOwner, stripeAccountReference));
 
-    stripeClient.triggerAccountValidationAfterPersonsProvided(
-        stripeAccountReference,
-        businessOwnersData.stream()
-            .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
-            .anyMatch(BusinessOwnerData::getRelationshipOwner),
-        businessOwnersData.stream()
-            .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
-            .anyMatch(BusinessOwnerData::getRelationshipExecutive));
-
     return businessOwners;
   }
 
-  public BusinessAndAccountErrorMessages allOwnersProvided(TypedId<BusinessId> businessId) {
+  public BusinessAndAccountErrorMessages allOwnersProvided(
+      TypedId<BusinessId> businessId, Boolean noOtherOwnersToProvide) {
     Business business = businessService.retrieveBusiness(businessId, true);
     List<BusinessOwner> businessOwners = findBusinessOwnerByBusinessId(business.getId());
-    Account updatedAccount =
-        stripeClient.triggerAccountValidationAfterPersonsProvided(
-            business.getStripeData().getAccountRef(),
-            businessOwners.stream()
+
+    stripeClient.triggerAccountValidationAfterPersonsProvided(
+        business.getStripeData().getAccountRef(),
+        isTrue(noOtherOwnersToProvide)
+            || businessOwners.stream()
                 .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
                 .anyMatch(BusinessOwner::getRelationshipOwner),
-            businessOwners.stream()
+        isTrue(noOtherOwnersToProvide)
+            || businessOwners.stream()
                 .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
                 .anyMatch(BusinessOwner::getRelationshipExecutive));
 
-    List<String> stripeAccountMessages =
-        businessService.updateBusinessAccordingToStripeAccountRequirements(
-            business, updatedAccount);
-
     return new BusinessAndAccountErrorMessages(
-        businessService.retrieveBusiness(businessId, true), stripeAccountMessages);
+        businessService.retrieveBusiness(businessId, true), java.util.Collections.emptyList());
   }
 
   public void validateOwner(BusinessOwnerData businessOwnerData) {
@@ -150,7 +141,7 @@ public class BusinessOwnerService {
 
     if (business.getType() != BusinessType.INDIVIDUAL) {
       if (ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipRepresentative)
-          && Boolean.TRUE.equals(businessOwnerData.getRelationshipRepresentative())) {
+          && isTrue(businessOwnerData.getRelationshipRepresentative())) {
         throw new InvalidKycDataException(
             businessOwnerData.getFirstName() + businessOwnerData.getLastName(),
             "Only one representative is allowed.");

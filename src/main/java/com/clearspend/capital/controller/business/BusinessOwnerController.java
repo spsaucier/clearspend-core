@@ -124,17 +124,17 @@ public class BusinessOwnerController {
   }
 
   @GetMapping("/trigger-all-owners-provided")
-  OwnersProvidedResponse allOwnersProvided(
-      @Validated @RequestBody(required = false) Boolean ignoreValidation) {
+  private OwnersProvidedResponse allOwnersProvided(
+      @Validated @RequestBody(required = false) Boolean noOtherOwnersToProvide) {
 
     log.info("Trigger end of onboarding owners process.");
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    if (!Boolean.TRUE.equals(ignoreValidation)) {
+    if (!Boolean.TRUE.equals(noOtherOwnersToProvide)) {
       businessOwnerService.validateBusinessOwners(businessId);
     }
     Assert.notNull(businessId, "Action not possible!");
     BusinessAndAccountErrorMessages businessAndAccountErrorMessages =
-        businessOwnerService.allOwnersProvided(businessId);
+        businessOwnerService.allOwnersProvided(businessId, noOtherOwnersToProvide);
 
     return new OwnersProvidedResponse(
         new Business(businessAndAccountErrorMessages.business()),

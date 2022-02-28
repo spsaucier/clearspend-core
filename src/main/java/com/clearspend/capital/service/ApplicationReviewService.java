@@ -112,9 +112,6 @@ public class ApplicationReviewService {
         uploadDocumentToStripeForPerson(business, multipartFile, entityToken);
       }
     }
-
-    Account account = stripeClient.retrieveAccount(business.getStripeData().getAccountRef());
-    businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
   }
 
   private void uploadDocumentToStripeForPerson(
@@ -162,7 +159,6 @@ public class ApplicationReviewService {
     Account account = stripeClient.retrieveAccount(stripeAccountReference);
     List<BusinessOwner> businessOwners =
         businessOwnerService.findBusinessOwnerByBusinessId(businessId);
-    businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
 
     List<KycOwnerDocuments> kycDocuments =
         extractStripeRequiredDocumentsForPerson(account, businessOwners);

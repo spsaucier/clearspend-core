@@ -572,20 +572,4 @@ public class BusinessService {
 
     return reallocateFundsRecord;
   }
-
-  @Transactional
-  public void triggerAccountValidationAfterPersonsProvided(
-      List<BusinessOwner> businessOwners, Business business, String stripeAccountReference) {
-    com.stripe.model.Account updatedAccount =
-        stripeClient.triggerAccountValidationAfterPersonsProvided(
-            stripeAccountReference,
-            businessOwners.stream()
-                .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
-                .anyMatch(BusinessOwner::getRelationshipOwner),
-            businessOwners.stream()
-                .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
-                .anyMatch(BusinessOwner::getRelationshipExecutive));
-
-    updateBusinessAccordingToStripeAccountRequirements(business, updatedAccount);
-  }
 }

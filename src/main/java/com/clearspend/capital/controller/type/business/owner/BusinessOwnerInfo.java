@@ -77,7 +77,9 @@ public class BusinessOwnerInfo {
         businessOwner.getFirstName().getEncrypted(),
         businessOwner.getLastName().getEncrypted(),
         businessOwner.getDateOfBirth(),
-        businessOwner.getTaxIdentificationNumber().getEncrypted(),
+        businessOwner.getTaxIdentificationNumber() != null
+            ? businessOwner.getTaxIdentificationNumber().getEncrypted()
+            : null,
         businessOwner.getRelationshipOwner(),
         businessOwner.getRelationshipRepresentative(),
         businessOwner.getRelationshipExecutive(),

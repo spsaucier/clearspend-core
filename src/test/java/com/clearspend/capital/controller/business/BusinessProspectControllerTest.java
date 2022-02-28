@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
@@ -23,6 +24,7 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.FusionAuthService;
 import io.fusionauth.domain.User;
 import javax.servlet.http.Cookie;
@@ -46,6 +48,8 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessRepository businessRepository;
   private final TwilioServiceMock twilioServiceMock;
+  private final BusinessService businessService;
+  private final StripeClient stripeClient;
 
   @BeforeEach
   void beforeEach() {
@@ -261,9 +265,11 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
         testHelper.convertBusinessProspect("Denied", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
-
-    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
     Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business, stripeClient.retrieveAccount(business.getStripeData().getAccountRef()));
+    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
+    business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
     log.info("{}", business);
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
     assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.FAIL);
@@ -288,9 +294,11 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     ConvertBusinessProspectResponse convertBusinessProspectResponse =
         testHelper.convertBusinessProspect("Review", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
-
-    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
     Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
+    businessService.updateBusinessAccordingToStripeAccountRequirements(
+        business, stripeClient.retrieveAccount(business.getStripeData().getAccountRef()));
+    assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
+    business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
     log.info("{}", business);
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(business.getKnowYourBusinessStatus()).isEqualTo(KnowYourBusinessStatus.REVIEW);

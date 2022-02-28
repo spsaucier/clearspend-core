@@ -27,6 +27,7 @@ import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -299,17 +300,12 @@ public class BusinessProspectService {
         allocationService.createRootAllocation(
             business.getId(), businessOwner.user(), business.getLegalName());
 
-    // validate and update business based on stripe account requirements
-    List<String> stripeAccountErrorMessages =
-        businessService.updateBusinessAccordingToStripeAccountRequirements(
-            business, businessAndStripeAccount.stripeAccount());
-
     return new ConvertBusinessProspectRecord(
         business,
         allocationRecord,
         businessOwner.businessOwner(),
         businessOwner.user(),
-        stripeAccountErrorMessages);
+        Collections.emptyList());
   }
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {
