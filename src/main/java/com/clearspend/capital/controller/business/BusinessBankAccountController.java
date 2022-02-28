@@ -138,10 +138,7 @@ public class BusinessBankAccountController {
     }
     log.debug("IP Address for sending ToS Acceptance to Stripe", ipAddress);
     businessBankAccountService.registerExternalBank(
-        businessId,
-        businessBankAccountId,
-        httpServletRequest.getRemoteAddr(),
-        httpServletRequest.getHeader("User-Agent"));
+        businessId, businessBankAccountId, ipAddress, httpServletRequest.getHeader("User-Agent"));
 
     return ResponseEntity.ok().build();
   }
