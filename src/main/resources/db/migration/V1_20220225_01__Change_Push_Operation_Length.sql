@@ -1,0 +1,1 @@
+alter table transaction_sync_log alter column direct_cost_push_operation_key type varchar(36);

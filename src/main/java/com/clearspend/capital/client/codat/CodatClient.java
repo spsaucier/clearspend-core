@@ -163,7 +163,7 @@ public class CodatClient {
     List<CodatLineItem> lineItems = new ArrayList<>();
     lineItems.add(
         new CodatLineItem(
-            transaction.getAmount().getAmount().doubleValue(),
+            -transaction.getAmount().getAmount().doubleValue(),
             1,
             new CodatAccountRef(codatAccount.getId(), codatAccount.getName()),
             new CodatTaxRateRef("NON")));
@@ -174,9 +174,9 @@ public class CodatClient {
         new DirectCostRequest(
             LocalDate.now(ZoneOffset.UTC),
             currency,
-            transaction.getAmount().getAmount().doubleValue(),
+            -transaction.getAmount().getAmount().doubleValue(),
             0,
-            transaction.getAmount().getAmount().doubleValue(),
+            -transaction.getAmount().getAmount().doubleValue(),
             paymentAllocations,
             lineItems,
             contactRef);
