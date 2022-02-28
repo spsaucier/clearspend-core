@@ -232,7 +232,8 @@ public class UserController {
             currentUser.userType(),
             cardId,
             CardStatus.INACTIVE,
-            request.getStatusReason()));
+            request.getStatusReason(),
+            false));
   }
 
   @PatchMapping("/cards/{cardId}/activate")
@@ -289,7 +290,12 @@ public class UserController {
             currentUser.userType(),
             cardId,
             CardStatus.ACTIVE,
-            request.getStatusReason()));
+            request.getStatusReason(),
+            false));
+    // update card currently cannot distinguish between activation which happened
+    // due to unfreeze event vs initial physical card activation
+    // last variable is needed to pick the right notification template
+
   }
 
   @PatchMapping("/cards/{cardId}/retire")
@@ -311,7 +317,8 @@ public class UserController {
             currentUser.userType(),
             cardId,
             CardStatus.CANCELLED,
-            request.getStatusReason()));
+            request.getStatusReason(),
+            false));
   }
 
   @GetMapping("/cards/{cardId}/accounts")

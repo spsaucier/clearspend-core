@@ -37,6 +37,9 @@ public class TwilioService {
   private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "change_password_id";
   private final String COMPANY_NAME_KEY = "company_name";
   private final String PASSWORD_KEY = "password";
+  private final String CARD_LAST_FOUR_KEY = "card_last_four";
+  private final String AMOUNT_KEY = "amount";
+  private final String EMPLOYEE_NAME_KEY = "employee_name";
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -187,6 +190,11 @@ public class TwilioService {
   }
 
   private void send(Mail mail) {
+
+    if (!sendGridProperties.isEmailNotificationsEnabled()) {
+      return;
+    }
+
     Request request = new Request();
     request.setMethod(Method.POST);
     request.setEndpoint("mail/send");
@@ -275,7 +283,7 @@ public class TwilioService {
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
         initMailWithTemplate(
-            sendGridProperties.getOnboardingBankDetailsAddedTemplateId(), to, personalization);
+            sendGridProperties.getBankDetailsAddedTemplateId(), to, personalization);
     send(mail);
   }
 
@@ -285,7 +293,18 @@ public class TwilioService {
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
         initMailWithTemplate(
-            sendGridProperties.getOnboardingBankFundsAvailableTemplateId(), to, personalization);
+            sendGridProperties.getBankFundsAvailableTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Onboarding: Bank Funds Deposit Request */
+  public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getBankFundsDepositRequestTemplateId(), to, personalization);
     send(mail);
   }
 
@@ -295,7 +314,7 @@ public class TwilioService {
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
         initMailWithTemplate(
-            sendGridProperties.getOnboardingBankDetailsRemovedTemplateId(), to, personalization);
+            sendGridProperties.getBankDetailsRemovedTemplateId(), to, personalization);
     send(mail);
   }
 
@@ -305,24 +324,26 @@ public class TwilioService {
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
         initMailWithTemplate(
-            sendGridProperties.getOnboardingBankFundsReturnTemplateId(), to, personalization);
+            sendGridProperties.getBankFundsReturnTemplateId(), to, personalization);
     send(mail);
   }
 
   /* Onboarding: Bank Funds Withdrawal */
-  public void sendBankFundsWithdrawalEmail(String to, String firstName) {
+  public void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
     Mail mail =
         initMailWithTemplate(
-            sendGridProperties.getOnboardingBankFundsReturnTemplateId(), to, personalization);
+            sendGridProperties.getBankFundsWithdrawalTemplateId(), to, personalization);
     send(mail);
   }
 
   /* Card : Card issued Owner Notification */
-  public void sendCardIssuedNotifyOwnerEmail(String to, String firstName) {
+  public void sendCardIssuedNotifyOwnerEmail(String to, String ownerName, String employeeName) {
     Personalization personalization = new Personalization();
-    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, ownerName);
+    personalization.addDynamicTemplateData(EMPLOYEE_NAME_KEY, employeeName);
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getCardIssuedNotifyOwnerTemplateId(), to, personalization);
@@ -331,11 +352,10 @@ public class TwilioService {
 
   /* Card : Virtual Card issued to Employee Notification */
   public void sendCardIssuedVirtualNotifyUserEmail(
-      String to, String firstName, String companyName, String password) {
+      String to, String firstName, String companyName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(COMPANY_NAME_KEY, companyName);
-    personalization.addDynamicTemplateData(PASSWORD_KEY, password);
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getCardIssuedVirtualNotifyUserTemplateId(), to, personalization);
@@ -344,11 +364,10 @@ public class TwilioService {
 
   /* Card : Physical Card issued to Employee Notification */
   public void sendCardIssuedPhysicalNotifyUserEmail(
-      String to, String firstName, String companyName, String password) {
+      String to, String firstName, String companyName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(COMPANY_NAME_KEY, companyName);
-    personalization.addDynamicTemplateData(PASSWORD_KEY, password);
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getCardIssuedPhysicalNotifyUserTemplateId(), to, personalization);
@@ -386,18 +405,20 @@ public class TwilioService {
   }
 
   /* Card : Card Freeze email */
-  public void sendCardFrozenEmail(String to, String firstName) {
+  public void sendCardFrozenEmail(String to, String firstName, String lastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
     Mail mail =
         initMailWithTemplate(sendGridProperties.getCardFrozenTemplateId(), to, personalization);
     send(mail);
   }
 
   /* Card : Card Unfreeze email */
-  public void sendCardUnfrozenEmail(String to, String firstName) {
+  public void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
     Mail mail =
         initMailWithTemplate(sendGridProperties.getCardUnfrozenTemplateId(), to, personalization);
     send(mail);
@@ -410,6 +431,19 @@ public class TwilioService {
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getUserDetailsUpdatedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Login: User Account Created Notification */
+  public void sendUserAccountCreatedEmail(
+      String to, String firstName, String companyName, String password) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(COMPANY_NAME_KEY, companyName);
+    personalization.addDynamicTemplateData(PASSWORD_KEY, password);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getUserAccountCreatedTemplateId(), to, personalization);
     send(mail);
   }
 }

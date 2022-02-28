@@ -42,15 +42,15 @@ public class SendGridProperties {
 
   @NotBlank private String kybKycDocsReceivedTemplateId;
 
-  @NotBlank private String onboardingBankDetailsAddedTemplateId;
+  @NotBlank private String bankDetailsAddedTemplateId;
 
-  @NotBlank private String onboardingBankFundsAvailableTemplateId;
+  @NotBlank private String bankFundsAvailableTemplateId;
 
-  @NotBlank private String onboardingBankDetailsRemovedTemplateId;
+  @NotBlank private String bankDetailsRemovedTemplateId;
 
-  @NotBlank private String onboardingBankFundsReturnTemplateId;
+  @NotBlank private String bankFundsReturnTemplateId;
 
-  @NotBlank private String onboardingBankFundsWithdrawalTemplateId;
+  @NotBlank private String bankFundsWithdrawalTemplateId;
 
   @NotBlank private String cardIssuedNotifyOwnerTemplateId;
 
@@ -69,4 +69,10 @@ public class SendGridProperties {
   @NotBlank private String cardUnfrozenTemplateId;
 
   @NotBlank private String userDetailsUpdatedTemplateId;
+
+  @NotBlank private String userAccountCreatedTemplateId;
+
+  private boolean emailNotificationsEnabled;
+
+  @NotBlank private String bankFundsDepositRequestTemplateId;
 }

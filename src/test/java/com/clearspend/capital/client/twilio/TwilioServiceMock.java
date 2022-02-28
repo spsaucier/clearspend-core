@@ -105,18 +105,18 @@ public class TwilioServiceMock extends TwilioService {
   public void sendBankFundsReturnEmail(String to, String firstName) {}
 
   @Override
-  public void sendBankFundsWithdrawalEmail(String to, String firstName) {}
+  public void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {}
 
   @Override
-  public void sendCardIssuedNotifyOwnerEmail(String to, String firstName) {}
+  public void sendCardIssuedNotifyOwnerEmail(String to, String ownerName, String employeeName) {}
 
   @Override
   public void sendCardIssuedVirtualNotifyUserEmail(
-      String to, String firstName, String companyName, String password) {}
+      String to, String firstName, String companyName) {}
 
   @Override
   public void sendCardIssuedPhysicalNotifyUserEmail(
-      String to, String firstName, String companyName, String password) {}
+      String to, String firstName, String companyName) {}
 
   @Override
   public void sendCardShippedNotifyUserEmail(String to, String firstName) {}
@@ -128,11 +128,18 @@ public class TwilioServiceMock extends TwilioService {
   public void sendCardActivationCompletedEmail(String to, String firstName) {}
 
   @Override
-  public void sendCardFrozenEmail(String to, String firstName) {}
+  public void sendCardFrozenEmail(String to, String firstName, String lastFour) {}
 
   @Override
-  public void sendCardUnfrozenEmail(String to, String firstName) {}
+  public void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {}
 
   @Override
   public void sendUserDetailsUpdatedEmail(String to, String firstName) {}
+
+  @Override
+  public void sendUserAccountCreatedEmail(
+      String to, String firstName, String companyName, String password) {}
+
+  @Override
+  public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {}
 }

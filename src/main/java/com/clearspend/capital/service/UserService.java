@@ -13,7 +13,6 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -61,7 +60,7 @@ public class UserService {
   @FusionAuthUserCreator(
       reviewer = "jscarbor",
       explanation = "User Service manages the sync between users and FA users")
-  User sendWelcomeEmailIfNeeded(User user, CardType cardType) {
+  User sendWelcomeEmailIfNeeded(User user) {
     if (StringUtils.isEmpty(user.getSubjectRef())) {
       String password = PasswordUtil.generatePassword();
       user.setSubjectRef(
@@ -77,18 +76,11 @@ public class UserService {
 
       user = userRepository.save(user);
 
-      switch (cardType) {
-        case PHYSICAL -> twilioService.sendCardIssuedPhysicalNotifyUserEmail(
-            user.getEmail().getEncrypted(),
-            user.getFirstName().getEncrypted(),
-            businessRepository.getById(user.getBusinessId()).getLegalName(),
-            password);
-        case VIRTUAL -> twilioService.sendCardIssuedVirtualNotifyUserEmail(
-            user.getEmail().getEncrypted(),
-            user.getFirstName().getEncrypted(),
-            businessRepository.getById(user.getBusinessId()).getLegalName(),
-            password);
-      }
+      twilioService.sendUserAccountCreatedEmail(
+          user.getEmail().getEncrypted(),
+          user.getFirstName().getEncrypted(),
+          businessRepository.getById(user.getBusinessId()).getLegalName(),
+          password);
     }
     return user;
   }
@@ -231,7 +223,11 @@ public class UserService {
           String.format("Hello from ClearSpend, your new password is %s", password));
     }
 
-    return new CreateUpdateUserRecord(userRepository.save(user), password);
+    CreateUpdateUserRecord response =
+        new CreateUpdateUserRecord(userRepository.save(user), password);
+    twilioService.sendUserDetailsUpdatedEmail(
+        user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
+    return response;
   }
 
   public User retrieveUser(TypedId<UserId> userId) {

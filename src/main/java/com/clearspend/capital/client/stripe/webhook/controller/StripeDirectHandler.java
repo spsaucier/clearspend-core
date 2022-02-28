@@ -3,12 +3,14 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
 import com.stripe.exception.StripeException;
 import com.stripe.model.StripeObject;
 import com.stripe.model.issuing.Authorization;
+import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Transaction;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.issuing.AuthorizationApproveParams;
@@ -27,6 +29,7 @@ public class StripeDirectHandler {
 
   private final NetworkMessageService networkMessageService;
   private final StripeProperties stripeProperties;
+  private final CardService cardService;
 
   NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
       throws StripeException {
@@ -123,7 +126,14 @@ public class StripeDirectHandler {
     return common;
   }
 
-  void processCard(StripeEventType stripeEventType, StripeObject stripeObject) {}
+  void processCard(StripeEventType stripeEventType, ParseRecord parseRecord) {
+    if (stripeEventType == StripeEventType.ISSUING_CARD_UPDATED) {
+      Card card = (Card) parseRecord.stripeObject();
+      if (card.getShipping() != null) {
+        cardService.processCardShippingEvents(card);
+      }
+    }
+  }
 
   void processCardHolder(StripeEventType stripeEventType, StripeObject stripeObject) {}
 

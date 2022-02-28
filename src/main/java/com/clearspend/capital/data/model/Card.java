@@ -105,4 +105,13 @@ public class Card extends TypedMutable<CardId> {
 
   // this is the identifier of this card at Stripe
   private String externalRef;
+
+  // shipping and delivery fields
+  private boolean shipped;
+  private OffsetDateTime shippedDate;
+  private OffsetDateTime deliveryEta;
+  private String carrier;
+  private String trackingNumber;
+  private boolean delivered;
+  private OffsetDateTime deliveredDate;
 }

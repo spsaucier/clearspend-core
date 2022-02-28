@@ -118,7 +118,9 @@ public class StripeWebhookController {
         case ISSUING_TRANSACTION_CREATED -> networkCommon =
             stripeDirectHandler.processCapture(parseRecord);
         case ISSUING_CARD_CREATED -> stripeDirectHandler.processCard(
-            parseRecord.stripeEventType, parseRecord.stripeObject);
+            parseRecord.stripeEventType, parseRecord);
+        case ISSUING_CARD_UPDATED -> stripeDirectHandler.processCard(
+            parseRecord.stripeEventType, parseRecord);
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> stripeDirectHandler
             .processCardHolder(parseRecord.stripeEventType, parseRecord.stripeObject);
         default -> {

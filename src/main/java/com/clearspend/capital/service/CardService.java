@@ -42,8 +42,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -74,7 +76,6 @@ public class CardService {
 
   private final AccountService accountService;
   private final BusinessLimitService businessLimitService;
-  private final FusionAuthService fusionAuthService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
   private final TwilioService twilioService;
@@ -175,13 +176,14 @@ public class CardService {
 
     cardRepository.flush();
 
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+
     // If user never had any cards, stripe cardholder id (ExternalRef) will be empty
     // we need to create a stripe cardholder before we can create the actual stripe card
     if (StringUtils.isEmpty(user.getExternalRef())) {
-      Business business =
-          businessRepository
-              .findById(businessId)
-              .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
       user.setExternalRef(
           stripeClient
               .createCardholder(
@@ -193,7 +195,7 @@ public class CardService {
     // If FusionAuth record was never created for the current user, we will create it now
     // This usually happens for new employees, created after the main user was created,
     // for whom the cards were not issued yet
-    user = userService.sendWelcomeEmailIfNeeded(user, card.getType());
+    user = userService.sendWelcomeEmailIfNeeded(user);
 
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {
@@ -215,6 +217,23 @@ public class CardService {
         user,
         entityManager.getReference(Allocation.class, allocationId),
         DefaultRoles.ALLOCATION_VIEW_ONLY);
+
+    twilioService.sendCardIssuedNotifyOwnerEmail(
+        business.getBusinessEmail().getEncrypted(),
+        business.getLegalName(),
+        user.getFirstName().getEncrypted());
+
+    switch (cardType) {
+      case PHYSICAL -> twilioService.sendCardIssuedPhysicalNotifyUserEmail(
+          user.getEmail().getEncrypted(),
+          user.getFirstName().getEncrypted(),
+          business.getLegalName());
+      case VIRTUAL -> twilioService.sendCardIssuedVirtualNotifyUserEmail(
+          user.getEmail().getEncrypted(),
+          user.getFirstName().getEncrypted(),
+          business.getLegalName());
+    }
+
     return new CardRecord(card, account);
   }
 
@@ -331,7 +350,7 @@ public class CardService {
     card.setActivationDate(OffsetDateTime.now());
 
     return updateCardStatus(
-        businessId, userId, userType, card.getId(), CardStatus.ACTIVE, statusReason);
+        businessId, userId, userType, card.getId(), CardStatus.ACTIVE, statusReason, true);
   }
 
   @Transactional
@@ -341,7 +360,8 @@ public class CardService {
       UserType userType,
       TypedId<CardId> cardId,
       CardStatus cardStatus,
-      CardStatusReason statusReason) {
+      CardStatusReason statusReason,
+      boolean isInitialActivation) {
 
     Card card =
         (switch (userType) {
@@ -351,10 +371,6 @@ public class CardService {
             })
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
-    return updateCardStatus(cardStatus, statusReason, card);
-  }
-
-  private Card updateCardStatus(CardStatus cardStatus, CardStatusReason statusReason, Card card) {
     if (!card.isActivated()) {
       throw new InvalidRequestException("Cannot update status for non activated cards");
     }
@@ -364,6 +380,26 @@ public class CardService {
 
     cardRepository.flush();
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
+
+    User cardOwner = userService.retrieveUser(card.getUserId());
+    if (cardStatus == CardStatus.ACTIVE) {
+      // We need to use separate email templates for initial physical card activation,
+      // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
+      if (isInitialActivation) {
+        twilioService.sendCardActivationCompletedEmail(
+            cardOwner.getEmail().getEncrypted(), cardOwner.getFirstName().getEncrypted());
+      } else {
+        twilioService.sendCardUnfrozenEmail(
+            cardOwner.getEmail().getEncrypted(),
+            cardOwner.getFirstName().getEncrypted(),
+            card.getLastFour());
+      }
+    } else if (cardStatus == CardStatus.INACTIVE) {
+      twilioService.sendCardFrozenEmail(
+          cardOwner.getEmail().getEncrypted(),
+          cardOwner.getFirstName().getEncrypted(),
+          card.getLastFour());
+    }
 
     return card;
   }
@@ -497,5 +533,42 @@ public class CardService {
       throw new RuntimeException(e.getMessage());
     }
     return csvFile.toByteArray();
+  }
+
+  public void processCardShippingEvents(com.stripe.model.issuing.Card stripeCard) {
+    cardRepository.flush();
+    Card card;
+    try {
+      CardRecord cardRecord = getCardByExternalRef(stripeCard.getId());
+      card = cardRecord.card();
+      if (card.getType() != CardType.PHYSICAL) {
+        log.error("Unexpected card type containing shipping information for card " + card.getId());
+        return;
+      }
+    } catch (RecordNotFoundException e) {
+      log.error("failed to find card with externalRef: " + stripeCard.getId());
+      return;
+    }
+
+    if ("shipped".equals(stripeCard.getShipping().getStatus())) {
+      if (!card.isShipped()) {
+        card.setShipped(true);
+        card.setShippedDate(OffsetDateTime.now());
+        card.setDeliveryEta(
+            OffsetDateTime.ofInstant(
+                Instant.ofEpochSecond(stripeCard.getShipping().getEta()), ZoneOffset.UTC));
+        card.setCarrier(stripeCard.getShipping().getCarrier());
+        cardRepository.save(card);
+        User user = userService.retrieveUser(card.getUserId());
+        twilioService.sendCardShippedNotifyUserEmail(
+            user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
+      }
+    } else if ("delivered".equals(stripeCard.getShipping().getStatus())) {
+      if (!card.isDelivered()) {
+        card.setDelivered(true);
+        card.setDeliveredDate(OffsetDateTime.now());
+        cardRepository.save(card);
+      }
+    }
   }
 }

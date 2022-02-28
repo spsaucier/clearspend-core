@@ -72,6 +72,7 @@ public class BusinessBankAccountService {
   private final StripeClient stripeClient;
   private final RetrievalService retrievalService;
   private final PendingStripeTransferService pendingStripeTransferService;
+  private final TwilioService twilioService;
 
   public record BusinessBankAccountRecord(
       RequiredEncryptedStringWithHash routingNumber,
@@ -168,24 +169,31 @@ public class BusinessBankAccountService {
         accountsResponse.accounts().stream()
             .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getBalances));
 
-    return accountsResponse.achList().stream()
-        .map(
-            ach -> {
-              BusinessBankAccount businessBankAccount =
-                  createBusinessBankAccount(
-                      ach.getRouting(),
-                      ach.getAccount(),
-                      accountNames.get(ach.getAccountId()),
-                      accountsResponse.accessToken(),
-                      ach.getAccountId(),
-                      businessId);
+    List<BusinessBankAccount> accounts =
+        accountsResponse.achList().stream()
+            .map(
+                ach -> {
+                  BusinessBankAccount businessBankAccount =
+                      createBusinessBankAccount(
+                          ach.getRouting(),
+                          ach.getAccount(),
+                          accountNames.get(ach.getAccountId()),
+                          accountsResponse.accessToken(),
+                          ach.getAccountId(),
+                          businessId);
 
-              businessBankAccountBalanceService.createBusinessBankAccountBalance(
-                  businessBankAccount.getId(), accountBalances.get(ach.getAccountId()));
+                  businessBankAccountBalanceService.createBusinessBankAccountBalance(
+                      businessBankAccount.getId(), accountBalances.get(ach.getAccountId()));
 
-              return businessBankAccount;
-            })
-        .toList();
+                  return businessBankAccount;
+                })
+            .toList();
+
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+    twilioService.sendBankDetailsAddedEmail(
+        business.getBusinessEmail().getEncrypted(), business.getLegalName());
+
+    return accounts;
   }
 
   public List<BusinessBankAccount> getBusinessBankAccounts(
@@ -269,15 +277,22 @@ public class BusinessBankAccountService {
               "ACH pull",
               "clearspend.com");
         }
+
+        twilioService.sendBankFundsDepositRequestEmail(
+            business.getBusinessEmail().getEncrypted(), business.getLegalName(), amount.toString());
       }
 
-      case WITHDRAW -> stripeClient.pushFundsToConnectedFinancialAccount(
-          businessId,
-          business.getStripeData().getFinancialAccountRef(),
-          adjustmentAndHoldRecord.adjustment().getId(),
-          amount,
-          "Company [%s] ACH push funds relocation".formatted(business.getLegalName()),
-          "Company [%s] ACH push funds relocation".formatted(business.getLegalName()));
+      case WITHDRAW -> {
+        stripeClient.pushFundsToConnectedFinancialAccount(
+            businessId,
+            business.getStripeData().getFinancialAccountRef(),
+            adjustmentAndHoldRecord.adjustment().getId(),
+            amount,
+            "Company [%s] ACH push funds relocation".formatted(business.getLegalName()),
+            "Company [%s] ACH push funds relocation".formatted(business.getLegalName()));
+        twilioService.sendBankFundsWithdrawalEmail(
+            business.getBusinessEmail().getEncrypted(), business.getLegalName(), amount.toString());
+      }
     }
 
     return adjustmentAndHoldRecord;
@@ -307,6 +322,11 @@ public class BusinessBankAccountService {
           .setLedgerBalance(rootAllocation.account().getLedgerBalance().sub(amount));
 
       accountActivity.setStatus(AccountActivityStatus.DECLINED);
+
+      Business business = retrievalService.retrieveBusiness(businessId, true);
+      twilioService.sendBankFundsReturnEmail(
+          business.getBusinessEmail().getEncrypted(), business.getLegalName());
+
     } else {
       accountActivity.setStatus(AccountActivityStatus.PROCESSED);
 
