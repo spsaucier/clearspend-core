@@ -9,13 +9,18 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.twilio.TwilioServiceMock;
+import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
+import com.clearspend.capital.service.UserService;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
 @Slf4j
@@ -25,6 +30,19 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final TwilioServiceMock twilioServiceMock;
+  private CreateBusinessRecord createBusinessRecord;
+  private UserService.CreateUpdateUserRecord user;
+  private Cookie userCookie;
+
+  @SneakyThrows
+  @BeforeEach
+  void init() {
+    if (createBusinessRecord == null) {
+      createBusinessRecord = testHelper.init();
+      user = testHelper.createUser(createBusinessRecord.business());
+      userCookie = testHelper.login(user.user());
+    }
+  }
 
   @Test
   @SneakyThrows
@@ -107,5 +125,22 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
         .andExpect(status().isForbidden())
         .andReturn()
         .getResponse();
+  }
+
+  @Test
+  @SneakyThrows
+  void incorrectLoginId() {
+    ChangePasswordRequest changePasswordRequest =
+        new ChangePasswordRequest(user.user().getEmail().toString(), user.password(), "lucky1234");
+    String body = objectMapper.writeValueAsString(changePasswordRequest);
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/authentication/change-password")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(userCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
   }
 }

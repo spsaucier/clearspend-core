@@ -426,6 +426,19 @@ public class FusionAuthService {
     }
   }
 
+  public void changePassword(String loginId, String currentPassword, String password) {
+    ClientResponse<Void, Errors> changePasswordResponse =
+        client.changePasswordByIdentity(
+            new ChangePasswordRequest(loginId, currentPassword, password));
+    StringBuilder builder = new StringBuilder();
+    builder.append("[status: ").append(changePasswordResponse.status);
+    builder.append(", success response: ").append(changePasswordResponse.successResponse);
+    builder.append(", error response: ").append(changePasswordResponse.errorResponse);
+    builder.append(", successful:").append(changePasswordResponse.wasSuccessful());
+    log.debug("clientResponse : {}", builder);
+    validateResponse(changePasswordResponse);
+  }
+
   public ClientResponse<LoginResponse, Errors> login(String loginId, @Sensitive String password) {
     LoginRequest request = new LoginRequest(getApplicationId(), loginId, password);
     return client.login(request);

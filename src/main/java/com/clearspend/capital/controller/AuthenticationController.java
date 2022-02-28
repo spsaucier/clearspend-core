@@ -3,6 +3,7 @@ package com.clearspend.capital.controller;
 import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.TwoFactorAuthenticationRequired;
 import com.clearspend.capital.configuration.SecurityConfig;
+import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
@@ -218,6 +219,12 @@ public class AuthenticationController {
   @PostMapping("/reset-password")
   void resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
     fusionAuthService.resetPassword(request);
+  }
+
+  @PostMapping("/change-password")
+  void changePassword(@Validated @RequestBody ChangePasswordRequest request) {
+    fusionAuthService.changePassword(
+        request.getUsername(), request.getCurrentPassword(), request.getNewPassword());
   }
 
   String createCookie(String name, String value, long ttl) {
