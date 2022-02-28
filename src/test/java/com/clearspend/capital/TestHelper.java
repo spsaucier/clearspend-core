@@ -39,6 +39,7 @@ import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUs
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -59,6 +60,7 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
@@ -177,6 +179,7 @@ public class TestHelper {
   private final BusinessRepository businessRepository;
   private final TransactionLimitRepository transactionLimitRepository;
   private final UserRepository userRepository;
+  private final ChartOfAccountsMappingRepository mappingRepository;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -780,6 +783,9 @@ public class TestHelper {
             stripeClient
                 .createFinancialAccount(business.getId(), business.getStripeData().getAccountRef())
                 .getId());
+
+    business.setCodatCompanyRef("codat_company_ref");
+
     business = businessRepository.save(business);
 
     return new CreateBusinessRecord(
@@ -1108,5 +1114,14 @@ public class TestHelper {
     out.setType("individual");
 
     return out;
+  }
+
+  public void createCodatExpenseCategoryMappings(Business business) {
+    ChartOfAccountsMapping mappingOne = new ChartOfAccountsMapping(business.getId(), 1, "auto");
+
+    ChartOfAccountsMapping mappingTwo = new ChartOfAccountsMapping(business.getId(), 2, "fuel");
+
+    mappingRepository.save(mappingOne);
+    mappingRepository.save(mappingTwo);
   }
 }

@@ -11,6 +11,7 @@ public enum Table {
   BUSINESS_OWNER("BusinessOwner"),
   BUSINESS_PROSPECT("BusinessProspect"),
   CARD("Card"),
+  CHART_OF_ACCOUNTS_MAPPING("codat_account_expense_category_mappings"),
   EXPENSE_CATEGORY("expense_categories"),
   FILE_STORE("FileStore"),
   HOLD("Hold"),
