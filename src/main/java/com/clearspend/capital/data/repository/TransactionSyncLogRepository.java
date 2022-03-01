@@ -10,7 +10,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface TransactionSyncLogRepository
     extends JpaRepository<TransactionSyncLog, TypedId<TransactionSyncLogId>>,
-        JpaSpecificationExecutor<TransactionSyncLog> {
+        JpaSpecificationExecutor<TransactionSyncLog>,
+        TransactionSyncLogRepositoryCustom {
 
   List<TransactionSyncLog> findByStatusAndCodatCompanyRef(
       TransactionSyncStatus status, String codatCompanyRef);

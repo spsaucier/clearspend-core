@@ -24,6 +24,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.TransactionSyncLog;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
@@ -46,6 +47,7 @@ public class CodatService {
   private final AccountActivityService accountActivityService;
   private final BusinessService businessService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
+  private final UserService userService;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -127,6 +129,7 @@ public class CodatService {
               supplier,
               checkingAccount.get());
 
+      User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
           new TransactionSyncLog(
               business.getId(),
@@ -134,7 +137,9 @@ public class CodatService {
               supplier.getId(), // TODO look back at this
               TransactionSyncStatus.IN_PROGRESS,
               syncResponse.getPushOperationKey(),
-              business.getCodatCompanyRef()));
+              business.getCodatCompanyRef(),
+              currentUserDetails.getFirstName(),
+              currentUserDetails.getLastName()));
 
       return new SyncTransactionResponse("IN_PROGRESS", syncResponse);
     } else {
@@ -146,14 +151,18 @@ public class CodatService {
           new CodatSupplierRequest(
               accountActivity.getMerchant().getName(), "ACTIVE", business.getCurrency().name()));
 
+      User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
+
       transactionSyncLogRepository.save(
           new TransactionSyncLog(
               business.getId(),
               accountActivityId,
-              "CS-" + accountActivity.getMerchant().getMerchantNumber(), // TODO look back at this
+              "", // TODO look back at this
               TransactionSyncStatus.AWAITING_SUPPLIER,
               "",
-              business.getCodatCompanyRef()));
+              business.getCodatCompanyRef(),
+              currentUserDetails.getFirstName(),
+              currentUserDetails.getLastName()));
 
       return new SyncTransactionResponse("WAITING_FOR_SUPPLIER");
     }
@@ -349,7 +358,9 @@ public class CodatService {
                 supplier.getId(), // TODO look back at this
                 TransactionSyncStatus.IN_PROGRESS,
                 syncResponse.getPushOperationKey(),
-                business.getCodatCompanyRef());
+                business.getCodatCompanyRef(),
+                transaction.getFirstName(),
+                transaction.getLastName());
 
         updatedLog.setId(transaction.getId());
 

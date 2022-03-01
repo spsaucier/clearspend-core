@@ -180,7 +180,11 @@ public class CodatClient {
             paymentAllocations,
             lineItems,
             contactRef);
+    return syncDirectCostToCodat(companyRef, connectionId, request);
+  }
 
+  public CodatSyncDirectCostResponse syncDirectCostToCodat(
+      String companyRef, String connectionId, DirectCostRequest request) {
     try {
       return callCodatApi(
           String.format("/companies/%s/connections/%s/push/directCosts", companyRef, connectionId),

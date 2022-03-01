@@ -1,14 +1,20 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.client.codat.types.SyncLogRequest;
+import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
@@ -19,16 +25,22 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
+import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.util.Assert;
 
 @Slf4j
 @Transactional
@@ -43,10 +55,13 @@ public class CodatServiceTest extends BaseCapitalTest {
   private Business business;
   private Card card;
   private User user;
+  private Cookie userCookie;
+  @Autowired MockMvcHelper mockMvcHelper;
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired AccountService accountService;
   @Autowired CodatService codatService;
+  @Autowired TransactionSyncLogRepository transactionSyncLogRepository;
 
   @BeforeEach
   public void setup() {
@@ -55,6 +70,7 @@ public class CodatServiceTest extends BaseCapitalTest {
       business = createBusinessRecord.business();
       allocation = createBusinessRecord.allocationRecord().allocation();
       user = createBusinessRecord.user();
+      userCookie = createBusinessRecord.authCookie();
       card =
           testHelper.issueCard(
               business,
@@ -100,5 +116,62 @@ public class CodatServiceTest extends BaseCapitalTest {
     accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
+    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
+
+    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
+    Assert.isTrue(
+        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER,
+        "Log for sync has incorrect status");
+  }
+
+  @Test
+  void syncSupplierWhenExists() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity newAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getId(),
+            allocation.getName(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    newAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(newAccountActivity);
+
+    codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
+    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
+
+    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
+    Assert.isTrue(
+        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.IN_PROGRESS,
+        "Log for sync has incorrect status");
+
+    PagedData<SyncLogResponse> syncLog =
+        mockMvcHelper.queryObject(
+            "/codat/sync-log",
+            HttpMethod.POST,
+            userCookie,
+            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
+            PagedData.class);
+
+    Assert.isTrue(syncLog.getTotalElements() > 0, "Nothing in sync log from endpoint");
   }
 }
