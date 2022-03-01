@@ -131,12 +131,12 @@ public class BusinessBankAccountController {
       HttpServletRequest httpServletRequest) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
-    String ipAddress = httpServletRequest.getHeader("X-FORWARDED-FOR");
+    String ipAddress = httpServletRequest.getHeader("X-Forwared-For");
     if (ipAddress == null) {
       log.debug("X-Forwared-For header was null");
       ipAddress = httpServletRequest.getRemoteAddr();
     }
-    log.debug("IP Address for sending ToS Acceptance to Stripe", ipAddress);
+    log.debug("IP Address for sending ToS Acceptance to Stripe " + ipAddress);
     businessBankAccountService.registerExternalBank(
         businessId, businessBankAccountId, ipAddress, httpServletRequest.getHeader("User-Agent"));
 
