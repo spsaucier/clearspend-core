@@ -68,9 +68,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
+      business.setCodatCompanyRef("test-codat-ref");
       allocation = createBusinessRecord.allocationRecord().allocation();
       user = createBusinessRecord.user();
-      userCookie = createBusinessRecord.authCookie();
+      userCookie = testHelper.login(user);
       card =
           testHelper.issueCard(
               business,
@@ -126,9 +127,6 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @Test
   void syncSupplierWhenExists() {
-    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    Business business = createBusinessRecord.business();
-    business.setCodatCompanyRef("test-codat-ref");
 
     testHelper.setCurrentUser(createBusinessRecord.user());
 

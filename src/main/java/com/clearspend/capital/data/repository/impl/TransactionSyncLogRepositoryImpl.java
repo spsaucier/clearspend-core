@@ -28,13 +28,13 @@ public class TransactionSyncLogRepositoryImpl implements TransactionSyncLogRepos
 
   @Override
   public Page<TransactionSyncLog> find(
-      TypedId<BusinessId> businessIdTypedId, TransactionSyncLogFilterCriteria criteria) {
+      TypedId<BusinessId> businessId, TransactionSyncLogFilterCriteria criteria) {
     // query
     CriteriaBuilder<TransactionSyncLog> select =
         criteriaBuilderFactory
             .create(entityManager, TransactionSyncLog.class, "transactionSyncLog")
             .select("transactionSyncLog");
-
+    select.where("transactionSyncLog.businessId").eqLiteral(businessId);
     select.orderByDesc("transactionSyncLog.created");
     select.orderByDesc("transactionSyncLog.id");
     PageToken pageToken = criteria.getPageToken();
