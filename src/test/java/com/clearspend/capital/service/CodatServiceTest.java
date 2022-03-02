@@ -3,8 +3,13 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.client.codat.CodatMockClient;
+import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataType;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookRulesType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
@@ -39,7 +44,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.util.Assert;
 
 @Slf4j
@@ -56,12 +65,14 @@ public class CodatServiceTest extends BaseCapitalTest {
   private Card card;
   private User user;
   private Cookie userCookie;
+  @Autowired MockMvc mvc;
   @Autowired MockMvcHelper mockMvcHelper;
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired AccountService accountService;
   @Autowired CodatService codatService;
   @Autowired TransactionSyncLogRepository transactionSyncLogRepository;
+  @Autowired CodatMockClient mockClient;
 
   @BeforeEach
   public void setup() {
@@ -104,9 +115,10 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
 
+    // This merchant does not exist in the suppliers
     newAccountActivity.setMerchant(
         new MerchantDetails(
-            "Test Store",
+            "Test Restaurant",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -171,5 +183,109 @@ public class CodatServiceTest extends BaseCapitalTest {
             PagedData.class);
 
     Assert.isTrue(syncLog.getTotalElements() > 0, "Nothing in sync log from endpoint");
+  }
+
+  @Test
+  void fullSyncWithWebhook() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity newAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getId(),
+            allocation.getName(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+    // Supplier does not exist, will need to be made
+    newAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Store",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(newAccountActivity);
+
+    codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
+    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
+
+    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
+    Assert.isTrue(
+        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER,
+        "Log for sync has incorrect status");
+
+    mockClient.addSupplierToList(new CodatSupplier("supplier-123", "Test Store", "Active", "USD"));
+
+    try {
+      CodatWebhookRequest request =
+          new CodatWebhookRequest(
+              business.getCodatCompanyRef(),
+              CodatWebhookRulesType.PUSH_OPERATION_STATUS_CHANGED.getKey(),
+              new CodatWebhookDataType("suppliers", "Success", "test-push-operation-key-supplier"));
+      MockHttpServletResponse result =
+          mvc.perform(
+                  MockMvcRequestBuilders.post("/codat-webhook")
+                      .contentType("application/json")
+                      .header(
+                          "Authorization",
+                          "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                      .content(objectMapper.writeValueAsString(request)))
+              .andReturn()
+              .getResponse();
+      Page<TransactionSyncLog> syncLog =
+          transactionSyncLogRepository.find(
+              business.getId(),
+              new TransactionSyncLogFilterCriteria(
+                  PageRequest.toPageToken(new PageRequest(0, 10))));
+
+      Assert.isTrue(syncLog.getSize() > 0, "Nothing in sync log from endpoint");
+      Assert.isTrue(
+          syncLog.get().findFirst().get().getStatus().equals(TransactionSyncStatus.IN_PROGRESS),
+          "Sync log not marked as IN_PROGRESS when it should be");
+    } catch (Exception e) {
+      Assert.isTrue(false, "Failed to send codat webhook request");
+    }
+
+    // Now post to make it go from IN_PROGRESS to COMPLETED
+    try {
+      CodatWebhookRequest request =
+          new CodatWebhookRequest(
+              business.getCodatCompanyRef(),
+              CodatWebhookRulesType.PUSH_OPERATION_STATUS_CHANGED.getKey(),
+              new CodatWebhookDataType("directCosts", "Success", "test-push-operation-key-cost"));
+      MockHttpServletResponse result =
+          mvc.perform(
+                  MockMvcRequestBuilders.post("/codat-webhook")
+                      .contentType("application/json")
+                      .header(
+                          "Authorization",
+                          "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                      .content(objectMapper.writeValueAsString(request)))
+              .andReturn()
+              .getResponse();
+      Page<TransactionSyncLog> syncLog =
+          transactionSyncLogRepository.find(
+              business.getId(),
+              new TransactionSyncLogFilterCriteria(
+                  PageRequest.toPageToken(new PageRequest(0, 10))));
+
+      Assert.isTrue(syncLog.getSize() > 0, "Nothing in sync log from endpoint");
+      Assert.isTrue(
+          syncLog.get().findFirst().get().getStatus().equals(TransactionSyncStatus.COMPLETED),
+          "Sync log not marked as IN_PROGRESS when it should be");
+    } catch (Exception e) {
+      Assert.isTrue(false, "Failed to send codat webhook request");
+    }
   }
 }

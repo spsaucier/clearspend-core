@@ -1,7 +1,10 @@
 package com.clearspend.capital.client.codat;
 
 import com.clearspend.capital.client.codat.types.CodatAccount;
+import com.clearspend.capital.client.codat.types.CodatAccountStatus;
+import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
+import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
@@ -22,23 +25,49 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Component
 @Slf4j
 public class CodatMockClient extends CodatClient {
+  private List<CodatSupplier> supplierList;
+
   public CodatMockClient(WebClient codatWebClient, ObjectMapper objectMapper) {
     super(codatWebClient, objectMapper);
+    supplierList = new ArrayList<>();
+    supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
   }
 
   @Override
   public GetAccountsResponse getAccountsForBusiness(String companyRef) {
     List<CodatAccount> accountList = new ArrayList<CodatAccount>();
     accountList.add(
-        new CodatAccount("checking", "checking", "active", "category", "full_name", "banking"));
+        new CodatAccount(
+            "checking",
+            "checking",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "full_name",
+            CodatAccountType.ASSET));
     accountList.add(
         new CodatAccount(
-            "banking", "checking_account", "active", "category", "full_name", "banking"));
+            "banking",
+            "checking_account",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "full_name",
+            CodatAccountType.ASSET));
     accountList.add(
         new CodatAccount(
-            "auto", "automobile", "active", "category", "expense.auto.auto", "expense"));
+            "auto",
+            "automobile",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "expense.auto.auto",
+            CodatAccountType.EXPENSE));
     accountList.add(
-        new CodatAccount("fuel", "fuel", "active", "category", "expense.auto.fuel", "expense"));
+        new CodatAccount(
+            "fuel",
+            "fuel",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "expense.auto.fuel",
+            CodatAccountType.EXPENSE));
     return new GetAccountsResponse(accountList);
   }
 
@@ -50,8 +79,7 @@ public class CodatMockClient extends CodatClient {
   }
 
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
-    return new GetSuppliersResponse(
-        List.of(new CodatSupplier("1", "Test Business", "ACTIVE", "USD")));
+    return new GetSuppliersResponse(supplierList);
   }
 
   public ConnectionStatusResponse getConnectionsForBusiness(String companyRef) {
@@ -60,11 +88,19 @@ public class CodatMockClient extends CodatClient {
 
   public CodatPushDataResponse syncSupplierToCodat(
       String companyRef, String connectionId, CodatSupplierRequest supplier) {
-    return new CodatPushDataResponse("Started");
+    return new CodatPushDataResponse("Started", "test-push-operation-key-supplier");
   }
 
   public CodatSyncDirectCostResponse syncDirectCostToCodat(
       String companyRef, String connectionId, DirectCostRequest request) {
-    return new CodatSyncDirectCostResponse("Started", "test-pushoperation-key");
+    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
+  }
+
+  public void addSupplierToList(CodatSupplier supplier) {
+    this.supplierList.add(supplier);
+  }
+
+  public CodatPushStatusResponse getPushStatus(String pushOperationKey, String companyRef) {
+    return new CodatPushStatusResponse("Success");
   }
 }

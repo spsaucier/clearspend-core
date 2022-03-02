@@ -18,7 +18,7 @@ public class CodatAccount {
 
   @JsonProperty("status")
   @NonNull
-  private String status;
+  private CodatAccountStatus status;
 
   @JsonProperty("fullyQualifiedCategory")
   @NonNull
@@ -30,5 +30,5 @@ public class CodatAccount {
 
   @JsonProperty("type")
   @NonNull
-  private String type;
+  private CodatAccountType type;
 }

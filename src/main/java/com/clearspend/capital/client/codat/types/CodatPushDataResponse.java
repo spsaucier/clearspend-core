@@ -11,4 +11,8 @@ public class CodatPushDataResponse {
   @JsonProperty("status")
   @NonNull
   private String status;
+
+  @JsonProperty("pushOperationKey")
+  @NonNull
+  private String pushOperationKey;
 }

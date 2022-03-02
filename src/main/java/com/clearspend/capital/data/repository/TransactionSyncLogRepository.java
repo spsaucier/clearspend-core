@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -15,4 +16,6 @@ public interface TransactionSyncLogRepository
 
   List<TransactionSyncLog> findByStatusAndCodatCompanyRef(
       TransactionSyncStatus status, String codatCompanyRef);
+
+  Optional<TransactionSyncLog> findByDirectCostPushOperationKey(String directCostPushOperationKey);
 }

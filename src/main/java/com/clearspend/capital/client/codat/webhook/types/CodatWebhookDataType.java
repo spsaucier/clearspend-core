@@ -12,7 +12,11 @@ public class CodatWebhookDataType {
   @NonNull
   private String dataType;
 
-  @JsonProperty("datasetId")
+  @JsonProperty("status")
   @NonNull
-  private String datasetId;
+  private String status;
+
+  @JsonProperty("pushOperationKey")
+  @NonNull
+  private String pushOperationKey;
 }

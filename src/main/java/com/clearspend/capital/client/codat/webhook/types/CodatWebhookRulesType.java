@@ -1,7 +1,7 @@
 package com.clearspend.capital.client.codat.webhook.types;
 
 public enum CodatWebhookRulesType {
-  DATASET_CHANGED("Dataset data changed");
+  PUSH_OPERATION_STATUS_CHANGED("Push Operation Status Changed()");
 
   private String key;
 

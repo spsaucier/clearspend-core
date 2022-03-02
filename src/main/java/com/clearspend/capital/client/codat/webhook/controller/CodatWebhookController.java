@@ -32,11 +32,15 @@ public class CodatWebhookController {
       @RequestHeader("Authorization") String validation,
       @RequestBody @Validated CodatWebhookRequest request) {
     if (validateToken(validation.replace("Bearer ", ""))) {
-      if (request.getRuleType().equals(CodatWebhookRulesType.DATASET_CHANGED.getKey())) {
+      if (request
+          .getRuleType()
+          .equals(CodatWebhookRulesType.PUSH_OPERATION_STATUS_CHANGED.getKey())) {
         if (request.getData().getDataType().equals("suppliers")) {
-          codatService.syncTransactionsAwaitingSupplierForCompany(request.getCompanyId());
+          codatService.syncTransactionAwaitingSupplier(
+              request.getCompanyId(), request.getData().getPushOperationKey());
         } else if (request.getData().getDataType().equals("directCosts")) {
-          codatService.updateSyncedTransactionsInLog(request.getCompanyId());
+          codatService.updateStatusForSyncedTransaction(
+              request.getCompanyId(), request.getData().getPushOperationKey());
         }
       }
     }

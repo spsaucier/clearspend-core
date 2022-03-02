@@ -9,6 +9,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
+import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
@@ -145,11 +146,14 @@ public class CodatService {
     } else {
       // if supplier does not exist, create it
 
-      codatClient.syncSupplierToCodat(
-          business.getCodatCompanyRef(),
-          connectionId,
-          new CodatSupplierRequest(
-              accountActivity.getMerchant().getName(), "ACTIVE", business.getCurrency().name()));
+      CodatPushDataResponse response =
+          codatClient.syncSupplierToCodat(
+              business.getCodatCompanyRef(),
+              connectionId,
+              new CodatSupplierRequest(
+                  accountActivity.getMerchant().getName(),
+                  "ACTIVE",
+                  business.getCurrency().name()));
 
       User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
 
@@ -159,7 +163,7 @@ public class CodatService {
               accountActivityId,
               "", // TODO look back at this
               TransactionSyncStatus.AWAITING_SUPPLIER,
-              "",
+              response.getPushOperationKey(),
               business.getCodatCompanyRef(),
               currentUserDetails.getFirstName(),
               currentUserDetails.getLastName()));
@@ -282,10 +286,10 @@ public class CodatService {
                 // reorient leaf node
                 currentAccount.setId(account.getId());
                 currentAccount.setName(account.getName());
-                currentAccount.setStatus(account.getStatus());
+                currentAccount.setStatus(account.getStatus().getName());
                 currentAccount.setCategory(account.getCategory());
                 currentAccount.setQualifiedName(account.getQualifiedName());
-                currentAccount.setType(account.getType());
+                currentAccount.setType(account.getType().getName());
               }
             });
 
@@ -294,10 +298,10 @@ public class CodatService {
 
   private CodatAccountNested createNestedAccountFromAccount(CodatAccount account, String id) {
     CodatAccountNested newAccount = new CodatAccountNested(id, id);
-    newAccount.setStatus(account.getStatus());
+    newAccount.setStatus(account.getStatus().getName());
     newAccount.setCategory(account.getCategory());
     newAccount.setQualifiedName(id);
-    newAccount.setType(account.getType());
+    newAccount.setType(account.getType().getName());
     return newAccount;
   }
 
@@ -351,20 +355,18 @@ public class CodatService {
                 supplier,
                 checkingAccount.get());
 
-        TransactionSyncLog updatedLog =
-            new TransactionSyncLog(
-                business.getId(),
-                accountActivity.getId(),
-                supplier.getId(), // TODO look back at this
-                TransactionSyncStatus.IN_PROGRESS,
-                syncResponse.getPushOperationKey(),
-                business.getCodatCompanyRef(),
-                transaction.getFirstName(),
-                transaction.getLastName());
+        Optional<TransactionSyncLog> transactionSyncLogOptional =
+            transactionSyncLogRepository.findById(transaction.getId());
 
-        updatedLog.setId(transaction.getId());
+        if (transactionSyncLogOptional.isEmpty()) {
+          return;
+        }
 
-        transactionSyncLogRepository.save(updatedLog);
+        TransactionSyncLog transactionSyncLog = transactionSyncLogOptional.get();
+
+        transactionSyncLog.setStatus(TransactionSyncStatus.IN_PROGRESS);
+        transactionSyncLog.setDirectCostPushOperationKey(syncResponse.getPushOperationKey());
+        transactionSyncLogRepository.saveAndFlush(transactionSyncLog);
       }
     }
   }
@@ -418,10 +420,43 @@ public class CodatService {
         codatClient.getPushStatus(
             transaction.getDirectCostPushOperationKey(), business.getCodatCompanyRef());
 
-    if (status.getStatus().equals("Success")) {
-      transaction.setStatus(TransactionSyncStatus.COMPLETED);
-    } else if (status.getStatus().equals("Failed")) {
-      transaction.setStatus(TransactionSyncStatus.FAILED);
+    Optional<TransactionSyncLog> transactionSyncLogOptional =
+        transactionSyncLogRepository.findById(transaction.getId());
+
+    if (transactionSyncLogOptional.isEmpty()) {
+      return;
     }
+
+    TransactionSyncLog transactionSyncLog = transactionSyncLogOptional.get();
+
+    if (status.getStatus().equals("Success")) {
+      transactionSyncLog.setStatus(TransactionSyncStatus.COMPLETED);
+    } else if (status.getStatus().equals("Failed")) {
+      transactionSyncLog.setStatus(TransactionSyncStatus.FAILED);
+    }
+
+    transactionSyncLogRepository.save(transactionSyncLog);
+  }
+
+  public void syncTransactionAwaitingSupplier(String companyId, String pushOperationKey) {
+    Optional<TransactionSyncLog> syncForKey =
+        transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
+
+    if (syncForKey.isEmpty()) {
+      return;
+    }
+
+    syncTransactionIfSupplierExists(syncForKey.get(), syncForKey.get().getBusinessId());
+  }
+
+  public void updateStatusForSyncedTransaction(String companyId, String pushOperationKey) {
+    Optional<TransactionSyncLog> syncForKey =
+        transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
+
+    if (syncForKey.isEmpty()) {
+      return;
+    }
+
+    updateSyncStatusIfComplete(syncForKey.get());
   }
 }
