@@ -75,4 +75,6 @@ public class SendGridProperties {
   private boolean emailNotificationsEnabled;
 
   @NotBlank private String bankFundsDepositRequestTemplateId;
+
+  @NotBlank private String financialAccountReadyTemplateId;
 }

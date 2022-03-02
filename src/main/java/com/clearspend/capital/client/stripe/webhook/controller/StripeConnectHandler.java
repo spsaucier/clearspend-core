@@ -202,6 +202,8 @@ public class StripeConnectHandler {
           financialAccountAddress.getRoutingNumber());
 
       pendingStripeTransferService.executePendingStripeTransfers(businessId);
+
+      businessService.notifyFinancialAccountReady(business);
     }
   }
 

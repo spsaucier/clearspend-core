@@ -142,4 +142,7 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {}
+
+  @Override
+  public void sendFinancialAccountReadyEmail(String to, String firstName) {}
 }

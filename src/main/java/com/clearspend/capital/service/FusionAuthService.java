@@ -412,12 +412,18 @@ public class FusionAuthService {
   }
 
   public void resetPassword(ResetPasswordRequest request) {
+
+    ClientResponse<UserResponse, Errors> fusionAuthUser =
+        client.retrieveUserByChangePasswordId(request.getChangePasswordId());
+
     ClientResponse<ChangePasswordResponse, Errors> changePasswordResponse =
         client.changePassword(
             request.getChangePasswordId(), new ChangePasswordRequest(request.getNewPassword()));
 
     switch (changePasswordResponse.status) {
-      case 200 -> {}
+      case 200 -> {
+        twilioService.sendPasswordResetSuccessEmail(fusionAuthUser.successResponse.user.email, "");
+      }
       case 404 -> throw new ForbiddenException();
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", changePasswordResponse.exception);

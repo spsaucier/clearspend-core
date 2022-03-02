@@ -277,7 +277,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Details Added */
+  /* Bank Details Added */
   public void sendBankDetailsAddedEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -287,7 +287,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Funds Available */
+  /* Bank Funds Available */
   public void sendBankFundsAvailableEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -297,7 +297,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Funds Deposit Request */
+  /* Bank Funds Deposit Request */
   public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -308,7 +308,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Details Removed */
+  /* Bank Details Removed */
   public void sendBankDetailsRemovedEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -318,7 +318,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Funds Available */
+  /* Bank Funds Available */
   public void sendBankFundsReturnEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -328,7 +328,7 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Bank Funds Withdrawal */
+  /* Bank Funds Withdrawal */
   public void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -444,6 +444,16 @@ public class TwilioService {
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getUserAccountCreatedTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Financial Account Ready */
+  public void sendFinancialAccountReadyEmail(String to, String firstName) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getFinancialAccountReadyTemplateId(), to, personalization);
     send(mail);
   }
 }

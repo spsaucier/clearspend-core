@@ -572,4 +572,9 @@ public class BusinessService {
 
     return reallocateFundsRecord;
   }
+
+  public void notifyFinancialAccountReady(Business business) {
+    twilioService.sendFinancialAccountReadyEmail(
+        business.getBusinessEmail().getEncrypted(), business.getLegalName());
+  }
 }

@@ -33,6 +33,7 @@ public class BatchService {
   Currently it's single purpose it to send email to the business email about funds availability
   */
   public void holdChecker() {
+    log.debug("BatchService holdChecker: execution started");
     BatchSummary batchSummary = batchSummaryRepository.findByBatchType("HOLD_EXPIRATION_CHECK");
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     OffsetDateTime previousLastRecordDate = batchSummary.getLastRecordDate();
@@ -82,5 +83,9 @@ public class BatchService {
         batchSummary.getTotalRecordsProcessed() + recordsAffected);
 
     batchSummaryRepository.save(batchSummary);
+    log.debug(
+        "BatchService holdChecker: execution finished with status {} and affected records {}",
+        batchSummary.getStatus(),
+        batchSummary.getLastRecordsProcessed());
   }
 }
