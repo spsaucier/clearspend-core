@@ -10,7 +10,11 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.PermissionEvaluator;
@@ -75,8 +79,13 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
     overlapPermissions.allocationPermissions.retainAll(userPermissions.allocationPermissions());
     overlapPermissions.globalUserPermissions.retainAll(userPermissions.globalUserPermissions());
 
-    return !overlapPermissions.allocationPermissions.isEmpty()
-        || !overlapPermissions.globalUserPermissions.isEmpty();
+    final boolean hasPermission =
+        !overlapPermissions.allocationPermissions.isEmpty()
+            || !overlapPermissions.globalUserPermissions.isEmpty();
+    if (!hasPermission) {
+      log.trace("User {} has insufficient permission", CurrentUser.getUserId());
+    }
+    return hasPermission;
   }
 
   private record RequiredPermissions(

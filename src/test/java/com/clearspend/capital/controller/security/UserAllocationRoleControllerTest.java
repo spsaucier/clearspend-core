@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -72,7 +73,6 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     assertEquals(ALLOCATION_MANAGER, permissions.get(manager.getId()).getAllocationRole());
     assertEquals(
         ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
-    assertEquals(2, permissions.size());
 
     // Now edit the permission - give the second user only read permission
     mvc.perform(
@@ -93,7 +93,6 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     assertEquals(ALLOCATION_VIEW_ONLY, permissions.get(manager.getId()).getAllocationRole());
     assertEquals(
         ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
-    assertEquals(2, permissions.size());
 
     // Then delete the manager user's permission
     mvc.perform(
@@ -113,7 +112,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     permissions = getPermissions(rootAllocation);
     assertEquals(
         ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
-    assertEquals(1, permissions.size());
+    assertFalse(permissions.containsKey(manager.getId()));
   }
 
   @NotNull

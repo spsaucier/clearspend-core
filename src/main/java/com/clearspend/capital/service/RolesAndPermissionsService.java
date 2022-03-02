@@ -143,8 +143,10 @@ public class RolesAndPermissionsService {
     }
 
     UserRolesAndPermissions oldEffectivePermissions =
-        userAllocationRoleRepository.getUserPermissionAtAllocation(
-            grantee.getBusinessId(), allocation.getId(), grantee.getId(), granteeGlobalRoles);
+        ensureNonNullPermissions(
+            userAllocationRoleRepository.getUserPermissionAtAllocation(
+                grantee.getBusinessId(), allocation.getId(), grantee.getId(), granteeGlobalRoles),
+            allocation.getId());
 
     EnumSet<AllocationPermission> newPerms =
         newRole == null
@@ -192,12 +194,13 @@ public class RolesAndPermissionsService {
       }
       if (allocation.getParentAllocationId() != null) {
         requiredPermissions.addAll(
-            userAllocationRoleRepository
-                .getUserPermissionAtAllocation(
-                    grantee.getBusinessId(),
-                    allocation.getParentAllocationId(),
-                    grantee.getId(),
-                    granteeGlobalRoles)
+            ensureNonNullPermissions(
+                    userAllocationRoleRepository.getUserPermissionAtAllocation(
+                        grantee.getBusinessId(),
+                        allocation.getParentAllocationId(),
+                        grantee.getId(),
+                        granteeGlobalRoles),
+                    allocation.getParentAllocationId())
                 .allocationPermissions());
       }
 
@@ -329,6 +332,7 @@ public class RolesAndPermissionsService {
   @NonNull
   public UserRolesAndPermissions getUserRolesAndPermissionsForAllocation(
       TypedId<AllocationId> allocationId) {
+    entityManager.flush();
     CurrentUser currentUser = CurrentUser.get();
     return ensureNonNullPermissions(
         userAllocationRoleRepository.getUserPermissionAtAllocation(
@@ -409,6 +413,7 @@ public class RolesAndPermissionsService {
   @NonNull
   public UserRolesAndPermissions getUserRolesAndPermissionsAtRootAllocation(
       TypedId<BusinessId> businessId) {
+    entityManager.flush();
     CurrentUser user = CurrentUser.get();
     return ensureNonNullPermissions(
         userAllocationRoleRepository.getUserPermissionAtBusiness(
@@ -449,12 +454,11 @@ public class RolesAndPermissionsService {
 
   @NonNull
   private UserRolesAndPermissions ensureNonNullPermissions(
-      UserRolesAndPermissions target, TypedId<AllocationId> allocationId) {
-    UserRolesAndPermissions result = target;
-    if (target == null) {
-      CurrentUser user = CurrentUser.get();
-      result =
-          new UserRolesAndPermissions(
+      Optional<UserRolesAndPermissions> target, TypedId<AllocationId> allocationId) {
+    return target.orElseGet(
+        () -> {
+          CurrentUser user = CurrentUser.get();
+          return new UserRolesAndPermissions(
               null,
               "",
               "",
@@ -465,8 +469,7 @@ public class RolesAndPermissionsService {
               null,
               EnumSet.noneOf(AllocationPermission.class),
               EnumSet.noneOf(GlobalUserPermission.class));
-    }
-    return result;
+        });
   }
 
   // TODO list businesses available to a user (bookkeeper, customer service)

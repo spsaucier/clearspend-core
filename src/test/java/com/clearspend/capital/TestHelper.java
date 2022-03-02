@@ -238,13 +238,19 @@ public class TestHelper {
     }
 
     if (createBusinessRecord == null) {
-      Business business = entityManager.getReference(Business.class, businessId);
+      Business business = businessRepository.getById(businessId);
       BusinessOwner businessOwner = businessOwnerRepository.findByBusinessId(businessId).get(0);
       User user =
           userService.retrieveUsersForBusiness(businessId).stream()
-              .filter(u -> u.getType().equals(UserType.BUSINESS_OWNER))
+              .filter(
+                  u ->
+                      u.getType().equals(UserType.BUSINESS_OWNER)
+                          && passwords.containsKey(u.getId()))
               .findFirst()
-              .orElseThrow();
+              .orElse(
+                  createBusinessOwner(business.getId(), generateEmail(), generatePassword())
+                      .user());
+      entityManager.flush();
       setCurrentUser(user);
       createBusinessRecord =
           new CreateBusinessRecord(
@@ -419,7 +425,11 @@ public class TestHelper {
    * @return cookie for authorizing this user
    */
   public Cookie login(@NonNull User user) {
-    return login(user.getEmail().getEncrypted(), passwords.get(user.getId()));
+    return login(user.getEmail().getEncrypted(), getPassword(user));
+  }
+
+  public String getPassword(User user) {
+    return passwords.get(user.getId());
   }
 
   /**
@@ -435,7 +445,7 @@ public class TestHelper {
    * @return cookie for authorizing this user
    */
   @SneakyThrows
-  public Cookie login(String email, String password) {
+  public Cookie login(@NonNull String email, @NonNull String password) {
     LoginRequest request = new LoginRequest(email, password);
     String body = objectMapper.writeValueAsString(request);
 

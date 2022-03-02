@@ -174,26 +174,25 @@ public class AuthenticationController {
     return finalizeLogin(loginResponse);
   }
 
-  record FirstTwoFactorSendRequest(
-      UUID userId, String destination, TwoFactorAuthenticationMethod method) {}
+  record FirstTwoFactorSendRequest(String destination, TwoFactorAuthenticationMethod method) {}
 
   @PostMapping("/two-factor/first/send")
   void firstTwoFactorSend(
       @Validated @RequestBody FirstTwoFactorSendRequest firstTwoFactorSendRequest) {
     fusionAuthService.sendInitialTwoFactorCode(
-        firstTwoFactorSendRequest.userId,
+        UUID.fromString(userService.retrieveUser(CurrentUser.getUserId()).getSubjectRef()),
         firstTwoFactorSendRequest.method,
         firstTwoFactorSendRequest.destination);
   }
 
   record FirstTwoFactorValidateRequest(
-      UUID userId, String code, TwoFactorAuthenticationMethod method, String destination) {}
+      String code, TwoFactorAuthenticationMethod method, String destination) {}
 
   @PostMapping("/two-factor/first/validate")
   TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
     return fusionAuthService.validateFirstTwoFactorCode(
-        firstTwoFactorValidateRequest.userId,
+        UUID.fromString(userService.retrieveUser(CurrentUser.getUserId()).getSubjectRef()),
         firstTwoFactorValidateRequest.code,
         firstTwoFactorValidateRequest.method,
         firstTwoFactorValidateRequest.destination);

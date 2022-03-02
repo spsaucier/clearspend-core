@@ -18,7 +18,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     web.ignoring()
         .antMatchers(
             "/actuator/**",
-            "/authentication/*",
+            "/authentication/login",
+            "/authentication/two-factor/login",
+            "/authentication/forgot-password",
+            "/authentication/reset-password",
+            "/authentication/logout",
             "/business-prospects",
             "/business-prospects/*/password",
             "/business-prospects/*/phone",

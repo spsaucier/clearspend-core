@@ -102,6 +102,7 @@
                          )
                        AND NOT users.archived
                        AND allocation.business_id = :businessId
+                       AND users.id <> allocation.owner_id
                        AND (users.type <> 'BUSINESS_OWNER'
                          OR users.business_id <> allocation.business_id)
                      UNION
@@ -112,7 +113,7 @@
                             users.type                             AS user_type,
                             allocation.id                          AS allocation_id,
                             allocation.business_id                 AS allocation_business_id,
-                            allocation.owner_id                    AS user_id,
+                            users.id                               AS user_id,
                             users.business_id                      AS user_business_id,
                             'Admin'                                AS allocation_role,
                             (SELECT permissions
@@ -125,7 +126,10 @@
                           on ordered_lineage.allocation_id = allocation.id
                               INNER JOIN
                           users ON (users.business_id = allocation.business_id
-                              AND users.type = 'BUSINESS_OWNER')
+                              AND (
+                                                users.type = 'BUSINESS_OWNER'
+                                            OR users.id = allocation.owner_id
+                                        ))
                      WHERE (:userId = '00000000-0000-0000-0000-000000000000'
                          OR :userId = users.id
                          )

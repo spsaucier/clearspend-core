@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -647,11 +648,13 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
-        userAllocationRoleRepository.getUserPermissionAtAllocation(
-            childAllocation.getBusinessId(),
-            childAllocation.getId(),
-            rootAllocationOwner.getId(),
-            null));
+        userAllocationRoleRepository
+            .getUserPermissionAtAllocation(
+                childAllocation.getBusinessId(),
+                childAllocation.getId(),
+                rootAllocationOwner.getId(),
+                null)
+            .orElseThrow());
 
     // Also admin on a child allocation created by someone else
     User manager = testHelper.createUser(createBusinessRecord.business()).user();
@@ -680,11 +683,13 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
-        userAllocationRoleRepository.getUserPermissionAtAllocation(
-            childAllocation2.getBusinessId(),
-            childAllocation2.getId(),
-            rootAllocationOwner.getId(),
-            null));
+        userAllocationRoleRepository
+            .getUserPermissionAtAllocation(
+                childAllocation2.getBusinessId(),
+                childAllocation2.getId(),
+                rootAllocationOwner.getId(),
+                null)
+            .orElseThrow());
 
     // It's not necessary to name the allocation to get root allocation permission
     assertUserRolesAndPermissions(
@@ -692,8 +697,10 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
-        userAllocationRoleRepository.getUserPermissionAtBusiness(
-            childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null));
+        userAllocationRoleRepository
+            .getUserPermissionAtBusiness(
+                childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null)
+            .orElseThrow());
 
     // Manager also has admin permission because she has that permission at the root
     setCurrentUser(manager);
@@ -702,8 +709,26 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         true,
-        userAllocationRoleRepository.getUserPermissionAtBusiness(
-            childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null));
+        userAllocationRoleRepository
+            .getUserPermissionAtBusiness(
+                childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null)
+            .orElseThrow());
+
+    // A newly-created owner has permission on the record
+    BusinessOwnerAndUserRecord otherOwner =
+        testHelper.createBusinessOwner(
+            createBusinessRecord.business().getId(),
+            testHelper.generateEmail(),
+            testHelper.generatePassword());
+    assertUserRolesAndPermissions(
+        ALLOCATION_ADMIN,
+        EnumSet.allOf(AllocationPermission.class),
+        EnumSet.noneOf(GlobalUserPermission.class),
+        true,
+        userAllocationRoleRepository
+            .getUserPermissionAtBusiness(
+                createBusinessRecord.business().getId(), otherOwner.user().getId(), null)
+            .orElseThrow());
   }
 
   private void setCurrentUser(User user) {

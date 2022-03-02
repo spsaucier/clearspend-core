@@ -8,6 +8,8 @@ spring:
       client:
         clientId: 58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6
         secret: d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0
+  main:
+    allow-bean-definition-overriding: true
 
 client:
   google:

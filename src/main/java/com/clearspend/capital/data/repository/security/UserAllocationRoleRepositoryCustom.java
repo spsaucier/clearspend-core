@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface UserAllocationRoleRepositoryCustom {
@@ -47,7 +48,7 @@ public interface UserAllocationRoleRepositoryCustom {
    * @param userGlobalRoles User roles from CurrentUser
    * @return The effective user permissions at the given level
    */
-  UserRolesAndPermissions getUserPermissionAtBusiness(
+  Optional<UserRolesAndPermissions> getUserPermissionAtBusiness(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, Set<String> userGlobalRoles);
 
   void deleteAllForGranteeByAllocationId(
@@ -62,7 +63,7 @@ public interface UserAllocationRoleRepositoryCustom {
    * @param userId The user whose permission is being interrogated
    * @return The effective user permissions at the given level
    */
-  UserRolesAndPermissions getUserPermissionAtAllocation(
+  Optional<UserRolesAndPermissions> getUserPermissionAtAllocation(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       TypedId<UserId> userId,

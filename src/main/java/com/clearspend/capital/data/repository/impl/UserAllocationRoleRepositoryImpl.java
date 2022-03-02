@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -84,7 +85,8 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
       EnumSet<AllocationPermission> allocationPermissions,
       EnumSet<GlobalUserPermission> globalUserPermissions) {
     UserRolesAndPermissions permissions =
-        getUserPermissionAtAllocation(businessId, allocationId, userId, userGlobalRoles);
+        getUserPermissionAtAllocation(businessId, allocationId, userId, userGlobalRoles)
+            .orElse(null);
     if (permissions == null) {
       return false;
     }
@@ -103,11 +105,9 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   }
 
   @Override
-  public UserRolesAndPermissions getUserPermissionAtBusiness(
+  public Optional<UserRolesAndPermissions> getUserPermissionAtBusiness(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, Set<String> userGlobalRoles) {
-    return getUserPermissions(businessId, null, userId, userGlobalRoles).stream()
-        .findFirst()
-        .orElse(null);
+    return getUserPermissions(businessId, null, userId, userGlobalRoles).stream().findFirst();
   }
 
   /**
@@ -160,14 +160,13 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   }
 
   @Override
-  public UserRolesAndPermissions getUserPermissionAtAllocation(
+  public Optional<UserRolesAndPermissions> getUserPermissionAtAllocation(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       @NonNull TypedId<UserId> userId,
       Set<String> userGlobalRoles) {
     return getUserPermissions(businessId, allocationId, userId, userGlobalRoles).stream()
-        .findFirst()
-        .orElse(null);
+        .findFirst();
   }
 
   @Override

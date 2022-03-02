@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.TwoFactorAuthenticationRequired;
+import com.clearspend.capital.controller.type.security.TwoFactorAuthenticationStart;
 import com.inversoft.error.Errors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,8 +27,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class GlobalControllerExceptionHandler {
 
   record ControllerError(String message) {}
-
-  record TwoFactorAuthenticationStart(String twoFactorId) {}
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ExceptionHandler({
