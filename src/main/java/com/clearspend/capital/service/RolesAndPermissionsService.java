@@ -3,10 +3,7 @@ package com.clearspend.capital.service;
 import static com.clearspend.capital.data.model.security.DefaultRoles.GLOBAL_BOOKKEEPER;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
-import com.clearspend.capital.common.error.ForbiddenException;
-import com.clearspend.capital.common.error.InvalidRequestException;
-import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.error.*;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -74,15 +71,28 @@ public class RolesAndPermissionsService {
   private final EntityManager entityManager;
   private final AllocationRolePermissionsRepository allocationRolePermissionsRepository;
 
+  private final UserService userService;
+
   /**
-   * Creates a user's role, adding the given permission to any existing UserAllocationRole
+   * Create a user's role, adding the given permissions to any existing UserAllocationRole
    *
-   * @param grantee The ID of the user whose permission is to change
-   * @param allocation The allocation ID
+   * @param granteeId The User ID for the receiver of the permissions
+   * @param allocationId The Allocation ID on which to grant the permissions
    * @param newRole The new role to set
+   * @return The newly created UserAllocationRole
    * @throws ForbiddenException when the current user's permissions are insufficient
    */
-  public com.clearspend.capital.data.model.security.UserAllocationRole createUserAllocationRole(
+  public UserAllocationRole createUserAllocationRole(
+      @NonNull TypedId<UserId> granteeId,
+      TypedId<AllocationId> allocationId,
+      @NonNull String newRole) {
+    return createUserAllocationRole(
+        userService.retrieveUser(granteeId),
+        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        newRole);
+  }
+
+  UserAllocationRole createUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
 
     prepareUserAllocationRoleChange(grantee, allocation, newRole)
@@ -91,10 +101,9 @@ public class RolesAndPermissionsService {
               throw new InvalidRequestException("Already created");
             });
 
-    com.clearspend.capital.data.model.security.UserAllocationRole role =
+    UserAllocationRole role =
         userAllocationRoleRepository.save(
-            new com.clearspend.capital.data.model.security.UserAllocationRole(
-                allocation.getId(), grantee.getId(), newRole));
+            new UserAllocationRole(allocation.getId(), grantee.getId(), newRole));
     entityManager.flush(); // this needs to take effect immediately
 
     return role;
@@ -103,12 +112,22 @@ public class RolesAndPermissionsService {
   /**
    * Updates a user's role, adding the given permission to any existing UserAllocationRole
    *
-   * @param grantee The ID of the user whose permission is to change
-   * @param allocation The allocation ID
+   * @param granteeId The ID of the user whose permission is to change
+   * @param allocationId The allocation ID
    * @param newRole The new role to set
    * @throws ForbiddenException when the current user's permissions are insufficient
    */
-  public com.clearspend.capital.data.model.security.UserAllocationRole updateUserAllocationRole(
+  public UserAllocationRole updateUserAllocationRole(
+      @NonNull TypedId<UserId> granteeId,
+      TypedId<AllocationId> allocationId,
+      @NonNull String newRole) {
+    return updateUserAllocationRole(
+        userService.retrieveUser(granteeId),
+        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        newRole);
+  }
+
+  UserAllocationRole updateUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
     return prepareUserAllocationRoleChange(grantee, allocation, newRole)
         .map(
@@ -136,7 +155,9 @@ public class RolesAndPermissionsService {
     }
 
     final Set<String> granteeGlobalRoles =
-        fusionAuthService.getUserRoles(UUID.fromString(grantee.getSubjectRef()));
+        Optional.ofNullable(grantee.getSubjectRef())
+            .map(s -> fusionAuthService.getUserRoles(UUID.fromString(s)))
+            .orElse(Collections.emptySet());
     if (!grantee.getBusinessId().equals(allocation.getBusinessId())
         && !granteeGlobalRoles.contains(GLOBAL_BOOKKEEPER)) {
       throw new InvalidRequestException("Only bookkeepers can cross business boundaries");
@@ -268,21 +289,25 @@ public class RolesAndPermissionsService {
    * Creates or updates a permission record, adding the given permission to any existing set,
    * creating the permission set if necessary.
    *
-   * @param allocation The allocation ID
-   * @param grantee The ID of the user whose permission is to change
+   * @param allocationId The allocation ID
+   * @param granteeId The ID of the user whose permission is to change
    * @throws ForbiddenException when the current user's permissions are insufficient
    * @throws RecordNotFoundException if there is nothing to delete, with the exception's id
    *     consisting of a Map of the grantee Id and allocation Id
    */
-  public void deleteUserAllocationRole(Allocation allocation, @NonNull User grantee) {
-    Optional<com.clearspend.capital.data.model.security.UserAllocationRole> doomedRecord =
-        prepareUserAllocationRoleChange(grantee, allocation, null);
+  public void deleteUserAllocationRole(
+      TypedId<AllocationId> allocationId, @NonNull TypedId<UserId> granteeId) {
+    Optional<UserAllocationRole> doomedRecord =
+        prepareUserAllocationRoleChange(
+            userService.retrieveUser(granteeId),
+            retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+            null);
     UserAllocationRole record =
         doomedRecord.orElseThrow(
             () ->
                 new RecordNotFoundException(
                     Table.USER_ALLOCATION_ROLE,
-                    Map.of("granteeUserId", grantee.getId(), "allocationId", allocation.getId())));
+                    Map.of("granteeUserId", granteeId, "allocationId", allocationId)));
 
     userAllocationRoleRepository.delete(record);
     userAllocationRoleRepository.flush();
@@ -470,6 +495,22 @@ public class RolesAndPermissionsService {
               EnumSet.noneOf(AllocationPermission.class),
               EnumSet.noneOf(GlobalUserPermission.class));
         });
+  }
+
+  public Allocation retrieveAllocation(
+      TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
+    Allocation allocation =
+        allocationRepository
+            .findById(allocationId)
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
+
+    if (!allocation.getBusinessId().equals(businessId)) {
+      throw new DataAccessViolationException(
+          Table.ALLOCATION, allocationId, businessId, allocation.getBusinessId());
+    }
+
+    return allocation;
   }
 
   // TODO list businesses available to a user (bookkeeper, customer service)

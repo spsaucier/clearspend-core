@@ -5,8 +5,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRecord;
-import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.stream.Collectors;
@@ -69,10 +67,8 @@ public class UserAllocationRoleController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> granteeId,
       @RequestBody String newRole) {
-    rolesAndPermissionsService.createUserAllocationRole(
-        entityManager.getReference(User.class, granteeId),
-        entityManager.getReference(Allocation.class, allocationId),
-        newRole);
+
+    rolesAndPermissionsService.createUserAllocationRole(granteeId, allocationId, newRole);
   }
 
   @PutMapping("/allocation/{allocationId}/user/{granteeId}")
@@ -93,10 +89,7 @@ public class UserAllocationRoleController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> granteeId,
       @RequestBody String newRole) {
-    rolesAndPermissionsService.updateUserAllocationRole(
-        entityManager.getReference(User.class, granteeId),
-        entityManager.getReference(Allocation.class, allocationId),
-        newRole);
+    rolesAndPermissionsService.updateUserAllocationRole(granteeId, allocationId, newRole);
   }
 
   @DeleteMapping("/allocation/{allocationId}/user/{granteeId}")
@@ -116,8 +109,6 @@ public class UserAllocationRoleController {
               description = "UserId of the grantee.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> granteeId) {
-    rolesAndPermissionsService.deleteUserAllocationRole(
-        entityManager.getReference(Allocation.class, allocationId),
-        entityManager.getReference(User.class, granteeId));
+    rolesAndPermissionsService.deleteUserAllocationRole(allocationId, granteeId);
   }
 }

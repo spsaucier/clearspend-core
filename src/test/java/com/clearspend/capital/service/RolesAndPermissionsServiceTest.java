@@ -351,7 +351,9 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         () -> String.valueOf(Map.of("actor", actor, "grantee", grantee, "allocation", allocation));
     assertThrows(
         Exception.class,
-        () -> rolesAndPermissionsService.deleteUserAllocationRole(allocation, grantee),
+        () ->
+            rolesAndPermissionsService.deleteUserAllocationRole(
+                allocation.getId(), grantee.getId()),
         msg);
 
     // ... or by lowering
