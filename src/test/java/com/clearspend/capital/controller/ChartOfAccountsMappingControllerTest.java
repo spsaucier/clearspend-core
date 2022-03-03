@@ -105,4 +105,18 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
                 .orElse(null))
         .isNotNull();
   }
+
+  @SneakyThrows
+  @Test
+  void testDeleteMappings() {
+    testHelper.createCodatExpenseCategoryMappings(business);
+
+    Boolean response =
+        mockMvcHelper.queryObject(
+            "/chart-of-accounts/mappings", HttpMethod.DELETE, userCookie, Boolean.class);
+
+    assertThat(response).isTrue();
+
+    assertThat(mappingRepository.findAllByBusinessId(business.getId()).size()).isEqualTo(0);
+  }
 }

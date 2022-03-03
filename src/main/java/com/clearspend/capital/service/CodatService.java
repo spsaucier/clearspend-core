@@ -253,6 +253,31 @@ public class CodatService {
         createBankAccountRequest);
   }
 
+  @PreAuthorize(
+      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public Boolean deleteCodatIntegrationConnection(TypedId<BusinessId> businessId)
+      throws RuntimeException {
+    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+
+    ConnectionStatusResponse connectionStatusResponse =
+        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
+
+    // For now, get the first Linked (active) connection. It should not really be
+    // possible for them
+    // to link multiple.
+    List<ConnectionStatus> linkedConnections =
+        connectionStatusResponse.getResults().stream()
+            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
+            .collect(toList());
+
+    if (linkedConnections.isEmpty()) {
+      throw new RuntimeException("Failed to get connection for business");
+    }
+
+    return codatClient.deleteCodatIntegrationConnectionForBusiness(
+        currentBusiness.getCodatCompanyRef(), linkedConnections.get(0).getId());
+  }
+
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
   // their end.
   private List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {

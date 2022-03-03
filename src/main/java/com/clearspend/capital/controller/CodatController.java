@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +40,11 @@ public class CodatController {
   @PostMapping("/quickbooks-online")
   String createQuickbooksOnlineConnectionLink() throws RuntimeException {
     return codatService.createQboConnectionForBusiness(CurrentUser.getBusinessId());
+  }
+
+  @DeleteMapping("/connection")
+  Boolean deleteCodatIntegrationConnection() throws RuntimeException {
+    return codatService.deleteCodatIntegrationConnection(CurrentUser.getBusinessId());
   }
 
   @GetMapping("/connection-status")

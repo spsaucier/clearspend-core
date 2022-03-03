@@ -109,6 +109,30 @@ public class CodatClient {
     }
   }
 
+  private <T> T deleteFromCodatApi(String uri, Class<T> clazz) {
+    T result = null;
+    try {
+      result =
+          codatWebClient
+              .delete()
+              .uri(uri)
+              .exchangeToMono(
+                  response -> {
+                    if (response.statusCode().equals(HttpStatus.OK)) {
+                      return response.bodyToMono(clazz);
+                    }
+
+                    return response.createException().flatMap(Mono::error);
+                  })
+              .block();
+      return result;
+    } finally {
+      if (log.isInfoEnabled()) {
+        log.info("Calling Codat [%s] method. \n Response: %s".formatted(uri, result));
+      }
+    }
+  }
+
   public CreateCompanyResponse createCodatCompanyForBusiness(String legalName)
       throws RuntimeException {
 
@@ -132,6 +156,12 @@ public class CodatClient {
   public ConnectionStatusResponse getConnectionsForBusiness(String companyRef) {
     return getFromCodatApi(
         "/companies/%s/connections?page=1".formatted(companyRef), ConnectionStatusResponse.class);
+  }
+
+  public Boolean deleteCodatIntegrationConnectionForBusiness(
+      String companyRef, String connectionId) {
+    return deleteFromCodatApi(
+        "/companies/%s/connections/%s".formatted(companyRef, connectionId), Boolean.class);
   }
 
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
