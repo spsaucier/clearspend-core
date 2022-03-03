@@ -16,4 +16,6 @@ public interface BusinessRepository extends JpaRepository<Business, TypedId<Busi
   Optional<Business> findByStripeFinancialAccountRef(String stripeFinancialAccountRef);
 
   Optional<Business> findByEmployerIdentificationNumber(String employerIdentificationNumber);
+
+  Optional<Business> findByCodatCompanyRef(String codatCompanyRef);
 }

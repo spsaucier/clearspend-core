@@ -1,0 +1,1 @@
+alter table business add column if not exists codat_connection_id varchar(36);

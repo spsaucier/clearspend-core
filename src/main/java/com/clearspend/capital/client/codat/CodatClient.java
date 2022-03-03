@@ -16,7 +16,6 @@ import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
-import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
@@ -151,11 +150,6 @@ public class CodatClient {
         String.format("/companies/%s/connections", companyRef),
         "\"quickbooksonlinesandbox\"",
         CreateIntegrationResponse.class);
-  }
-
-  public ConnectionStatusResponse getConnectionsForBusiness(String companyRef) {
-    return getFromCodatApi(
-        "/companies/%s/connections?page=1".formatted(companyRef), ConnectionStatusResponse.class);
   }
 
   public Boolean deleteCodatIntegrationConnectionForBusiness(

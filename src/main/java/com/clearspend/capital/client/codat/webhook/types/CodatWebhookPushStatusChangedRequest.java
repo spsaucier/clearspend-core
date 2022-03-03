@@ -7,16 +7,12 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class CodatWebhookDataType {
-  @JsonProperty("dataType")
+public class CodatWebhookPushStatusChangedRequest {
+  @JsonProperty("CompanyId")
   @NonNull
-  private String dataType;
+  private String companyId;
 
-  @JsonProperty("status")
+  @JsonProperty("Data")
   @NonNull
-  private String status;
-
-  @JsonProperty("pushOperationKey")
-  @NonNull
-  private String pushOperationKey;
+  private CodatWebhookPushStatusData data;
 }

@@ -1,5 +1,7 @@
 package com.clearspend.capital.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
@@ -7,9 +9,10 @@ import com.clearspend.capital.client.codat.CodatMockClient;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataType;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookRequest;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookRulesType;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
@@ -49,7 +52,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.util.Assert;
 
 @Slf4j
 @Transactional
@@ -67,12 +69,11 @@ public class CodatServiceTest extends BaseCapitalTest {
   private Cookie userCookie;
   @Autowired MockMvc mvc;
   @Autowired MockMvcHelper mockMvcHelper;
-  @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired AccountActivityRepository accountActivityRepository;
-  @Autowired AccountService accountService;
   @Autowired CodatService codatService;
   @Autowired TransactionSyncLogRepository transactionSyncLogRepository;
   @Autowired CodatMockClient mockClient;
+  @Autowired BusinessService businessService;
 
   @BeforeEach
   public void setup() {
@@ -131,10 +132,9 @@ public class CodatServiceTest extends BaseCapitalTest {
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
 
-    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
-    Assert.isTrue(
-        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER,
-        "Log for sync has incorrect status");
+    assertThat(loggedTransactions.size() > 0).isTrue();
+    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER)
+        .isTrue();
   }
 
   @Test
@@ -169,10 +169,8 @@ public class CodatServiceTest extends BaseCapitalTest {
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
 
-    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
-    Assert.isTrue(
-        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.IN_PROGRESS,
-        "Log for sync has incorrect status");
+    assertThat(loggedTransactions.size() > 0).isTrue();
+    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.IN_PROGRESS).isTrue();
 
     PagedData<SyncLogResponse> syncLog =
         mockMvcHelper.queryObject(
@@ -182,14 +180,11 @@ public class CodatServiceTest extends BaseCapitalTest {
             new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
             PagedData.class);
 
-    Assert.isTrue(syncLog.getTotalElements() > 0, "Nothing in sync log from endpoint");
+    assertThat(syncLog.getTotalElements() > 0).isTrue();
   }
 
   @Test
-  void fullSyncWithWebhook() {
-    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    Business business = createBusinessRecord.business();
-    business.setCodatCompanyRef("test-codat-ref");
+  void fullSyncWithWebhook() throws Exception {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
 
@@ -220,72 +215,92 @@ public class CodatServiceTest extends BaseCapitalTest {
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
 
-    Assert.isTrue(loggedTransactions.size() > 0, "No log present for transaction");
-    Assert.isTrue(
-        loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER,
-        "Log for sync has incorrect status");
+    assertThat(loggedTransactions.size() > 0).isTrue();
+    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER)
+        .isTrue();
 
     mockClient.addSupplierToList(new CodatSupplier("supplier-123", "Test Store", "Active", "USD"));
 
-    try {
-      CodatWebhookRequest request =
-          new CodatWebhookRequest(
-              business.getCodatCompanyRef(),
-              CodatWebhookRulesType.PUSH_OPERATION_STATUS_CHANGED.getKey(),
-              new CodatWebhookDataType("suppliers", "Success", "test-push-operation-key-supplier"));
-      MockHttpServletResponse result =
-          mvc.perform(
-                  MockMvcRequestBuilders.post("/codat-webhook")
-                      .contentType("application/json")
-                      .header(
-                          "Authorization",
-                          "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
-                      .content(objectMapper.writeValueAsString(request)))
-              .andReturn()
-              .getResponse();
-      Page<TransactionSyncLog> syncLog =
-          transactionSyncLogRepository.find(
-              business.getId(),
-              new TransactionSyncLogFilterCriteria(
-                  PageRequest.toPageToken(new PageRequest(0, 10))));
+    CodatWebhookPushStatusChangedRequest request =
+        new CodatWebhookPushStatusChangedRequest(
+            business.getCodatCompanyRef(),
+            new CodatWebhookPushStatusData(
+                "suppliers", "Success", "test-push-operation-key-supplier"));
+    MockHttpServletResponse result =
+        mvc.perform(
+                MockMvcRequestBuilders.post("/codat-webhook/push-status-changed")
+                    .contentType("application/json")
+                    .header(
+                        "Authorization",
+                        "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andReturn()
+            .getResponse();
+    Page<TransactionSyncLog> syncLog =
+        transactionSyncLogRepository.find(
+            business.getId(),
+            new TransactionSyncLogFilterCriteria(PageRequest.toPageToken(new PageRequest(0, 10))));
 
-      Assert.isTrue(syncLog.getSize() > 0, "Nothing in sync log from endpoint");
-      Assert.isTrue(
-          syncLog.get().findFirst().get().getStatus().equals(TransactionSyncStatus.IN_PROGRESS),
-          "Sync log not marked as IN_PROGRESS when it should be");
-    } catch (Exception e) {
-      Assert.isTrue(false, "Failed to send codat webhook request");
-    }
+    assertThat(syncLog.getSize() > 0).isTrue();
+    assertThat(
+            syncLog.get().findFirst().get().getStatus().equals(TransactionSyncStatus.IN_PROGRESS))
+        .isTrue();
 
     // Now post to make it go from IN_PROGRESS to COMPLETED
-    try {
-      CodatWebhookRequest request =
-          new CodatWebhookRequest(
-              business.getCodatCompanyRef(),
-              CodatWebhookRulesType.PUSH_OPERATION_STATUS_CHANGED.getKey(),
-              new CodatWebhookDataType("directCosts", "Success", "test-push-operation-key-cost"));
-      MockHttpServletResponse result =
-          mvc.perform(
-                  MockMvcRequestBuilders.post("/codat-webhook")
-                      .contentType("application/json")
-                      .header(
-                          "Authorization",
-                          "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
-                      .content(objectMapper.writeValueAsString(request)))
-              .andReturn()
-              .getResponse();
-      Page<TransactionSyncLog> syncLog =
-          transactionSyncLogRepository.find(
-              business.getId(),
-              new TransactionSyncLogFilterCriteria(
-                  PageRequest.toPageToken(new PageRequest(0, 10))));
+    CodatWebhookPushStatusChangedRequest codatWebhookPushStatusChangedRequest =
+        new CodatWebhookPushStatusChangedRequest(
+            business.getCodatCompanyRef(),
+            new CodatWebhookPushStatusData(
+                "directCosts", "Success", "test-push-operation-key-cost"));
+    mvc.perform(
+            MockMvcRequestBuilders.post("/codat-webhook/push-status-changed")
+                .contentType("application/json")
+                .header(
+                    "Authorization",
+                    "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                .content(objectMapper.writeValueAsString(codatWebhookPushStatusChangedRequest)))
+        .andReturn()
+        .getResponse();
+    Page<TransactionSyncLog> updatedSyncLog =
+        transactionSyncLogRepository.find(
+            business.getId(),
+            new TransactionSyncLogFilterCriteria(PageRequest.toPageToken(new PageRequest(0, 10))));
 
-      Assert.isTrue(syncLog.getSize() > 0, "Nothing in sync log from endpoint");
-      Assert.isTrue(
-          syncLog.get().findFirst().get().getStatus().equals(TransactionSyncStatus.COMPLETED),
-          "Sync log not marked as IN_PROGRESS when it should be");
-    } catch (Exception e) {
-      Assert.isTrue(false, "Failed to send codat webhook request");
-    }
+    assertThat(updatedSyncLog.getSize() > 0).isTrue();
+    assertThat(
+            updatedSyncLog
+                .get()
+                .findFirst()
+                .get()
+                .getStatus()
+                .equals(TransactionSyncStatus.COMPLETED))
+        .isTrue();
+  }
+
+  @Test
+  void canSaveConnectionIdFromWebhook() throws Exception {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CodatWebhookConnectionChangedRequest request =
+        new CodatWebhookConnectionChangedRequest(
+            "test-codat-ref",
+            new CodatWebhookConnectionChangedData("new-codat-dataconnection-id", "Active"));
+    MockHttpServletResponse result =
+        mvc.perform(
+                MockMvcRequestBuilders.post("/codat-webhook/data-connection-changed")
+                    .contentType("application/json")
+                    .header(
+                        "Authorization",
+                        "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andReturn()
+            .getResponse();
+
+    assertThat(
+            businessService
+                .retrieveBusiness(business.getId(), true)
+                .getCodatConnectionId()
+                .equals("new-codat-dataconnection-id"))
+        .isTrue();
   }
 }

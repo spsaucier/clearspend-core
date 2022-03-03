@@ -795,6 +795,7 @@ public class TestHelper {
                 .getId());
 
     business.setCodatCompanyRef("codat_company_ref");
+    business.setCodatConnectionId("codat-connection-id");
 
     business = businessRepository.save(business);
 

@@ -443,6 +443,16 @@ public class BusinessService {
   }
 
   @Transactional
+  public Business updateBusinessWithCodatConnectionId(
+      TypedId<BusinessId> businessId, String codatConnectionId) {
+    Business business = retrieveBusiness(businessId, true);
+
+    business.setCodatConnectionId(codatConnectionId);
+
+    return businessRepository.save(business);
+  }
+
+  @Transactional
   public Business updateBusinessAccountingSetupStep(
       TypedId<BusinessId> businessId, AccountingSetupStep accountingSetupStep) {
     Business business = retrieveBusiness(businessId, true);

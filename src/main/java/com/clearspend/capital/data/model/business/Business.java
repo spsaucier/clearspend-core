@@ -119,6 +119,8 @@ public class Business extends TypedMutable<BusinessId> {
   // identifier of the company within Codat for this business
   private String codatCompanyRef;
 
+  private String codatConnectionId;
+
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;

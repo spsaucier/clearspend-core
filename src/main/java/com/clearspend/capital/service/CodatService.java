@@ -14,8 +14,6 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
-import com.clearspend.capital.client.codat.types.ConnectionStatus;
-import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
@@ -29,6 +27,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +48,7 @@ public class CodatService {
   private final BusinessService businessService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
+  private final BusinessRepository businessRepository;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -74,10 +74,7 @@ public class CodatService {
       return false;
     }
 
-    ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(business.getCodatCompanyRef());
-    return connectionStatusResponse.getResults().stream()
-        .anyMatch(connection -> connection.getStatus().equals("Linked"));
+    return business.getCodatConnectionId() != null;
   }
 
   @PreAuthorize(
@@ -95,17 +92,13 @@ public class CodatService {
         accountActivityService.retrieveAccountActivity(
             CurrentUser.getBusinessId(), accountActivityId);
 
-    // TODO verify that these values save properly in Codat as expense categories are added
-
-    // TODO Remove hardcoded/placeholder values. (The CodatAccountRefs and CodatContactRef)
-
     GetSuppliersResponse suppliersResponse =
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
 
     CodatSupplier supplier =
         supplierForTransaction(accountActivity, suppliersResponse.getResults());
 
-    String connectionId = getConnectionIdForBusiness(business);
+    String connectionId = business.getCodatConnectionId();
     if (supplier != null) {
       // if supplier does exist, use it
 
@@ -177,23 +170,9 @@ public class CodatService {
   public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
-    ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
-
-    // For now, get the first Linked (active) connection. It should not really be
-    // possible for them
-    // to link multiple.
-    List<ConnectionStatus> linkedConnections =
-        connectionStatusResponse.getResults().stream()
-            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
-            .collect(toList());
-
-    if (linkedConnections.isEmpty()) {
-      return new CodatBankAccountsResponse(new ArrayList<>());
-    }
     CodatBankAccountsResponse bankAccounts =
         codatClient.getBankAccountsForBusiness(
-            currentBusiness.getCodatCompanyRef(), linkedConnections.get(0).getId());
+            currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
 
     return bankAccounts;
   }
@@ -233,23 +212,9 @@ public class CodatService {
       throws RuntimeException {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
-    ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
-
-    // For now, get the first Linked (active) connection. It should not really be
-    // possible for them
-    // to link multiple.
-    List<ConnectionStatus> linkedConnections =
-        connectionStatusResponse.getResults().stream()
-            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
-            .collect(toList());
-
-    if (linkedConnections.isEmpty()) {
-      throw new RuntimeException("Failed to get connection for business");
-    }
     return codatClient.createBankAccountForBusiness(
         currentBusiness.getCodatCompanyRef(),
-        linkedConnections.get(0).getId(),
+        currentBusiness.getCodatConnectionId(),
         createBankAccountRequest);
   }
 
@@ -259,23 +224,8 @@ public class CodatService {
       throws RuntimeException {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
-    ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(currentBusiness.getCodatCompanyRef());
-
-    // For now, get the first Linked (active) connection. It should not really be
-    // possible for them
-    // to link multiple.
-    List<ConnectionStatus> linkedConnections =
-        connectionStatusResponse.getResults().stream()
-            .filter(connectionStatus -> connectionStatus.getStatus().equals("Linked"))
-            .collect(toList());
-
-    if (linkedConnections.isEmpty()) {
-      throw new RuntimeException("Failed to get connection for business");
-    }
-
     return codatClient.deleteCodatIntegrationConnectionForBusiness(
-        currentBusiness.getCodatCompanyRef(), linkedConnections.get(0).getId());
+        currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
   }
 
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
@@ -374,7 +324,7 @@ public class CodatService {
         CodatSyncDirectCostResponse syncResponse =
             codatClient.syncTransactionAsDirectCost(
                 business.getCodatCompanyRef(),
-                getConnectionIdForBusiness(business),
+                business.getCodatConnectionId(),
                 accountActivity,
                 business.getCurrency().name(),
                 supplier,
@@ -410,23 +360,6 @@ public class CodatService {
     } else {
       return matchingSupplier.get();
     }
-  }
-
-  private String getConnectionIdForBusiness(Business business) {
-    ConnectionStatusResponse connectionStatusResponse =
-        codatClient.getConnectionsForBusiness(business.getCodatCompanyRef());
-
-    Optional<ConnectionStatus> connectionStatus =
-        connectionStatusResponse.getResults().stream()
-            .filter(connection -> connection.getStatus().equals("Linked"))
-            .findFirst();
-
-    // for now, use the first valid connection
-    if (connectionStatus.isEmpty()) {
-      return null;
-    }
-
-    return connectionStatus.get().getId();
   }
 
   public void updateSyncedTransactionsInLog(String companyRef) {
@@ -483,5 +416,14 @@ public class CodatService {
     }
 
     updateSyncStatusIfComplete(syncForKey.get());
+  }
+
+  public void updateConnectionIdForBusiness(String codatCompanyRef, String dataConnectionId) {
+    businessRepository
+        .findByCodatCompanyRef(codatCompanyRef)
+        .ifPresent(
+            business ->
+                businessService.updateBusinessWithCodatConnectionId(
+                    business.getId(), dataConnectionId));
   }
 }
