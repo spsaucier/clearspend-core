@@ -422,6 +422,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     query.where("accountActivity.businessId").eq(businessId);
     query.where("accountActivity.activityTime").between(criteria.getFrom()).and(criteria.getTo());
     query.where("accountActivity.card.cardId").eq(criteria.getCardId());
+    query.where("accountActivity.type").eq(AccountActivityType.NETWORK_CAPTURE);
 
     query
         .select("accountActivity.activityTime")

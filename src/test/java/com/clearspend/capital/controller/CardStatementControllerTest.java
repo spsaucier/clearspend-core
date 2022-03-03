@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.type.NetworkCommon;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import java.math.BigDecimal;
@@ -64,28 +65,56 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             true);
 
     testHelper.setCurrentUser(user);
-    NetworkCommonAuthorization networkCommonAuthorization =
+
+    // generate auth 1
+    NetworkCommonAuthorization networkCommonAuthorization1 =
         TestDataController.generateAuthorizationNetworkCommon(
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, new BigDecimal(900)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
-    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    networkMessageService.processNetworkMessage(networkCommonAuthorization1.networkCommon());
+    assertThat(networkCommonAuthorization1.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization1.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization1.networkCommon().isPostHold()).isTrue();
 
-    networkCommonAuthorization =
+    // generate capture 1
+    NetworkCommon common1 =
+        TestDataController.generateCaptureNetworkCommon(
+            business, networkCommonAuthorization1.authorization());
+    networkMessageService.processNetworkMessage(common1);
+
+    // generate auth 2
+    NetworkCommonAuthorization networkCommonAuthorization2 =
         TestDataController.generateAuthorizationNetworkCommon(
             user,
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, new BigDecimal(9)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    networkMessageService.processNetworkMessage(networkCommonAuthorization2.networkCommon());
 
-    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    assertThat(networkCommonAuthorization2.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization2.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization2.networkCommon().isPostHold()).isTrue();
+
+    // generate capture 2
+    NetworkCommon common2 =
+        TestDataController.generateCaptureNetworkCommon(
+            business, networkCommonAuthorization2.authorization());
+    networkMessageService.processNetworkMessage(common2);
+
+    // generate auth 3 without capture, should not be found in PDF below
+    NetworkCommonAuthorization networkCommonAuthorization3 =
+        TestDataController.generateAuthorizationNetworkCommon(
+            user,
+            card,
+            createBusinessRecord.allocationRecord().account(),
+            Amount.of(Currency.USD, new BigDecimal(13)));
+    networkMessageService.processNetworkMessage(networkCommonAuthorization3.networkCommon());
+
+    assertThat(networkCommonAuthorization3.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization3.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization3.networkCommon().isPostHold()).isTrue();
 
     CardStatementRequest cardStatementRequest = new CardStatementRequest();
     cardStatementRequest.setCardId(card.getId());
@@ -135,6 +164,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
     boolean foundHeader = false;
     boolean foundLine1 = false;
     boolean foundLine2 = false;
+    boolean foundLineWithoutCapture = false;
     boolean foundCardholder = false;
     boolean foundCardNumber = false;
 
@@ -153,7 +183,9 @@ public class CardStatementControllerTest extends BaseCapitalTest {
         foundLine1 = true;
       } else if (line.contains("$9.00")) {
         foundLine2 = true;
-      } else if (line.contains("$91.00")) {
+      } else if (line.contains("$13.00")) {
+        foundLineWithoutCapture = true;
+      } else if (line.contains("$78.00")) {
         foundAvailableToSpend = true;
       } else if (line.contains(user.getFirstName() + " " + user.getLastName())) {
         foundCardholder = true;
@@ -166,6 +198,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
     Assertions.assertTrue(foundHeader);
     Assertions.assertTrue(foundLine1);
     Assertions.assertTrue(foundLine2);
+    Assertions.assertFalse(foundLineWithoutCapture);
     Assertions.assertTrue(foundAvailableToSpend);
     Assertions.assertTrue(foundCardholder);
     Assertions.assertTrue(foundCardNumber);
