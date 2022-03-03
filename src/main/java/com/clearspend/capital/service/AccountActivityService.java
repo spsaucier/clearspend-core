@@ -43,6 +43,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -233,15 +234,18 @@ public class AccountActivityService {
       TypedId<UserId> userId,
       TypedId<AccountActivityId> accountActivityId,
       String notes,
-      Integer iconRef) {
+      Optional<Integer> iconRef) {
     AccountActivity accountActivity = getUserAccountActivity(businessId, userId, accountActivityId);
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
     ExpenseCategory expenseCategory;
-    if (null != iconRef && iconRef != 0) {
-      expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
+    if (iconRef != null) {
       accountActivity.setExpenseDetails(
-          new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
+          iconRef
+              .map(expenseCategoryService::retrieveExpenseCategory)
+              .map(
+                  category -> new ExpenseDetails(category.getIconRef(), category.getCategoryName()))
+              .orElse(null));
     }
     log.debug(
         "Set expense category {} to accountActivity {} ({})",
