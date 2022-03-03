@@ -12,6 +12,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
 import com.clearspend.capital.controller.type.card.RevealCardRequest;
@@ -212,6 +213,16 @@ public class CardControllerTest extends BaseCapitalTest {
             RevealCardResponse.class);
     assertThat(revealCardResponse.getExternalRef()).isNotNull();
     assertThat(revealCardResponse.getEphemeralKey()).isNotNull();
+  }
+
+  @SneakyThrows
+  @Test
+  void ephemeralKey() {
+    EphemeralKeyRequest ephemeralKeyRequest = new EphemeralKeyRequest(card.getId(), "2020-03-02");
+    String ephemeralKeyResponse =
+        mockMvcHelper.queryObject(
+            "/cards/ephemeral-key", HttpMethod.POST, userCookie, ephemeralKeyRequest, String.class);
+    assertThat(ephemeralKeyResponse).isEqualTo("true");
   }
 
   @Test

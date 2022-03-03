@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.IssueCardResponse;
 import com.clearspend.capital.controller.type.card.RevealCardRequest;
@@ -22,6 +23,7 @@ import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.stripe.model.EphemeralKey;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -149,5 +152,18 @@ public class CardController {
     headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
     headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
     return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
+  }
+
+  @RequestMapping(
+      value = "/ephemeral-key",
+      method = RequestMethod.POST,
+      produces = "application/json")
+  String ephemeralKey(@RequestBody @Validated EphemeralKeyRequest request) {
+    CardDetailsRecord cardDetailsRecord =
+        cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
+    EphemeralKey stripeEphemeralKey =
+        stripeClient.getEphemeralKeyObjectForCard(
+            cardDetailsRecord.card().getExternalRef(), request.getApiVersion());
+    return stripeEphemeralKey.getRawJson();
   }
 }

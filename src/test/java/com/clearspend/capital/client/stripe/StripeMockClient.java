@@ -25,6 +25,7 @@ import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.BankAccount;
+import com.stripe.model.EphemeralKey;
 import com.stripe.model.Event;
 import com.stripe.model.ExternalAccountCollection;
 import com.stripe.model.Person;
@@ -393,6 +394,13 @@ public class StripeMockClient extends StripeClient {
   @Override
   public String getEphemeralKey(String cardId, String nonce) {
     return "dummy_ephemeral_key";
+  }
+
+  @Override
+  public EphemeralKey getEphemeralKeyObjectForCard(String cardId, String apiVersion) {
+    EphemeralKey ephemeralKey = new EphemeralKey();
+    ephemeralKey.setRawJson("true");
+    return ephemeralKey;
   }
 
   @Override

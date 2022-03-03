@@ -775,6 +775,22 @@ public class StripeClient {
     }
   }
 
+  /** Returns an ephemeral key for a provided card id */
+  public EphemeralKey getEphemeralKeyObjectForCard(String cardId, String apiVersion) {
+    try {
+      var ephemeralKey =
+          EphemeralKey.create(
+              Map.of("issuing_card", cardId),
+              RequestOptions.builder()
+                  .setStripeVersionOverride(apiVersion)
+                  .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
+                  .build());
+      return ephemeralKey;
+    } catch (StripeException e) {
+      throw new StripeClientException(e);
+    }
+  }
+
   public Account setExternalAccount(String accountId, String btok) {
     Account account = new Account();
     account.setId(accountId);
