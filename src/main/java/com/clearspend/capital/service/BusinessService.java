@@ -489,8 +489,8 @@ public class BusinessService {
     BeanUtils.setNotNull(updateBusiness.getDescription(), business::setDescription);
     BeanUtils.setNotNull(updateBusiness.getUrl(), business::setUrl);
 
-    if (updateBusiness.getMerchantType() != null) {
-      business.setMcc(updateBusiness.getMerchantType().getMcc());
+    if (updateBusiness.getMcc() != null) {
+      business.setMcc(updateBusiness.getMcc());
     }
 
     if (updateBusiness.getAddress() != null) {
