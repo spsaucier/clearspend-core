@@ -103,4 +103,9 @@ public class CodatMockClient extends CodatClient {
   public CodatPushStatusResponse getPushStatus(String pushOperationKey, String companyRef) {
     return new CodatPushStatusResponse("Success");
   }
+
+  public Boolean deleteCodatIntegrationConnectionForBusiness(
+      String companyRef, String connectionId) {
+    return true;
+  }
 }

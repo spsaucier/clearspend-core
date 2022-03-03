@@ -303,4 +303,24 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .equals("new-codat-dataconnection-id"))
         .isTrue();
   }
+
+  @Test
+  public void canDeleteConnection() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    codatService.deleteCodatIntegrationConnection(business.getId());
+
+    assertThat(
+            businessService.retrieveBusiness(business.getId(), true).getCodatConnectionId() == null)
+        .isTrue();
+
+    businessService.updateBusinessWithCodatConnectionId(business.getId(), "codat-connection-id");
+
+    assertThat(
+            businessService
+                .retrieveBusiness(business.getId(), true)
+                .getCodatConnectionId()
+                .equals("codat-connection-id"))
+        .isTrue();
+  }
 }

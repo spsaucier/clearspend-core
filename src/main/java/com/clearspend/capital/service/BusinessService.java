@@ -452,6 +452,14 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
+  public Business deleteCodatConnectionForBusiness(TypedId<BusinessId> businessId) {
+    Business business = retrieveBusiness(businessId, true);
+
+    business.setCodatConnectionId(null);
+
+    return businessRepository.save(business);
+  }
+
   @Transactional
   public Business updateBusinessAccountingSetupStep(
       TypedId<BusinessId> businessId, AccountingSetupStep accountingSetupStep) {

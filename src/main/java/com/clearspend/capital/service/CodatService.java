@@ -6,6 +6,7 @@ import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
+import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
@@ -191,7 +192,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(
-      TypedId<BusinessId> businessId, String type) {
+      TypedId<BusinessId> businessId, CodatAccountType type) {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
     GetAccountsResponse chartOfAccounts =
@@ -224,8 +225,15 @@ public class CodatService {
       throws RuntimeException {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
-    return codatClient.deleteCodatIntegrationConnectionForBusiness(
-        currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
+    Boolean deleteResult =
+        codatClient.deleteCodatIntegrationConnectionForBusiness(
+            currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
+
+    if (deleteResult) {
+      businessService.deleteCodatConnectionForBusiness(businessId);
+    }
+
+    return deleteResult;
   }
 
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
