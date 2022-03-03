@@ -442,6 +442,9 @@ public class FusionAuthService {
     builder.append(", error response: ").append(changePasswordResponse.errorResponse);
     builder.append(", successful:").append(changePasswordResponse.wasSuccessful());
     log.debug("clientResponse : {}", builder);
+    if (changePasswordResponse.status == 404) {
+      throw new InvalidRequestException("Incorrect password");
+    }
     validateResponse(changePasswordResponse);
   }
 
