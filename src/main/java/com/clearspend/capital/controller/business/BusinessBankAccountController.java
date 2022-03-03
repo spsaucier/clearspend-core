@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.BankAccount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
@@ -66,10 +67,11 @@ public class BusinessBankAccountController {
         toListBankAccount(
             businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId));
 
-    // TODO: might need to be changed if it is possible to link a bank account outside of the
-    // onboarding process
-    businessService.updateBusiness(
-        businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY, null);
+    Business business = businessService.retrieveBusiness(businessId, true);
+    if (business.getStatus() == BusinessStatus.ONBOARDING) {
+      businessService.updateBusiness(
+          businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY, null);
+    }
 
     return bankAccounts;
   }
