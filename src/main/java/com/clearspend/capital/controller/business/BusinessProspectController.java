@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.business;
 
+import com.clearspend.capital.common.data.util.HttpReqRespUtils;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.Business;
@@ -126,7 +127,7 @@ public class BusinessProspectController {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
             request.toConvertBusinessProspect(businessProspectId),
-            httpServletRequest.getRemoteAddr(),
+            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
             userAgent);
 
     return new ConvertBusinessProspectResponse(

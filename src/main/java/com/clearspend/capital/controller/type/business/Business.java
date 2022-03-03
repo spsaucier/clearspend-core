@@ -73,6 +73,16 @@ public class Business {
   @JsonProperty("routingNumber")
   private String routingNumber;
 
+  @JsonProperty("description")
+  private String description;
+
+  @JsonProperty("mcc")
+  @NonNull
+  private String mcc;
+
+  @JsonProperty("url")
+  private String url;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -84,7 +94,11 @@ public class Business {
         business.getOnboardingStep(),
         business.getKnowYourBusinessStatus(),
         business.getStatus(),
-        business.getAccountingSetupStep());
+        business.getAccountingSetupStep(),
+        business.getMcc());
+
+    this.description = business.getDescription();
+    this.url = business.getUrl();
 
     if (business.getStripeData().getBankAccountNumber() != null) {
       this.accountNumber = business.getStripeData().getBankAccountNumber().getEncrypted();
