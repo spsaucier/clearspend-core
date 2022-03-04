@@ -198,7 +198,9 @@ public class StripeClient {
 
   public Account updateAccount(Business business) {
 
-    Account account = retrieveAccount(business.getStripeData().getAccountRef());
+    Account account = new Account();
+    String stripeAccountId = business.getStripeData().getAccountRef();
+    account.setId(stripeAccountId);
 
     AccountUpdateParams.Company.Builder companyBuilder =
         AccountUpdateParams.Company.builder()
@@ -268,9 +270,7 @@ public class StripeClient {
         accountUpdateParams,
         () ->
             account.update(
-                accountUpdateParams,
-                getRequestOptions(
-                    new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId())));
+                accountUpdateParams, getRequestOptions(new TypedId<>(), 0L, stripeAccountId)));
   }
 
   public Account retrieveAccount(String stripeAccountId) {
