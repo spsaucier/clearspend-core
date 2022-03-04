@@ -14,13 +14,14 @@ pipelines:
         size: 2x
         artifacts:
           - build/libs/*.jar
+          - build/reports/jacoco/test/html/**
         caches:
           - gradle
         services:
           - docker
           - postgres
         script:
-          - ./gradlew build
+          - ./gradlew build jacocoReport jacocoCoverageVerification
     - step:
         name: Build image and push to GCR
         image: google/cloud-sdk:latest
@@ -46,13 +47,14 @@ pipelines:
           size: 2x
           artifacts:
             - build/libs/*.jar
+            - build/reports/jacoco/test/html/**
           caches:
             - gradle
           services:
             - docker
             - postgres
           script:
-            - ./gradlew build
+            - ./gradlew build jacocoReport jacocoCoverageVerification
       - step:
           name: Build image and push to GCR
           image: google/cloud-sdk:latest

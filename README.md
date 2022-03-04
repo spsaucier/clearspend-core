@@ -18,17 +18,25 @@ and you'll want to run com.clearspend.capital.CapitalApplication with your IDE.
 
 See also [our schema](src/main/resources/db/migration/V1_0__Baseline.sql) which is managed by [flyway](https://flywaydb.org).
 
-Service urls and accounts:
+## Test coverage
+To check test coverage, `./gradlew jacocoTestReport` then open `build/reports/jacoco/test/html/index.html`.
+`./gradlew jacocoCoverageValidation` will see if coverage is at least as good as the limit set in build.gradle.kts
+
+Note that test coverage generally should not be 100% because that's silly, and high
+test coverage is, on its own, not saying that the tests are sufficient.  It's one measure among many
+(most not applied here yet) of test effectiveness.
+
+## Service urls and accounts
 - Fusion Auth: http://127.0.0.1:9011 admin@clearspend.com/admin
 - Prometheus: http://127.0.0.1:9090
 - Grafana: http://127.0.0.1:3000 admin@clearspend.com/admin
 
 # To use Plaid features
 
-To avoid publishing secrets to a git repository, the plaid secret is 
+To avoid publishing secrets to a git repository, the plaid secret is
 held in an env variable named `CLIENT_PLAID_SECRET`. Plaid features are
 <u>not required</u> to run the rest of the app, so it is not
-necessary to include it if you don't plan on linking bank accounts. 
+necessary to include it if you don't plan on linking bank accounts.
 If you do wish to use plaid features, populate the variable. This value can
 be found in the Plaid dashboard.
 
