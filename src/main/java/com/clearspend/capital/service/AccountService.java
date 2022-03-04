@@ -97,7 +97,7 @@ public class AccountService {
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
       Amount amount,
-      boolean placeHold) {
+      boolean standardHold) {
     amount.ensureNonNegative();
 
     businessLimitService.ensureWithinDepositLimit(businessId, amount);
@@ -105,18 +105,17 @@ public class AccountService {
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
-    Hold hold = null;
-    if (placeHold) {
-      hold =
-          holdRepository.save(
-              new Hold(
-                  businessId,
-                  rootAllocationAccount.getId(),
-                  HoldStatus.PLACED,
-                  amount.negate(),
-                  OffsetDateTime.now(ZoneOffset.UTC).plusDays(5)));
-      log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
-    }
+    Hold hold =
+        holdRepository.save(
+            new Hold(
+                businessId,
+                rootAllocationAccount.getId(),
+                HoldStatus.PLACED,
+                amount.negate(),
+                standardHold
+                    ? OffsetDateTime.now(ZoneOffset.UTC).plusDays(5)
+                    : adjustment.getCreated()));
+    log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
 
     // flush everything to the db before trying to call i2c
     holdRepository.flush();

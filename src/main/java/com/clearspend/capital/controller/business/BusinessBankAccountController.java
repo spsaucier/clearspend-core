@@ -38,8 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class BusinessBankAccountController {
 
-  @Value("${clearspend.ach.hold.place:true}")
-  private boolean placeHold;
+  @Value("${clearspend.ach.hold.standard:true}")
+  private boolean standardHold;
 
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
@@ -48,7 +48,7 @@ public class BusinessBankAccountController {
 
   @PostConstruct
   private void init() {
-    log.info("configValue: clearspend.ach.hold.place: {}", placeHold);
+    log.info("configValue: clearspend.ach.hold.standard: {}", standardHold);
   }
 
   @GetMapping("/link-token")
@@ -114,7 +114,7 @@ public class BusinessBankAccountController {
             businessBankAccountId,
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
-            placeHold);
+            standardHold);
 
     return new CreateAdjustmentResponse(adjustmentAndHoldRecord.adjustment().getId());
   }

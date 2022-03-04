@@ -653,7 +653,7 @@ public class TestHelper {
       BusinessBankAccount businessBankAccount,
       BankAccountTransactType bankAccountTransactType,
       BigDecimal amount,
-      boolean placeHold) {
+      boolean standardHold) {
     Account businessAccount =
         allocationService.getRootAllocation(businessBankAccount.getBusinessId()).account();
     return businessBankAccountService.transactBankAccount(
@@ -661,7 +661,7 @@ public class TestHelper {
         businessBankAccount.getId(),
         bankAccountTransactType,
         new Amount(businessAccount.getLedgerBalance().getCurrency(), amount),
-        placeHold);
+        standardHold);
   }
 
   public AllocationRecord createAllocation(

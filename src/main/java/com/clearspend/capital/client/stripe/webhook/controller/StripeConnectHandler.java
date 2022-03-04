@@ -45,7 +45,7 @@ public class StripeConnectHandler {
   private final BusinessBankAccountService businessBankAccountService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final StripeClient stripeClient;
-  private final boolean placeHold;
+  private final boolean standardHold;
   private final StripeProperties stripeProperties;
 
   public StripeConnectHandler(
@@ -54,14 +54,14 @@ public class StripeConnectHandler {
       PendingStripeTransferService pendingStripeTransferService,
       StripeClient stripeClient,
       StripeProperties stripeProperties,
-      @Value("${clearspend.ach.hold.place:true}") boolean placeHold) {
+      @Value("${clearspend.ach.hold.standard:true}") boolean standardHold) {
 
     this.businessService = businessService;
     this.businessBankAccountService = businessBankAccountService;
     this.pendingStripeTransferService = pendingStripeTransferService;
     this.stripeClient = stripeClient;
     this.stripeProperties = stripeProperties;
-    this.placeHold = placeHold;
+    this.standardHold = standardHold;
   }
 
   public void accountUpdated(Account account) {
@@ -79,9 +79,9 @@ public class StripeConnectHandler {
 
   public void inboundTransferSucceeded(StripeObject stripeObject) {
     // TODO: Doublecheck with Stripe if this callback means that we can safely use the money or not
-    // can be used as an alternative for clearspend.ach.hold.place in test env since we receive it
-    // almost immediately after issuing a transfer
-    if (!placeHold) {
+    // can be used as an alternative for clearspend.ach.hold.standard in test env since we receive
+    // it almost immediately after issuing a transfer
+    if (!standardHold) {
       processInboundTransferResult(stripeObject, true);
     }
   }

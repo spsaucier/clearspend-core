@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -38,6 +39,7 @@ public class CardStatementService {
   @Value("classpath:reports/logo_300px.png")
   Resource logoResource;
 
+  private final AccountService accountService;
   private final CardService cardService;
   private final UserService userService;
   private final AccountActivityRepository accountActivityRepository;
@@ -201,6 +203,7 @@ public class CardStatementService {
     // Column
     CardDetailsRecord card =
         cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
+    Account account = accountService.retrieveAccountById(card.account().getId(), true);
 
     Font fontNormal8White = new Font(defaultBaseFont, 8, Font.NORMAL);
     fontNormal8White.setColor(Color.white);
@@ -239,7 +242,7 @@ public class CardStatementService {
         new PdfPCellLeft(
             new Paragraph(
                 new Chunk(
-                    "$" + String.format("%,.2f", card.account().getAvailableBalance().getAmount()),
+                    "$" + String.format("%,.2f", account.getAvailableBalance().getAmount()),
                     fontBold16))));
 
     // Column

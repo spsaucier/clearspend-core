@@ -41,7 +41,7 @@ clearspend:
           physical: 10
   ach:
     hold:
-      place: false
+      standard: false
   encryption:
     key:
       aes:
