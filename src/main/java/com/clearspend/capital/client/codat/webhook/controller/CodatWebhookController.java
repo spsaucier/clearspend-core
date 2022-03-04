@@ -66,7 +66,7 @@ public class CodatWebhookController {
       @RequestHeader("Authorization") String validation,
       @RequestBody @Validated CodatWebhookConnectionChangedRequest request) {
     if (validateToken(validation.replace("Bearer ", ""))
-        && "Active".equals(request.getData().getNewStatus())) {
+        && "Linked".equals(request.getData().getNewStatus())) {
       codatService.updateConnectionIdForBusiness(
           request.getCompanyId(), request.getData().getDataConnectionId());
     }

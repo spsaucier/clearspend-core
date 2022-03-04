@@ -284,7 +284,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     CodatWebhookConnectionChangedRequest request =
         new CodatWebhookConnectionChangedRequest(
             "test-codat-ref",
-            new CodatWebhookConnectionChangedData("new-codat-dataconnection-id", "Active"));
+            new CodatWebhookConnectionChangedData("new-codat-dataconnection-id", "Linked"));
     MockHttpServletResponse result =
         mvc.perform(
                 MockMvcRequestBuilders.post("/codat-webhook/data-connection-changed")
