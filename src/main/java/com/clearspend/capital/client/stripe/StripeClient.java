@@ -204,7 +204,7 @@ public class StripeClient {
         AccountUpdateParams.Company.builder()
             .setName(business.getLegalName())
             .setTaxId(business.getEmployerIdentificationNumber())
-            .setStructure(Structure.valueOf(business.getType().getStripeValue().getValue()));
+            .setStructure(Structure.valueOf(business.getType().getStripeValue().name()));
 
     AccountUpdateParams.Builder accountBuilder =
         AccountUpdateParams.builder()
