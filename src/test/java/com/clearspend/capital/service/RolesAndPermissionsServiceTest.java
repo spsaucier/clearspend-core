@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.DefaultRoles;
@@ -42,6 +43,7 @@ import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -731,6 +733,69 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
             .getUserPermissionAtBusiness(
                 createBusinessRecord.business().getId(), otherOwner.user().getId(), null)
             .orElseThrow());
+  }
+
+  @SneakyThrows
+  @Test
+  public void testUsersHaveNoPermissionsToAnInactiveBusinessAccount() {
+    setCurrentUser(rootAllocationOwner);
+    createBusinessRecord.business().setStatus(BusinessStatus.SUSPENDED);
+
+    assertUserRolesAndPermissions(
+        DefaultRoles.ALLOCATION_ADMIN,
+        EnumSet.noneOf(AllocationPermission.class),
+        EnumSet.noneOf(GlobalUserPermission.class),
+        false,
+        rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId()));
+  }
+
+  @SneakyThrows
+  @SwitchesCurrentUser(reviewer = "pmorton", explanation = "For testing")
+  @FusionAuthRoleAdministrator(reviewer = "pmorton", explanation = "For testing")
+  @Test
+  public void testGlobalRolesHaveNoTranscendentPermissionsOnInactiveBusinessAccount() {
+    fusionAuthService.changeUserRole(
+        RoleChange.GRANT, rootAllocationOwner.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
+    setCurrentUser(rootAllocationOwner);
+
+    CreateBusinessRecord disjointBusiness = testHelper.createBusiness();
+    Allocation disjointAllocation = disjointBusiness.allocationRecord().allocation();
+
+    // Ensure our Global Customer Service Manager has access to the Disjoint Business before
+    // 'closing'
+    setCurrentUser(rootAllocationOwner);
+    assertDoesNotThrow(
+        () ->
+            rolesAndPermissionsService.assertUserHasPermission(
+                disjointAllocation.getId(),
+                EnumSet.noneOf(AllocationPermission.class),
+                EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE_MANAGER)));
+
+    disjointBusiness.business().setStatus(BusinessStatus.CLOSED);
+
+    // Now that the Business has been Closed, we need to ensure that our Global CS Manager is
+    // still able to access the Closed Business
+    assertDoesNotThrow(
+        () ->
+            rolesAndPermissionsService.assertUserHasPermission(
+                disjointAllocation.getId(),
+                EnumSet.noneOf(AllocationPermission.class),
+                EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE_MANAGER)));
+  }
+
+  @SneakyThrows
+  @Test
+  public void testBusinessOwnerHasOnlyReadPermissionsAfterBusinessClosure() {
+    setCurrentUser(rootAllocationOwner);
+    createBusinessRecord.business().setStatus(BusinessStatus.CLOSED);
+
+    assertUserRolesAndPermissions(
+        DefaultRoles.ALLOCATION_ADMIN, // null allocation from the
+        // RolesAndPermissionsService::ensureNonNullPermissions(...)
+        EnumSet.of(AllocationPermission.READ, AllocationPermission.VIEW_OWN),
+        EnumSet.noneOf(GlobalUserPermission.class),
+        false,
+        rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId()));
   }
 
   private void setCurrentUser(User user) {

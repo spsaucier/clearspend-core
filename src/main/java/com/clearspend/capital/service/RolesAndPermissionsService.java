@@ -372,8 +372,8 @@ public class RolesAndPermissionsService {
         userAllocationRoleRepository.getActiveUsersWithAllocationPermission(
             currentUser.businessId(), allocationId);
 
-    if (permissionsMap
-            .get(currentUser.userId())
+    if (ensureNonNullPermissions(
+                Optional.ofNullable(permissionsMap.get(currentUser.userId())), allocationId)
             .allocationPermissions()
             .contains(AllocationPermission.READ)
         || getGlobalPermissions(currentUser.roles()).contains(GlobalUserPermission.GLOBAL_READ)) {
