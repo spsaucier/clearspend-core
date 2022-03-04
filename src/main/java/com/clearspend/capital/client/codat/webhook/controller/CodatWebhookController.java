@@ -3,6 +3,10 @@ package com.clearspend.capital.client.codat.webhook.controller;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.service.CodatService;
+import java.util.Map;
+import java.util.function.Consumer;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class CodatWebhookController {
+
+  @Getter(AccessLevel.PRIVATE)
   private final CodatService codatService;
 
   @Value("${client.codat.auth-secret}")
@@ -27,18 +33,31 @@ public class CodatWebhookController {
     return authToken.equals(authSecret);
   }
 
+  private final Map<String, Consumer<CodatWebhookPushStatusChangedRequest>> bearerFunctions =
+      Map.of(
+          "suppliers",
+          (request) ->
+              getCodatService()
+                  .syncTransactionAwaitingSupplier(
+                      request.getCompanyId(), request.getData().getPushOperationKey()),
+          "directCosts",
+          (request) ->
+              getCodatService()
+                  .updateStatusForSyncedTransaction(
+                      request.getCompanyId(), request.getData().getPushOperationKey()),
+          "bankAccounts",
+          (request) ->
+              getCodatService()
+                  .updateCodatBankAccountForBusiness(
+                      request.getCompanyId(), request.getData().getPushOperationKey()));
+
   @PostMapping("/push-status-changed")
   public void handleWebhookCall(
       @RequestHeader("Authorization") String validation,
-      @RequestBody @Validated CodatWebhookPushStatusChangedRequest request) {
-    if (validateToken(validation.replace("Bearer ", ""))) {
-      if (request.getData().getDataType().equals("suppliers")) {
-        codatService.syncTransactionAwaitingSupplier(
-            request.getCompanyId(), request.getData().getPushOperationKey());
-      } else if (request.getData().getDataType().equals("directCosts")) {
-        codatService.updateStatusForSyncedTransaction(
-            request.getCompanyId(), request.getData().getPushOperationKey());
-      }
+      @RequestBody @Validated CodatWebhookPushStatusChangedRequest webhookRequest) {
+    if (validateToken(validation.replace("Bearer ", ""))
+        && "Success".equals(webhookRequest.getData().getStatus())) {
+      bearerFunctions.get(webhookRequest.getData().getDataType()).accept(webhookRequest);
     }
   }
 
@@ -46,7 +65,8 @@ public class CodatWebhookController {
   public void handleWebhookCall(
       @RequestHeader("Authorization") String validation,
       @RequestBody @Validated CodatWebhookConnectionChangedRequest request) {
-    if (validateToken(validation.replace("Bearer ", ""))) {
+    if (validateToken(validation.replace("Bearer ", ""))
+        && "Active".equals(request.getData().getNewStatus())) {
       codatService.updateConnectionIdForBusiness(
           request.getCompanyId(), request.getData().getDataConnectionId());
     }

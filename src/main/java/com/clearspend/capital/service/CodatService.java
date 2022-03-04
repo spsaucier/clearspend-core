@@ -7,6 +7,7 @@ import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
+import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
@@ -433,5 +434,18 @@ public class CodatService {
             business ->
                 businessService.updateBusinessWithCodatConnectionId(
                     business.getId(), dataConnectionId));
+  }
+
+  public void updateCodatBankAccountForBusiness(String codatCompanyRef, String pushOperationKey) {
+    CodatBankAccountStatusResponse accountStatus =
+        codatClient.getBankAccountDetails(pushOperationKey, codatCompanyRef);
+    if (accountStatus.getStatus().equals("Success")) {
+      businessRepository
+          .findByCodatCompanyRef(codatCompanyRef)
+          .ifPresent(
+              business ->
+                  businessService.updateCodatCreditCardForBusiness(
+                      business.getId(), accountStatus.getData().getId()));
+    }
   }
 }

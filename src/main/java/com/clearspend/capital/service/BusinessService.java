@@ -460,6 +460,15 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
+  public Business updateCodatCreditCardForBusiness(
+      TypedId<BusinessId> businessId, String codatCreditCardId) {
+    Business business = retrieveBusiness(businessId, true);
+
+    business.setCodatCreditCardId(codatCreditCardId);
+
+    return businessRepository.save(business);
+  }
+
   @Transactional
   public Business updateBusinessAccountingSetupStep(
       TypedId<BusinessId> businessId, AccountingSetupStep accountingSetupStep) {

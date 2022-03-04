@@ -3,6 +3,8 @@ package com.clearspend.capital.client.codat;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountStatus;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
+import com.clearspend.capital.client.codat.types.CodatBankAccount;
+import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
@@ -107,5 +109,11 @@ public class CodatMockClient extends CodatClient {
   public Boolean deleteCodatIntegrationConnectionForBusiness(
       String companyRef, String connectionId) {
     return true;
+  }
+
+  public CodatBankAccountStatusResponse getBankAccountDetails(
+      String pushOperationKey, String companyRef) {
+    return new CodatBankAccountStatusResponse(
+        "Success", new CodatBankAccount("1234", "Clearspend Card"));
   }
 }

@@ -3,6 +3,7 @@ package com.clearspend.capital.client.codat;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountRef;
 import com.clearspend.capital.client.codat.types.CodatAllocation;
+import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatContactRef;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
@@ -257,5 +258,12 @@ public class CodatClient {
     return getFromCodatApi(
         "/companies/%s/push/%s".formatted(companyRef, pushOperationKey),
         CodatPushStatusResponse.class);
+  }
+
+  public CodatBankAccountStatusResponse getBankAccountDetails(
+      String pushOperationKey, String companyRef) {
+    return getFromCodatApi(
+        "/companies/%s/push/%s".formatted(companyRef, pushOperationKey),
+        CodatBankAccountStatusResponse.class);
   }
 }

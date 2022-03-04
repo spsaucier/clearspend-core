@@ -121,6 +121,8 @@ public class Business extends TypedMutable<BusinessId> {
 
   private String codatConnectionId;
 
+  private String codatCreditCardId;
+
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;

@@ -323,4 +323,33 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .equals("codat-connection-id"))
         .isTrue();
   }
+
+  @Test
+  void canSaveCreditCardIdFromWebhook() throws Exception {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CodatWebhookPushStatusChangedRequest request =
+        new CodatWebhookPushStatusChangedRequest(
+            business.getCodatCompanyRef(),
+            new CodatWebhookPushStatusData(
+                "bankAccounts", "Success", "test-push-operation-key-supplier"));
+
+    MockHttpServletResponse result =
+        mvc.perform(
+                MockMvcRequestBuilders.post("/codat-webhook/push-status-changed")
+                    .contentType("application/json")
+                    .header(
+                        "Authorization",
+                        "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andReturn()
+            .getResponse();
+
+    assertThat(
+            businessService
+                .retrieveBusiness(business.getId(), true)
+                .getCodatCreditCardId()
+                .equals("1234"))
+        .isTrue();
+  }
 }
