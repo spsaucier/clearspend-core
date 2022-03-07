@@ -61,7 +61,8 @@ public class CodatService {
     if (business.getCodatCompanyRef() == null) {
       CreateCompanyResponse response =
           codatClient.createCodatCompanyForBusiness(business.getLegalName());
-      businessService.updateBusinessWithCodatCompanyRef(business.getId(), response.getId());
+      business =
+          businessService.updateBusinessWithCodatCompanyRef(business.getId(), response.getId());
     }
 
     return codatClient.createQboConnectionForBusiness(business.getCodatCompanyRef()).getLinkUrl();
