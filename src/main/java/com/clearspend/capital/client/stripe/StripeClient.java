@@ -78,6 +78,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -127,7 +128,7 @@ public class StripeClient {
             .setBusinessType(business.getType().getStripeBusinessType())
             .setBusinessProfile(
                 BusinessProfile.builder()
-                    .setMcc(business.getMcc().toString())
+                    .setMcc(business.getMcc())
                     .setProductDescription(business.getDescription())
                     .setUrl(business.getUrl())
                     .build());
@@ -688,7 +689,8 @@ public class StripeClient {
       String stripeAccountId,
       String idempotencyKey,
       Class<T> clazz) {
-    T result = null;
+    T result;
+    String loggedResult = null;
 
     Objects.requireNonNull(
         parameters.get(
@@ -716,8 +718,12 @@ public class StripeClient {
                     return response.createException().flatMap(Mono::error);
                   })
               .block();
+      loggedResult = result != null ? result.toString() : null;
 
       return result;
+    } catch (WebClientResponseException e) {
+      loggedResult = e.getResponseBodyAsString();
+      throw e;
     } finally {
       if (log.isInfoEnabled()) {
         String requestStr = null;
@@ -728,7 +734,8 @@ public class StripeClient {
         }
         log.info(
             "Calling stripe [%s] beta method. \n Request: %s, \n Response: %s"
-                .formatted(uri, requestStr != null ? requestStr : parameters.toString(), result));
+                .formatted(
+                    uri, requestStr != null ? requestStr : parameters.toString(), loggedResult));
       }
     }
   }
@@ -778,14 +785,12 @@ public class StripeClient {
   /** Returns an ephemeral key for a provided card id */
   public EphemeralKey getEphemeralKeyObjectForCard(String cardId, String apiVersion) {
     try {
-      var ephemeralKey =
-          EphemeralKey.create(
-              Map.of("issuing_card", cardId),
-              RequestOptions.builder()
-                  .setStripeVersionOverride(apiVersion)
-                  .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
-                  .build());
-      return ephemeralKey;
+      return EphemeralKey.create(
+          Map.of("issuing_card", cardId),
+          RequestOptions.builder()
+              .setStripeVersionOverride(apiVersion)
+              .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
+              .build());
     } catch (StripeException e) {
       throw new StripeClientException(e);
     }
@@ -853,9 +858,20 @@ public class StripeClient {
       String description,
       String statementDescriptor) {
 
+    String paymentMethod = stripeBankAccountRef;
+    if (stripeProperties.isEnableTransferFailures()) {
+      paymentMethod =
+          switch ((int) amount.toStripeAmount()) {
+            case 13100 -> "pm_usBankAccount_noAccount";
+            case 13200 -> "pm_usBankAccount_invalidAccountNumber";
+            case 13300 -> "pm_usBankAccount_dispute";
+            default -> paymentMethod;
+          };
+    }
+
     MultiValueMap<String, String> formData =
         MultiValueMapBuilder.builder()
-            .add("origin_payment_method", stripeBankAccountRef)
+            .add("origin_payment_method", paymentMethod)
             .add("financial_account", stripeFinancialAccountRef)
             .add("amount", Long.toString(amount.toStripeAmount()))
             .add("description", description)
@@ -883,9 +899,20 @@ public class StripeClient {
       String description,
       String statementDescriptor) {
 
+    String paymentMethod = stripeBankAccountRef;
+    if (stripeProperties.isEnableTransferFailures()) {
+      paymentMethod =
+          switch ((int) amount.toStripeAmount()) {
+            case 14100 -> "pm_usBankAccount_canceledByUser";
+            case 14200 -> "pm_usBankAccount_internalFailure";
+            case 14300 -> "pm_usBankAccount_accountClosed";
+            default -> paymentMethod;
+          };
+    }
+
     MultiValueMap<String, String> formData =
         MultiValueMapBuilder.builder()
-            .add("destination_payment_method", stripeBankAccountRef)
+            .add("destination_payment_method", paymentMethod)
             .add("financial_account", stripeFinancialAccountRef)
             .add("amount", Long.toString(amount.toStripeAmount()))
             .add("description", description)

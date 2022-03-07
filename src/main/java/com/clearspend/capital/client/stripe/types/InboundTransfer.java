@@ -3,7 +3,9 @@ package com.clearspend.capital.client.stripe.types;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 public class InboundTransfer {
@@ -27,7 +29,7 @@ public class InboundTransfer {
   private String description;
 
   @JsonProperty("failure_details")
-  private String failureDetails;
+  private InboundTransferFailureDetails failureDetails;
 
   @JsonProperty("financial_account")
   private String financialAccount;
@@ -65,4 +67,19 @@ public class InboundTransfer {
   // @JsonProperty("transaction")
   // private String transaction;
 
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class InboundTransferFailureDetails {
+
+    @JsonProperty("code")
+    private String code;
+
+    @JsonProperty("message")
+    private String message;
+
+    public InboundTransferFailureDetails(String code) {
+      this.code = code;
+    }
+  }
 }

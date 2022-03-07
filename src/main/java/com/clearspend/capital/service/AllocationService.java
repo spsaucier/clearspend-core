@@ -80,9 +80,9 @@ public class AllocationService {
 
   public @interface CreatesRootAllocation {
 
-    public String reviewer();
+    String reviewer();
 
-    public String explanation();
+    String explanation();
   }
 
   @RestrictedApi(
@@ -244,7 +244,9 @@ public class AllocationService {
         entityManager.getReference(User.class, allocation.getOwnerId()), allocation);
   }
 
-  @PreAuthorize("hasPermission(#businessId, 'BusinessId', 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
+  // TODO: should be uncomment when CAP-442 is implemented - to allow security context creation for
+  // webhooks
+  // @PreAuthorize("hasPermission(#businessId, 'BusinessId', 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {
     Allocation rootAllocation =
         allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId);

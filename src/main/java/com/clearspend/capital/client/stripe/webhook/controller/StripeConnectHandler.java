@@ -16,15 +16,19 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.stripe.model.Account;
 import com.stripe.model.StripeObject;
 import com.stripe.model.StripeRawJsonObject;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -78,38 +82,40 @@ public class StripeConnectHandler {
   public void inboundTransferCreated(StripeObject stripeObject) {}
 
   public void inboundTransferSucceeded(StripeObject stripeObject) {
-    // TODO: Doublecheck with Stripe if this callback means that we can safely use the money or not
-    // can be used as an alternative for clearspend.ach.hold.standard in test env since we receive
-    // it almost immediately after issuing a transfer
-    if (!standardHold) {
-      processInboundTransferResult(stripeObject, true);
-    }
+    parseBetaApiEvent(stripeObject, InboundTransferEvent.class)
+        .ifPresent(
+            inboundTransferEvent -> processInboundTransferResult(inboundTransferEvent.getEvent()));
   }
 
   public void inboundTransferFailed(StripeObject stripeObject) {
-    // TODO: General note for failures - revisit if should have some sort of user notification
-    // (email/push/sms) in case of money movement failure
-    processInboundTransferResult(stripeObject, false);
-  }
-
-  private void processInboundTransferResult(StripeObject stripeObject, boolean succeed) {
     parseBetaApiEvent(stripeObject, InboundTransferEvent.class)
         .ifPresent(
-            inboundTransferEvent -> {
-              Map<String, String> metadata = inboundTransferEvent.getEvent().getMetadata();
+            inboundTransferEvent -> processInboundTransferResult(inboundTransferEvent.getEvent()));
+  }
 
-              Amount amount =
-                  Amount.fromStripeAmount(
-                      Currency.of(inboundTransferEvent.getEvent().getCurrency()),
-                      inboundTransferEvent.getEvent().getAmount().longValue());
+  @VisibleForTesting
+  void processInboundTransferResult(InboundTransfer inboundTransfer) {
+    Map<String, String> metadata = inboundTransfer.getMetadata();
 
-              businessBankAccountService.processBankAccountDepositOutcome(
-                  StripeMetadataEntry.extractId(StripeMetadataEntry.BUSINESS_ID, metadata),
-                  StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
-                  StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
-                  amount,
-                  succeed);
-            });
+    Amount amount =
+        Amount.fromStripeAmount(
+            Currency.of(inboundTransfer.getCurrency()), inboundTransfer.getAmount().longValue());
+
+    List<DeclineReason> declineReasons = new ArrayList<>();
+    if (inboundTransfer.getFailureDetails() != null) {
+      // TODO: General note for failures - revisit if should have some sort of user
+      // notification (email/push/sms) in case of money movement failure
+      declineReasons.add(
+          DeclineReason.fromStripeInboundTransferFailure(
+              inboundTransfer.getFailureDetails().getCode()));
+    }
+
+    businessBankAccountService.processBankAccountDepositOutcome(
+        StripeMetadataEntry.extractId(StripeMetadataEntry.BUSINESS_ID, metadata),
+        StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
+        StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
+        amount,
+        declineReasons);
   }
 
   public void receivedCreditCreated(StripeObject stripeObject) {
@@ -118,52 +124,73 @@ public class StripeConnectHandler {
             event -> {
               ReceivedCredit receivedCredit = event.getEvent();
               switch (receivedCredit.getNetwork()) {
-                case "stripe" -> {
-                  // We should only process this event for customer connected accounts to push
-                  // money further to the Clearspend financial account
-                  if (StringUtils.equals(
-                      stripeProperties.getClearspendFinancialAccountId(),
-                      event.getEvent().getFinancialAccount())) {
-                    return;
-                  }
-
-                  try {
-                    Business business =
-                        businessService.retrieveBusinessByStripeFinancialAccount(
-                            receivedCredit.getFinancialAccount());
-                    BusinessBankAccount businessBankAccount =
-                        businessBankAccountService
-                            .getBusinessBankAccounts(business.getId(), true)
-                            .get(0);
-
-                    stripeClient.executeOutboundTransfer(
-                        business.getId(),
-                        business.getStripeData().getAccountRef(),
-                        receivedCredit.getFinancialAccount(),
-                        businessBankAccount.getStripeBankAccountRef(),
-                        Amount.fromStripeAmount(
-                            Currency.of(receivedCredit.getCurrency()),
-                            receivedCredit.getAmount().longValue()),
-                        "ACH push",
-                        "ACH push");
-                  } catch (RecordNotFoundException e) {
-                    log.info(
-                        "Skipping received credit event for business since it is not found in the db by stripe financial account {}",
-                        receivedCredit.getFinancialAccount());
-                  } catch (Exception e) {
-                    log.error("Failed to create outbound payment", e);
-                  }
-                }
-                case "ach" -> {
-                  // TODO: Call StripeClient.pushFundsToClearspendFinancialAccount to move
-                  // funds to the platform account. But so far we do not receive it for ach
-                  // transfers
-                }
+                case "stripe" -> onStripeCreditsReceived(receivedCredit);
+                case "ach", "us_domestic_wire" -> onAchCreditsReceived(receivedCredit);
                 default -> log.error(
-                    "Unexpected network value {} for inbound transfer",
+                    "Unexpected network value {} for credit received event",
                     receivedCredit.getNetwork());
               }
             });
+  }
+
+  /**
+   * Stripe credit received might be a result of 2 money movement operations: Clearspend FA ->
+   * Customer FA (in this case we need to push money further to the customer external bank account)
+   * Customer FA -> Clearspend FA (no need to do anything since it is the final step of the incoming
+   * transfer)
+   *
+   * @param receivedCredit Received credit event object from Stripe
+   */
+  private void onStripeCreditsReceived(ReceivedCredit receivedCredit) {
+    if (StringUtils.equals(
+        stripeProperties.getClearspendFinancialAccountId(), receivedCredit.getFinancialAccount())) {
+      return;
+    }
+
+    try {
+      Business business =
+          businessService.retrieveBusinessByStripeFinancialAccount(
+              receivedCredit.getFinancialAccount());
+      BusinessBankAccount businessBankAccount =
+          businessBankAccountService.getBusinessBankAccounts(business.getId(), true).get(0);
+
+      stripeClient.executeOutboundTransfer(
+          business.getId(),
+          business.getStripeData().getAccountRef(),
+          receivedCredit.getFinancialAccount(),
+          businessBankAccount.getStripeBankAccountRef(),
+          Amount.fromStripeAmount(
+              Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
+          "ACH push",
+          "ACH push");
+    } catch (RecordNotFoundException e) {
+      log.info(
+          "Skipping received credit event for business since it is not found in the db by stripe financial account {}",
+          receivedCredit.getFinancialAccount());
+    } catch (Exception e) {
+      log.error("Failed to create outbound payment", e);
+    }
+  }
+
+  @VisibleForTesting
+  void onAchCreditsReceived(ReceivedCredit receivedCredit) {
+    try {
+      Business business =
+          businessService.retrieveBusinessByStripeFinancialAccount(
+              receivedCredit.getFinancialAccount());
+
+      businessBankAccountService.processExternalAchTransfer(
+          business.getId(),
+          Amount.fromStripeAmount(
+              Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
+          standardHold);
+    } catch (RecordNotFoundException e) {
+      log.info(
+          "Skipping received credit event for an ach transfer for business since it is not found in the db by stripe financial account {}",
+          receivedCredit.getFinancialAccount());
+    } catch (Exception e) {
+      log.error("Failed to create outbound payment", e);
+    }
   }
 
   public void financialAccountFeaturesUpdated(StripeObject stripeObject) {

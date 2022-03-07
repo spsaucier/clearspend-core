@@ -39,6 +39,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.NonNull;
@@ -56,12 +58,15 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Profile("test")
 public class StripeMockClient extends StripeClient {
 
+  private static final String PERSON = "person";
+
   private static final String fakerRandom32SymbolsPattern = "????????????????????????????????";
   private static final Faker faker = new Faker();
+
   @Autowired private BusinessRepository businessRepository;
   @Autowired private BusinessOwnerRepository businessOwnerRepository;
 
-  public static final String PERSON = "person";
+  private final ConcurrentMap<String, Object> createdObjects = new ConcurrentHashMap<>();
 
   private final Resource successOnboarding;
   private final Resource accountAddRepresentative;
@@ -384,9 +389,11 @@ public class StripeMockClient extends StripeClient {
   }
 
   @SneakyThrows
+  @SuppressWarnings("unchecked")
   private <T> T generateEntityWithId(Class<T> entityClass, String id) {
     T entity = (T) entityClass.getDeclaredConstructors()[0].newInstance();
     ReflectionUtils.findMethod(entityClass, "setId", String.class).invoke(entity, id);
+    createdObjects.put(id, entity);
 
     return entity;
   }
@@ -450,11 +457,8 @@ public class StripeMockClient extends StripeClient {
   }
 
   @SneakyThrows
-  @SuppressWarnings("unchecked")
   private <T> T generateEntityWithIdAndStatus(Class<T> entityClass, String status) {
-    T entity = (T) entityClass.getDeclaredConstructors()[0].newInstance();
-    ReflectionUtils.findMethod(entityClass, "setId", String.class)
-        .invoke(entity, faker.letterify(fakerRandom32SymbolsPattern));
+    T entity = generateEntityWithId(entityClass);
     ReflectionUtils.findMethod(entityClass, "setStatus", String.class).invoke(entity, status);
 
     return entity;
@@ -508,14 +512,7 @@ public class StripeMockClient extends StripeClient {
       Amount amount,
       String description,
       String statementDescriptor) {
-    return super.pushFundsToClearspendFinancialAccount(
-        businessId,
-        fromAccountRef,
-        fromFinancialAccountRef,
-        adjustmentId,
-        amount,
-        description,
-        statementDescriptor);
+    return generateEntityWithId(OutboundPayment.class);
   }
 
   @SneakyThrows
@@ -557,5 +554,15 @@ public class StripeMockClient extends StripeClient {
         });
 
     return account;
+  }
+
+  public void reset() {
+    createdObjects.clear();
+  }
+
+  public long countCreatedObjectsByType(Class<?> clazz) {
+    return createdObjects.values().stream()
+        .filter(v -> clazz.isAssignableFrom(v.getClass()))
+        .count();
   }
 }

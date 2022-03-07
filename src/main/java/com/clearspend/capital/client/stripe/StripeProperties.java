@@ -26,4 +26,5 @@ public class StripeProperties {
   private String tosAcceptanceIp;
   private String clearspendConnectedAccountId;
   private String clearspendFinancialAccountId;
+  private boolean enableTransferFailures;
 }

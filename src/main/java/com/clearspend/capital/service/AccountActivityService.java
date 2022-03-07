@@ -38,6 +38,7 @@ import com.clearspend.capital.service.type.NetworkCommon;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -98,6 +99,7 @@ public class AccountActivityService {
               adjustment.getAmount(),
               AccountActivityIntegrationSyncStatus.NOT_READY);
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
+      holdAccountActivity.setHoldId(hold.getId());
 
       accountActivityRepository.save(holdAccountActivity);
     }
@@ -131,7 +133,7 @@ public class AccountActivityService {
             .min(Comparator.comparing(Versioned::getCreated))
             .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, hold.getId()));
 
-    accountActivity.setHideAfter(OffsetDateTime.now());
+    accountActivity.setHideAfter(OffsetDateTime.now(Clock.systemUTC()));
     log.debug(
         "updating account activity {}: hideAfter: {}",
         accountActivity.getId(),
@@ -248,9 +250,10 @@ public class AccountActivityService {
               .orElse(null));
     }
     log.debug(
-        "Set expense category {} to accountActivity {} ({})",
-        accountActivity.getId(),
-        accountActivity.getExpenseDetails());
+        "Set expense details {} to accountActivity {}",
+        accountActivity.getExpenseDetails(),
+        accountActivity.getId());
+
     return accountActivityRepository.save(accountActivity);
   }
 

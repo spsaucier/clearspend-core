@@ -123,6 +123,19 @@ client:
     # Terms of service acceptance ip address needed during stripe account creation.
     # Current value equals to clearspend domain public ip
     tos-acceptance-ip: ${STRIPE_TOS_ACCEPTANCE_IP:35.172.94.1}
+    # Enable special amounts that will fail stripe transfers
+    # More details:
+    # https://stripe.com/docs/treasury/beta/api-spec/moving-money#inbound-transfers-test-mode
+    # https://stripe.com/docs/treasury/beta/api-spec/moving-money#outbound-transfers-test-mode
+    # Inbound transfers:
+    # 131$ - pm_usBankAccount_noAccount
+    # 132$ - pm_usBankAccount_invalidAccountNumber
+    # 133$ - pm_usBankAccount_dispute
+    # Outbound transfers:
+    # 141$ - pm_usBankAccount_canceledByUser
+    # 142$ - pm_usBankAccount_internalFailure
+    # 143$ - pm_usBankAccount_accountClosed
+    enable-transfer-failures: ${STRIPE_ENABLE_TRANSFER_FAILURES:true}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC0a899d1f81a7443c707b2f66637b1ac3}
     auth-token: ${TWILIO_AUTH_TOKEN:a24434d31b817cf0f3acae9eba031cc1}

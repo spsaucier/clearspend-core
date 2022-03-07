@@ -28,6 +28,7 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.HoldStatus;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -41,6 +42,8 @@ import com.stripe.model.Account;
 import com.stripe.model.ExternalAccount;
 import com.stripe.model.SetupIntent;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,6 +67,7 @@ public class BusinessBankAccountService {
   private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
+  private final AdjustmentService adjustmentService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
   private final ContactValidator contactValidator;
@@ -73,12 +77,6 @@ public class BusinessBankAccountService {
   private final RetrievalService retrievalService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final TwilioService twilioService;
-
-  public record BusinessBankAccountRecord(
-      RequiredEncryptedStringWithHash routingNumber,
-      RequiredEncryptedStringWithHash accountNumber,
-      RequiredEncryptedStringWithHash accessToken,
-      RequiredEncryptedStringWithHash accountRef) {}
 
   @Transactional
   public BusinessBankAccount createBusinessBankAccount(
@@ -207,6 +205,40 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
+  public AdjustmentAndHoldRecord processExternalAchTransfer(
+      TypedId<BusinessId> businessId, Amount amount, boolean standardHold) {
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+    if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
+      throw new InvalidStateException(
+          Table.BUSINESS, "Stripe Financial Account Ref missing on business " + businessId);
+    }
+
+    AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        accountService.depositFunds(businessId, allocationRecord.account(), amount, standardHold);
+
+    accountActivityService.recordBankAccountAccountActivity(
+        allocationRecord.allocation(),
+        AccountActivityType.BANK_DEPOSIT,
+        adjustmentAndHoldRecord.adjustment(),
+        adjustmentAndHoldRecord.hold());
+
+    businessBankAccountRepository.flush();
+
+    stripeClient.pushFundsToClearspendFinancialAccount(
+        businessId,
+        business.getStripeData().getAccountRef(),
+        business.getStripeData().getFinancialAccountRef(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount,
+        "Company [%s] External ACH pull funds relocation".formatted(business.getLegalName()),
+        "Company [%s] External ACH pull funds relocation".formatted(business.getLegalName()));
+
+    return adjustmentAndHoldRecord;
+  }
+
+  @Transactional
   public AdjustmentAndHoldRecord transactBankAccount(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
@@ -304,35 +336,44 @@ public class BusinessBankAccountService {
       TypedId<AdjustmentId> adjustmentId,
       TypedId<HoldId> holdId,
       Amount amount,
-      boolean succeed) {
-    if (holdId != null) {
+      List<DeclineReason> declineReasons) {
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+    AccountActivity accountActivity =
+        accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
+
+    if (!declineReasons.isEmpty()) {
+      // if deposit has failed we need to release original deposit hold and decrease ledger balance
       Hold hold = accountService.retrieveHold(holdId);
       hold.setStatus(HoldStatus.RELEASED);
 
       accountActivityService.recordHoldReleaseAccountActivity(hold);
-    }
 
-    AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
+      // make sure the adjustment account activity becomes visible because hold related one is now
+      // hidden due to the recordHoldReleaseAccountActivity method invocation
+      accountActivity.setVisibleAfter(OffsetDateTime.now(Clock.systemUTC()));
 
-    if (!succeed) {
-      AllocationRecord rootAllocation = allocationService.getRootAllocation(businessId);
-      rootAllocation
-          .account()
-          .setLedgerBalance(rootAllocation.account().getLedgerBalance().sub(amount));
+      // withdraw funds and create bank account activity record about it
+      AllocationRecord rootAllocationRecord = allocationService.getRootAllocation(businessId);
+      com.clearspend.capital.data.model.Account rootAllocationAccount =
+          rootAllocationRecord.account();
+      AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+          accountService.withdrawFunds(businessId, rootAllocationAccount, amount);
+      accountActivityService.recordBankAccountAccountActivity(
+          rootAllocationRecord.allocation(),
+          AccountActivityType.BANK_DEPOSIT_RETURN,
+          adjustmentAndHoldRecord.adjustment(),
+          adjustmentAndHoldRecord.hold());
 
+      // mark adjustment account activity as DECLINED
       accountActivity.setStatus(AccountActivityStatus.DECLINED);
 
-      Business business = retrievalService.retrieveBusiness(businessId, true);
+      // send fund returns email
       twilioService.sendBankFundsReturnEmail(
           business.getBusinessEmail().getEncrypted(), business.getLegalName());
 
+      // TODO: write decline to the db and account activity. Should be done as a part of adding
+      // decline reason to the account activity table
     } else {
-      accountActivity.setStatus(AccountActivityStatus.PROCESSED);
-
-      businessBankAccountRepository.flush();
-
-      Business business = retrievalService.retrieveBusiness(businessId, true);
       stripeClient.pushFundsToClearspendFinancialAccount(
           businessId,
           business.getStripeData().getAccountRef(),
