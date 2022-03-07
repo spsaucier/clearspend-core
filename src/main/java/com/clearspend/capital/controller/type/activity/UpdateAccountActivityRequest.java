@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.type.activity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Optional;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +18,5 @@ public class UpdateAccountActivityRequest {
 
   /** Expense category code */
   @JsonProperty("iconRef")
-  @Min(1)
   private Optional<Integer> iconRef;
 }
