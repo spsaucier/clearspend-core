@@ -66,8 +66,8 @@ client:
   google:
     storage:
       credentials: ${GCS_IMAGES_RECEIPTS_SA:<not set>}
-      receiptBucketName: dev-images-receipts
-      onboardFileBucketName: dev-images-onboard-file
+      receiptBucketName: ${RECEIPT_BUCKET_NAME:dev-images-receipts}
+      onboardFileBucketName: ${ONBOARD_FILE_BUCKET_NAME:dev-images-onboard-file}
       createBucket: true
       enabled: true
 
@@ -78,7 +78,7 @@ client:
   sendgrid:
     api-key: ${SENDGRID_API_KEY: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}
     email-notifications-enabled: ${SENDGRID_EMAIL_NOTIFICATIONS_ENABLED:true}
-    notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:ClearSpend <notifications@em4186.clearspend.com>}
+    notifications-sender-email: ${SENDGRID_NOTIFICATIONS_SENDER_EMAIL:ClearSpend <notifications@em8072.clearspend.com>}
     notifications-email-subject: ${SENDGRID_NOTIFICATIONS_EMAIL_SUBJECT:ClearSpend}
     onboarding-welcome-email-template-id: ${SENDGRID_ONBOARDING_WELCOME_EMAIL_TEMPLATE_ID:d-3215eacb40784ac6b6a96217196b17fe}
     kyb-kyc-pass-email-template-id: ${SENDGRID_KYB_KYC_PASS_EMAIL_TEMPLATE_ID:d-d27553e5452f4e3e9f7b097acb1b9738}

@@ -29,7 +29,7 @@ class FileStoreServiceTest extends BaseCapitalTest {
     Business business = testHelper.createBusiness().business();
     FileStore fileStore =
         fileStoreService.saveFileForBusiness(
-            business.getId(), "fileName", "Identity", "Hello".getBytes());
+            business.getId(), "id", "fileName", "Identity", "Hello".getBytes());
     FileStore fileStoreByBusinessIdAndId =
         fileStoreRepository
             .findFileStoreByBusinessIdAndId(business.getId(), fileStore.getId())
@@ -46,7 +46,7 @@ class FileStoreServiceTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
     BusinessOwner businessOwner = createBusinessRecord.businessOwner();
     fileStoreService.saveFileForBusinessOwner(
-        business.getId(), businessOwner.getId(), "fileName", "Identity", "Hello".getBytes());
+        business.getId(), businessOwner.getId(), "id", "fileName", "Identity", "Hello".getBytes());
     List<FileStore> fileStoreByBusinessIdAndId =
         fileStoreRepository.findFileStoreByBusinessIdAndBusinessOwnerId(
             business.getId(), businessOwner.getId());

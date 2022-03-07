@@ -45,6 +45,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessType;
@@ -116,6 +117,7 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -380,6 +382,8 @@ public class TestHelper {
             false,
             false,
             email,
+            faker.internet().ipV4Address(),
+            faker.internet().userAgentAny(),
             true);
     assertThat(record.businessProspectStatus()).isEqualTo(status);
   }
@@ -468,11 +472,16 @@ public class TestHelper {
             generateLastName(),
             BusinessType.MULTI_MEMBER_LLC,
             true,
-            false);
+            false,
+            true);
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
-        mvc.perform(post("/business-prospects").contentType("application/json").content(body))
+        mvc.perform(
+                post("/business-prospects")
+                    .header(HttpHeaders.USER_AGENT, faker.internet().userAgentAny())
+                    .contentType("application/json")
+                    .content(body))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -539,7 +548,6 @@ public class TestHelper {
     MockHttpServletResponse response =
         mvc.perform(
                 post(String.format("/business-prospects/%s/convert", businessProspectId))
-                    .header(HttpHeaders.USER_AGENT, faker.internet().userAgentAny())
                     .contentType("application/json")
                     .content(body)
                     .cookie(defaultAuthCookie))
@@ -764,8 +772,10 @@ public class TestHelper {
                     MerchantType.AGRICULTURAL_COOPERATIVE,
                     MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
                     faker.internet().url()),
-                faker.internet().ipV4Address(),
-                faker.internet().userAgentAny())
+                new TosAcceptance(
+                    OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS),
+                    faker.internet().ipV4Address(),
+                    faker.internet().userAgentAny()))
             .business();
     BusinessOwnerAndUserRecord businessOwner =
         createBusinessOwner(business.getId(), email, password);

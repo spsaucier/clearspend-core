@@ -33,8 +33,8 @@ public enum BusinessOnboardingStep {
 
   private static final Map<BusinessOnboardingStep, Set<BusinessOnboardingStep>> stateTransfers =
       Map.of(
-          BUSINESS, Set.of(BUSINESS_OWNERS, LINK_ACCOUNT, REVIEW, SOFT_FAIL),
-          BUSINESS_OWNERS, Set.of(LINK_ACCOUNT, REVIEW, SOFT_FAIL, BUSINESS),
+          BUSINESS, Set.of(BUSINESS_OWNERS, LINK_ACCOUNT, REVIEW, SOFT_FAIL, BUSINESS),
+          BUSINESS_OWNERS, Set.of(LINK_ACCOUNT, REVIEW, SOFT_FAIL, BUSINESS, BUSINESS_OWNERS),
           SOFT_FAIL, Set.of(REVIEW, BUSINESS, BUSINESS_OWNERS, LINK_ACCOUNT, SOFT_FAIL),
           REVIEW, Set.of(SOFT_FAIL, BUSINESS, BUSINESS_OWNERS, LINK_ACCOUNT),
           LINK_ACCOUNT, Set.of(TRANSFER_MONEY, COMPLETE),

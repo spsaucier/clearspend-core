@@ -53,4 +53,10 @@ public class CreateOrUpdateBusinessProspectRequest {
   @JsonProperty("relationshipExecutive")
   @Schema(title = "Relationship to business Executive", example = "true")
   private Boolean relationshipExecutive;
+
+  @NonNull
+  @NotNull(message = "Terms of Service and Privacy Policy Acceptance required")
+  @JsonProperty("tosAndPrivacyPolicyAcceptance")
+  @Schema(title = "Terms of Service and Privacy Policy Acceptance", example = "true")
+  private Boolean tosAndPrivacyPolicyAcceptance;
 }

@@ -11,6 +11,7 @@ import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import javax.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @Autowired private BusinessService businessService;
   @Autowired private ApplicationReviewService applicationReviewService;
   @Autowired private StripeClient stripeClient;
+  @Autowired private BusinessKycStepHandler stepHandler;
 
   @Test
   @SneakyThrows
@@ -48,10 +50,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
         businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
-    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().size() > 0);
+    Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireOwner());
+    Assertions.assertTrue(stripeApplicationRequirements.getRequireRepresentative());
   }
 
   @Test
@@ -112,8 +116,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("invalidAccountAddressInvalidPersonAddressRequirePersonDocument");
     businessRepository.save(business1);
     businessRepository.flush();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business1, stripeClient.retrieveCompleteAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -182,8 +186,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownersAndRepresentativeProvided");
     businessRepository.save(business1);
     businessRepository.flush();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business1, stripeClient.retrieveCompleteAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -191,11 +195,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     Business business =
         businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
 
-    Assertions.assertEquals(BusinessOnboardingStep.SOFT_FAIL, business.getOnboardingStep());
+    Assertions.assertEquals(BusinessOnboardingStep.REVIEW, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
-    Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().size() > 0);
+    Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredDocuments().isEmpty());
     Assertions.assertTrue(stripeApplicationRequirements.getKycRequiredFields().isEmpty());
+    Assertions.assertTrue(stripeApplicationRequirements.getPendingVerification().size() > 0);
   }
 
   @Test
@@ -206,8 +211,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownersAndRepresentativeProvided_event2fromStripe");
     businessRepository.save(business1);
     businessRepository.flush();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business1, stripeClient.retrieveCompleteAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -230,8 +235,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("successOnboarding");
     businessRepository.save(business1);
     businessRepository.flush();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business1, stripeClient.retrieveCompleteAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 
@@ -252,8 +257,8 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("ownerRepresentativeAditionaCompanyAndSettingDetailsRequired");
     businessRepository.save(business1);
     businessRepository.flush();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business1, stripeClient.retrieveAccount(business1.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business1, stripeClient.retrieveCompleteAccount(business1.getStripeData().getAccountRef()));
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 

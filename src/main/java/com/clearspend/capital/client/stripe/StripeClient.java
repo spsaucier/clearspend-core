@@ -6,6 +6,8 @@ import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.error.StripeAccountDocumentUpdateException;
+import com.clearspend.capital.common.error.StripePersonDocumentUpdateException;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -52,6 +54,8 @@ import com.stripe.param.PersonCollectionCreateParams.Builder;
 import com.stripe.param.PersonCollectionCreateParams.Dob;
 import com.stripe.param.PersonCollectionCreateParams.Relationship;
 import com.stripe.param.PersonUpdateParams;
+import com.stripe.param.PersonUpdateParams.Verification;
+import com.stripe.param.PersonUpdateParams.Verification.Document;
 import com.stripe.param.SetupIntentCreateParams;
 import com.stripe.param.SetupIntentCreateParams.MandateData;
 import com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance;
@@ -66,7 +70,6 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -164,9 +167,16 @@ public class StripeClient {
         accountBuilder
             .setTosAcceptance(
                 TosAcceptance.builder()
-                    // TODO: identify proper values
-                    .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                    .setDate(
+                        business
+                            .getStripeData()
+                            .getTosAcceptance()
+                            .getDate()
+                            .toInstant()
+                            .getEpochSecond())
+                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                    .setUserAgent(business.getStripeData().getTosAcceptance().getUserAgent())
+                    .setServiceAgreement("full")
                     .build())
             .setSettings(
                 Settings.builder()
@@ -175,8 +185,15 @@ public class StripeClient {
                             .setTosAcceptance(
                                 Settings.CardIssuing.TosAcceptance.builder()
                                     .setDate(
-                                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                                        business
+                                            .getStripeData()
+                                            .getTosAcceptance()
+                                            .getDate()
+                                            .toInstant()
+                                            .getEpochSecond())
+                                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                                    .setUserAgent(
+                                        business.getStripeData().getTosAcceptance().getUserAgent())
                                     .build())
                             .build())
                     .putExtraParam(
@@ -185,9 +202,16 @@ public class StripeClient {
                             "tos_acceptance",
                             Map.of(
                                 "date",
-                                TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
+                                business
+                                    .getStripeData()
+                                    .getTosAcceptance()
+                                    .getDate()
+                                    .toInstant()
+                                    .getEpochSecond(),
                                 "ip",
-                                business.getStripeData().getTosAcceptanceIp())))
+                                business.getStripeData().getTosAcceptance().getIp(),
+                                "user_agent",
+                                business.getStripeData().getTosAcceptance().getUserAgent())))
                     .build())
             .build();
 
@@ -240,8 +264,16 @@ public class StripeClient {
         accountBuilder
             .setTosAcceptance(
                 AccountUpdateParams.TosAcceptance.builder()
-                    .setDate(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                    .setDate(
+                        business
+                            .getStripeData()
+                            .getTosAcceptance()
+                            .getDate()
+                            .toInstant()
+                            .getEpochSecond())
+                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                    .setUserAgent(business.getStripeData().getTosAcceptance().getUserAgent())
+                    .setServiceAgreement("full")
                     .build())
             .setSettings(
                 AccountUpdateParams.Settings.builder()
@@ -250,8 +282,15 @@ public class StripeClient {
                             .setTosAcceptance(
                                 AccountUpdateParams.Settings.CardIssuing.TosAcceptance.builder()
                                     .setDate(
-                                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()))
-                                    .setIp(business.getStripeData().getTosAcceptanceIp())
+                                        business
+                                            .getStripeData()
+                                            .getTosAcceptance()
+                                            .getDate()
+                                            .toInstant()
+                                            .getEpochSecond())
+                                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                                    .setUserAgent(
+                                        business.getStripeData().getTosAcceptance().getUserAgent())
                                     .build())
                             .build())
                     .putExtraParam(
@@ -260,9 +299,16 @@ public class StripeClient {
                             "tos_acceptance",
                             Map.of(
                                 "date",
-                                TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
+                                business
+                                    .getStripeData()
+                                    .getTosAcceptance()
+                                    .getDate()
+                                    .toInstant()
+                                    .getEpochSecond(),
                                 "ip",
-                                business.getStripeData().getTosAcceptanceIp())))
+                                business.getStripeData().getTosAcceptance().getIp(),
+                                "user_agent",
+                                business.getStripeData().getTosAcceptance().getUserAgent())))
                     .build())
             .build();
 
@@ -276,6 +322,16 @@ public class StripeClient {
 
   public Account retrieveAccount(String stripeAccountId) {
     return callStripe("retrieveAccount", null, () -> Account.retrieve(stripeAccountId));
+  }
+
+  public com.clearspend.capital.client.stripe.types.Account retrieveCompleteAccount(
+      String stripeAccountId) {
+    return callStripeBetaApi(
+        "/accounts",
+        MultiValueMapBuilder.builder().build(),
+        stripeAccountId,
+        null,
+        com.clearspend.capital.client.stripe.types.Account.class);
   }
 
   @SneakyThrows
@@ -431,7 +487,7 @@ public class StripeClient {
 
   @SneakyThrows
   public File uploadFile(MultipartFile file, Purpose purpose) {
-
+    log.info("Upload file {} to Stripe", file.getOriginalFilename());
     FileCreateParams fileCreateParams =
         FileCreateParams.builder().setPurpose(purpose).setFile(file.getInputStream()).build();
 
@@ -513,6 +569,45 @@ public class StripeClient {
     }
 
     return person.update(builder.build());
+  }
+
+  public Account updateAccountDocument(
+      String accountId, AccountUpdateParams.Company.Verification.Document document) {
+    Account account = new Account();
+    account.setId(accountId);
+
+    try {
+      return account.update(
+          AccountUpdateParams.builder()
+              .setCompany(
+                  AccountUpdateParams.Company.builder()
+                      .setVerification(
+                          AccountUpdateParams.Company.Verification.builder()
+                              .setDocument(document)
+                              .build())
+                      .build())
+              .build());
+    } catch (StripeException e) {
+      throw new StripeAccountDocumentUpdateException(e.getMessage());
+    }
+  }
+
+  public Person updatePersonDocuments(String personId, String accountId, Document document) {
+    Person person = new Person();
+    person.setId(personId);
+    person.setAccount(accountId);
+
+    Person personResponse = null;
+    try {
+      personResponse =
+          person.update(
+              PersonUpdateParams.builder()
+                  .setVerification(Verification.builder().setDocument(document).build())
+                  .build());
+    } catch (StripeException e) {
+      throw new StripePersonDocumentUpdateException(e.getMessage());
+    }
+    return personResponse;
   }
 
   @SneakyThrows

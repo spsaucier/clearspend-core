@@ -48,4 +48,7 @@ public class FileStore extends TypedMutable<FileStoreId> {
 
   // This will be the path to file from Google cloud bucket
   private String path;
+
+  // The id where document can be downloaded from Stripe
+  private String stripeId;
 }

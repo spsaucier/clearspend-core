@@ -23,7 +23,7 @@
         "transfers": "active",
         "us_bank_account_ach_payments": "active",
         "card_issuing": "active",
-        "treasury": "inactive"
+        "treasury": "active"
       },
       "charges_enabled": true,
       "country": "US",

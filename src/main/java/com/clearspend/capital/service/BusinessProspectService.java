@@ -16,6 +16,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -27,6 +28,8 @@ import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -70,6 +73,8 @@ public class BusinessProspectService {
       Boolean relationshipExecutive,
       Boolean relationshipDirector,
       String email,
+      String tosAcceptanceIp,
+      String userAgent,
       boolean live) {
     BusinessProspect businessProspect =
         businessProspectRepository
@@ -80,7 +85,11 @@ public class BusinessProspectService {
                       new BusinessProspect(
                           new RequiredEncryptedString(firstName),
                           new RequiredEncryptedString(lastName),
-                          new RequiredEncryptedStringWithHash(email));
+                          new RequiredEncryptedStringWithHash(email),
+                          new TosAcceptance(
+                              OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS),
+                              tosAcceptanceIp,
+                              userAgent));
                   entity.setBusinessType(businessType);
                   entity.setRelationshipOwner(relationshipOwner);
                   entity.setRelationshipRepresentative(relationshipRepresentative);
@@ -262,7 +271,7 @@ public class BusinessProspectService {
       explanation = "This is where the business gets created")
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
-      ConvertBusinessProspect convertBusinessProspect, String tosAcceptanceIp, String userAgent) {
+      ConvertBusinessProspect convertBusinessProspect) {
     BusinessProspect businessProspect =
         retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
 
@@ -283,8 +292,7 @@ public class BusinessProspectService {
             businessProspect.getBusinessType(),
             businessProspect.getEmail().getEncrypted(),
             convertBusinessProspect,
-            tosAcceptanceIp,
-            userAgent);
+            businessProspect.getTosAcceptance());
 
     BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
 

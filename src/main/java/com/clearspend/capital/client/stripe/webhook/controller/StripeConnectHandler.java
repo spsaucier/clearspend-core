@@ -3,6 +3,7 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.stripe.StripeMetadataEntry;
 import com.clearspend.capital.client.stripe.StripeProperties;
+import com.clearspend.capital.client.stripe.types.Account;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
@@ -20,11 +21,13 @@ import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
+import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.stripe.model.Account;
+import com.google.gson.JsonSyntaxException;
+import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.model.StripeRawJsonObject;
 import java.util.ArrayList;
@@ -51,6 +54,7 @@ public class StripeConnectHandler {
   private final StripeClient stripeClient;
   private final boolean standardHold;
   private final StripeProperties stripeProperties;
+  private final BusinessKycStepHandler stepHandler;
 
   public StripeConnectHandler(
       BusinessService businessService,
@@ -58,7 +62,8 @@ public class StripeConnectHandler {
       PendingStripeTransferService pendingStripeTransferService,
       StripeClient stripeClient,
       StripeProperties stripeProperties,
-      @Value("${clearspend.ach.hold.standard:true}") boolean standardHold) {
+      @Value("${clearspend.ach.hold.standard:true}") boolean standardHold,
+      BusinessKycStepHandler stepHandler) {
 
     this.businessService = businessService;
     this.businessBankAccountService = businessBankAccountService;
@@ -66,14 +71,20 @@ public class StripeConnectHandler {
     this.stripeClient = stripeClient;
     this.stripeProperties = stripeProperties;
     this.standardHold = standardHold;
+    this.stepHandler = stepHandler;
   }
 
-  public void accountUpdated(Account account) {
+  public void accountUpdated(StripeObject stripeObject) {
     try {
+      Account account =
+          gson.fromJson(
+              ((Event) stripeObject).getDataObjectDeserializer().getRawJson(), Account.class);
       Business business = businessService.retrieveBusinessByStripeAccountReference(account.getId());
-      businessService.updateBusinessAccordingToStripeAccountRequirements(business, account);
+      stepHandler.execute(business, account);
     } catch (RecordNotFoundException recordNotFoundException) {
       log.info("Ignored case for record not found exception on Stripe connect webhook event.");
+    } catch (JsonSyntaxException jsonSyntaxException) {
+      log.error(jsonSyntaxException.getMessage());
     }
   }
 

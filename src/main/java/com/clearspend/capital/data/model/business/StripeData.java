@@ -34,8 +34,5 @@ public class StripeData {
 
   @Sensitive @Embedded private RequiredEncryptedString bankRoutingNumber;
 
-  // on business creation we will collect the ip of the customer, required by Stripe
-  @NonNull private String tosAcceptanceIp;
-  // on business creation we will collect the userAgent of the customer, as part of tos acceptance
-  @NonNull private String tosAcceptanceUserAgent;
+  @Embedded @NonNull private TosAcceptance tosAcceptance;
 }

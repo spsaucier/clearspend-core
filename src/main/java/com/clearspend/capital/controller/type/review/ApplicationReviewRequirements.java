@@ -37,12 +37,20 @@ public class ApplicationReviewRequirements {
   @JsonProperty("requireRepresentative")
   private final Boolean requireRepresentative;
 
+  @JsonProperty("pendingVerification")
+  private final List<String> pendingVerification;
+
+  @JsonProperty("errorCodes")
+  private final List<StripeRequirementsErrorCode> errorCodes;
+
   public static ApplicationReviewRequirements from(
       List<String> businessRequiredFields,
       Map<TypedId<BusinessOwnerId>, List<String>> personRequiredFields,
       RequiredDocumentsForStripe requiredDocumentsForStripe,
       Boolean requireOwner,
-      Boolean requireRepresentative) {
+      Boolean requireRepresentative,
+      List<String> pendingVerification,
+      List<StripeRequirementsErrorCode> errorCodes) {
     List<RequiredDocument> kybRequiredDocuments =
         requiredDocumentsForStripe.kybDocuments() != null
             ? requiredDocumentsForStripe.kybDocuments().kybErrorCodeList().stream()
@@ -89,6 +97,8 @@ public class ApplicationReviewRequirements {
         kybRequiredDocuments,
         kycRequiredDocuments,
         requireOwner,
-        requireRepresentative);
+        requireRepresentative,
+        pendingVerification,
+        errorCodes);
   }
 }

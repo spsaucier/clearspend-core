@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.business;
 
 import com.clearspend.capital.common.data.util.HttpReqRespUtils;
+import com.clearspend.capital.common.error.TosAndPrivacyPolicyException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.Business;
@@ -47,7 +48,12 @@ public class BusinessProspectController {
 
   @PostMapping("")
   CreateBusinessProspectResponse createBusinessProspect(
-      @Validated @RequestBody CreateOrUpdateBusinessProspectRequest request) {
+      @Validated @RequestBody CreateOrUpdateBusinessProspectRequest request,
+      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+      HttpServletRequest httpServletRequest) {
+    if (!request.getTosAndPrivacyPolicyAcceptance()) {
+      throw new TosAndPrivacyPolicyException();
+    }
     BusinessProspectRecord businessProspect =
         businessProspectService.createOrUpdateBusinessProspect(
             request.getFirstName(),
@@ -61,6 +67,8 @@ public class BusinessProspectController {
             request.getRelationshipExecutive(),
             false, // for now we decide to ignore director option
             request.getEmail(),
+            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
+            userAgent,
             onboardingEmailPhoneValidation);
 
     return new CreateBusinessProspectResponse(
@@ -121,14 +129,10 @@ public class BusinessProspectController {
               description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
-      @Validated @RequestBody ConvertBusinessProspectRequest request,
-      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
-      HttpServletRequest httpServletRequest) {
+      @Validated @RequestBody ConvertBusinessProspectRequest request) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
         businessProspectService.convertBusinessProspect(
-            request.toConvertBusinessProspect(businessProspectId),
-            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
-            userAgent);
+            request.toConvertBusinessProspect(businessProspectId));
 
     return new ConvertBusinessProspectResponse(
         new Business(convertBusinessProspectRecord.business()),

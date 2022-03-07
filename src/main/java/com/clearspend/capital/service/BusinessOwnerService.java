@@ -10,6 +10,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
+import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
@@ -23,12 +24,8 @@ import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
-import com.stripe.model.Account.Requirements.Errors;
 import com.stripe.model.Person;
-import com.stripe.model.Person.Requirements;
 import io.jsonwebtoken.lang.Assert;
-import io.jsonwebtoken.lang.Collections;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +39,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessOwnerService {
 
-  private final TwilioService twilioService;
-
   private final BusinessOwnerRepository businessOwnerRepository;
 
   private final UserService userService;
@@ -54,10 +49,7 @@ public class BusinessOwnerService {
 
   public record BusinessOwnerAndUserRecord(BusinessOwner businessOwner, User user) {}
 
-  public record StripePersonAndErrorMessages(Person person, List<String> errorMessages) {}
-
-  public record BusinessOwnerAndStripePersonRecord(
-      BusinessOwner businessOwner, StripePersonAndErrorMessages personReport) {}
+  public record BusinessOwnerAndStripePersonRecord(BusinessOwner businessOwner, Person person) {}
 
   public record BusinessAndAccountErrorMessages(Business business, List<String> errorMessages) {}
 
@@ -111,17 +103,17 @@ public class BusinessOwnerService {
   }
 
   public BusinessAndAccountErrorMessages allOwnersProvided(
-      TypedId<BusinessId> businessId, Boolean noOtherOwnersToProvide) {
+      TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
     Business business = businessService.retrieveBusiness(businessId, true);
     List<BusinessOwner> businessOwners = findBusinessOwnerByBusinessId(business.getId());
 
     stripeClient.triggerAccountValidationAfterPersonsProvided(
         business.getStripeData().getAccountRef(),
-        isTrue(noOtherOwnersToProvide)
+        isTrue(ownersProvidedRequest.getNoOtherOwnersToProvide())
             || businessOwners.stream()
                 .filter(businessOwnerData -> businessOwnerData.getRelationshipOwner() != null)
                 .anyMatch(BusinessOwner::getRelationshipOwner),
-        isTrue(noOtherOwnersToProvide)
+        isTrue(ownersProvidedRequest.getNoExecutiveToProvide())
             || businessOwners.stream()
                 .filter(businessOwnerData -> businessOwnerData.getRelationshipExecutive() != null)
                 .anyMatch(BusinessOwner::getRelationshipExecutive));
@@ -164,7 +156,8 @@ public class BusinessOwnerService {
     }
   }
 
-  public void validateBusinessOwners(TypedId<BusinessId> businessId) {
+  public void validateBusinessOwners(
+      TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
 
     Business business = businessService.retrieveBusiness(businessId, true);
 
@@ -176,22 +169,26 @@ public class BusinessOwnerService {
         : String.format(
             "Please provide at least one representative for %s.", business.getLegalName());
 
-    assert !List.of(
-                    BusinessType.MULTI_MEMBER_LLC,
-                    BusinessType.PRIVATE_PARTNERSHIP,
-                    BusinessType.PRIVATE_CORPORATION,
-                    BusinessType.INCORPORATED_NON_PROFIT)
-                .contains(business.getType())
-            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipExecutive)
-        : String.format("Please provide the executive for business %s.", business.getLegalName());
+    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoExecutiveToProvide())) {
+      assert !List.of(
+                      BusinessType.MULTI_MEMBER_LLC,
+                      BusinessType.PRIVATE_PARTNERSHIP,
+                      BusinessType.PRIVATE_CORPORATION,
+                      BusinessType.INCORPORATED_NON_PROFIT)
+                  .contains(business.getType())
+              || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipExecutive)
+          : String.format("Please provide the executive for business %s.", business.getLegalName());
+    }
 
-    assert !List.of(
-                    BusinessType.MULTI_MEMBER_LLC,
-                    BusinessType.PRIVATE_PARTNERSHIP,
-                    BusinessType.PRIVATE_CORPORATION)
-                .contains(business.getType())
-            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipOwner)
-        : String.format("Please provide owner details for business %s.", business.getLegalName());
+    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoOtherOwnersToProvide())) {
+      assert !List.of(
+                      BusinessType.MULTI_MEMBER_LLC,
+                      BusinessType.PRIVATE_PARTNERSHIP,
+                      BusinessType.PRIVATE_CORPORATION)
+                  .contains(business.getType())
+              || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipOwner)
+          : String.format("Please provide owner details for business %s.", business.getLegalName());
+    }
   }
 
   @Transactional
@@ -210,14 +207,7 @@ public class BusinessOwnerService {
     stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
     businessOwner.setStripePersonReference(stripePerson.getId());
 
-    List<String> stripePersonErrorMessages =
-        updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
-
-    // TODO:gb: return this to UI after a discussion will clarify this
-    StripePersonAndErrorMessages stripePersonAndErrorMessages =
-        new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
-
-    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePersonAndErrorMessages);
+    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePerson);
   }
 
   @Transactional
@@ -240,14 +230,7 @@ public class BusinessOwnerService {
       businessOwner.setStripePersonReference(stripePerson.getId());
     }
 
-    List<String> stripePersonErrorMessages =
-        updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
-
-    // TODO:gb: return this to UI after a discussion will clarify this
-    StripePersonAndErrorMessages stripePersonAndErrorMessages =
-        new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
-
-    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePersonAndErrorMessages);
+    return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePerson);
   }
 
   @Transactional
@@ -260,7 +243,7 @@ public class BusinessOwnerService {
     return businessOwner;
   }
 
-  private StripePersonAndErrorMessages createOrUpdateStripePersonReference(
+  private Person createOrUpdateStripePersonReference(
       BusinessOwner businessOwner, String stripeAccountReference) {
 
     Person stripePerson;
@@ -272,37 +255,7 @@ public class BusinessOwnerService {
       stripePerson = stripeClient.updatePerson(businessOwner, stripeAccountReference);
     }
 
-    List<String> stripePersonErrorMessages =
-        updateBusinessOwnerAccordingToStripePersonRequirements(businessOwner, stripePerson);
-
-    return new StripePersonAndErrorMessages(stripePerson, stripePersonErrorMessages);
-  }
-
-  private List<String> updateBusinessOwnerAccordingToStripePersonRequirements(
-      BusinessOwner businessOwner, Person stripePerson) {
-    Requirements stripePersonRequirements = stripePerson.getRequirements();
-
-    List<String> stripePersonErrorMessages = new ArrayList<>();
-    if (stripePersonRequirements != null
-        && (!Collections.isEmpty(stripePersonRequirements.getCurrentlyDue())
-            || !Collections.isEmpty(stripePersonRequirements.getEventuallyDue())
-            || !Collections.isEmpty(stripePersonRequirements.getPastDue())
-            || !Collections.isEmpty(stripePersonRequirements.getPendingVerification())
-            || !Collections.isEmpty(stripePersonRequirements.getErrors()))) {
-      businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus.REVIEW);
-
-      return extractErrorMessages(stripePersonRequirements);
-    }
-
-    businessOwner.setKnowYourCustomerStatus(KnowYourCustomerStatus.PASS);
-
-    return stripePersonErrorMessages;
-  }
-
-  private List<String> extractErrorMessages(Person.Requirements requirements) {
-    return requirements.getErrors() != null
-        ? requirements.getErrors().stream().map(Errors::getReason).toList()
-        : null;
+    return stripePerson;
   }
 
   public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 public enum StripeAccountFieldsToClearspendBusinessFields {
   legalName("name"),
-  employerIdentificationNumber("tax_id_provided"),
+  employerIdentificationNumber("tax_id"),
   businessPhone("phone"),
   address_streetLine1("address.line1"),
   address_streetLine2("address.line2"),

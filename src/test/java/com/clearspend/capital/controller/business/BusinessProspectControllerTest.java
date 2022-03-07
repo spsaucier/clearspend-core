@@ -26,6 +26,7 @@ import com.clearspend.capital.data.repository.business.BusinessProspectRepositor
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import io.fusionauth.domain.User;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   private final TwilioServiceMock twilioServiceMock;
   private final BusinessService businessService;
   private final StripeClient stripeClient;
+  private final BusinessKycStepHandler stepHandler;
 
   @BeforeEach
   void beforeEach() {
@@ -266,8 +268,8 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         testHelper.convertBusinessProspect("Denied", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
     Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business, stripeClient.retrieveAccount(business.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business, stripeClient.retrieveCompleteAccount(business.getStripeData().getAccountRef()));
     assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
     business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
     log.info("{}", business);
@@ -295,8 +297,8 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         testHelper.convertBusinessProspect("Review", businessProspect.getId());
     log.info("{}", convertBusinessProspectResponse);
     Business business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
-    businessService.updateBusinessAccordingToStripeAccountRequirements(
-        business, stripeClient.retrieveAccount(business.getStripeData().getAccountRef()));
+    stepHandler.execute(
+        business, stripeClient.retrieveCompleteAccount(business.getStripeData().getAccountRef()));
     assertThat(businessProspectRepository.findById(businessProspect.getId())).isEmpty();
     business = businessRepository.findById(businessProspect.getBusinessId()).orElseThrow();
     log.info("{}", business);

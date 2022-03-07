@@ -6,12 +6,14 @@ import static java.util.stream.Collectors.joining;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.util.HttpReqRespUtils;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
 import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResponse;
+import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements.KycDocuments;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
@@ -89,18 +91,23 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
+import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -114,6 +121,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 public class TestDataController {
+
+  private String testPersonSSNSuccess = "000000000";
+  private String testPersonSSNUnsuccess = "111111111";
+  private String testPersonSSNSuccessImmediate = "222222222";
+  private String einSuccess = "000000000";
+  private String einSuccessImmediate = "222222222";
+  private String einSuccessAsNonProfit = "000000001";
+  private String einUnsuccess = "111111111";
+  private LocalDate dobSuccess = LocalDate.of(1901, 1, 1);
+  private LocalDate dobSuccessImmediate = LocalDate.of(1902, 1, 1);
+  private LocalDate dobOfacAllert = LocalDate.of(1900, 1, 1);
 
   public static final ObjectMapper objectMapper =
       new ObjectMapper()
@@ -174,10 +192,13 @@ public class TestDataController {
 
   @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "This class is for testing only")
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
-  CreateTestDataResponse createTestData() {
+  CreateTestDataResponse createTestData(
+      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+      HttpServletRequest httpServletRequest) {
 
     // create a new business
-    BusinessRecord businessRecord = onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC);
+    BusinessRecord businessRecord =
+        onboardNewBusiness(BusinessType.MULTI_MEMBER_LLC, userAgent, httpServletRequest);
     Business business = businessRecord.business();
 
     // FIXME(kuchlein): change this to follow a proper onboarding rather than ramming it through
@@ -388,7 +409,10 @@ public class TestDataController {
   // This test data method is used to simulate an onboarding flow as in UI ,
   // and upload test documents provided by Stripe for application review.
   @GetMapping("/business/{type}/onboard")
-  BusinessRecord onboardNewBusiness(@PathVariable(value = "type") BusinessType businessType) {
+  BusinessRecord onboardNewBusiness(
+      @PathVariable(value = "type") BusinessType businessType,
+      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+      HttpServletRequest httpServletRequest) {
 
     BusinessProspectRecord businessProspect =
         businessProspectService.createOrUpdateBusinessProspect(
@@ -400,6 +424,8 @@ public class TestDataController {
             false,
             false,
             faker.internet().safeEmailAddress(),
+            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
+            userAgent,
             false);
     businessProspectService.setBusinessProspectPhone(
         businessProspect.businessProspect().getId(), getValidPhoneNumber(), false);
@@ -419,11 +445,9 @@ public class TestDataController {
                     "Texas",
                     new EncryptedString("78230"),
                     Country.USA),
-                MerchantType.TELECOMMUNICATION_EQUIPMENT_AND_TELEPHONE_SALES,
+                MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
                 "Description of business",
-                faker.internet().url()),
-            faker.internet().ipV4Address(),
-            faker.internet().userAgentAny());
+                faker.internet().url()));
 
     Business business = convertBusinessProspectRecord.business();
 
@@ -443,7 +467,7 @@ public class TestDataController {
                     convertBusinessProspectRecord.businessOwner().getRelationshipExecutive(),
                     convertBusinessProspectRecord.businessOwner().getRelationshipDirector(),
                     BigDecimal.valueOf(40),
-                    "Title Owner",
+                    "Title",
                     new Address(
                         new EncryptedString("13810 Shavano Wind"),
                         new EncryptedString("San Antonio, Texas(TX), 78230"),
@@ -504,6 +528,136 @@ public class TestDataController {
         businessOwners,
         convertBusinessProspectRecord.user(),
         allocationRecord.allocation());
+  }
+
+  // This test data method is used to simulate an onboarding flow as in UI ,
+  // and upload test documents provided by Stripe for application review.
+  @GetMapping("/business/onboard/test-data")
+  List<BusinessRecord> onboardNewBusiness_testData(
+      @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+      HttpServletRequest httpServletRequest,
+      @RequestParam(name = "unsuccessEIN", required = false, defaultValue = "false")
+          Boolean unsuccessEIN) {
+
+    List<BusinessRecord> businessRecords = new ArrayList<>();
+
+    businessRecords.add(
+        generateTestBusinessAndBusinessOwner(
+            userAgent,
+            httpServletRequest,
+            BusinessType.PRIVATE_CORPORATION,
+            false,
+            true,
+            true,
+            unsuccessEIN ? einUnsuccess : generateEmployerIdentificationNumber(),
+            faker.number().digits(9),
+            LocalDate.of(1970, 1, 1),
+            false,
+            false));
+
+    return businessRecords;
+  }
+
+  private BusinessRecord generateTestBusinessAndBusinessOwner(
+      String userAgent,
+      HttpServletRequest httpServletRequest,
+      BusinessType businessType,
+      Boolean prospectOwner,
+      Boolean prospectRepresentative,
+      Boolean prospectExecutive,
+      String ein,
+      String ssn,
+      LocalDate dob,
+      Boolean owner,
+      Boolean executive) {
+
+    List<BusinessOwner> businessOwners = new ArrayList<>();
+
+    // prepare database for generating new test cases with EIN business issue
+    if (einUnsuccess.equals(ein)) {
+      prepareDatabaseToAcceptTestEIN(ein);
+    }
+
+    BusinessProspectRecord businessProspect =
+        businessProspectService.createOrUpdateBusinessProspect(
+            faker.name().firstName(),
+            faker.name().lastName(),
+            businessType,
+            prospectOwner,
+            prospectRepresentative,
+            prospectExecutive,
+            false,
+            faker.internet().safeEmailAddress(),
+            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
+            userAgent,
+            false);
+    businessProspectService.setBusinessProspectPhone(
+        businessProspect.businessProspect().getId(), getValidPhoneNumber(), false);
+    businessProspectService.setBusinessProspectPassword(
+        businessProspect.businessProspect().getId(), "1234567890", false);
+    ConvertBusinessProspectRecord convertBusinessProspectRecord =
+        businessProspectService.convertBusinessProspect(
+            new ConvertBusinessProspect(
+                businessProspect.businessProspect().getId(),
+                faker.company().name(),
+                ein,
+                getValidPhoneNumber(),
+                new Address(
+                    new EncryptedString("13810 Shavano Wind"),
+                    new EncryptedString("San Antonio, Texas(TX), 78230"),
+                    "San Antonio",
+                    "Texas",
+                    new EncryptedString("78230"),
+                    Country.USA),
+                MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
+                "Description of business",
+                faker.internet().url()));
+
+    Business business = convertBusinessProspectRecord.business();
+
+    businessOwners.add(
+        businessOwnerService
+            .updateBusinessOwnerAndStripePerson(
+                business.getId(),
+                new BusinessOwnerData(
+                    convertBusinessProspectRecord.businessOwner().getId(),
+                    business.getId(),
+                    convertBusinessProspectRecord.businessOwner().getFirstName().getEncrypted(),
+                    convertBusinessProspectRecord.businessOwner().getLastName().getEncrypted(),
+                    dob,
+                    ssn,
+                    convertBusinessProspectRecord.businessOwner().getRelationshipOwner(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipRepresentative(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipExecutive(),
+                    convertBusinessProspectRecord.businessOwner().getRelationshipDirector(),
+                    null,
+                    "Title",
+                    new Address(
+                        new EncryptedString("13810 Shavano Wind"),
+                        new EncryptedString("San Antonio, Texas(TX), 78230"),
+                        "San Antonio",
+                        "Texas",
+                        new EncryptedString("78230"),
+                        Country.USA),
+                    convertBusinessProspectRecord.businessOwner().getEmail().getEncrypted(),
+                    convertBusinessProspectRecord.businessOwner().getPhone().getEncrypted(),
+                    null,
+                    true))
+            .businessOwner());
+
+    businessOwnerService.allOwnersProvided(business.getId(), new OwnersProvidedRequest(true, true));
+
+    return new BusinessRecord(business, businessOwners, null, null);
+  }
+
+  private void prepareDatabaseToAcceptTestEIN(String ein) {
+    Optional<Business> byEmployerIdentificationNumber =
+        businessRepository.findByEmployerIdentificationNumber(ein);
+    byEmployerIdentificationNumber.ifPresent(
+        business -> {
+          business.setEmployerIdentificationNumber(generateEmployerIdentificationNumber());
+          businessRepository.save(business);
+        });
   }
 
   private void uploadIdentityDocument(Business business, KycDocuments kycOwnerDocuments) {

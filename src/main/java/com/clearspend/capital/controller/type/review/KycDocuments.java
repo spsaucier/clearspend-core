@@ -1,14 +1,12 @@
 package com.clearspend.capital.controller.type.review;
 
 public enum KycDocuments {
-  CERTIFICATE_OF_INCORPORATION(
-      "Certificate Of Incorporation", DocumentType.ADDITIONAL_VERIFICATION),
-  BANK_STATEMENT("Bank Statement", DocumentType.PCI_DOCUMENT),
-  UTILITY_BILL("Utility Bill", DocumentType.ADDITIONAL_VERIFICATION),
-  TAX_RETURN("Tax Return", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
-  PROCESSED_SS4("Processed SS4", DocumentType.TAX_DOCUMENT_USER_UPLOAD),
-  MANUAL_THIRD_PARTY_REVIEW(null, null),
-  IDENTITY_DOCUMENT("Identity document", DocumentType.IDENTITY_DOCUMENT);
+  IDENTITY_DOCUMENT_FRONT(
+      "Government issued documents (national IDs, driver’s licenses or passports) - Front",
+      DocumentType.IDENTITY_DOCUMENT_FRONT),
+  IDENTITY_DOCUMENT_BACK(
+      "Government issued documents (national IDs, driver’s licenses or passports) - Back",
+      DocumentType.IDENTITY_DOCUMENT_BACK);
 
   DocumentType documentType;
   String documentName;

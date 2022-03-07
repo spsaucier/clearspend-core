@@ -22,11 +22,16 @@ public class FileStoreService {
 
   @Transactional
   public FileStore saveFileForBusiness(
-      TypedId<BusinessId> businessId, String fileName, String purpose, byte[] file) {
-
+      TypedId<BusinessId> businessId,
+      String stripeId,
+      String fileName,
+      String purpose,
+      byte[] file) {
+    log.info("Store file name {}. For businessId {}", fileName, businessId);
     FileStore fileStore = new FileStore(businessId);
     fileStore.setFileName(fileName);
     fileStore.setPurpose(purpose);
+    fileStore.setStripeId(stripeId);
     fileStore.setPath(getFileStorePath(businessId, fileStore.getId()));
     fileStoreRepository.save(fileStore);
 
@@ -34,7 +39,7 @@ public class FileStoreService {
     fileStore.setPath(fileStorePath);
 
     googleCloudStorageClient.writeOnboardFile(fileStorePath, file);
-
+    log.info("File {} stored on {}", fileName, fileStorePath);
     return fileStore;
   }
 
@@ -42,14 +47,16 @@ public class FileStoreService {
   public FileStore saveFileForBusinessOwner(
       TypedId<BusinessId> businessId,
       TypedId<BusinessOwnerId> businessOwnerId,
+      String stripeId,
       String fileName,
       String purpose,
       byte[] file) {
-
+    log.info("Store file name {}. For businessId {}", fileName, businessId);
     FileStore fileStore = new FileStore(businessId);
     fileStore.setBusinessOwnerId(businessOwnerId);
     fileStore.setFileName(fileName);
     fileStore.setPurpose(purpose);
+    fileStore.setStripeId(stripeId);
     fileStore.setPath(getFileStorePath(businessId, businessOwnerId, fileStore.getId()));
     fileStoreRepository.save(fileStore);
 
@@ -57,7 +64,7 @@ public class FileStoreService {
     fileStore.setPath(fileStorePath);
 
     googleCloudStorageClient.writeOnboardFile(fileStorePath, file);
-
+    log.info("File {} stored on {}", fileName, fileStorePath);
     return fileStore;
   }
 

@@ -7,6 +7,7 @@ import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.owner.BusinessOwnerInfo;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
+import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedResponse;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.service.BusinessOwnerService;
@@ -75,8 +76,7 @@ public class BusinessOwnerController {
         businessOwnerService.createBusinessOwnerAndStripePerson(businessId, businessOwnerData);
 
     return new CreateBusinessOwnerResponse(
-        businessOwnerAndStripePersonRecord.businessOwner().getId(),
-        businessOwnerAndStripePersonRecord.personReport().errorMessages());
+        businessOwnerAndStripePersonRecord.businessOwner().getId(), null);
   }
 
   @PatchMapping(
@@ -94,8 +94,7 @@ public class BusinessOwnerController {
         businessOwnerService.updateBusinessOwnerAndStripePerson(businessId, businessOwnerData);
 
     return new CreateBusinessOwnerResponse(
-        businessOwnerAndStripePersonRecord.businessOwner().getId(),
-        businessOwnerAndStripePersonRecord.personReport().errorMessages());
+        businessOwnerAndStripePersonRecord.businessOwner().getId(), null);
   }
 
   @DeleteMapping(value = "/{businessOwnerId}")
@@ -123,18 +122,18 @@ public class BusinessOwnerController {
         .toList();
   }
 
-  @GetMapping("/trigger-all-owners-provided")
-  private OwnersProvidedResponse allOwnersProvided(
-      @Validated @RequestBody(required = false) Boolean noOtherOwnersToProvide) {
+  @PostMapping("/trigger-all-owners-provided")
+  OwnersProvidedResponse allOwnersProvided(
+      @Validated @RequestBody(required = false) OwnersProvidedRequest ownersProvidedRequest) {
 
     log.info("Trigger end of onboarding owners process.");
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    if (!Boolean.TRUE.equals(noOtherOwnersToProvide)) {
-      businessOwnerService.validateBusinessOwners(businessId);
-    }
+
+    businessOwnerService.validateBusinessOwners(businessId, ownersProvidedRequest);
+
     Assert.notNull(businessId, "Action not possible!");
     BusinessAndAccountErrorMessages businessAndAccountErrorMessages =
-        businessOwnerService.allOwnersProvided(businessId, noOtherOwnersToProvide);
+        businessOwnerService.allOwnersProvided(businessId, ownersProvidedRequest);
 
     return new OwnersProvidedResponse(
         new Business(businessAndAccountErrorMessages.business()),

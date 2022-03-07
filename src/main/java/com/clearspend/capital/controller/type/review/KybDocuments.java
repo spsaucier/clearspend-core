@@ -6,12 +6,10 @@ public enum KybDocuments {
   UTILITY_BILL("Utility Bill", DocumentType.ACCOUNT_REQUIREMENT),
   TAX_RETURN("Tax Return", DocumentType.ACCOUNT_REQUIREMENT),
   PROCESSED_SS4("Social Security Card", DocumentType.ACCOUNT_REQUIREMENT),
-  MANUAL_THIRD_PARTY_REVIEW(null, DocumentType.ACCOUNT_REQUIREMENT),
-  UNEXPIRED_GOVERNMENT_ISSUED_ID(
-      "Unexpired Government Issued Id", DocumentType.ACCOUNT_REQUIREMENT);
+  IRS_LETTER_147C("IRS Letter 147C document", DocumentType.ACCOUNT_REQUIREMENT),
+  IRS_SS4_CONFIRMATION_LETTER("IRS SS-4 confirmation letter", DocumentType.ACCOUNT_REQUIREMENT);
 
   DocumentType documentType;
-
   String documentName;
 
   KybDocuments(String documentName, DocumentType documentType) {

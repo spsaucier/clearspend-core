@@ -73,4 +73,6 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> {
 
   // Link to FusionAuth
   private String subjectRef;
+
+  @Embedded @NonNull private TosAcceptance tosAcceptance;
 }

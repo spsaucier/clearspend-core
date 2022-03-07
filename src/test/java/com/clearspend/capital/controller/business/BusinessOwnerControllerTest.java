@@ -22,27 +22,29 @@ import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Country;
-import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessService;
-import com.stripe.model.Account;
-import com.stripe.model.Account.Requirements;
-import com.stripe.model.Account.Requirements.Errors;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
+import com.stripe.model.Event;
+import java.io.FileReader;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import javax.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
-@RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 @Transactional
 class BusinessOwnerControllerTest extends BaseCapitalTest {
@@ -54,6 +56,9 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   private final BusinessOwnerService businessOwnerService;
   private final StripeConnectHandler stripeConnectHandler;
 
+  private final Resource createAccount;
+  private final Resource requiredDocumentsForPersonAndSSNLast4;
+
   OnboardBusinessRecord onboardBusinessRecord;
 
   Address address =
@@ -64,6 +69,25 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
           "Texas",
           new EncryptedString("78230"),
           Country.USA);
+
+  @Autowired
+  public BusinessOwnerControllerTest(
+      MockMvc mvc,
+      TestHelper testHelper,
+      BusinessService businessService,
+      BusinessOwnerService businessOwnerService,
+      StripeConnectHandler stripeConnectHandler,
+      @Value("classpath:stripeResponses/createAccount.json") Resource createAccount,
+      @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
+          Resource requiredDocumentsForPersonAndSSNLast4) {
+    this.mvc = mvc;
+    this.testHelper = testHelper;
+    this.businessService = businessService;
+    this.businessOwnerService = businessOwnerService;
+    this.stripeConnectHandler = stripeConnectHandler;
+    this.createAccount = createAccount;
+    this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
+  }
 
   @BeforeEach
   void init() throws Exception {
@@ -148,7 +172,6 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
     BusinessOwner businessOwner =
         businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
-    Assertions.assertEquals(KnowYourCustomerStatus.PASS, businessOwner.getKnowYourCustomerStatus());
     Assertions.assertNotNull(businessOwner.getStripePersonReference());
   }
 
@@ -185,12 +208,35 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    Account account1 = new Account();
-    account1.setId(business.getStripeData().getAccountRef());
-    Requirements requirements = new Requirements();
-    requirements.setDisabledReason("rejected.fraud");
-    account1.setRequirements(requirements);
-    stripeConnectHandler.accountUpdated(account1);
+    Event event =
+        new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create()
+            .fromJson(new FileReader(createAccount.getFile()), Event.class);
+
+    event
+        .getData()
+        .setObject(
+            JsonParser.parseString(
+                    event
+                        .getDataObjectDeserializer()
+                        .getRawJson()
+                        .replace(event.getAccount(), business.getStripeData().getAccountRef()))
+                .getAsJsonObject());
+
+    event
+        .getData()
+        .setObject(
+            JsonParser.parseString(
+                    event
+                        .getDataObjectDeserializer()
+                        .getRawJson()
+                        .replace(
+                            "\"disabled_reason\":\"requirements.past_due\"",
+                            "\"disabled_reason\":\"rejected.fraud\""))
+                .getAsJsonObject());
+
+    stripeConnectHandler.accountUpdated(event);
 
     businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
     Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
@@ -232,21 +278,27 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    Account account1 = new Account();
-    account1.setId(business.getStripeData().getAccountRef());
-    Requirements requirements = new Requirements();
-    Errors failed_address_match = new Errors();
-    failed_address_match.setCode("verification_failed_address_match");
-    requirements.setErrors(List.of(failed_address_match));
-    requirements.setPastDue(List.of("verification.document"));
-    account1.setRequirements(requirements);
-    stripeConnectHandler.accountUpdated(account1);
+    Event event =
+        new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create()
+            .fromJson(new FileReader(requiredDocumentsForPersonAndSSNLast4.getFile()), Event.class);
 
-    BusinessOwner owner = businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
+    event
+        .getData()
+        .setObject(
+            JsonParser.parseString(
+                    event
+                        .getDataObjectDeserializer()
+                        .getRawJson()
+                        .replace(event.getAccount(), business.getStripeData().getAccountRef()))
+                .getAsJsonObject());
+
+    stripeConnectHandler.accountUpdated(event);
+
     Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
     assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
-    assertThat(owner.getKnowYourCustomerStatus()).isEqualTo(KnowYourCustomerStatus.REVIEW);
   }
 
   @SneakyThrows
