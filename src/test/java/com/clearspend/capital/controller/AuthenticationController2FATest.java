@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
-import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorSendRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
@@ -26,8 +25,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,15 +35,6 @@ public class AuthenticationController2FATest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final FusionAuthClient fusionAuthClient;
-
-  @TestConfiguration
-  static class TestConfig {
-
-    @Bean("fusionAuthClientLib")
-    io.fusionauth.client.FusionAuthClient fusionAuthClient(FusionAuthProperties properties) {
-      return new TestFusionAuthClient(properties.getApiKey(), properties.getBaseUrl());
-    }
-  }
 
   @Test
   @SneakyThrows

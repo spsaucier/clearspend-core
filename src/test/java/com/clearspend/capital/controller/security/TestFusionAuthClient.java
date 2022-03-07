@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.security;
 
+import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
 import com.inversoft.error.Error;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
@@ -18,8 +19,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
+@Profile("test")
 public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient {
 
   private static final Random random = new Random(0);
@@ -32,8 +37,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   private final Map<UUID, TwoFactorEnable> pendingEnable = new HashMap<>();
   private final Map<UUID, TwoFactorEnabled> twoFactorEnabled = new HashMap<>();
-  private final Map<UUID, TwoFactorPending> twoFactorPending =
-      new HashMap<UUID, TwoFactorPending>();
+  private final Map<UUID, TwoFactorPending> twoFactorPending = new HashMap<>();
 
   public void reset() {
     pendingEnable.clear();
@@ -50,12 +54,11 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   }
 
   private static String generateNextTwoFactorCode() {
-    String code = String.valueOf((int) (random.nextDouble() * 1e+7) % 1e+7);
-    return code;
+    return String.valueOf((int) (random.nextDouble() * 1e+7) % 1e+7);
   }
 
-  public TestFusionAuthClient(String apiKey, String baseURL) {
-    super(apiKey, baseURL);
+  public TestFusionAuthClient(FusionAuthProperties fusionAuthProperties) {
+    super(fusionAuthProperties.getApiKey(), fusionAuthProperties.getBaseUrl());
   }
 
   @Override
