@@ -12,7 +12,6 @@ import com.clearspend.capital.controller.type.activity.GraphData;
 import com.clearspend.capital.controller.type.activity.GraphDataRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
@@ -20,7 +19,6 @@ import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
@@ -46,13 +44,11 @@ public class AccountActivityController {
 
   private final AccountActivityService accountActivityService;
 
-  private final AccountActivityRepository accountActivityRepository;
-
   @PostMapping("")
   PagedData<AccountActivityResponse> retrieveAccountActivityPage(
       @Validated @RequestBody AccountActivityRequest request) {
     Page<AccountActivity> accountActivities =
-        accountActivityRepository.find(
+        accountActivityService.find(
             CurrentUser.get().businessId(),
             new AccountActivityFilterCriteria(
                 request.getAllocationId(),
@@ -86,7 +82,7 @@ public class AccountActivityController {
   @PostMapping("/graph-data")
   DashboardGraphData retrieveDashboardGraphData(@Validated @RequestBody GraphDataRequest request) {
     DashboardData dashboardData =
-        accountActivityRepository.findDataForLineGraph(
+        accountActivityService.findDataForLineGraph(
             CurrentUser.get().businessId(),
             new GraphFilterCriteria(
                 request.getAllocationId(),
@@ -120,14 +116,13 @@ public class AccountActivityController {
   @PostMapping("/category-spend")
   ChartDataResponse getResultSpendByCategory(@Validated @RequestBody ChartDataRequest request) {
     return new ChartDataResponse(
-        accountActivityRepository.findDataForChart(
+        accountActivityService.findDataForChart(
             CurrentUser.get().businessId(), new ChartFilterCriteria(request)),
         request.getChartFilter());
   }
 
   @PostMapping("/export-csv")
-  ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request)
-      throws IOException {
+  ResponseEntity<byte[]> exportCsv(@Validated @RequestBody AccountActivityRequest request) {
 
     // export must return all records, regardless if pagination is set in "view records" mode
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));

@@ -7,6 +7,7 @@ import com.clearspend.capital.client.stripe.types.Account;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
+import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
 import com.clearspend.capital.common.data.model.Amount;
@@ -110,15 +111,14 @@ public class StripeConnectHandler {
 
     Amount amount =
         Amount.fromStripeAmount(
-            Currency.of(inboundTransfer.getCurrency()), inboundTransfer.getAmount().longValue());
+            Currency.of(inboundTransfer.getCurrency()), inboundTransfer.getAmount());
 
     List<DeclineReason> declineReasons = new ArrayList<>();
     if (inboundTransfer.getFailureDetails() != null) {
       // TODO: General note for failures - revisit if should have some sort of user
       // notification (email/push/sms) in case of money movement failure
       declineReasons.add(
-          DeclineReason.fromStripeInboundTransferFailure(
-              inboundTransfer.getFailureDetails().getCode()));
+          DeclineReason.fromStripeTransferFailure(inboundTransfer.getFailureDetails().getCode()));
     }
 
     businessBankAccountService.processBankAccountDepositOutcome(
@@ -142,6 +142,33 @@ public class StripeConnectHandler {
                     receivedCredit.getNetwork());
               }
             });
+  }
+
+  @VisibleForTesting
+  void processOutboundTransferResult(OutboundTransfer outboundTransfer) {
+    TypedId<BusinessId> businessId =
+        StripeMetadataEntry.extractId(
+            StripeMetadataEntry.BUSINESS_ID, outboundTransfer.getMetadata());
+
+    Amount amount =
+        Amount.fromStripeAmount(
+            Currency.of(outboundTransfer.getCurrency()), outboundTransfer.getAmount());
+
+    switch (outboundTransfer.getStatus()) {
+      case "posted", "processing" -> {} // do nothing since we assume the happy path by default
+      case "cancelled" -> businessBankAccountService.processBankAccountWithdrawFailure(
+          businessId, amount, List.of(DeclineReason.ST_CANCELLED));
+      case "failed" -> businessBankAccountService.processBankAccountWithdrawFailure(
+          businessId, amount, List.of(DeclineReason.ST_FAILED));
+      case "returned" -> businessBankAccountService.processBankAccountWithdrawFailure(
+          businessId,
+          amount,
+          List.of(
+              DeclineReason.fromStripeTransferFailure(
+                  outboundTransfer.getReturnedDetails().getCode())));
+      default -> log.error(
+          "Unknown outbound transfer status received: " + outboundTransfer.getStatus());
+    }
   }
 
   /**
@@ -247,11 +274,26 @@ public class StripeConnectHandler {
 
   public void outboundTransferCreated(StripeObject stripeObject) {}
 
-  public void outboundTransferReturned(StripeObject stripeObject) {}
+  public void outboundTransferReturned(StripeObject stripeObject) {
+    parseBetaApiEvent(stripeObject, OutboundTransferEvent.class)
+        .ifPresent(
+            outboundTransferEvent ->
+                processOutboundTransferResult(outboundTransferEvent.getEvent()));
+  }
 
-  public void outboundTransferFailed(StripeObject stripeObject) {}
+  public void outboundTransferFailed(StripeObject stripeObject) {
+    parseBetaApiEvent(stripeObject, OutboundTransferEvent.class)
+        .ifPresent(
+            outboundTransferEvent ->
+                processOutboundTransferResult(outboundTransferEvent.getEvent()));
+  }
 
-  public void outboundTransferCancelled(StripeObject stripeObject) {}
+  public void outboundTransferCancelled(StripeObject stripeObject) {
+    parseBetaApiEvent(stripeObject, OutboundTransferEvent.class)
+        .ifPresent(
+            outboundTransferEvent ->
+                processOutboundTransferResult(outboundTransferEvent.getEvent()));
+  }
 
   public void outboundTransferExpectedArrivalDateUpdated(StripeObject stripeObject) {}
 
@@ -299,6 +341,14 @@ public class StripeConnectHandler {
   }
 
   public static class InboundTransferEvent extends StripeWebhookEventWrapper<InboundTransfer> {
+
+    @Override
+    protected Map<String, String> getMetadata() {
+      return getEvent().getMetadata();
+    }
+  }
+
+  public static class OutboundTransferEvent extends StripeWebhookEventWrapper<OutboundTransfer> {
 
     @Override
     protected Map<String, String> getMetadata() {

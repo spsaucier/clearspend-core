@@ -33,7 +33,11 @@ import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.service.type.ChartData;
+import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.clearspend.capital.service.type.DashboardData;
+import com.clearspend.capital.service.type.GraphFilterCriteria;
 import com.clearspend.capital.service.type.NetworkCommon;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -392,5 +396,20 @@ public class AccountActivityService {
       throw new RuntimeException(e.getMessage());
     }
     return csvFile.toByteArray();
+  }
+
+  public Page<AccountActivity> find(
+      TypedId<BusinessId> businessId, AccountActivityFilterCriteria filterCriteria) {
+    return accountActivityRepository.find(businessId, filterCriteria);
+  }
+
+  public DashboardData findDataForLineGraph(
+      TypedId<BusinessId> businessId, GraphFilterCriteria filterCriteria) {
+    return accountActivityRepository.findDataForLineGraph(businessId, filterCriteria);
+  }
+
+  public ChartData findDataForChart(
+      TypedId<BusinessId> businessId, ChartFilterCriteria filterCriteria) {
+    return accountActivityRepository.findDataForChart(businessId, filterCriteria);
   }
 }

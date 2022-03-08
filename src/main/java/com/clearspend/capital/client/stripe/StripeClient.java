@@ -597,17 +597,14 @@ public class StripeClient {
     person.setId(personId);
     person.setAccount(accountId);
 
-    Person personResponse = null;
     try {
-      personResponse =
-          person.update(
-              PersonUpdateParams.builder()
-                  .setVerification(Verification.builder().setDocument(document).build())
-                  .build());
+      return person.update(
+          PersonUpdateParams.builder()
+              .setVerification(Verification.builder().setDocument(document).build())
+              .build());
     } catch (StripeException e) {
       throw new StripePersonDocumentUpdateException(e.getMessage());
     }
-    return personResponse;
   }
 
   @SneakyThrows
@@ -1001,6 +998,7 @@ public class StripeClient {
             case 14100 -> "pm_usBankAccount_canceledByUser";
             case 14200 -> "pm_usBankAccount_internalFailure";
             case 14300 -> "pm_usBankAccount_accountClosed";
+            case 14400 -> "pm_usBankAccount_invalidAccountNumber";
             default -> paymentMethod;
           };
     }
@@ -1079,6 +1077,7 @@ public class StripeClient {
             .add("statement_descriptor", statementDescriptor)
             .add("end_user_details[present]", "false")
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId)
+            .addMetadata(StripeMetadataEntry.ADJUSTMENT_ID, adjustmentId)
             .build();
 
     return callStripeBetaApi(

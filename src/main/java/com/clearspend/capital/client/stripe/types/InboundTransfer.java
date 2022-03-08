@@ -1,7 +1,6 @@
 package com.clearspend.capital.client.stripe.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.math.BigDecimal;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,7 +16,7 @@ public class InboundTransfer {
   private String object;
 
   @JsonProperty("amount")
-  private BigDecimal amount;
+  private Long amount;
 
   @JsonProperty("created")
   private Long created;

@@ -1,10 +1,11 @@
 package com.clearspend.capital.client.stripe.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 public class OutboundTransfer {
@@ -25,7 +26,7 @@ public class OutboundTransfer {
   private String financialAccount;
 
   @JsonProperty("amount")
-  private BigDecimal amount;
+  private Long amount;
 
   @JsonProperty("currency")
   private String currency;
@@ -68,8 +69,20 @@ public class OutboundTransfer {
   private Boolean cancelable;
 
   @JsonProperty("returned_details")
-  private String returnedDetails;
+  private ReturnedDetails returnedDetails;
 
   @JsonProperty("metadata")
   private Map<String, String> metadata;
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ReturnedDetails {
+
+    @JsonProperty("code")
+    private String code;
+
+    @JsonProperty("transaction")
+    private String transaction;
+  }
 }

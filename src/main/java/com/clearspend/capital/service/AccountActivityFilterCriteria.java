@@ -40,12 +40,16 @@ public class AccountActivityFilterCriteria {
 
   public AccountActivityFilterCriteria(
       TypedId<AllocationId> allocationId,
-      TypedId<UserId> userId,
+      List<AccountActivityType> types,
       OffsetDateTime from,
-      OffsetDateTime to) {
+      OffsetDateTime to,
+      String searchText,
+      PageToken pageToken) {
     this.allocationId = allocationId;
-    this.userId = userId;
+    this.types = types;
     this.from = from;
     this.to = to;
+    this.searchText = searchText;
+    this.pageToken = pageToken;
   }
 }

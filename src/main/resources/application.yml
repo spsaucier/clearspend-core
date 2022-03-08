@@ -135,6 +135,7 @@ client:
     # 141$ - pm_usBankAccount_canceledByUser
     # 142$ - pm_usBankAccount_internalFailure
     # 143$ - pm_usBankAccount_accountClosed
+    # 144$ - pm_usBankAccount_invalidAccountNumber
     enable-transfer-failures: ${STRIPE_ENABLE_TRANSFER_FAILURES:true}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC0a899d1f81a7443c707b2f66637b1ac3}

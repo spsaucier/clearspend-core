@@ -94,7 +94,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     inboundTransfer.setMetadata(
         Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
     inboundTransfer.setCurrency("usd");
-    inboundTransfer.setAmount(new BigDecimal(amount.toAmount().toStripeAmount()));
+    inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
 
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 
@@ -127,7 +127,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
                 createAdjustmentResponse.getAdjustmentId().toString(),
             StripeMetadataEntry.HOLD_ID.getKey(), hold.getId().toString()));
     inboundTransfer.setCurrency("usd");
-    inboundTransfer.setAmount(new BigDecimal(amount.toAmount().toStripeAmount()));
+    inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
 
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);

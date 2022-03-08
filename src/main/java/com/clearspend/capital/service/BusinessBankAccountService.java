@@ -33,6 +33,7 @@ import com.clearspend.capital.data.repository.business.BusinessBankAccountReposi
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ContactValidator.ValidationResult;
+import com.clearspend.capital.service.type.PageToken;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
@@ -44,6 +45,7 @@ import com.stripe.model.SetupIntent;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,6 +56,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -328,6 +331,50 @@ public class BusinessBankAccountService {
     }
 
     return adjustmentAndHoldRecord;
+  }
+
+  @Transactional
+  public void processBankAccountWithdrawFailure(
+      TypedId<BusinessId> businessId, Amount amount, List<DeclineReason> declineReasons) {
+    Business business = retrievalService.retrieveBusiness(businessId, true);
+
+    AllocationRecord rootAllocation = allocationService.getRootAllocation(businessId);
+    Page<AccountActivity> accountActivities =
+        accountActivityService.find(
+            businessId,
+            new AccountActivityFilterCriteria(
+                rootAllocation.allocation().getId(),
+                List.of(AccountActivityType.BANK_WITHDRAWAL),
+                // assuming stripe will be able to process it faster than in 1 hour
+                OffsetDateTime.now(Clock.systemUTC()).minusHours(1),
+                OffsetDateTime.now(Clock.systemUTC()),
+                Long.toString(amount.getAmount().longValue()),
+                new PageToken(0, 1, Collections.emptyList())));
+
+    if (!accountActivities.getContent().isEmpty()) {
+      accountActivities.getContent().get(0).setStatus(AccountActivityStatus.DECLINED);
+    } else {
+      log.error(
+          "Failed to find a corresponding account activity for the bank withdraw operation for business: %s and amount %s"
+              .formatted(businessId, amount));
+    }
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        accountService.depositFunds(businessId, rootAllocation.account(), amount, false);
+    accountActivityService.recordBankAccountAccountActivity(
+        rootAllocation.allocation(),
+        AccountActivityType.BANK_WITHDRAWAL_RETURN,
+        adjustmentAndHoldRecord.adjustment(),
+        adjustmentAndHoldRecord.hold());
+
+    stripeClient.pushFundsToClearspendFinancialAccount(
+        businessId,
+        business.getStripeData().getAccountRef(),
+        business.getStripeData().getFinancialAccountRef(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount,
+        "Company [%s] ACH funds return".formatted(business.getLegalName()),
+        "Company [%s] ACH funds return".formatted(business.getLegalName()));
   }
 
   @Transactional
