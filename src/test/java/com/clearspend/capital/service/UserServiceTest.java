@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Slf4j
 class UserServiceTest extends BaseCapitalTest {
@@ -76,6 +77,73 @@ class UserServiceTest extends BaseCapitalTest {
             null);
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
+  }
+
+  @SneakyThrows
+  @Test
+  void createUser_exceptionThrownWhenCreatingUserWithNullEmailAddress() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            userService.createUser(
+                createBusinessRecord.business().getId(),
+                UserType.EMPLOYEE,
+                faker.name().firstName(),
+                faker.name().lastName(),
+                testHelper.generateEntityAddress(),
+                null, // MISSING EMAIL ADDRESS
+                faker.phoneNumber().phoneNumber()));
+  }
+
+  @SneakyThrows
+  @Test
+  void createUser_exceptionThrownWhenCreatingUserWithEmptyEmailAddress() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    assertThrows(
+        DataIntegrityViolationException.class,
+        () ->
+            userService.createUser(
+                createBusinessRecord.business().getId(),
+                UserType.EMPLOYEE,
+                faker.name().firstName(),
+                faker.name().lastName(),
+                testHelper.generateEntityAddress(),
+                "", // EMPTY EMAIL ADDRESS
+                faker.phoneNumber().phoneNumber()));
+  }
+
+  @SneakyThrows
+  @Test
+  void createUser_exceptionThrownWhenCreatingUserWithDuplicateEmailAddress() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateBusinessRecord newBusiness = testHelper.createBusiness();
+    String emailAddress = faker.internet().emailAddress();
+
+    // Create the first Employee on the createBusinessRecord.business
+    userService.createUser(
+        createBusinessRecord.business().getId(),
+        UserType.EMPLOYEE,
+        faker.name().firstName(),
+        faker.name().lastName(),
+        testHelper.generateEntityAddress(),
+        emailAddress,
+        faker.phoneNumber().phoneNumber());
+
+    // Ensure that another User with the same email address cannot be created, even on another
+    // Business
+    testHelper.setCurrentUser(newBusiness.user());
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            userService.createUser(
+                newBusiness.business().getId(),
+                UserType.EMPLOYEE,
+                faker.name().firstName(),
+                faker.name().lastName(),
+                testHelper.generateEntityAddress(),
+                emailAddress,
+                faker.phoneNumber().phoneNumber()));
   }
 
   @SneakyThrows

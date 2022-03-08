@@ -140,6 +140,10 @@ public class UserService {
     if (phone != null) {
       user.setPhone(new NullableEncryptedStringWithHash(phone));
     }
+    if (userRepository.findByEmailHash(HashUtil.calculateHash(email)).isPresent()) {
+      throw new InvalidRequestException("A user with that email address already exists");
+    }
+
     user.setAddress(address);
 
     user = userRepository.save(user);
