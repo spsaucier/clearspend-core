@@ -196,7 +196,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             createdUser.user().getLastName().toString(),
             new Address(createdUser.user().getAddress()),
-            createdUser.user().getEmail().toString(),
+            faker.internet().emailAddress(), // Ensure non-duplicate email address
             createdUser.user().getPhone().toString(),
             true);
 
@@ -220,6 +220,44 @@ class UserControllerTest extends BaseCapitalTest {
     Assertions.assertEquals(userRecord.getLastName(), user.getLastName().toString());
     Assertions.assertEquals(userRecord.getFirstName(), user.getFirstName().toString());
     log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void testUpdateUserFailsForDuplicateEmailAddresses() {
+    Business business = createBusinessRecord.business();
+
+    Cookie authCookie = createBusinessRecord.authCookie();
+
+    testHelper.createAllocation(
+        business.getId(),
+        "allocationName",
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        createBusinessRecord.user());
+
+    CreateUpdateUserRecord createdUser = testHelper.createUser(business);
+
+    // Use the Business Owner email to demonstrate that no duplicate emails are permitted
+    UpdateUserRequest userRecord =
+        new UpdateUserRequest(
+            faker.name().firstName(),
+            createdUser.user().getLastName().toString(),
+            new Address(createdUser.user().getAddress()),
+            createBusinessRecord.user().getEmail().toString(),
+            createdUser.user().getPhone().toString(),
+            true);
+
+    String body = objectMapper.writeValueAsString(userRecord);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                patch("/users/" + createdUser.user().getId())
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(authCookie))
+            .andExpect(status().is4xxClientError())
+            .andReturn()
+            .getResponse();
   }
 
   @Test

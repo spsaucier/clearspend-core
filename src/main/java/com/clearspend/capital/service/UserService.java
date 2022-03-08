@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -196,6 +197,10 @@ public class UserService {
       user.setLastName(new RequiredEncryptedStringWithHash(lastName));
     }
     if (StringUtils.isNotEmpty(email)) {
+      // Ensure that this email address does NOT already exist within the database.
+      if (userRepository.findByEmailHash(HashUtil.calculateHash(email)).isPresent()) {
+        throw new InvalidRequestException("A user with that email address already exists");
+      }
       user.setEmail(new RequiredEncryptedStringWithHash(email));
     }
     if (StringUtils.isNotEmpty(phone)) {

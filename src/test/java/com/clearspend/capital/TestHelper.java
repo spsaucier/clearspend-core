@@ -85,6 +85,7 @@ import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
@@ -192,6 +193,7 @@ public class TestHelper {
   private final CardService cardService;
   private final FusionAuthService fusionAuthService;
   private final NetworkMessageService networkMessageService;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
   private final UserService userService;
 
   private final EntityManager entityManager;
@@ -839,6 +841,14 @@ public class TestHelper {
             faker.phoneNumber().phoneNumber());
     passwords.put(record.user().getId(), record.password());
     return record;
+  }
+
+  public CreateUpdateUserRecord createUserWithRole(Allocation allocation, String role) {
+    CreateUpdateUserRecord result =
+        createUser(businessService.getBusiness(allocation.getBusinessId()).business());
+    rolesAndPermissionsService.createUserAllocationRole(
+        result.user().getId(), allocation.getId(), role);
+    return result;
   }
 
   public Card issueCard(
