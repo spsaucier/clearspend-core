@@ -707,13 +707,13 @@ public class StripeMockClient extends StripeClient {
     return account;
   }
 
-  public File uploadFile(MultipartFile file, Purpose purpose) {
+  public File uploadFile(MultipartFile file, Purpose purpose, String accountId) {
     File file1 = new File();
     file1.setId("id");
     return file1;
   }
 
-  public File uploadFile(InputStream inputStream, Purpose purpose) {
+  public File uploadFile(InputStream inputStream, Purpose purpose, String accountId) {
     File file1 = new File();
     file1.setId("id");
     return file1;

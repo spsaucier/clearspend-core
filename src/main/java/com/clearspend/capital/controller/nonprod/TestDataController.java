@@ -436,6 +436,7 @@ public class TestDataController {
             new ConvertBusinessProspect(
                 businessProspect.businessProspect().getId(),
                 faker.company().name(),
+                faker.company().name(),
                 generateEmployerIdentificationNumber(),
                 getValidPhoneNumber(),
                 new Address(
@@ -600,6 +601,7 @@ public class TestDataController {
             new ConvertBusinessProspect(
                 businessProspect.businessProspect().getId(),
                 faker.company().name(),
+                faker.company().name(),
                 ein,
                 getValidPhoneNumber(),
                 new Address(
@@ -674,7 +676,8 @@ public class TestDataController {
                     stripeClient.uploadFile(
                         new FileInputStream(
                             new ClassPathResource("files/stripeTestFile/success.png").getFile()),
-                        Purpose.IDENTITY_DOCUMENT);
+                        Purpose.IDENTITY_DOCUMENT,
+                        business.getStripeData().getAccountRef());
 
                 person.update(
                     PersonUpdateParams.builder()

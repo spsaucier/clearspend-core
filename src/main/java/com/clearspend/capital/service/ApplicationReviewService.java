@@ -98,7 +98,10 @@ public class ApplicationReviewService {
 
       if (entityToken.startsWith(STRIPE_ACCOUNT_PREFIX)) {
         File file =
-            stripeClient.uploadFile(multipartFile, Purpose.valueOf(documentType.toString()));
+            stripeClient.uploadFile(
+                multipartFile,
+                Purpose.valueOf(documentType.toString()),
+                business.getStripeData().getAccountRef());
         fileStoreService.saveFileForBusiness(
             business.getId(),
             file.getId(),
@@ -112,7 +115,9 @@ public class ApplicationReviewService {
       } else {
         BusinessOwner businessOwner =
             businessOwnerService.findBusinessOwnerByStripePersonReference(entityToken);
-        File file = stripeClient.uploadFile(multipartFile, Purpose.IDENTITY_DOCUMENT);
+        File file =
+            stripeClient.uploadFile(
+                multipartFile, Purpose.IDENTITY_DOCUMENT, business.getStripeData().getAccountRef());
         fileStoreService.saveFileForBusinessOwner(
             business.getId(),
             businessOwner.getId(),

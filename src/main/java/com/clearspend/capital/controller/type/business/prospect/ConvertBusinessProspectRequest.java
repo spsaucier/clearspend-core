@@ -25,6 +25,10 @@ public class ConvertBusinessProspectRequest {
   @NotNull(message = "Legal Name is required")
   private String legalName;
 
+  @JsonProperty("businessName")
+  @Schema(title = "Doing business as name if is different by company name", example = "business")
+  private String businessName;
+
   @JsonProperty("employerIdentificationNumber")
   @NonNull
   @NotNull(message = "EIN is required")
@@ -62,6 +66,7 @@ public class ConvertBusinessProspectRequest {
     return new ConvertBusinessProspect(
         businessProspectId,
         legalName,
+        businessName,
         employerIdentificationNumber,
         businessPhone,
         address.toAddress(),

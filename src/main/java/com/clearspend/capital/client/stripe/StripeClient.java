@@ -131,6 +131,7 @@ public class StripeClient {
             .setBusinessType(business.getType().getStripeBusinessType())
             .setBusinessProfile(
                 BusinessProfile.builder()
+                    .setName(business.getBusinessName())
                     .setMcc(business.getMcc())
                     .setProductDescription(business.getDescription())
                     .setUrl(business.getUrl())
@@ -238,6 +239,7 @@ public class StripeClient {
             .setBusinessType(business.getType().getStripeBusinessType().getValue())
             .setBusinessProfile(
                 AccountUpdateParams.BusinessProfile.builder()
+                    .setName(business.getBusinessName())
                     .setMcc(business.getMcc())
                     .setProductDescription(business.getDescription())
                     .setUrl(business.getUrl())
@@ -486,21 +488,21 @@ public class StripeClient {
   }
 
   @SneakyThrows
-  public File uploadFile(MultipartFile file, Purpose purpose) {
+  public File uploadFile(MultipartFile file, Purpose purpose, String accountId) {
     log.info("Upload file {} to Stripe", file.getOriginalFilename());
     FileCreateParams fileCreateParams =
         FileCreateParams.builder().setPurpose(purpose).setFile(file.getInputStream()).build();
 
-    return File.create(fileCreateParams);
+    return File.create(fileCreateParams, getRequestOptionsBetaApi(new TypedId<>(), accountId));
   }
 
   @SneakyThrows
-  public File uploadFile(InputStream inputStream, Purpose purpose) {
+  public File uploadFile(InputStream inputStream, Purpose purpose, String accountId) {
 
     FileCreateParams fileCreateParams =
         FileCreateParams.builder().setPurpose(purpose).setFile(inputStream).build();
 
-    return File.create(fileCreateParams);
+    return File.create(fileCreateParams, getRequestOptionsBetaApi(new TypedId<>(), accountId));
   }
 
   @SneakyThrows

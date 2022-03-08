@@ -39,6 +39,8 @@ public class Business extends TypedMutable<BusinessId> {
 
   @NonNull private String legalName;
 
+  private String businessName;
+
   @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessType type;

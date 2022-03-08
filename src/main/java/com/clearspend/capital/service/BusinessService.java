@@ -81,6 +81,7 @@ public class BusinessService {
       business.setId(businessId);
     }
 
+    business.setBusinessName(convertBusinessProspect.getBusinessName());
     business.setDescription(convertBusinessProspect.getDescription());
     business.setBusinessPhone(
         new RequiredEncryptedString(convertBusinessProspect.getBusinessPhone()));
@@ -175,6 +176,7 @@ public class BusinessService {
 
     BeanUtils.setNotNull(updateBusiness.getBusinessType(), business::setType);
     BeanUtils.setNotNull(updateBusiness.getLegalName(), business::setLegalName);
+    BeanUtils.setNotNull(updateBusiness.getBusinessName(), business::setBusinessName);
     BeanUtils.setNotNull(
         updateBusiness.getEmployerIdentificationNumber(),
         business::setEmployerIdentificationNumber);

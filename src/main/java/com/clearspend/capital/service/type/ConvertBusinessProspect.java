@@ -15,6 +15,8 @@ public class ConvertBusinessProspect {
 
   private String legalName;
 
+  private String businessName;
+
   private String employerIdentificationNumber;
 
   private String businessPhone;

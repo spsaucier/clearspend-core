@@ -14,6 +14,9 @@ public class UpdateBusiness {
   @JsonProperty("legalName")
   private String legalName;
 
+  @JsonProperty("businessName")
+  private String businessName;
+
   @JsonProperty("businessType")
   private BusinessType businessType;
 

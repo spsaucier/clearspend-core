@@ -768,6 +768,7 @@ public class TestHelper {
                 new ConvertBusinessProspect(
                     null,
                     legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
+                    legalName.length() > 100 ? legalName.substring(0, 100) : legalName,
                     generateEmployerIdentificationNumber(),
                     faker.phoneNumber().phoneNumber(),
                     generateEntityAddress(),
