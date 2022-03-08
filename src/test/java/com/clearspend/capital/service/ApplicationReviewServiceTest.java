@@ -12,7 +12,6 @@ import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
-import javax.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -21,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
 
 @Slf4j
-@Transactional
 class ApplicationReviewServiceTest extends BaseCapitalTest {
 
   @Autowired private MockMvc mvc;

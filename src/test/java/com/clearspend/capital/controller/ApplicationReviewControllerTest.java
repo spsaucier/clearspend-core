@@ -16,7 +16,6 @@ import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndStrip
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import java.time.LocalDate;
 import java.util.Collections;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 class ApplicationReviewControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;

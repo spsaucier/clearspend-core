@@ -26,7 +26,6 @@ import com.clearspend.capital.service.PendingStripeTransferService;
 import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

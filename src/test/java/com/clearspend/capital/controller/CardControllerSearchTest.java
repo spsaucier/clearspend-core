@@ -23,7 +23,6 @@ import com.clearspend.capital.service.type.PageToken.OrderBy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.List;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +35,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class CardControllerSearchTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

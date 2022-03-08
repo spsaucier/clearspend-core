@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import javax.transaction.Transactional;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -12,6 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @CapitalTest
 @Testcontainers
+@Transactional
 public abstract class BaseCapitalTest {
 
   public final ObjectMapper objectMapper =

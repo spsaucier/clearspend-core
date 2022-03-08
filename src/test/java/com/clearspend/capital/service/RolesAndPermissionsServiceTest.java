@@ -41,7 +41,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +50,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements DefaultRoles {
 
   private static final BigDecimal TWO = new BigDecimal(2);

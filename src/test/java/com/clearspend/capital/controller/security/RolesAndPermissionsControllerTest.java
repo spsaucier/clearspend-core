@@ -12,7 +12,6 @@ import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRe
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import java.util.EnumSet;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 class RolesAndPermissionsControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

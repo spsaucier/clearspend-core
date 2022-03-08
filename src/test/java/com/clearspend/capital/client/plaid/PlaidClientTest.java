@@ -28,14 +28,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-@Transactional
 class PlaidClientTest extends BaseCapitalTest {
 
   @Autowired private PlaidClient underTest;

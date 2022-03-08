@@ -32,7 +32,6 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +41,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 
 @Slf4j
-@Transactional
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 

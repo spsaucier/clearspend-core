@@ -42,7 +42,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @Slf4j
-@Transactional
 public class CodatServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
 

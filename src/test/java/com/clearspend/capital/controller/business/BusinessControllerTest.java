@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +51,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class BusinessControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

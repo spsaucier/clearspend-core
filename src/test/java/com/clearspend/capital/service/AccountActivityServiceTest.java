@@ -27,7 +27,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 
 @Slf4j
-@Transactional
 public class AccountActivityServiceTest extends BaseCapitalTest {
 
   @Autowired AccountService accountService;

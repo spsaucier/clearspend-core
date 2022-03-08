@@ -10,13 +10,11 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import java.math.BigDecimal;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-@Transactional
 class AccountServiceTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;

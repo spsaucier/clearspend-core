@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 
 @Slf4j
-@Transactional
 public class AllocationServiceTest extends BaseCapitalTest {
 
   @Autowired private AssertionHelper assertionHelper;

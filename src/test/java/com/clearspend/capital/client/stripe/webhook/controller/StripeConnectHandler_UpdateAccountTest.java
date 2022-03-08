@@ -13,7 +13,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import com.stripe.model.Event;
 import java.io.FileReader;
-import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 
 @Slf4j
-@Transactional
 class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
 
   @Autowired private TestHelper testHelper;

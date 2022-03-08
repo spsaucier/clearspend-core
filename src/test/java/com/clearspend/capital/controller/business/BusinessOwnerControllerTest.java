@@ -32,7 +32,6 @@ import java.io.FileReader;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +45,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
 @Slf4j
-@Transactional
 class BusinessOwnerControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

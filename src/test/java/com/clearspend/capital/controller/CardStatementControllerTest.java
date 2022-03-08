@@ -23,7 +23,6 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +36,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class CardStatementControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

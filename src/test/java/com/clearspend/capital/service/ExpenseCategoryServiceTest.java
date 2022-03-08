@@ -6,13 +6,11 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
-import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-@Transactional
 class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Autowired private ExpenseCategoryRepository expenseCategoryRepository;

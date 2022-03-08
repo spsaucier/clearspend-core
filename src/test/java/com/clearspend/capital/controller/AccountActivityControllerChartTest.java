@@ -24,7 +24,6 @@ import com.clearspend.capital.service.NetworkMessageService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import javax.servlet.http.Cookie;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +35,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @SuppressWarnings("JavaTimeDefaultTimeZone")
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
   private final MockMvc mvc;

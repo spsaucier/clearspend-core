@@ -20,7 +20,6 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.NetworkMessageService;
 import java.time.OffsetDateTime;
-import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +33,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-@Transactional
 public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
