@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -232,6 +233,8 @@ public class CodatService {
             currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
 
     if (deleteResult) {
+      businessService.updateBusinessAccountingSetupStep(
+          businessId, AccountingSetupStep.ADD_CREDIT_CARD);
       businessService.deleteCodatConnectionForBusiness(businessId);
     }
 
