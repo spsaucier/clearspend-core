@@ -41,7 +41,6 @@ import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,23 +88,18 @@ public class BusinessControllerTest extends BaseCapitalTest {
             response.getContentAsString(),
             com.clearspend.capital.controller.type.business.Business.class);
 
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getBusinessId())
-        .isEqualTo(business.getId());
+    assertThat(jsonBusiness.getBusinessId()).isEqualTo(business.getId());
     assertThat(jsonBusiness.getLegalName()).isEqualTo(business.getLegalName());
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getBusinessType())
-        .isEqualTo(business.getType());
+    assertThat(jsonBusiness.getBusinessType()).isEqualTo(business.getType());
     assertThat(jsonBusiness.getEmployerIdentificationNumber())
         .isEqualTo(business.getEmployerIdentificationNumber());
     assertThat(jsonBusiness.getBusinessPhone())
         .isEqualTo(business.getBusinessPhone().getEncrypted());
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getAddress())
-        .isEqualTo(new Address(business.getClearAddress()));
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getOnboardingStep())
-        .isEqualTo(business.getOnboardingStep());
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getKnowYourBusinessStatus())
+    assertThat(jsonBusiness.getAddress()).isEqualTo(new Address(business.getClearAddress()));
+    assertThat(jsonBusiness.getOnboardingStep()).isEqualTo(business.getOnboardingStep());
+    assertThat(jsonBusiness.getKnowYourBusinessStatus())
         .isEqualTo(business.getKnowYourBusinessStatus());
-    org.assertj.core.api.Assertions.assertThat(jsonBusiness.getStatus())
-        .isEqualTo(business.getStatus());
+    assertThat(jsonBusiness.getStatus()).isEqualTo(business.getStatus());
   }
 
   @SneakyThrows
@@ -192,32 +186,39 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   public void getBusinessAllocations_success() {
-    Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    CreateBusinessRecord businessRecord = testHelper.createBusiness(100L);
+    Allocation rootAllocation = businessRecord.allocationRecord().allocation();
     AllocationRecord allocationChild1 =
         testHelper.createAllocation(
-            createBusinessRecord.business().getId(),
+            businessRecord.business().getId(),
             "child_1",
             rootAllocation.getId(),
-            createBusinessRecord.user());
+            businessRecord.user());
     AllocationRecord allocationGrandchild1 =
         testHelper.createAllocation(
-            createBusinessRecord.business().getId(),
+            businessRecord.business().getId(),
             "grandchild_1",
             allocationChild1.allocation().getId(),
-            createBusinessRecord.user());
+            businessRecord.user());
     AllocationRecord allocationGrandchild2 =
         testHelper.createAllocation(
-            createBusinessRecord.business().getId(),
+            businessRecord.business().getId(),
             "grandchild_2",
             allocationChild1.allocation().getId(),
-            createBusinessRecord.user());
+            businessRecord.user());
+
+    accountService.depositFunds(
+        businessRecord.business().getId(),
+        allocationService.getRootAllocation(businessRecord.business().getId()).account(),
+        Amount.of(Currency.USD, new BigDecimal(200)),
+        true);
 
     MockHttpServletResponse response =
         mvc.perform(
                 get("/businesses/allocations")
-                    .header("businessId", createBusinessRecord.business().getId())
+                    .header("businessId", businessRecord.business().getId())
                     .contentType(APPLICATION_JSON_VALUE)
-                    .cookie(createBusinessRecord.authCookie()))
+                    .cookie(businessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -244,37 +245,42 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     // checking tree structure
     // root node
-    org.assertj.core.api.Assertions.assertThat(
-            allocationMap.get(rootAllocation.getId()).getParentAllocationId())
-        .isNull();
-    org.assertj.core.api.Assertions.assertThat(
-            allocationMap.get(rootAllocation.getId()).getChildrenAllocationIds())
+    assertThat(allocationMap.get(rootAllocation.getId()).getParentAllocationId()).isNull();
+    assertThat(allocationMap.get(rootAllocation.getId()).getChildrenAllocationIds())
         .containsExactly(allocationChild1.allocation().getId());
+    assertThat(
+            allocationMap.get(rootAllocation.getId()).getAccount().getLedgerBalance().getAmount())
+        .isEqualTo(new BigDecimal("300.00"));
+    assertThat(
+            allocationMap
+                .get(rootAllocation.getId())
+                .getAccount()
+                .getAvailableBalance()
+                .getAmount())
+        .isEqualTo(new BigDecimal("100.00"));
 
     // child 1
-    org.assertj.core.api.Assertions.assertThat(
-            allocationMap.get(allocationChild1.allocation().getId()).getParentAllocationId())
+    assertThat(allocationMap.get(allocationChild1.allocation().getId()).getParentAllocationId())
         .isEqualTo(rootAllocation.getId());
-    org.assertj.core.api.Assertions.assertThat(
-            allocationMap.get(allocationChild1.allocation().getId()).getChildrenAllocationIds())
+    assertThat(allocationMap.get(allocationChild1.allocation().getId()).getChildrenAllocationIds())
         .containsExactlyInAnyOrder(
             allocationGrandchild1.allocation().getId(), allocationGrandchild2.allocation().getId());
 
     // grandchild 1
-    org.assertj.core.api.Assertions.assertThat(
+    assertThat(
             allocationMap.get(allocationGrandchild1.allocation().getId()).getParentAllocationId())
         .isEqualTo(allocationChild1.allocation().getId());
-    org.assertj.core.api.Assertions.assertThat(
+    assertThat(
             allocationMap
                 .get(allocationGrandchild1.allocation().getId())
                 .getChildrenAllocationIds())
         .isEmpty();
 
     // grandchild 2
-    org.assertj.core.api.Assertions.assertThat(
+    assertThat(
             allocationMap.get(allocationGrandchild2.allocation().getId()).getParentAllocationId())
         .isEqualTo(allocationChild1.allocation().getId());
-    org.assertj.core.api.Assertions.assertThat(
+    assertThat(
             allocationMap
                 .get(allocationGrandchild2.allocation().getId())
                 .getChildrenAllocationIds())
@@ -346,10 +352,10 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .getResponse();
     log.info(response.getContentAsString());
     Account account = objectMapper.readValue(response.getContentAsString(), Account.class);
-    Assertions.assertEquals(
-        com.clearspend.capital.controller.type.Amount.of(
-            Amount.of(Currency.USD, BigDecimal.valueOf(200))),
-        account.getLedgerBalance());
+    assertThat(
+            com.clearspend.capital.controller.type.Amount.of(
+                Amount.of(Currency.USD, BigDecimal.valueOf(200))))
+        .isEqualTo(account.getLedgerBalance());
   }
 
   @Test

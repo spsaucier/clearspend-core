@@ -53,6 +53,9 @@ public class Account {
   @NotNull(message = "ledgerBalance required")
   private Amount ledgerBalance;
 
+  @JsonProperty("availableBalance")
+  private Amount availableBalance;
+
   public static Account of(com.clearspend.capital.data.model.Account account) {
     return new Account(
         account.getId(),
@@ -61,6 +64,7 @@ public class Account {
         account.getLedgerAccountId(),
         account.getType(),
         account.getCardId(),
-        Amount.of(account.getLedgerBalance()));
+        Amount.of(account.getLedgerBalance()),
+        Amount.of(account.getAvailableBalance()));
   }
 }

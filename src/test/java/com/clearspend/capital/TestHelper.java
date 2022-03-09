@@ -796,7 +796,7 @@ public class TestHelper {
       accountService.depositFunds(
           business.getId(),
           rootAllocation.account(),
-          Amount.of(Currency.USD, new BigDecimal("1000")),
+          Amount.of(Currency.USD, new BigDecimal(openingBalance)),
           false);
     }
 

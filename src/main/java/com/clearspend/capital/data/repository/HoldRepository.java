@@ -14,6 +14,9 @@ public interface HoldRepository extends JpaRepository<Hold, TypedId<HoldId>> {
   List<Hold> findByAccountIdAndStatusAndExpirationDateAfter(
       TypedId<AccountId> accountId, HoldStatus holdStatus, OffsetDateTime expirationDate);
 
+  List<Hold> findByAccountIdInAndStatusAndExpirationDateAfter(
+      List<TypedId<AccountId>> accountIds, HoldStatus holdStatus, OffsetDateTime expirationDate);
+
   List<Hold> findByStatusAndExpirationDateGreaterThanAndExpirationDateLessThanEqual(
       HoldStatus holdStatus, OffsetDateTime startDate, OffsetDateTime endDate);
 }

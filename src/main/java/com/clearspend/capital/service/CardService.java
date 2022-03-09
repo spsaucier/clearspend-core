@@ -200,11 +200,15 @@ public class CardService {
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {
           case PHYSICAL -> stripeClient.createPhysicalCard(
-              card, shippingAddress, user.getExternalRef());
+              card,
+              shippingAddress,
+              business.getStripeData().getAccountRef(),
+              user.getExternalRef());
           case VIRTUAL -> {
             card.setActivated(true);
             card.setActivationDate(OffsetDateTime.now());
-            yield stripeClient.createVirtualCard(card, user.getExternalRef());
+            yield stripeClient.createVirtualCard(
+                card, business.getStripeData().getAccountRef(), user.getExternalRef());
           }
         };
 

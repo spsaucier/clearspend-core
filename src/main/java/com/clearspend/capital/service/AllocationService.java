@@ -317,7 +317,7 @@ public class AllocationService {
         allocations.stream().map(TypedMutable::getId).collect(Collectors.toList());
     List<Account> accounts =
         accountService.retrieveAllocationAccounts(
-            business.getId(), business.getCurrency(), allocationIds);
+            business.getId(), business.getCurrency(), allocationIds, true);
     if (allocations.size() != accounts.size()) {
       throw new IllegalStateException("allocation vs account count mismatch");
     }

@@ -14,6 +14,7 @@ public enum StripeMetadataEntry {
   USER_ID("user_id"),
   ADJUSTMENT_ID("adjustment_id"),
   HOLD_ID("hold_id"),
+  CARD_ID("card_id"),
   STRIPE_ACCOUNT_ID("stripe_account_id");
 
   private final String key;

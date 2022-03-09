@@ -55,7 +55,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   @BeforeEach
   void init() {
-    createBusinessRecord = testHelper.createBusiness(100_000L);
+    createBusinessRecord = testHelper.createBusiness(1000L);
     businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     this.authCookie = createBusinessRecord.authCookie();

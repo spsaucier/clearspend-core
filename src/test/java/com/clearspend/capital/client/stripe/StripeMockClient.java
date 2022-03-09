@@ -455,7 +455,7 @@ public class StripeMockClient extends StripeClient {
 
   @Override
   public Card createVirtualCard(
-      com.clearspend.capital.data.model.Card card, String userExternalRef) {
+      com.clearspend.capital.data.model.Card card, String stripeAccountRef, String stripeUserRef) {
     Card result = generateEntityWithId(Card.class);
     result.setLast4(faker.numerify("####"));
 
@@ -466,7 +466,8 @@ public class StripeMockClient extends StripeClient {
   public Card createPhysicalCard(
       com.clearspend.capital.data.model.Card card,
       Address shippingAddress,
-      String userExternalRef) {
+      String stripeAccountRef,
+      String stripeUserRef) {
     Card result = generateEntityWithId(Card.class);
     result.setLast4(faker.numerify("####"));
 

@@ -62,6 +62,9 @@ import com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance;
 import com.stripe.param.issuing.CardCreateParams;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
+import com.stripe.param.issuing.CardCreateParams.SpendingControls;
+import com.stripe.param.issuing.CardCreateParams.SpendingControls.SpendingLimit;
+import com.stripe.param.issuing.CardCreateParams.SpendingControls.SpendingLimit.Interval;
 import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
@@ -644,14 +647,17 @@ public class StripeClient {
   }
 
   public Card createVirtualCard(
-      com.clearspend.capital.data.model.Card card, String userExternalRef) {
+      com.clearspend.capital.data.model.Card card, String stripeAccountRef, String stripeUserRef) {
     CardCreateParams cardParameters =
         CardCreateParams.builder()
-            .setCardholder(userExternalRef)
+            .setCardholder(stripeUserRef)
             .setCurrency(Currency.USD.name())
             .setType(CardCreateParams.Type.VIRTUAL)
             .setStatus(Status.ACTIVE)
             .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
+            .putMetadata(StripeMetadataEntry.BUSINESS_ID.getKey(), card.getBusinessId().toString())
+            .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), card.getId().toString())
+            .putMetadata(StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(), stripeAccountRef)
             .build();
     log.debug("Virtual card: cardParameters: {}", cardParameters);
 
@@ -668,7 +674,8 @@ public class StripeClient {
   public Card createPhysicalCard(
       com.clearspend.capital.data.model.Card card,
       com.clearspend.capital.common.data.model.Address shippingAddress,
-      String userExternalRef) {
+      String stripeAccountRef,
+      String stripeUserRef) {
     Shipping.Address.Builder addressBuilder =
         Shipping.Address.builder()
             .setLine1(shippingAddress.getStreetLine1().getEncrypted())
@@ -682,19 +689,28 @@ public class StripeClient {
 
     CardCreateParams cardParameters =
         CardCreateParams.builder()
-            .setCardholder(userExternalRef)
+            .setCardholder(stripeUserRef)
             .setCurrency(Currency.USD.name())
             .setType(CardCreateParams.Type.PHYSICAL)
             .setStatus(Status.INACTIVE)
             .setShipping(
                 Shipping.builder()
-                    // TODO: Should be a part of the user request when issuing a card
-                    .setName("Some funny looking shipping label")
+                    .setName("Business Address")
                     .setService(Service.STANDARD)
                     .setAddress(addressBuilder.build())
                     .build())
             .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
-            // TODO: Add business_id/stripe_account_id etc to the metadata
+            .setSpendingControls(
+                SpendingControls.builder()
+                    .addSpendingLimit(
+                        SpendingLimit.builder()
+                            .setAmount(10_000_00L)
+                            .setInterval(Interval.DAILY)
+                            .build())
+                    .build())
+            .putMetadata(StripeMetadataEntry.BUSINESS_ID.getKey(), card.getBusinessId().toString())
+            .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), card.getId().toString())
+            .putMetadata(StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(), stripeAccountRef)
             .build();
     log.debug("Physical card: cardParameters: {}", cardParameters);
 

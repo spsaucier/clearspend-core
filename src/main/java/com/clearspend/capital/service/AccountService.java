@@ -30,8 +30,10 @@ import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.NonNull;
@@ -242,16 +244,26 @@ public class AccountService {
   public List<Account> retrieveAllocationAccounts(
       TypedId<BusinessId> businessId,
       Currency currency,
-      List<TypedId<AllocationId>> allocationIds) {
-    return accountRepository.findByBusinessIdAndTypeAndAllocationIdIsInAndLedgerBalance_Currency(
-        businessId, AccountType.ALLOCATION, allocationIds, currency);
-  }
+      List<TypedId<AllocationId>> allocationIds,
+      boolean fetchHolds) {
+    List<Account> accounts =
+        accountRepository.findByBusinessIdAndTypeAndAllocationIdIsInAndLedgerBalance_Currency(
+            businessId, AccountType.ALLOCATION, allocationIds, currency);
 
-  // used to fetch a small set of accounts and their available balances/holds. Note this is super
-  // inefficient
-  public List<Account> findAccountsByIds(Set<TypedId<AccountId>> accountIds) {
-    List<Account> accounts = accountRepository.findByIdIn(accountIds);
-    accounts.forEach(account -> fetchHolds(account, true));
+    if (fetchHolds) {
+      Map<TypedId<AccountId>, List<Hold>> holds =
+          holdRepository
+              .findByAccountIdInAndStatusAndExpirationDateAfter(
+                  accounts.stream().map(Account::getId).collect(Collectors.toList()),
+                  HoldStatus.PLACED,
+                  OffsetDateTime.now(ZoneOffset.UTC))
+              .stream()
+              .collect(Collectors.groupingBy(Hold::getAccountId));
+      accounts.forEach(
+          account ->
+              account.setHolds(holds.getOrDefault(account.getId(), Collections.emptyList())));
+    }
+
     return accounts;
   }
 
