@@ -266,6 +266,15 @@ public class AccountActivityService {
     return accountActivityRepository.save(accountActivity);
   }
 
+  public AccountActivity updateAccountActivitySyncStatus(
+      TypedId<BusinessId> businessId,
+      TypedId<AccountActivityId> accountActivityId,
+      AccountActivityIntegrationSyncStatus status) {
+    AccountActivity accountActivity = retrieveAccountActivity(businessId, accountActivityId);
+    accountActivity.setIntegrationSyncStatus(status);
+    return accountActivityRepository.save(accountActivity);
+  }
+
   public AccountActivity retrieveAccountActivity(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
     return accountActivityRepository

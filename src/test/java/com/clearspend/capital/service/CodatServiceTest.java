@@ -216,6 +216,12 @@ public class CodatServiceTest extends BaseCapitalTest {
     assertThat(loggedTransactions.size() > 0).isTrue();
     assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER)
         .isTrue();
+    assertThat(
+            accountActivityRepository
+                .findById(newAccountActivity.getId())
+                .get()
+                .getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
 
     mockClient.addSupplierToList(new CodatSupplier("supplier-123", "Test Store", "Active", "USD"));
 

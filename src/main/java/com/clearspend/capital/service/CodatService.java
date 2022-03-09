@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
@@ -139,6 +140,9 @@ public class CodatService {
               currentUserDetails.getFirstName(),
               currentUserDetails.getLastName()));
 
+      accountActivityService.updateAccountActivitySyncStatus(
+          business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
+
       return new SyncTransactionResponse("IN_PROGRESS", syncResponse);
     } else {
       // if supplier does not exist, create it
@@ -164,6 +168,9 @@ public class CodatService {
               business.getCodatCompanyRef(),
               currentUserDetails.getFirstName(),
               currentUserDetails.getLastName()));
+
+      accountActivityService.updateAccountActivitySyncStatus(
+          business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
 
       return new SyncTransactionResponse("WAITING_FOR_SUPPLIER");
     }
