@@ -125,6 +125,8 @@ public class NetworkCommon {
   private UUID networkMessageGroupId = UUID.randomUUID();
 
   private AccountActivity accountActivity;
+  // holds prior account activity, if any, so we can copy data from it to newly created records
+  private AccountActivity priorAccountActivity;
 
   private boolean postHold = false;
   private OffsetDateTime holdExpiration;

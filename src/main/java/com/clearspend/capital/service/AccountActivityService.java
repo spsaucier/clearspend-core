@@ -131,7 +131,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordHoldReleaseAccountActivity(Hold hold) {
+  public AccountActivity recordHoldReleaseAccountActivity(Hold hold) {
     AccountActivity accountActivity =
         accountActivityRepository.findByHoldId(hold.getId()).stream()
             .min(Comparator.comparing(Versioned::getCreated))
@@ -143,7 +143,7 @@ public class AccountActivityService {
         accountActivity.getId(),
         accountActivity.getHideAfter());
 
-    accountActivityRepository.save(accountActivity);
+    return accountActivityRepository.save(accountActivity);
   }
 
   @Transactional(TxType.REQUIRED)
@@ -224,6 +224,11 @@ public class AccountActivityService {
     if (hold != null) {
       accountActivity.setHoldId(hold.getId());
       accountActivity.setHideAfter(hold.getExpirationDate());
+    }
+    if (common.getPriorAccountActivity() != null) {
+      accountActivity.setExpenseDetails(common.getPriorAccountActivity().getExpenseDetails());
+      accountActivity.setNotes(common.getPriorAccountActivity().getNotes());
+      accountActivity.setReceipt(common.getPriorAccountActivity().getReceipt());
     }
 
     AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();

@@ -394,7 +394,8 @@ public class NetworkMessageService {
       common.getPriorHold().setStatus(HoldStatus.RELEASED);
       common.getUpdatedHolds().add(common.getPriorHold());
       common.getAccount().recalculateAvailableBalance();
-      accountActivityService.recordHoldReleaseAccountActivity(common.getPriorHold());
+      common.setPriorAccountActivity(
+          accountActivityService.recordHoldReleaseAccountActivity(common.getPriorHold()));
     }
   }
 
