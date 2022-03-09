@@ -214,6 +214,13 @@ public class TestHelper {
 
   private volatile Cookie defaultAuthCookie;
 
+  public void setIssuedPhysicalCardsLimit(TypedId<BusinessId> businessId, int newLimit) {
+    com.clearspend.capital.data.model.business.BusinessLimit limit =
+        businessLimitRepository.findByBusinessId(businessId).orElseThrow();
+    limit.setIssuedPhysicalCardsLimit(newLimit);
+    businessLimitRepository.save(limit);
+  }
+
   public record OnboardBusinessRecord(
       Business business,
       BusinessOwner businessOwner,
@@ -451,7 +458,7 @@ public class TestHelper {
    * @return cookie for authorizing this user
    */
   @SneakyThrows
-  public Cookie login(@NonNull String email, @NonNull String password) {
+  public @NonNull Cookie login(@NonNull String email, @NonNull String password) {
     LoginRequest request = new LoginRequest(email, password);
     String body = objectMapper.writeValueAsString(request);
 

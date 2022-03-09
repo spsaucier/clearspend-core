@@ -34,3 +34,11 @@ logging:
   level:
     root: INFO
     com.clearspend.capital: DEBUG
+    org.springframework.security.access.expression.method: DEBUG
+
+clearspend:
+  business:
+    limit:
+      issuance:
+        card:
+          physical: 100000

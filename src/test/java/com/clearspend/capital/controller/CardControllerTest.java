@@ -29,6 +29,7 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -47,7 +48,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 public class CardControllerTest extends BaseCapitalTest {
@@ -55,6 +58,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
   private final EntityManager entityManager;
+  private final BusinessLimitRepository businessLimitRepository;
 
   private final Faker faker = new Faker();
 
@@ -227,6 +231,8 @@ public class CardControllerTest extends BaseCapitalTest {
 
   @Test
   void physicalCardsIssuanceLimit() {
+    testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
+
     BusinessLimit businessLimit =
         mockMvcHelper.queryObject(
             "/businesses/business-limit", HttpMethod.GET, userCookie, BusinessLimit.class);

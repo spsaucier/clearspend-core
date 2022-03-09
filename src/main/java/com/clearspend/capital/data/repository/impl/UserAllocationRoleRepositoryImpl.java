@@ -20,12 +20,14 @@ import com.clearspend.capital.data.repository.security.UserAllocationRoleReposit
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import lombok.NonNull;
@@ -215,6 +217,10 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         UserType.valueOf(resultSet.getString("user_type")),
         getTypedId(resultSet, "user_id"),
         getTypedId(resultSet, "allocation_id"),
+        getTypedId(resultSet, "allocation_business_id"),
+        Arrays.stream((UUID[]) resultSet.getArray("ancestor_allocation_ids").getArray())
+            .map(uuid -> new TypedId<AllocationId>(uuid))
+            .collect(Collectors.toList()),
         resultSet.getBoolean("inherited"),
         resultSet.getString("allocation_role"),
         permissions,

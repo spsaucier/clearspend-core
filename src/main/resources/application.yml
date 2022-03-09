@@ -27,8 +27,9 @@ spring:
   security:
     oauth2:
       client:
-        clientId: ${SPRING_SECURITY_OAUTH2_CLIENT_CLIENT_ID:58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6}
-        secret: ${SPRING_SECURITY_OAUTH2_CLIENT_SECRET:d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0}
+        registration:
+          clientId: ${SPRING_SECURITY_OAUTH2_CLIENT_CLIENT_ID:58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6}
+          secret: ${SPRING_SECURITY_OAUTH2_CLIENT_SECRET:d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0}
       resourceserver:
         jwt:
           issuer-uri: ${client.fusionauth.base-url}

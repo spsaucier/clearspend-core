@@ -8,18 +8,22 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 @Slf4j
 public class CapitalPermissionEvaluator implements PermissionEvaluator {
 
@@ -58,15 +62,15 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
   @Override
   public boolean hasPermission(
       Authentication authentication, Serializable targetId, String targetType, Object permission) {
+    @SuppressWarnings("unchecked")
     TypedId<AllocationId> allocationId =
         targetType.equals("AllocationId") ? (TypedId<AllocationId>) targetId : null;
+    @SuppressWarnings("unchecked")
     TypedId<BusinessId> businessId =
         targetType.equals("BusinessId") ? (TypedId<BusinessId>) targetId : null;
 
     UserRolesAndPermissions userPermissions =
-        allocationId == null
-            ? rolesAndPermissionsService.getUserRolesAndPermissionsAtRootAllocation(businessId)
-            : rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId);
+        getPermissions(authentication, allocationId, businessId);
 
     if (userPermissions == null
         || (userPermissions.allocationPermissions().isEmpty()
@@ -86,6 +90,36 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
       log.trace("User {} has insufficient permission", CurrentUser.getUserId());
     }
     return hasPermission;
+  }
+
+  private UserRolesAndPermissions getPermissions(
+      Authentication authentication,
+      final TypedId<AllocationId> allocationId,
+      final TypedId<BusinessId> businessId) {
+
+    // BusinessID alone implies root allocationID
+    // AllocationID could refer to root allocation, but certainly refers to an allocation
+    // cache in CapitalAuthenticationConverter
+    Object details = authentication.getDetails();
+    UserRolesAndPermissionsCache cache = (UserRolesAndPermissionsCache) details;
+
+    return Optional.ofNullable(allocationId)
+        .map(
+            a ->
+                cache
+                    .getPermissionsForAllocation(a)
+                    .orElse(
+                        cache.cachePermissions(
+                            rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(a))))
+        // wasn't allocation, so looking for root allocation of the business
+        .orElseGet(
+            () ->
+                cache
+                    .getPermissionsForBusiness(businessId)
+                    .orElse(
+                        cache.cachePermissions(
+                            rolesAndPermissionsService.getUserRolesAndPermissionsAtRootAllocation(
+                                businessId))));
   }
 
   private record RequiredPermissions(

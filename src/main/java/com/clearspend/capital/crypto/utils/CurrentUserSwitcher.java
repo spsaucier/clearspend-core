@@ -6,6 +6,7 @@ import static com.clearspend.capital.controller.Common.ROLES;
 import static com.clearspend.capital.controller.Common.USER_TYPE;
 
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import io.fusionauth.jwt.Signer;
@@ -121,7 +122,10 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
     // Sign and encode the JWT to a JSON string representation
     String encodedJWT = JWT.getEncoder().encode(jwt, signer);
 
-    return new JwtAuthenticationToken(jwtDecoder.decode(encodedJWT));
+    final JwtAuthenticationToken jwtAuthenticationToken =
+        new JwtAuthenticationToken(jwtDecoder.decode(encodedJWT));
+    jwtAuthenticationToken.setDetails(new UserRolesAndPermissionsCache());
+    return jwtAuthenticationToken;
   }
 
   @RestrictedApi(

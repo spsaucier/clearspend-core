@@ -360,6 +360,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @Test
   void defaultBusinessLimit() {
+    testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
     BusinessLimit businessLimit =
         mvcHelper.queryObject(
             "/businesses/business-limit", HttpMethod.GET, authCookie, BusinessLimit.class);
