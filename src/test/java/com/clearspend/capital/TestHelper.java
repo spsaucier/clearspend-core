@@ -949,7 +949,8 @@ public class TestHelper {
       pendingRequestAmountDetails.setAtmFee(null);
       pendingRequest.setAmountDetails(pendingRequestAmountDetails);
       pendingRequest.setCurrency(business.getCurrency().toStripeCurrency());
-      pendingRequest.setIsAmountControllable(false);
+      pendingRequest.setIsAmountControllable(
+          merchantType == MerchantType.AUTOMATED_FUEL_DISPENSERS);
       pendingRequest.setMerchantAmount(pendingAmount);
       pendingRequest.setMerchantCurrency(business.getCurrency().toStripeCurrency());
       authorization.setPendingRequest(pendingRequest);

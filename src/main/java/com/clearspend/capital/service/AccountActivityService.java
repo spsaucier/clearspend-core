@@ -178,7 +178,7 @@ public class AccountActivityService {
 
   @Transactional(TxType.REQUIRED)
   public void recordNetworkDeclineAccountActivity(NetworkCommon common) {
-    recordNetworkAccountActivity(common, common.getRequestedAmount(), null, null);
+    recordNetworkAccountActivity(common, common.getPaddedAmount(), null, null);
   }
 
   private void recordNetworkAccountActivity(

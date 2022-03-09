@@ -168,7 +168,13 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   }
 
   private AuthorizationRecord authorize(
-      Allocation allocation, User user, Card card, BigDecimal openingBalance, long amount) {
+      Allocation allocation,
+      User user,
+      Card card,
+      BigDecimal openingBalance,
+      MerchantType merchantType,
+      long amount,
+      boolean approved) {
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
     String stripeId = generateStripeId("iauth_");
     Authorization authorization =
@@ -176,7 +182,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             business,
             user,
             card,
-            MerchantType.TRANSPORTATION_SERVICES,
+            merchantType,
             0L,
             AuthorizationMethod.CONTACTLESS,
             amount,
@@ -188,14 +194,21 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorization, stripeEventType),
             true);
-    testHelper.assertPost(networkCommon, false, false, true);
-    assertionHelper.assertBalance(
-        business,
-        allocation,
-        networkCommon.getAccount(),
-        openingBalance,
-        openingBalance.subtract(
-            Amount.fromStripeAmount(business.getCurrency(), amount).getAmount()));
+    if (approved) {
+      testHelper.assertPost(networkCommon, false, false, true);
+      amount = merchantType == MerchantType.AUTOMATED_FUEL_DISPENSERS ? 10000L : amount;
+      assertionHelper.assertBalance(
+          business,
+          allocation,
+          networkCommon.getAccount(),
+          openingBalance,
+          openingBalance.subtract(
+              Amount.fromStripeAmount(business.getCurrency(), amount).getAmount()));
+    } else {
+      testHelper.assertPost(networkCommon, false, true, false);
+      assertionHelper.assertBalance(
+          business, allocation, networkCommon.getAccount(), openingBalance, openingBalance);
+    }
 
     validateStripeWebhookLog(networkCommon);
 
@@ -261,40 +274,27 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void processAuthorization_insufficientBalance() {
-    UserRecord userRecord = createUser(BigDecimal.TEN);
+    BigDecimal openingBalance = BigDecimal.TEN;
+    UserRecord userRecord = createUser(openingBalance);
     Allocation allocation = userRecord.allocation;
     User user = userRecord.user;
     Card card = userRecord.card;
 
     long amount = 1001L;
-
-    StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
-    String stripeId = generateStripeId("iauth_");
-    Authorization authorization =
-        testHelper.getAuthorization(
-            business,
+    AuthorizationRecord x =
+        authorize(
+            allocation,
             user,
             card,
+            openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
-            0L,
-            AuthorizationMethod.CONTACTLESS,
             amount,
-            stripeId);
+            false);
+    Authorization authorization = x.authorization();
+    NetworkCommon networkCommon = x.networkCommon();
 
-    NetworkCommon networkCommon =
-        stripeWebhookController.handleDirectRequest(
-            Instant.now(),
-            new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, stripeEventType),
-            true);
-    testHelper.assertPost(networkCommon, false, true, false);
-    assertionHelper.assertBalance(
-        business, allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
-    assertionHelper.assertNetworkMessageRequestAccountActivity(networkCommon, authorization, user);
-
-    validateStripeWebhookLog(networkCommon);
-
-    stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_CREATED;
+    String stripeId = authorization.getId();
+    StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_CREATED;
     Authorization authorizationCreated =
         testHelper.getAuthorization(
             business,
@@ -394,7 +394,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    authorize(allocation, user, card, openBalance, 1000L);
+    authorize(
+        allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
   }
 
   @SneakyThrows
@@ -406,7 +407,47 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    authorize(allocation, user, card, openBalance, 927L);
+    authorize(
+        allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 927L, true);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_afd_insufficientBalance() {
+    BigDecimal openBalance = BigDecimal.valueOf(99.99);
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    authorize(
+        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, false);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_afd_exactBalance() {
+    BigDecimal openBalance = BigDecimal.valueOf(100);
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    authorize(
+        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, true);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_afd_underBalance() {
+    BigDecimal openBalance = BigDecimal.valueOf(101);
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    authorize(
+        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, true);
   }
 
   @SneakyThrows
@@ -418,7 +459,9 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    AuthorizationRecord authorizationRecord = authorize(allocation, user, card, openBalance, 1000L);
+    AuthorizationRecord authorizationRecord =
+        authorize(
+            allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
 
     NetworkCommon networkCommon =
         authorizeUpdate(allocation, authorizationRecord, 900L, BigDecimal.TEN, BigDecimal.ONE);
@@ -434,7 +477,15 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     long authAmount = 1000L;
-    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
+    AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            authAmount,
+            true);
 
     long captureAmount = -900L;
     BigDecimal closingBalance = BigDecimal.ONE;
@@ -451,7 +502,15 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     long authAmount = 1000L;
-    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
+    AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            authAmount,
+            true);
 
     long captureAmount = -authAmount;
     BigDecimal closingBalance = BigDecimal.ZERO;
@@ -468,7 +527,15 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     long authAmount = 1000L;
-    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, authAmount);
+    AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            authAmount,
+            true);
 
     long captureAmount = -1200L;
     BigDecimal closingBalance = BigDecimal.valueOf(-2);
@@ -570,7 +637,15 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     long amount = 900L;
-    AuthorizationRecord authorize = authorize(allocation, user, card, openingBalance, amount);
+    AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            amount,
+            true);
 
     openingBalance = BigDecimal.TEN;
     closingBalance = BigDecimal.ZERO;

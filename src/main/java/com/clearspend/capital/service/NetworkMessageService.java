@@ -242,6 +242,7 @@ public class NetworkMessageService {
         common.setHoldExpiration(OffsetDateTime.now().plusHours(2));
         common.setPaddedAmount(
             Amount.of(common.getRequestedAmount().getCurrency(), BigDecimal.valueOf(-100)));
+        common.setAllowPartialApproval(false);
       }
       case AIRLINES_AIR_CARRIERS,
           CAR_RENTAL_AGENCIES,
@@ -340,7 +341,8 @@ public class NetworkMessageService {
       common.setApprovedAmount(common.getPaddedAmount());
     } else {
       common.setApprovedAmount(
-          Amount.min(common.getAccount().getAvailableBalance(), common.getPaddedAmount().abs()));
+          Amount.min(common.getAccount().getAvailableBalance(), common.getPaddedAmount().abs())
+              .negate());
     }
     common.setHoldAmount(common.getApprovedAmount());
 
