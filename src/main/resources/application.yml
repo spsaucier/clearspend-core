@@ -42,7 +42,7 @@ clearspend:
           physical: 10
   ach:
     hold:
-      standard: false
+      standard: ${CLEARSPEND_ACH_HOLD_STANDARD:false}
   encryption:
     key:
       aes:
