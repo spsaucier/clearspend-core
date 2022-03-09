@@ -58,6 +58,7 @@ public class AccountActivityController {
                 request.getSearchText(),
                 request.getFrom(),
                 request.getTo(),
+                request.getStatuses(),
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, AccountActivityResponse::new);
@@ -137,6 +138,7 @@ public class AccountActivityController {
                 request.getSearchText(),
                 request.getFrom(),
                 request.getTo(),
+                request.getStatuses(),
                 PageRequest.toPageToken(request.getPageRequest())));
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transactions.csv");

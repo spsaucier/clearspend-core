@@ -174,7 +174,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
-                null, null, null, null, null, null, null, new PageToken(0, 10, null)));
+                null, null, null, null, null, null, null, null, new PageToken(0, 10, null)));
 
     assertThat(accountActivity).hasSize(3);
   }
@@ -225,6 +225,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 null,
+                null,
                 new PageToken(0, 10, null)));
 
     assertThat(withdrawalFilteredAccountActivity).hasSize(2);
@@ -240,9 +241,62 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 null,
+                null,
                 new PageToken(0, 10, null)));
 
     assertThat(depositFilteredAccountActivity).hasSize(1);
+  }
+
+  @Test
+  void retrieveAllAccountActivityFilterByStatus() {
+    CreateBusinessRecord businessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(businessRecord.user());
+
+    AccountActivity approvedAccountActivity =
+        new AccountActivity(
+            businessRecord.business().getId(),
+            businessRecord.allocationRecord().allocation().getId(),
+            businessRecord.allocationRecord().allocation().getName(),
+            businessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+
+    accountActivityRepository.save(approvedAccountActivity);
+
+    Page<AccountActivity> depositFilteredAccountActivity =
+        accountActivityRepository.find(
+            businessRecord.business().getId(),
+            new AccountActivityFilterCriteria(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(AccountActivityStatus.APPROVED),
+                new PageToken(0, 10, null)));
+
+    assertThat(depositFilteredAccountActivity).hasSize(1);
+
+    Page<AccountActivity> canceledFilteredAccountActivity =
+        accountActivityRepository.find(
+            businessRecord.business().getId(),
+            new AccountActivityFilterCriteria(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(AccountActivityStatus.CANCELED),
+                new PageToken(0, 10, null)));
+
+    assertThat(canceledFilteredAccountActivity).hasSize(0);
   }
 
   @Test

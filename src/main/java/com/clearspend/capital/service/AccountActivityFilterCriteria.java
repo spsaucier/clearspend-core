@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.service.type.PageToken;
 import java.time.OffsetDateTime;
@@ -23,6 +24,7 @@ public class AccountActivityFilterCriteria {
   private String searchText;
   private OffsetDateTime from;
   private OffsetDateTime to;
+  private List<AccountActivityStatus> statuses;
   private PageToken pageToken;
 
   public AccountActivityFilterCriteria(

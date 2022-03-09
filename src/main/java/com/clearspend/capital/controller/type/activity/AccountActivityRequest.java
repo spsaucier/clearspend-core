@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
@@ -40,6 +41,9 @@ public class AccountActivityRequest {
 
   @JsonProperty("to")
   private OffsetDateTime to;
+
+  @JsonProperty("statuses")
+  private List<AccountActivityStatus> statuses;
 
   @NonNull
   @NotNull(message = "Page request is mandatory")
