@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.HoldStatus;
+import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
@@ -281,7 +282,10 @@ public class NetworkMessageService {
         releasePriorHold(common);
         common.setApprovedAmount(common.getRequestedAmount());
         common.setHoldAmount(common.getApprovedAmount());
-        common.setHoldExpiration(common.getPriorHold().getExpirationDate());
+        common.setHoldExpiration(
+            common.getMerchantType() == MerchantType.AUTOMATED_FUEL_DISPENSERS
+                ? OffsetDateTime.now().plusDays(3)
+                : common.getPriorHold().getExpirationDate());
         common.setPostHold(true);
         common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
       }

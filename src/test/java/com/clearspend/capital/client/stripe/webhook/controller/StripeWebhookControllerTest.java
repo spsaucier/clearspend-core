@@ -433,8 +433,21 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    authorize(
-        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, true);
+    AuthorizationRecord authorizationRecord =
+        authorize(
+            allocation,
+            user,
+            card,
+            openBalance,
+            MerchantType.AUTOMATED_FUEL_DISPENSERS,
+            100L,
+            true);
+
+    OffsetDateTime now = OffsetDateTime.now().plusDays(3);
+    NetworkCommon networkCommon =
+        authorizeUpdate(
+            allocation, authorizationRecord, 1467L, openBalance, BigDecimal.valueOf(85.33));
+    assertThat(networkCommon.getHold().getExpirationDate()).isAfter(now);
   }
 
   @SneakyThrows
