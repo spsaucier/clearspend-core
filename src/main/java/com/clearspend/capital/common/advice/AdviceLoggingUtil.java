@@ -83,29 +83,37 @@ public class AdviceLoggingUtil {
       stringBuilder.append("Request Parameters: [").append(parameters).append("]\n");
     }
 
-    if (responseBody != null) {
-      stringBuilder.append("Request Body: [");
-      try {
-        stringBuilder.append(objectMapper.writeValueAsString(requestBody));
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-      stringBuilder.append("]\n");
-    }
-
-    if (responseBody != null) {
-      stringBuilder.append("Response Body: [");
-      try {
-        stringBuilder.append(objectMapper.writeValueAsString(responseBody));
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-      stringBuilder.append("]\n");
-    }
+    appendBody("Request", httpServletRequest, requestBody, stringBuilder);
+    appendBody("Response", httpServletRequest, responseBody, stringBuilder);
 
     stringBuilder.append(prefix).append(" <<<<<<<<<<<<<<<<<<<< ]");
 
     log.info(stringBuilder.toString());
+  }
+
+  private void appendBody(
+      String type,
+      HttpServletRequest httpServletRequest,
+      Object body,
+      StringBuilder stringBuilder) {
+    if (body == null) {
+      return;
+    }
+
+    stringBuilder.append(type);
+    stringBuilder.append(" Body: [");
+    if (httpServletRequest.getRequestURI().startsWith("/images/receipts")) {
+      stringBuilder.append("<binary>");
+    } else {
+      try {
+        stringBuilder.append(objectMapper.writeValueAsString(body));
+      } catch (Exception e) {
+        stringBuilder.append("<error: ");
+        stringBuilder.append(e.getMessage());
+        stringBuilder.append(">");
+      }
+    }
+    stringBuilder.append("]\n");
   }
 
   Map<String, String> buildHeadersMap(HttpServletRequest request) {
