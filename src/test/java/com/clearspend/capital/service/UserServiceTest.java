@@ -185,5 +185,24 @@ class UserServiceTest extends BaseCapitalTest {
     // Ensure we have different email addresses in the end
     assertThat(existingUser.getEmail())
         .isNotEqualTo(userService.retrieveUser(toChange.getId()).getEmail());
+
+    // We should be able to update other fields on the User without triggering the Email duplication
+    // message
+    String emailPriorToUpdate = toChange.getEmail().toString();
+    assertThat(
+            userService
+                .updateUser(
+                    createBusinessRecord.business().getId(),
+                    toChange.getId(),
+                    toChange.getFirstName().toString(),
+                    faker.name().lastName(),
+                    toChange.getAddress(),
+                    toChange.getEmail().toString(),
+                    toChange.getPhone().toString(),
+                    false)
+                .user()
+                .getEmail()
+                .toString())
+        .isEqualTo(emailPriorToUpdate);
   }
 }

@@ -202,10 +202,12 @@ public class UserService {
     }
     if (StringUtils.isNotEmpty(email)) {
       // Ensure that this email address does NOT already exist within the database.
-      if (userRepository.findByEmailHash(HashUtil.calculateHash(email)).isPresent()) {
+      RequiredEncryptedStringWithHash newHash = new RequiredEncryptedStringWithHash(email);
+      Optional<User> duplicate = userRepository.findByEmailHash(HashUtil.calculateHash(email));
+      if (duplicate.isPresent() && duplicate.get().getId() != userId) {
         throw new InvalidRequestException("A user with that email address already exists");
       }
-      user.setEmail(new RequiredEncryptedStringWithHash(email));
+      user.setEmail(newHash);
     }
     if (StringUtils.isNotEmpty(phone)) {
       user.setPhone(new NullableEncryptedStringWithHash(phone));
