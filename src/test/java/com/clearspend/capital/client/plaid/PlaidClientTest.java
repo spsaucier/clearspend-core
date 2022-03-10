@@ -125,7 +125,7 @@ class PlaidClientTest extends BaseCapitalTest {
   void getAccountsAndOwnersButTheInstitutionDoesNotSupportOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
     TypedId<BusinessId> businessId =
-        TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Flexible Platypus Open Banking");
+        TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Tattersall Federal Credit Union");
     String linkToken = underTest.createLinkToken(businessId);
     String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId);
     PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId);

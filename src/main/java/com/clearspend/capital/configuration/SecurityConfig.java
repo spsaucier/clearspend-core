@@ -29,6 +29,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers(
             "/actuator/**",
             "/authentication/login",
+            "/authentication/change-password/*",
             "/authentication/two-factor/login",
             "/authentication/forgot-password",
             "/authentication/reset-password",

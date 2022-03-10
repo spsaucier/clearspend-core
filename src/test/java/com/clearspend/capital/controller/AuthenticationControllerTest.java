@@ -11,8 +11,19 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
+import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
+import com.clearspend.capital.controller.type.user.UserLoginResponse;
+import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.UserService;
+import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import io.fusionauth.domain.api.user.ChangePasswordResponse;
+import java.util.Collections;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,6 +41,9 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final TwilioServiceMock twilioServiceMock;
+  private final UserService userService;
+  private final CardService cardService;
+
   private CreateBusinessRecord createBusinessRecord;
   private UserService.CreateUpdateUserRecord user;
   private Cookie userCookie;
@@ -142,5 +156,87 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
+  }
+
+  @Test
+  @SneakyThrows
+  void expirePasswordForNextLogin() {
+    // CAP-601 support reset password email
+    // The astute reader will wonder why the heck this test issues cards
+    // instead of just creating a user with an expired password.  The latter is the main use
+    // case we want to see working at the time of this test writing.
+
+    // Create a user without registering with FusionAuth
+    CreateUpdateUserRecord newUser =
+        userService.createUser(
+            createBusinessRecord.business().getId(),
+            UserType.EMPLOYEE,
+            testHelper.generateFirstName(),
+            testHelper.generateLastName(),
+            testHelper.generateEntityAddress(),
+            testHelper.generateEmail(),
+            testHelper.generatePhone());
+
+    twilioServiceMock.setLastUserAccountCreatedPassword("NONE");
+
+    // Issuing the card registers with FA and sends an email to reset their password
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    cardService.issueCard(
+        BinType.DEBIT,
+        FundingType.POOLED,
+        CardType.VIRTUAL,
+        createBusinessRecord.business().getId(),
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        newUser.user().getId(),
+        Currency.USD,
+        false,
+        createBusinessRecord.business().getLegalName(),
+        Collections.emptyMap(),
+        Collections.emptySet(),
+        Collections.emptySet(),
+        newUser.user().getAddress());
+
+    String newPassword = twilioServiceMock.getLastUserAccountCreatedPassword();
+    // check that the email arrived
+    assertThat(newPassword).isNotEqualTo("NONE");
+
+    LoginRequest request = new LoginRequest(newUser.user().getEmail().getEncrypted(), newPassword);
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse response =
+        mvc.perform(post("/authentication/login").contentType("application/json").content(body))
+            .andExpect(status().is(203))
+            .andReturn()
+            .getResponse();
+
+    UserLoginResponse changePasswordResponse =
+        objectMapper.readValue(response.getContentAsString(), UserLoginResponse.class);
+
+    assertThat(changePasswordResponse.getChangePasswordId()).isNotNull();
+
+    // Set a new password
+    String replacementPassword = testHelper.generatePassword(16);
+    ChangePasswordRequest changePasswordRequest =
+        new ChangePasswordRequest(
+            newUser.user().getEmail().getEncrypted(), newPassword, replacementPassword);
+
+    MockHttpServletResponse httpResponseAfterChange =
+        mvc.perform(
+                post(
+                        "/authentication/change-password/{changePasswordId}",
+                        changePasswordResponse.getChangePasswordId())
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(changePasswordRequest)))
+            .andExpect(status().is(200))
+            .andReturn()
+            .getResponse();
+
+    ChangePasswordResponse faChangeResponse =
+        objectMapper.readValue(
+            httpResponseAfterChange.getContentAsString(), ChangePasswordResponse.class);
+
+    // Log in and get a fresh cookie.
+    Cookie cookie = testHelper.login(newUser.user().getEmail().getEncrypted(), replacementPassword);
+    assertThat(cookie).isNotNull();
   }
 }

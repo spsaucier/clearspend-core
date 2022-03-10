@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -54,7 +55,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   }
 
   private static String generateNextTwoFactorCode() {
-    return String.valueOf((int) (random.nextDouble() * 1e+7) % 1e+7);
+    return RandomStringUtils.randomNumeric(6);
   }
 
   public TestFusionAuthClient(FusionAuthProperties fusionAuthProperties) {
@@ -117,9 +118,12 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     if (!response.wasSuccessful()) {
       return response;
     }
-    if (twoFactorEnabled.containsKey(response.successResponse.user.id)) {
+    if (response.successResponse != null
+        && response.successResponse.user != null
+        && twoFactorEnabled.containsKey(response.successResponse.user.id)) {
       UUID twoFactorId = UUID.randomUUID();
-      twoFactorPending.put(twoFactorId, new TwoFactorPending(response.successResponse, null));
+      twoFactorPending.put(
+          twoFactorId, new TwoFactorPending(response.successResponse, generateNextTwoFactorCode()));
 
       response = new ClientResponse<>();
       response.successResponse = new LoginResponse();

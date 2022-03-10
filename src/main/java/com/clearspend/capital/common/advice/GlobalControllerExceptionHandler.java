@@ -10,8 +10,6 @@ import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.TwoFactorAuthenticationRequired;
-import com.clearspend.capital.controller.type.security.TwoFactorAuthenticationStart;
 import com.inversoft.error.Errors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,13 +43,6 @@ public class GlobalControllerExceptionHandler {
   public ResponseEntity<Errors> handleLoginException(LoginException exception) {
     return new ResponseEntity<>(
         exception.getErrors(), HttpStatus.valueOf(exception.getHttpStatus()));
-  }
-
-  @ExceptionHandler({TwoFactorAuthenticationRequired.class})
-  public ResponseEntity<TwoFactorAuthenticationStart> startTwoFactorAuthentication(
-      TwoFactorAuthenticationRequired twoFactorStart) {
-    return ResponseEntity.status(200)
-        .body(new TwoFactorAuthenticationStart(twoFactorStart.getTwoFactorId()));
   }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)

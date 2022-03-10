@@ -12,37 +12,32 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NonNull;
 
 @Data
 @AllArgsConstructor
 public class User {
 
+  protected User() {}
+
   @JsonProperty("userId")
-  @NonNull
   private TypedId<UserId> userId;
 
   @JsonProperty("businessId")
-  @NonNull
   private TypedId<BusinessId> businessId;
 
   @JsonProperty("type")
-  @NonNull
   private UserType type;
 
   @JsonProperty("firstName")
-  @NonNull
   private String firstName;
 
   @JsonProperty("lastName")
-  @NonNull
   private String lastName;
 
   @JsonProperty("address")
   private Address address;
 
   @JsonProperty("email")
-  @NonNull
   private String email;
 
   @JsonProperty("phone")

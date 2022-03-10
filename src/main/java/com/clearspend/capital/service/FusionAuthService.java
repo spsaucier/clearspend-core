@@ -52,24 +52,28 @@ import org.springframework.stereotype.Component;
 public class FusionAuthService {
 
   public @interface FusionAuthUserCreator {
+
     String reviewer();
 
     String explanation();
   }
 
   public @interface FusionAuthUserModifier {
+
     String reviewer();
 
     String explanation();
   }
 
   public @interface FusionAuthUserAccessor {
+
     String reviewer();
 
     String explanation();
   }
 
   @interface FusionAuthRoleAdministrator {
+
     String reviewer();
 
     String explanation();
@@ -446,6 +450,16 @@ public class FusionAuthService {
       throw new InvalidRequestException("Incorrect password");
     }
     validateResponse(changePasswordResponse);
+  }
+
+  public ChangePasswordResponse changePassword(
+      String changePasswordId, String loginId, String currentPassword, String password) {
+    final ChangePasswordRequest request =
+        new ChangePasswordRequest(loginId, currentPassword, password);
+    request.applicationId = getApplicationId();
+    ClientResponse<ChangePasswordResponse, Errors> changePasswordResponse =
+        client.changePassword(changePasswordId, request);
+    return validateResponse(changePasswordResponse);
   }
 
   public ClientResponse<LoginResponse, Errors> login(String loginId, @Sensitive String password) {

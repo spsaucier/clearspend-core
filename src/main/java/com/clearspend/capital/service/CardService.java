@@ -151,6 +151,9 @@ public class CardService {
             cardLine3.toString(),
             StringUtils.EMPTY,
             cardType.equals(CardType.PHYSICAL) ? shippingAddress : new Address());
+    if (cardLine4.length() > 25) {
+      cardLine4.setLength(25);
+    }
     card.setCardLine4(cardLine4.toString());
 
     Account account;

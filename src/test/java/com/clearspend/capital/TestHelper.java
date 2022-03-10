@@ -125,6 +125,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -136,6 +137,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -227,6 +229,8 @@ public class TestHelper {
       BusinessProspect businessProspect,
       Cookie cookie) {}
 
+  private final Random random = new Random(0);
+
   /**
    * Creates the default business if it doesn't already exist, creates a businessBankAccount if it
    * doesn't exist.
@@ -310,7 +314,11 @@ public class TestHelper {
   }
 
   public String generatePassword() {
-    return randomUUID().toString();
+    return generatePassword(32);
+  }
+
+  public String generatePassword(int length) {
+    return RandomStringUtils.randomAscii(length);
   }
 
   public String generatePhone() {

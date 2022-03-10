@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,8 +13,8 @@ import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorSendRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
 import com.clearspend.capital.controller.security.TestFusionAuthClient;
-import com.clearspend.capital.controller.type.security.TwoFactorAuthenticationStart;
 import com.clearspend.capital.controller.type.user.LoginRequest;
+import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import io.fusionauth.client.FusionAuthClient;
@@ -97,16 +98,19 @@ public class AuthenticationController2FATest extends BaseCapitalTest {
             .getResponse();
 
     log.info("response: {}", response);
-    TwoFactorAuthenticationStart twoFactorAuthenticationStart =
-        objectMapper.readValue(response.getContentAsString(), TwoFactorAuthenticationStart.class);
+    UserLoginResponse twoFactorAuthenticationStart =
+        objectMapper.readValue(response.getContentAsString(), UserLoginResponse.class);
+    final String twoFactorCode =
+        faClient.getTwoFactorCodeForLogin(
+            UUID.fromString(twoFactorAuthenticationStart.getTwoFactorId()));
+    assertThat(twoFactorCode).isNotNull();
 
     // and confirm the 2F
 
     TwoFactorLoginRequest twoFactorLoginRequest = new TwoFactorLoginRequest();
-    twoFactorLoginRequest.code =
-        faClient.getTwoFactorCodeForLogin(
-            UUID.fromString(twoFactorAuthenticationStart.twoFactorId()));
-    twoFactorLoginRequest.twoFactorId = twoFactorAuthenticationStart.twoFactorId();
+
+    twoFactorLoginRequest.code = twoFactorCode;
+    twoFactorLoginRequest.twoFactorId = twoFactorAuthenticationStart.getTwoFactorId();
 
     response =
         mvc.perform(

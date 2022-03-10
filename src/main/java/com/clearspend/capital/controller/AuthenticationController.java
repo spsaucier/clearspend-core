@@ -1,13 +1,12 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.error.LoginException;
-import com.clearspend.capital.common.error.TwoFactorAuthenticationRequired;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
-import com.clearspend.capital.controller.type.user.User;
+import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
@@ -23,6 +22,8 @@ import com.nimbusds.jwt.JWTParser;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
+import io.fusionauth.domain.api.user.ChangePasswordResponse;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.text.ParseException;
 import java.time.Duration;
 import java.util.Date;
@@ -37,6 +38,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -70,8 +72,8 @@ public class AuthenticationController {
       reviewer = "jscarbor",
       explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
-  ResponseEntity<User> login(@Validated @RequestBody LoginRequest request)
-      throws ParseException, LoginException, TwoFactorAuthenticationRequired {
+  ResponseEntity<UserLoginResponse> login(@Validated @RequestBody LoginRequest request)
+      throws ParseException, LoginException {
     ClientResponse<LoginResponse, Errors> loginResponse;
     try {
       loginResponse = fusionAuthService.login(request.getUsername(), request.getPassword());
@@ -87,11 +89,14 @@ public class AuthenticationController {
       throw new LoginException(loginResponse.status, loginResponse.errorResponse);
     }
 
+    if (loginResponse.status == 203) {
+      return UserLoginResponse.resetPasswordResponse(
+          loginResponse.successResponse.changePasswordId,
+          loginResponse.successResponse.changePasswordReason);
+    }
+
     if (loginResponse.status == 242) {
-      fusionAuthService.sendTwoFactorCodeForLoginUsingMethod(
-          loginResponse.successResponse.twoFactorId,
-          loginResponse.successResponse.methods.get(0).id);
-      throw new TwoFactorAuthenticationRequired(loginResponse.successResponse.twoFactorId);
+      return UserLoginResponse.twoFactorChallenge(loginResponse.successResponse.twoFactorId);
     }
 
     return finalizeLogin(loginResponse);
@@ -106,16 +111,16 @@ public class AuthenticationController {
               be made to move this functionality to the user service or remove it entirely.
               Removal after March 2022 is probably appropriate.
               """)
-  public ResponseEntity<User> finalizeLogin(ClientResponse<LoginResponse, Errors> loginResponse)
-      throws ParseException {
+  public ResponseEntity<UserLoginResponse> finalizeLogin(
+      ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {
     LoginResponse response = loginResponse.successResponse;
 
     // Status 202 = The user was authenticated successfully. The user is not registered for
     // the application specified by the applicationId on the request. The response will contain
     // the User object that was authenticated.
+    CurrentUser user = CurrentUser.get(getClaims(response));
     if (loginResponse.status == 202) {
       // populate-token.js populates the JWT
-      CurrentUser user = CurrentUser.get(getClaims(response));
       fusionAuthService.updateUser(
           user.businessId(),
           user.userId(),
@@ -136,18 +141,30 @@ public class AuthenticationController {
       expiry = 20L * 60; // 20 minutes
     }
 
-    Optional<User> user = userService.retrieveUserBySubjectRef(userId).map(User::new);
-    if (user.isEmpty()) {
-      // If it is not found from "users" table, it may still exist in business_prospect
-      // during the first steps of on-boarding phase
-      user = businessProspectService.retrieveBusinessProspectBySubjectRef(userId).map(User::new);
-    } else {
-      // For special group of users =business owners= we want to load them
-      // from business_owner table, as it contains important fields used during on-boarding
-      if (user.get().getType() == UserType.BUSINESS_OWNER) {
-        user = businessOwnerService.retrieveBusinessOwnerBySubjectRef(userId).map(User::new);
-      }
-    }
+    UserLoginResponse userLoginResponse =
+        userService
+            .retrieveUserBySubjectRef(userId)
+            .map(UserLoginResponse::new)
+            // If it is not found from "users" table, it may still exist in business_prospect
+            // during the first steps of on-boarding phase
+            .orElse(
+                businessProspectService
+                    .retrieveBusinessProspectBySubjectRef(userId)
+                    .map(UserLoginResponse::new)
+                    .orElseGet(
+                        () -> {
+                          // For special group of users =business owners= we want to load them
+                          // from business_owner table, as it contains important fields used during
+                          // on-boarding
+
+                          if (user.userType() == UserType.BUSINESS_OWNER) {
+                            return businessOwnerService
+                                .retrieveBusinessOwnerBySubjectRef(userId)
+                                .map(UserLoginResponse::new)
+                                .orElse(null);
+                          }
+                          return null;
+                        }));
 
     return ResponseEntity.status(loginResponse.status)
         .header(
@@ -157,7 +174,7 @@ public class AuthenticationController {
                 SecurityConfig.REFRESH_TOKEN_COOKIE_NAME,
                 response.refreshToken,
                 refreshTokenTimeToLiveInMinutes * 60L))
-        .body(user.orElse(null));
+        .body(userLoginResponse);
   }
 
   private Map<String, Object> getClaims(LoginResponse response) throws ParseException {
@@ -168,8 +185,8 @@ public class AuthenticationController {
   }
 
   @PostMapping("/two-factor/login")
-  ResponseEntity<User> twoFactorLogin(@Validated @RequestBody TwoFactorLoginRequest request)
-      throws ParseException {
+  ResponseEntity<UserLoginResponse> twoFactorLogin(
+      @Validated @RequestBody TwoFactorLoginRequest request) throws ParseException {
     ClientResponse<LoginResponse, Errors> loginResponse = fusionAuthService.twoFactorLogin(request);
     return finalizeLogin(loginResponse);
   }
@@ -224,6 +241,24 @@ public class AuthenticationController {
   void changePassword(@Validated @RequestBody ChangePasswordRequest request) {
     fusionAuthService.changePassword(
         request.getUsername(), request.getCurrentPassword(), request.getNewPassword());
+  }
+
+  @PostMapping("/change-password/{changePasswordId}")
+  ChangePasswordResponse changePassword(
+      @PathVariable(value = "changePasswordId")
+          @Parameter(
+              required = true,
+              name = "changePasswordId",
+              description =
+                  "a token presented to the user upon attempted login when password must be changed immediately",
+              example = "!51m3e#P44tsTh!")
+          String changePasswordId,
+      @Validated @RequestBody ChangePasswordRequest request) {
+    return fusionAuthService.changePassword(
+        changePasswordId,
+        request.getUsername(),
+        request.getCurrentPassword(),
+        request.getNewPassword());
   }
 
   String createCookie(String name, String value, long ttl) {

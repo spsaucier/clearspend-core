@@ -38,7 +38,7 @@ public record CurrentUser(
         new TypedId<>(claims.get(CAPITAL_USER_ID).toString()),
         new TypedId<>(claims.get(BUSINESS_ID).toString()),
         StreamSupport.stream(
-                ((Iterable<Object>) getClaims().getOrDefault(ROLES, Collections.emptyList()))
+                ((Iterable<Object>) claims.getOrDefault(ROLES, Collections.emptyList()))
                     .spliterator(),
                 false)
             .map(Object::toString)

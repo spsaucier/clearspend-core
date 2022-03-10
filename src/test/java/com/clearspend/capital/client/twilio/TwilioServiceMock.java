@@ -24,6 +24,7 @@ public class TwilioServiceMock extends TwilioService {
   @Setter @Getter private String lastVerificationEmail;
   @Setter @Getter private String lastVerificationPhone;
   @Setter @Getter private String lastOtp;
+  @Setter @Getter private String lastUserAccountCreatedPassword;
 
   public TwilioServiceMock(
       TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {
@@ -138,7 +139,9 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   public void sendUserAccountCreatedEmail(
-      String to, String firstName, String companyName, String password) {}
+      String to, String firstName, String companyName, String password) {
+    lastUserAccountCreatedPassword = password;
+  }
 
   @Override
   public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {}

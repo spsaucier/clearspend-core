@@ -21,6 +21,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
+import javax.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -92,26 +93,44 @@ public class Card extends TypedMutable<CardId> {
   private OffsetDateTime activationDate;
 
   // name on card (limit 26 characters)
-  @NonNull private String cardLine3;
+  @Column(length = 26)
+  @Size(max = 26)
+  @NonNull
+  private String cardLine3;
+
+  @Column(length = 25)
+  @Size(max = 25)
   private String cardLine4;
 
   // Flag to indicate whether this card has been superseded by another in some way like reissue,
   // renew, replace, etc.
   private boolean superseded;
 
-  @NonNull private String lastFour;
+  @Column(length = 4)
+  @Size(max = 4)
+  @NonNull
+  private String lastFour;
 
   @NonNull @Embedded private Address shippingAddress;
 
   // this is the identifier of this card at Stripe
+  @Column(length = 32)
+  @Size(max = 32)
   private String externalRef;
 
   // shipping and delivery fields
   private boolean shipped;
   private OffsetDateTime shippedDate;
   private OffsetDateTime deliveryEta;
+
+  @Column(length = 255)
+  @Size(max = 255)
   private String carrier;
+
+  @Column(length = 255)
+  @Size(max = 255)
   private String trackingNumber;
+
   private boolean delivered;
   private OffsetDateTime deliveredDate;
 }
