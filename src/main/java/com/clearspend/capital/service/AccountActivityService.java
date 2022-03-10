@@ -57,6 +57,8 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -240,13 +242,10 @@ public class AccountActivityService {
     common.setAccountActivity(accountActivityRepository.save(accountActivity));
   }
 
+  @PreAuthorize(
+      "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity updateAccountActivity(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      TypedId<AccountActivityId> accountActivityId,
-      String notes,
-      Optional<Integer> iconRef) {
-    AccountActivity accountActivity = getUserAccountActivity(businessId, userId, accountActivityId);
+      AccountActivity accountActivity, String notes, Optional<Integer> iconRef) {
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
     ExpenseCategory expenseCategory;
@@ -307,19 +306,6 @@ public class AccountActivityService {
     return accountActivityRepository.find(businessId, accountActivityFilterCriteria);
   }
 
-  public AccountActivity getUserAccountActivity(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      TypedId<AccountActivityId> accountActivityId) {
-
-    return accountActivityRepository
-        .findByBusinessIdAndUserIdAndId(businessId, userId, accountActivityId)
-        .orElseThrow(
-            () ->
-                new RecordNotFoundException(
-                    Table.ACCOUNT_ACTIVITY, businessId, userId, accountActivityId));
-  }
-
   public AccountActivity findByReceiptId(
       TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
 
@@ -339,6 +325,15 @@ public class AccountActivityService {
     }
 
     return accountActivity;
+  }
+
+  @PostAuthorize(
+      "isSelfOwned() or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
+  public AccountActivity getAccountActivity(TypedId<AccountActivityId> accountActivityId) {
+
+    return accountActivityRepository
+        .findById(accountActivityId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, accountActivityId));
   }
 
   public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) {

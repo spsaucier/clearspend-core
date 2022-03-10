@@ -1,10 +1,10 @@
 package com.clearspend.capital.configuration;
 
-import com.clearspend.capital.service.CapitalPermissionEvaluator;
-import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.security.CapitalMethodSecurityExpressionHandler;
+import com.clearspend.capital.service.security.CapitalPermissionEvaluator;
+import com.clearspend.capital.service.security.PermissionEnrichmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.GlobalMethodSecurityConfiguration;
@@ -13,14 +13,14 @@ import org.springframework.security.config.annotation.method.configuration.Globa
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
 
-  @Autowired private RolesAndPermissionsService rolesAndPermissionsService;
+  @Autowired private PermissionEnrichmentService permissionEnrichmentService;
 
   @Override
   protected MethodSecurityExpressionHandler createExpressionHandler() {
-    DefaultMethodSecurityExpressionHandler expressionHandler =
-        new DefaultMethodSecurityExpressionHandler();
+    CapitalMethodSecurityExpressionHandler expressionHandler =
+        new CapitalMethodSecurityExpressionHandler(permissionEnrichmentService);
     expressionHandler.setPermissionEvaluator(
-        new CapitalPermissionEvaluator(rolesAndPermissionsService));
+        new CapitalPermissionEvaluator(permissionEnrichmentService));
     return expressionHandler;
   }
 }

@@ -1,16 +1,12 @@
-package com.clearspend.capital.service;
+package com.clearspend.capital.service.security;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
-import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
-import com.clearspend.capital.service.type.CurrentUser;
-import java.io.Serializable;
+import com.clearspend.capital.service.RolesAndPermissionsService;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -18,57 +14,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.PermissionEvaluator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
-@Transactional
-@Slf4j
-public class CapitalPermissionEvaluator implements PermissionEvaluator {
+@Service
+@RequiredArgsConstructor
+public class PermissionEnrichmentService {
 
   private final RolesAndPermissionsService rolesAndPermissionsService;
 
-  public CapitalPermissionEvaluator(RolesAndPermissionsService rolesAndPermissionsService) {
-    this.rolesAndPermissionsService = rolesAndPermissionsService;
-  }
-
-  @Override
-  public boolean hasPermission(
-      Authentication authentication, Object targetDomainObject, Object permission) {
-    TypedId<AllocationId> allocationId = null;
-    TypedId<BusinessId> businessId = null;
-    if (targetDomainObject instanceof Business) {
-      businessId = ((Business) targetDomainObject).getId();
-    } else if (targetDomainObject instanceof Allocation) {
-      allocationId = ((Allocation) targetDomainObject).getId();
-    } else if (targetDomainObject instanceof TypedId) {
-      // only allocationID will work here, else use the syntax with an explicit targetType
-      //noinspection unchecked
-      allocationId = (TypedId<AllocationId>) targetDomainObject;
-    }
-
-    if (businessId == null) {
-      businessId = CurrentUser.getBusinessId();
-    }
-
-    return hasPermission(
-        authentication,
-        allocationId == null ? businessId : allocationId,
-        allocationId == null ? "BusinessId" : "AllocationId",
-        permission);
-  }
-
-  @Override
-  public boolean hasPermission(
-      Authentication authentication, Serializable targetId, String targetType, Object permission) {
-    @SuppressWarnings("unchecked")
-    TypedId<AllocationId> allocationId =
-        targetType.equals("AllocationId") ? (TypedId<AllocationId>) targetId : null;
-    @SuppressWarnings("unchecked")
-    TypedId<BusinessId> businessId =
-        targetType.equals("BusinessId") ? (TypedId<BusinessId>) targetId : null;
-
+  public boolean evaluatePermission(
+      Authentication authentication,
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      String permissions) {
     UserRolesAndPermissions userPermissions =
         getPermissions(authentication, allocationId, businessId);
 
@@ -78,7 +38,7 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
       return false;
     }
 
-    RequiredPermissions overlapPermissions = resolvePermission(String.valueOf(permission));
+    RequiredPermissions overlapPermissions = resolvePermission(String.valueOf(permissions));
 
     overlapPermissions.allocationPermissions.retainAll(userPermissions.allocationPermissions());
     overlapPermissions.globalUserPermissions.retainAll(userPermissions.globalUserPermissions());
@@ -86,9 +46,6 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
     final boolean hasPermission =
         !overlapPermissions.allocationPermissions.isEmpty()
             || !overlapPermissions.globalUserPermissions.isEmpty();
-    if (!hasPermission) {
-      log.trace("User {} has insufficient permission", CurrentUser.getUserId());
-    }
     return hasPermission;
   }
 

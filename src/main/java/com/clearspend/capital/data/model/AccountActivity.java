@@ -44,7 +44,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class AccountActivity extends TypedMutable<AccountActivityId> {
+public class AccountActivity extends TypedMutable<AccountActivityId> implements Ownable {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")

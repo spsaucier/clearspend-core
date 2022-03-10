@@ -15,11 +15,13 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ExpenseCategory;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.enums.*;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.PageToken;
@@ -27,11 +29,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 
 @Slf4j
 public class AccountActivityServiceTest extends BaseCapitalTest {
@@ -304,6 +309,130 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     assertThrows(
         RecordNotFoundException.class,
         () -> accountActivityService.findByReceiptId(new TypedId<>(), new TypedId<>()));
+  }
+
+  @SneakyThrows
+  @Test
+  void getAccountActivity_onlyActivityOwnersAndAllocationManagersCanAccessActivity() {
+    CreateBusinessRecord primaryBusinessRecord = testHelper.createBusiness();
+
+    testHelper.setCurrentUser(primaryBusinessRecord.user());
+    User manager =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    User activityOwner =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    User snooper =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    AccountActivity accountActivity =
+        new AccountActivity(
+            primaryBusinessRecord.business().getId(),
+            primaryBusinessRecord.allocationRecord().allocation().getId(),
+            primaryBusinessRecord.allocationRecord().allocation().getName(),
+            primaryBusinessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setNotes("");
+    accountActivity.setUserId(activityOwner.getId());
+    accountActivityRepository.save(accountActivity);
+
+    testHelper.setCurrentUser(manager);
+    assertThat(accountActivityService.getAccountActivity(accountActivity.getId())).isNotNull();
+
+    testHelper.setCurrentUser(activityOwner);
+    assertThat(accountActivityService.getAccountActivity(accountActivity.getId())).isNotNull();
+
+    testHelper.setCurrentUser(snooper);
+    assertThrows(
+        AccessDeniedException.class,
+        () -> accountActivityService.getAccountActivity(accountActivity.getId()));
+  }
+
+  @SneakyThrows
+  @Test
+  void updateAccountActivity_onlyAccessibleToActivityOwnerAndManageFundsPermissions() {
+    CreateBusinessRecord primaryBusinessRecord = testHelper.createBusiness();
+
+    testHelper.setCurrentUser(primaryBusinessRecord.user());
+    User manager =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    User activityOwner =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    User snooper =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    AccountActivity accountActivity =
+        new AccountActivity(
+            primaryBusinessRecord.business().getId(),
+            primaryBusinessRecord.allocationRecord().allocation().getId(),
+            primaryBusinessRecord.allocationRecord().allocation().getName(),
+            primaryBusinessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setNotes("");
+    accountActivity.setUserId(activityOwner.getId());
+    accountActivityRepository.save(accountActivity);
+
+    testHelper.setCurrentUser(manager);
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "I'm a manager and I can update Activities!", Optional.empty()))
+        .isNotNull();
+    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
+        .isEqualTo("I'm a manager and I can update Activities!");
+
+    testHelper.setCurrentUser(activityOwner);
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "I own the Activity. I can do whatever I want.", Optional.empty()))
+        .isNotNull();
+    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
+        .isEqualTo("I own the Activity. I can do whatever I want.");
+
+    testHelper.setCurrentUser(snooper);
+    assertThrows(
+        AccessDeniedException.class,
+        () ->
+            assertThat(
+                    accountActivityService.updateAccountActivity(
+                        accountActivity,
+                        "I'm trying to update something I should NOT have access to",
+                        Optional.empty()))
+                .isNotNull());
+
+    // Should be unchanged from the Owner modification above
+    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
+        .isEqualTo("I own the Activity. I can do whatever I want.");
   }
 
   @Test

@@ -401,11 +401,9 @@ public class UserController {
               description = "ID of the account activity record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId) {
-    CurrentUser currentUser = CurrentUser.get();
 
     return new AccountActivityResponse(
-        accountActivityService.getUserAccountActivity(
-            currentUser.businessId(), currentUser.userId(), accountActivityId));
+        accountActivityService.getAccountActivity(accountActivityId));
   }
 
   @PatchMapping("/account-activity/{accountActivityId}")
@@ -418,13 +416,10 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId,
       @Validated @RequestBody UpdateAccountActivityRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
 
     return new AccountActivityResponse(
         accountActivityService.updateAccountActivity(
-            currentUser.businessId(),
-            currentUser.userId(),
-            accountActivityId,
+            accountActivityService.getAccountActivity(accountActivityId),
             request.getNotes(),
             request.getIconRef()));
   }
