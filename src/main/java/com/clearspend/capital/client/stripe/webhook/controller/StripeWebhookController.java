@@ -2,6 +2,8 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -17,19 +19,30 @@ import com.stripe.net.Webhook;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import javax.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/stripe")
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 @Slf4j
 public class StripeWebhookController {
+
+  private static final EnumSet<StripeEventType> AUTH_EVENT_TYPES =
+      EnumSet.of(
+          StripeEventType.ISSUING_AUTHORIZATION_REQUEST,
+          StripeEventType.ISSUING_AUTHORIZATION_CREATED,
+          StripeEventType.ISSUING_AUTHORIZATION_UPDATED,
+          StripeEventType.ISSUING_TRANSACTION_CREATED);
 
   private final StripeWebhookLogRepository stripeWebhookLogRepository;
 
@@ -37,6 +50,20 @@ public class StripeWebhookController {
 
   private final StripeConnectHandler stripeConnectHandler;
   private final StripeDirectHandler stripeDirectHandler;
+  private final WebClient authFallbackClient;
+
+  public StripeWebhookController(
+      StripeWebhookLogRepository stripeWebhookLogRepository,
+      StripeProperties stripeProperties,
+      StripeConnectHandler stripeConnectHandler,
+      StripeDirectHandler stripeDirectHandler,
+      @Autowired(required = false) @Qualifier("authFallbackClient") WebClient authFallbackClient) {
+    this.stripeWebhookLogRepository = stripeWebhookLogRepository;
+    this.stripeProperties = stripeProperties;
+    this.stripeConnectHandler = stripeConnectHandler;
+    this.stripeDirectHandler = stripeDirectHandler;
+    this.authFallbackClient = authFallbackClient;
+  }
 
   @PostMapping("/webhook/connect")
   void connectWebhook(HttpServletRequest request) {
@@ -130,7 +157,24 @@ public class StripeWebhookController {
         }
       }
     } catch (StripeException e) {
-      e.printStackTrace();
+      log.error("Failed to process direct request", e);
+    } catch (RecordNotFoundException e) {
+      // For test webhooks we might want to delegate the auth request to another endpoint since
+      // stripe can only deliver auth event to one instance only (unlike other events)
+      if (e.getTable() == Table.CARD
+          && authFallbackClient != null
+          && stripeProperties.isTestMode()
+          && AUTH_EVENT_TYPES.contains(parseRecord.stripeEventType)) {
+        Mono<String> response =
+            authFallbackClient
+                .post()
+                .bodyValue(parseRecord.stripeWebhookLog().getRequest())
+                .retrieve()
+                .bodyToMono(String.class);
+        response.subscribe(
+            r -> log.debug("Auth request has been delivered to fallback url"),
+            t -> log.error("Failed to deliver auth request to fallback url", t));
+      }
     }
 
     // capture total processing time or -1 if an error occurred

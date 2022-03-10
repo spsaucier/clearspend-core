@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -98,6 +99,18 @@ public class WebclientConfiguration {
               headers.setBasicAuth(authToken);
               headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             })
+        .build();
+  }
+
+  @Bean
+  @ConditionalOnExpression(
+      "T(org.apache.commons.lang3.StringUtils).isNotEmpty('${client.stripe.auth-fallback-url}')")
+  WebClient authFallbackClient(StripeProperties stripeProperties) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(new ReactorClientHttpConnector(httpClient()))
+        .baseUrl(stripeProperties.getAuthFallbackUrl())
+        .defaultHeaders(headers -> headers.add("skip-stripe-header-verification", "true"))
         .build();
   }
 

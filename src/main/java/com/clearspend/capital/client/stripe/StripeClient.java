@@ -654,6 +654,14 @@ public class StripeClient {
             .setCurrency(Currency.USD.name())
             .setType(CardCreateParams.Type.VIRTUAL)
             .setStatus(Status.ACTIVE)
+            .setSpendingControls(
+                SpendingControls.builder()
+                    .addSpendingLimit(
+                        SpendingLimit.builder()
+                            .setAmount(10_000_00L)
+                            .setInterval(Interval.DAILY)
+                            .build())
+                    .build())
             .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
             .putMetadata(StripeMetadataEntry.BUSINESS_ID.getKey(), card.getBusinessId().toString())
             .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), card.getId().toString())

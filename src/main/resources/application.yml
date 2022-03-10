@@ -138,6 +138,10 @@ client:
     # 143$ - pm_usBankAccount_accountClosed
     # 144$ - pm_usBankAccount_invalidAccountNumber
     enable-transfer-failures: ${STRIPE_ENABLE_TRANSFER_FAILURES:true}
+    # For test webhooks we might want to delegate the auth request to another endpoint since stripe
+    # can only deliver auth event to one instance only (unlike other events).
+    # If left blank no fallback will be attempted
+    auth-fallback-url: ${STRIPE_AUTH_FALLBACK_URL:}
   twilio:
     account-sid: ${TWILIO_ACCOUNT_SID:AC0a899d1f81a7443c707b2f66637b1ac3}
     auth-token: ${TWILIO_AUTH_TOKEN:a24434d31b817cf0f3acae9eba031cc1}

@@ -117,13 +117,9 @@ public class NetworkMessageService {
     try {
       cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
     } catch (RecordNotFoundException e) {
-      // if the card isn't found, set decline bits and return to caller
       common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
       common.setPostDecline(true);
-      log.error("failed to find card with externalRef: " + common.getCardExternalRef());
-      // TODO(kuchlein): sort out how we want to handle errors since we always want to write at
-      //   at least StripWebhookLog
-      return;
+      throw e;
     }
 
     common.setBusinessId(cardRecord.card().getBusinessId());

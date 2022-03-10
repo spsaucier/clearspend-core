@@ -3,6 +3,7 @@ package com.clearspend.capital.client.stripe;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,4 +28,9 @@ public class StripeProperties {
   private String clearspendConnectedAccountId;
   private String clearspendFinancialAccountId;
   private boolean enableTransferFailures;
+  private String authFallbackUrl;
+
+  public boolean isTestMode() {
+    return apiKey == null || StringUtils.startsWith(apiKey, "sk_test");
+  }
 }
