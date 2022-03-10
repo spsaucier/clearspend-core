@@ -22,30 +22,30 @@ public class BusinessKycStepBusinessReview extends BusinessKycStep {
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
 
-    if (applicationRequireAdditionalCheck(account, requirements)) {
-      return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW);
-    }
-    return false;
+    return applicationRequireAdditionalCheck(account, requirements);
   }
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
-    updateBusiness(
-        business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
-    // TODO:gb: send email for REVIEW state
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW)) {
+      updateBusiness(
+          business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
+      // TODO:gb: send email for REVIEW state
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    List<String> reasons = extractErrorMessages(requirements);
-    twilioService.sendKybKycReviewStateEmail(
-        business.getBusinessEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
-    return reasons;
+      List<String> reasons = extractErrorMessages(requirements);
+      twilioService.sendKybKycReviewStateEmail(
+          business.getBusinessEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
+      return reasons;
+    }
+    return extractErrorMessages(requirements);
   }
 }

@@ -25,7 +25,7 @@ public class BusinessKycStepBusinessSoftFail extends BusinessKycStep {
     if (applicationRequireAdditionalCheck(account, requirements)) {
       // when additional checks are required,
       // we will move business onboarding status depending on the stripe required information
-      if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+      return (!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
               && requirements.getCurrentlyDue().stream()
                   .anyMatch(s -> s.endsWith(DOCUMENT) || s.endsWith(COMPANY_TAX_ID)))
           || (!CollectionUtils.isEmpty(requirements.getPastDue())
@@ -33,33 +33,34 @@ public class BusinessKycStepBusinessSoftFail extends BusinessKycStep {
                   .anyMatch(s -> s.endsWith(DOCUMENT) || s.endsWith(COMPANY_TAX_ID)))
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
               && requirements.getEventuallyDue().stream()
-                  .anyMatch(s -> s.endsWith(DOCUMENT) || s.endsWith(COMPANY_TAX_ID)))) {
-        return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.SOFT_FAIL);
-      }
+                  .anyMatch(s -> s.endsWith(DOCUMENT) || s.endsWith(COMPANY_TAX_ID)));
     }
     return false;
   }
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
-    updateBusiness(
-        business.getId(), null, BusinessOnboardingStep.SOFT_FAIL, KnowYourBusinessStatus.REVIEW);
-    // TODO:gb: send email for required documents to review
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.SOFT_FAIL)) {
+      updateBusiness(
+          business.getId(), null, BusinessOnboardingStep.SOFT_FAIL, KnowYourBusinessStatus.REVIEW);
+      // TODO:gb: send email for required documents to review
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    List<String> reasons = extractErrorMessages(requirements);
-    twilioService.sendKybKycRequireDocumentsEmail(
-        business.getBusinessEmail().getEncrypted(),
-        businessOwner.getFirstName().getEncrypted(),
-        reasons);
-    return reasons;
+      List<String> reasons = extractErrorMessages(requirements);
+      twilioService.sendKybKycRequireDocumentsEmail(
+          business.getBusinessEmail().getEncrypted(),
+          businessOwner.getFirstName().getEncrypted(),
+          reasons);
+      return reasons;
+    }
+    return extractErrorMessages(requirements);
   }
 }

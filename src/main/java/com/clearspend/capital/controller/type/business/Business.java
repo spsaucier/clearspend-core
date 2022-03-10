@@ -30,6 +30,9 @@ public class Business {
   @NonNull
   private String legalName;
 
+  @JsonProperty("businessName")
+  private String businessName;
+
   @JsonProperty("businessType")
   @NonNull
   private BusinessType businessType;
@@ -97,6 +100,7 @@ public class Business {
         business.getAccountingSetupStep(),
         business.getMcc());
 
+    this.businessName = business.getBusinessName();
     this.description = business.getDescription();
     this.url = business.getUrl();
 

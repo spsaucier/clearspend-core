@@ -6,6 +6,8 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
+import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.service.BusinessService;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -41,6 +43,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
   private final Resource ownersAndRepresentativeAndDocumentProvided;
   private final Resource requiredDocumentsForPersonAndSSNLast4;
   private final Resource ownersAndRepresentativeProvided_step2inStripe;
+  private final Resource controllerError;
 
   Gson gson =
       new GsonBuilder()
@@ -75,7 +78,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
           Resource requiredDocumentsForPersonAndSSNLast4,
       @Value("classpath:stripeResponses/ownersAndRepresentativeProvided_event2fromStripe.json")
           @NonNull
-          Resource ownersAndRepresentativeProvided_step2inStripe) {
+          Resource ownersAndRepresentativeProvided_step2inStripe,
+      @Value("classpath:stripeResponses/controllerError.json") @NonNull Resource controllerError) {
 
     this.createAccount = createAccount;
     this.createAccount_secondEventFromStripe = createAccount_secondEventFromStripe;
@@ -93,6 +97,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         ownersAndRepresentativeProvided_step2inStripe;
     this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
     this.successOnboarding = successOnboarding;
+    this.controllerError = controllerError;
   }
 
   @Test
@@ -411,5 +416,35 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
         businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
+  }
+
+  @Test
+  @SneakyThrows
+  void accountUpdate_whenBusinessCompleteOnboarding_shouldNotImpactCurrentStatus() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    businessService.updateBusiness(
+        createBusinessRecord.business().getId(),
+        BusinessStatus.ACTIVE,
+        BusinessOnboardingStep.COMPLETE,
+        KnowYourBusinessStatus.PASS);
+    Event event = gson.fromJson(new FileReader(controllerError.getFile()), Event.class);
+
+    event
+        .getData()
+        .setObject(
+            JsonParser.parseString(
+                    event
+                        .getDataObjectDeserializer()
+                        .getRawJson()
+                        .replace(
+                            event.getAccount(),
+                            createBusinessRecord.business().getStripeData().getAccountRef()))
+                .getAsJsonObject());
+    stripeConnectHandler.accountUpdated(event);
+
+    Business business =
+        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+
+    Assertions.assertEquals(BusinessOnboardingStep.COMPLETE, business.getOnboardingStep());
   }
 }

@@ -34,7 +34,7 @@ public class BusinessKycStepBusiness extends BusinessKycStep {
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
               && requirements.getEventuallyDue().stream()
                   .anyMatch(this::businessOrCompanyRequirementsMatch))) {
-        return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS);
+        return true;
       }
     }
     return false;
@@ -42,24 +42,27 @@ public class BusinessKycStepBusiness extends BusinessKycStep {
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
-    updateBusiness(
-        business.getId(), null, BusinessOnboardingStep.BUSINESS, KnowYourBusinessStatus.PENDING);
-    // TODO:gb: send email for additional information required about business
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS)) {
+      updateBusiness(
+          business.getId(), null, BusinessOnboardingStep.BUSINESS, KnowYourBusinessStatus.PENDING);
+      // TODO:gb: send email for additional information required about business
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    List<String> reasons = extractErrorMessages(requirements);
-    twilioService.sendKybKycRequireAdditionalInfoEmail(
-        business.getBusinessEmail().getEncrypted(),
-        businessOwner.getFirstName().getEncrypted(),
-        reasons);
-    return reasons;
+      List<String> reasons = extractErrorMessages(requirements);
+      twilioService.sendKybKycRequireAdditionalInfoEmail(
+          business.getBusinessEmail().getEncrypted(),
+          businessOwner.getFirstName().getEncrypted(),
+          reasons);
+      return reasons;
+    }
+    return extractErrorMessages(requirements);
   }
 }

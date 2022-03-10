@@ -21,29 +21,28 @@ public class BusinessKycStepOutOfOnboarding extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
-    if (business.getStatus() != BusinessStatus.ONBOARDING
+    return business.getStatus() != BusinessStatus.ONBOARDING
         || !List.of(
                 BusinessOnboardingStep.BUSINESS,
                 BusinessOnboardingStep.BUSINESS_OWNERS,
                 BusinessOnboardingStep.REVIEW,
                 BusinessOnboardingStep.SOFT_FAIL)
-            .contains(business.getOnboardingStep())) {
-
-      return Strings.isBlank(business.getStripeData().getFinancialAccountRef());
-    }
-    return false;
+            .contains(business.getOnboardingStep());
   }
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
 
-    // to be finalized after KYB/KYC part will be ready
-    business
-        .getStripeData()
-        .setFinancialAccountRef(
-            stripeClient
-                .createFinancialAccount(business.getId(), business.getStripeData().getAccountRef())
-                .getId());
+    if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
+      // to be finalized after KYB/KYC part will be ready
+      business
+          .getStripeData()
+          .setFinancialAccountRef(
+              stripeClient
+                  .createFinancialAccount(
+                      business.getId(), business.getStripeData().getAccountRef())
+                  .getId());
+    }
     return new ArrayList<>();
   }
 }

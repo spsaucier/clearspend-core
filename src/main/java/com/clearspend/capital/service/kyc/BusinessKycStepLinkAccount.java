@@ -22,7 +22,7 @@ public class BusinessKycStepLinkAccount extends BusinessKycStep {
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
 
-    if (!applicationRequireAdditionalCheck(account, requirements)) {
+    if (Boolean.FALSE.equals(applicationRequireAdditionalCheck(account, requirements))) {
       return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT);
     }
 

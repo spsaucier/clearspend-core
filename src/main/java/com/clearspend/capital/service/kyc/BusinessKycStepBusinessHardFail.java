@@ -22,34 +22,31 @@ public class BusinessKycStepBusinessHardFail extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
-    boolean applicationRejected =
-        StringUtils.isNotEmpty(requirements.getDisabledReason())
-            && requirements.getDisabledReason().startsWith(REJECTED);
-    if (applicationRejected) {
-      return business.getStatus() != BusinessStatus.CLOSED;
-    }
-    return false;
+    return StringUtils.isNotEmpty(requirements.getDisabledReason())
+        && requirements.getDisabledReason().startsWith(REJECTED);
   }
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
+    if (business.getStatus() != BusinessStatus.CLOSED) {
+      updateBusiness(business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    updateBusiness(business.getId(), BusinessStatus.CLOSED, null, KnowYourBusinessStatus.FAIL);
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
-
-    List<String> reasons = extractErrorMessages(requirements);
-    twilioService.sendKybKycFailEmail(
-        business.getBusinessEmail().getEncrypted(),
-        businessOwner.getFirstName().getEncrypted(),
-        reasons);
-    return reasons;
+      List<String> reasons = extractErrorMessages(requirements);
+      twilioService.sendKybKycFailEmail(
+          business.getBusinessEmail().getEncrypted(),
+          businessOwner.getFirstName().getEncrypted(),
+          reasons);
+      return reasons;
+    }
+    return extractErrorMessages(requirements);
   }
 }

@@ -26,15 +26,12 @@ public class BusinessKycStepBusinessOwner extends BusinessKycStep {
     if (applicationRequireAdditionalCheck(account, requirements)) {
       // when additional checks are required,
       // we will move business onboarding status depending on the stripe required information
-      if ((!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
+      return (!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
               && requirements.getCurrentlyDue().stream().anyMatch(this::personRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getPastDue())
               && requirements.getPastDue().stream().anyMatch(this::personRequirementsMatch))
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream()
-                  .anyMatch(this::personRequirementsMatch))) {
-        return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS_OWNERS);
-      }
+              && requirements.getEventuallyDue().stream().anyMatch(this::personRequirementsMatch));
     }
 
     return false;
@@ -42,27 +39,30 @@ public class BusinessKycStepBusinessOwner extends BusinessKycStep {
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
-    updateBusiness(
-        business.getId(),
-        null,
-        BusinessOnboardingStep.BUSINESS_OWNERS,
-        KnowYourBusinessStatus.PENDING);
-    // TODO:gb: send email for additional information required about business owners
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS_OWNERS)) {
+      updateBusiness(
+          business.getId(),
+          null,
+          BusinessOnboardingStep.BUSINESS_OWNERS,
+          KnowYourBusinessStatus.PENDING);
+      // TODO:gb: send email for additional information required about business owners
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    List<String> reasons = extractErrorMessages(requirements);
-    twilioService.sendKybKycRequireAdditionalInfoEmail(
-        business.getBusinessEmail().getEncrypted(),
-        businessOwner.getFirstName().getEncrypted(),
-        reasons);
-    return reasons;
+      List<String> reasons = extractErrorMessages(requirements);
+      twilioService.sendKybKycRequireAdditionalInfoEmail(
+          business.getBusinessEmail().getEncrypted(),
+          businessOwner.getFirstName().getEncrypted(),
+          reasons);
+      return reasons;
+    }
+    return extractErrorMessages(requirements);
   }
 }

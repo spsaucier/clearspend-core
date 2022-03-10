@@ -1,6 +1,7 @@
 package com.clearspend.capital.service.kyc;
 
 import com.clearspend.capital.client.stripe.types.Account;
+import com.clearspend.capital.common.error.InvalidKycStepException;
 import com.clearspend.capital.data.model.business.Business;
 import com.stripe.model.Account.Requirements;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class BusinessKycStepHandler {
     return steps.stream()
         .filter(businessKycStep -> businessKycStep.support(requirements, business, account))
         .findFirst()
-        .orElseThrow(() -> new RuntimeException(""))
+        .orElseThrow(InvalidKycStepException::new)
         .execute(requirements, business, account);
   }
 }

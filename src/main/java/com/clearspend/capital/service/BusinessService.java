@@ -171,7 +171,8 @@ public class BusinessService {
   }
 
   @Transactional
-  public Business updateBusiness(TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
+  public com.clearspend.capital.controller.type.business.Business updateBusiness(
+      TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
     Business business = retrieveBusiness(businessId, true);
 
     BeanUtils.setNotNull(updateBusiness.getBusinessType(), business::setType);
@@ -195,7 +196,7 @@ public class BusinessService {
 
     stripeClient.updateAccount(business);
 
-    return business;
+    return new com.clearspend.capital.controller.type.business.Business(business);
   }
 
   @Transactional

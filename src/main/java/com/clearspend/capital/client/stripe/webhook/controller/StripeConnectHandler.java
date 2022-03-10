@@ -11,6 +11,7 @@ import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.InvalidKycStepException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -84,7 +85,7 @@ public class StripeConnectHandler {
       stepHandler.execute(business, account);
     } catch (RecordNotFoundException recordNotFoundException) {
       log.info("Ignored case for record not found exception on Stripe connect webhook event.");
-    } catch (JsonSyntaxException jsonSyntaxException) {
+    } catch (JsonSyntaxException | InvalidKycStepException jsonSyntaxException) {
       log.error(jsonSyntaxException.getMessage());
     }
   }
