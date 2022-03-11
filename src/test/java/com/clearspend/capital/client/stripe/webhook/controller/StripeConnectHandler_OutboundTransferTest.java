@@ -95,7 +95,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     outboundTransfer.setMetadata(
         Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
     outboundTransfer.setCurrency("usd");
-    outboundTransfer.setStatus("cancelled");
+    outboundTransfer.setStatus("canceled");
 
     testOutbountTransferFailure(outboundTransfer);
   }

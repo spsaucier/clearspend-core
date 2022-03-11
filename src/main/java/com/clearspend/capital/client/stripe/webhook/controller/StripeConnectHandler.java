@@ -160,7 +160,7 @@ public class StripeConnectHandler {
 
     switch (outboundTransfer.getStatus()) {
       case "posted", "processing" -> {} // do nothing since we assume the happy path by default
-      case "cancelled" -> businessBankAccountService.processBankAccountWithdrawFailure(
+      case "canceled" -> businessBankAccountService.processBankAccountWithdrawFailure(
           businessId, amount, List.of(DeclineReason.ST_CANCELLED));
       case "failed" -> businessBankAccountService.processBankAccountWithdrawFailure(
           businessId, amount, List.of(DeclineReason.ST_FAILED));

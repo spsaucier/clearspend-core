@@ -1,7 +1,6 @@
 package com.clearspend.capital.client.stripe.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.OffsetDateTime;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -46,7 +45,7 @@ public class OutboundTransfer {
   // Can change once set (for example, due to a partner delay) - Stripe fires an
   // outbound_transfer.expected_arrival_date_updated` webhook when it does
   @JsonProperty("expected_arrival_date")
-  private OffsetDateTime expectedArrivalDate;
+  private Long expectedArrivalDate;
 
   // Transaction representing balance impact of the OutboundTransfer, created
   // synchronously with the OutboundTransfer
