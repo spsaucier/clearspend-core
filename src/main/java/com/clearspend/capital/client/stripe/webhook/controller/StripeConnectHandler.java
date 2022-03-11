@@ -54,6 +54,7 @@ public class StripeConnectHandler {
   private final BusinessBankAccountService businessBankAccountService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final StripeClient stripeClient;
+  private final long achReturnFee;
   private final boolean standardHold;
   private final StripeProperties stripeProperties;
   private final BusinessKycStepHandler stepHandler;
@@ -65,6 +66,7 @@ public class StripeConnectHandler {
       StripeClient stripeClient,
       StripeProperties stripeProperties,
       @Value("${clearspend.ach.hold.standard:true}") boolean standardHold,
+      @Value("${clearspend.ach.return.fee:0}") long achReturnFee,
       BusinessKycStepHandler stepHandler) {
 
     this.businessService = businessService;
@@ -72,6 +74,7 @@ public class StripeConnectHandler {
     this.pendingStripeTransferService = pendingStripeTransferService;
     this.stripeClient = stripeClient;
     this.stripeProperties = stripeProperties;
+    this.achReturnFee = achReturnFee;
     this.standardHold = standardHold;
     this.stepHandler = stepHandler;
   }
@@ -222,7 +225,7 @@ public class StripeConnectHandler {
           business.getId(),
           Amount.fromStripeAmount(
               Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
-          standardHold);
+          false);
     } catch (RecordNotFoundException e) {
       log.info(
           "Skipping received credit event for an ach transfer for business since it is not found in the db by stripe financial account {}",

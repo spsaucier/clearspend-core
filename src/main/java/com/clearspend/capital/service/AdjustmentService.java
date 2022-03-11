@@ -76,6 +76,24 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public Adjustment recordApplyFee(Account account, Amount amount) {
+    BankJournalEntry bankJournalEntry =
+        ledgerService.recordApplyFee(account.getLedgerAccountId(), amount);
+
+    return adjustmentRepository.save(
+        new Adjustment(
+            account.getBusinessId(),
+            account.getAllocationId(),
+            account.getId(),
+            account.getLedgerAccountId(),
+            bankJournalEntry.journalEntry().getId(),
+            bankJournalEntry.accountPosting().getId(),
+            AdjustmentType.FEE,
+            OffsetDateTime.now(),
+            amount.negate()));
+  }
+
+  @Transactional(TxType.REQUIRED)
   public ReallocateFundsRecord reallocateFunds(
       Account fromAccount, Account toAccount, Amount amount) {
     ReallocationJournalEntry bankJournalEntry =

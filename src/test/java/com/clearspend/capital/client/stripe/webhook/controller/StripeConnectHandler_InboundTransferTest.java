@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
@@ -38,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 
 @Slf4j
@@ -55,6 +57,9 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
   private BusinessBankAccount businessBankAccount;
+
+  @Value("${clearspend.ach.return-fee:0}")
+  private long achReturnFee;
 
   @SneakyThrows
   @BeforeEach
@@ -103,7 +108,10 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
   @Test
   public void inboundTransfer_failure() {
+    // given
     Amount amount = new Amount(Currency.USD, new BigDecimal(9223));
+
+    // initiate the ach transfer
     CreateAdjustmentResponse createAdjustmentResponse =
         mvcHelper.queryObject(
             "/business-bank-accounts/%s/transactions".formatted(businessBankAccount.getId()),
@@ -111,6 +119,8 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
             createBusinessRecord.authCookie(),
             new TransactBankAccountRequest(BankAccountTransactType.DEPOSIT, amount),
             CreateAdjustmentResponse.class);
+
+    // constructing stripe inbound transfer failed event
     Hold hold =
         holdRepository
             .findByAccountIdAndStatusAndExpirationDateAfter(
@@ -130,15 +140,24 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
 
+    // when
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 
+    // then
     assertThat(stripeMockClient.countCreatedObjectsByType(OutboundPayment.class)).isZero();
 
+    // checking account activity records
     List<AccountActivity> accountActivities = accountActivityRepository.findAll();
-    assertThat(accountActivities).hasSize(3); // 2 activities for initial topup + 1 for withdraw
+    assertThat(accountActivities)
+        .hasSize(4); // 2 activities for initial topup + 1 for withdraw + 1 for the fee
+
     for (AccountActivity accountActivity : accountActivities) {
-      // account activity for the hold
-      if (accountActivity.getHoldId() != null) {
+      // account fee adjustment
+      if (accountActivity.getType() == AccountActivityType.FEE) {
+        assertThat(accountActivity.getAmount().getAmount())
+            .isEqualByComparingTo(new BigDecimal(achReturnFee).negate());
+        // account activity for the hold
+      } else if (accountActivity.getHoldId() != null) {
         assertThat(accountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
         // account activity for the initial topup adjustment
       } else if (accountActivity
@@ -186,5 +205,9 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     assertThat(holdAccountActivity.getHideAfter())
         .isEqualTo(adjustmentAccountActivity.getVisibleAfter());
+
+    assertThat(holdAccountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(adjustmentAccountActivity.getVisibleAfter())
+        .isBefore(OffsetDateTime.now(Clock.systemUTC()));
   }
 }

@@ -144,6 +144,18 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public AdjustmentAndHoldRecord applyFee(TypedId<AccountId> accountId, Amount amount) {
+    amount.ensureNonNegative();
+
+    Account account = retrieveAccount(accountId, false);
+    Adjustment adjustment = adjustmentService.recordApplyFee(account, amount);
+    account.setLedgerBalance(account.getLedgerBalance().sub(amount));
+    account = accountRepository.save(account);
+
+    return new AdjustmentAndHoldRecord(account, adjustment, null);
+  }
+
+  @Transactional(TxType.REQUIRED)
   public HoldRecord recordNetworkHold(
       Account account, Amount amount, OffsetDateTime expirationDate) {
     amount.ensureNegative();

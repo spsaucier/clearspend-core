@@ -133,6 +133,26 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
+  public AccountActivity recordApplyFeeActivity(
+      Allocation allocation, Adjustment adjustment, String notes) {
+    final AccountActivity accountActivity =
+        new AccountActivity(
+            adjustment.getBusinessId(),
+            allocation.getId(),
+            allocation.getName(),
+            adjustment.getAccountId(),
+            AccountActivityType.FEE,
+            AccountActivityStatus.PROCESSED,
+            adjustment.getEffectiveDate(),
+            adjustment.getAmount(),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setNotes(notes);
+
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  @Transactional(TxType.REQUIRED)
   public AccountActivity recordHoldReleaseAccountActivity(Hold hold) {
     AccountActivity accountActivity =
         accountActivityRepository.findByHoldId(hold.getId()).stream()

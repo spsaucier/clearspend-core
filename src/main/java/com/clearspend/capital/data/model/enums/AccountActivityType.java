@@ -11,4 +11,5 @@ public enum AccountActivityType {
   NETWORK_AUTHORIZATION,
   NETWORK_CAPTURE,
   REALLOCATE,
+  FEE
 }

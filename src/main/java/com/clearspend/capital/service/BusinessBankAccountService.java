@@ -43,6 +43,7 @@ import com.stripe.model.Account;
 import com.stripe.model.ExternalAccount;
 import com.stripe.model.SetupIntent;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -56,6 +57,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,7 +72,7 @@ public class BusinessBankAccountService {
   private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
-  private final AdjustmentService adjustmentService;
+  private final BusinessService businessService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
   private final ContactValidator contactValidator;
@@ -80,6 +82,9 @@ public class BusinessBankAccountService {
   private final RetrievalService retrievalService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final TwilioService twilioService;
+
+  @Value("${clearspend.ach.return-fee:0}")
+  private long achReturnFee;
 
   @Transactional
   public BusinessBankAccount createBusinessBankAccount(
@@ -413,6 +418,15 @@ public class BusinessBankAccountService {
 
       // mark adjustment account activity as DECLINED
       accountActivity.setStatus(AccountActivityStatus.DECLINED);
+
+      // apply fee if provided
+      if (achReturnFee > 0) {
+        businessService.applyFee(
+            businessId,
+            rootAllocationRecord.allocation().getId(),
+            Amount.of(business.getCurrency(), new BigDecimal(achReturnFee)),
+            "Bank deposit return fee");
+      }
 
       // send fund returns email
       twilioService.sendBankFundsReturnEmail(

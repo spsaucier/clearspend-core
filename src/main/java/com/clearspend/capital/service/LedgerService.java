@@ -97,6 +97,23 @@ public class LedgerService {
     return bankFunds(ledgerAccountId, amount.negate());
   }
 
+  @Transactional(TxType.REQUIRED)
+  public BankJournalEntry recordApplyFee(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+    LedgerAccount businessAccount = getLedgerAccount(ledgerAccountId);
+    LedgerAccount clearspendAccount =
+        getOrCreateLedgerAccount(LedgerAccountType.CLEARSPEND, amount.getCurrency());
+
+    JournalEntry journalEntry = new JournalEntry();
+    Posting accountPosting = new Posting(journalEntry, businessAccount.getId(), amount);
+    Posting clearspendPosting =
+        new Posting(journalEntry, clearspendAccount.getId(), amount.negate());
+
+    journalEntry.setPostings(List.of(clearspendPosting, accountPosting));
+    journalEntry = save(journalEntry);
+
+    return new BankJournalEntry(journalEntry, clearspendPosting, accountPosting);
+  }
+
   private BankJournalEntry bankFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount businessAccount = getLedgerAccount(ledgerAccountId);
     LedgerAccount bankAccount =

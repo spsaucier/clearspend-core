@@ -6,4 +6,5 @@ public enum AdjustmentType {
   NETWORK, // a card payment via network message
   REALLOCATE, // a transfer between allocation <-> allocation, allocation <-> card accounts
   WITHDRAW, // an ACH withdrawal
+  FEE // a fee for some operations
 }

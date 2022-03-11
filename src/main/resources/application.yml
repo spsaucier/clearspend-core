@@ -41,6 +41,7 @@ clearspend:
         card:
           physical: 10
   ach:
+    return-fee: ${CLEARSPEND_ACH_RETURN_FEE:20}
     hold:
       standard: ${CLEARSPEND_ACH_HOLD_STANDARD:false}
   encryption:

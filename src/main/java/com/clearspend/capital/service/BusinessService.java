@@ -11,6 +11,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.StripeData;
 import com.clearspend.capital.data.model.business.TosAcceptance;
@@ -24,6 +25,7 @@ import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
+import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import lombok.NonNull;
@@ -276,6 +278,24 @@ public class BusinessService {
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
 
     return reallocateFundsRecord;
+  }
+
+  @Transactional
+  public AdjustmentAndHoldRecord applyFee(
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      Amount amount,
+      String notes) {
+    amount.ensureNonNegative();
+
+    Allocation allocation = allocationService.retrieveAllocation(businessId, allocationId);
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        accountService.applyFee(allocation.getAccountId(), amount);
+
+    accountActivityService.recordApplyFeeActivity(
+        allocation, adjustmentAndHoldRecord.adjustment(), notes);
+
+    return adjustmentAndHoldRecord;
   }
 
   public void notifyFinancialAccountReady(Business business) {

@@ -8,7 +8,8 @@ public enum LedgerAccountType {
   BANK,
   CARD,
   MANUAL,
-  NETWORK;
+  NETWORK,
+  CLEARSPEND;
 
   public static final Set<LedgerAccountType> createOnlySet =
       Sets.immutableEnumSet(ALLOCATION, CARD, NETWORK);
