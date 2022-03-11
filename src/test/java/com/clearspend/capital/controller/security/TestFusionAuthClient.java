@@ -122,8 +122,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
         && response.successResponse.user != null
         && twoFactorEnabled.containsKey(response.successResponse.user.id)) {
       UUID twoFactorId = UUID.randomUUID();
-      twoFactorPending.put(
-          twoFactorId, new TwoFactorPending(response.successResponse, generateNextTwoFactorCode()));
+      twoFactorPending.put(twoFactorId, new TwoFactorPending(response.successResponse, null));
 
       response = new ClientResponse<>();
       response.successResponse = new LoginResponse();

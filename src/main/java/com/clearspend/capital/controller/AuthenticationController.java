@@ -96,6 +96,8 @@ public class AuthenticationController {
     }
 
     if (loginResponse.status == 242) {
+      fusionAuthService.sendTwoFactorCodeForLoginUsingMethod(
+          loginResponse.successResponse.twoFactorId, TwoFactorAuthenticationMethod.sms.name());
       return UserLoginResponse.twoFactorChallenge(loginResponse.successResponse.twoFactorId);
     }
 
