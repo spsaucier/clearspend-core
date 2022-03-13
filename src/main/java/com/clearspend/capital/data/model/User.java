@@ -10,6 +10,7 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.vladmihalcea.hibernate.type.array.EnumArrayType;
+import java.time.LocalDateTime;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -65,4 +66,7 @@ public class User extends TypedMutable<UserId> {
   private String externalRef;
 
   private boolean archived;
+
+  // Timestamp for terms & conditions
+  private LocalDateTime termsAndConditionsAcceptanceTimestamp;
 }
