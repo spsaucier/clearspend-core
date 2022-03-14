@@ -61,8 +61,7 @@ public class ReceiptService {
   }
 
   public List<Receipt> getReceipts(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-    return receiptRepository.findReceiptByBusinessIdAndUserIdAndAdjustmentIdIsNull(
-        businessId, userId);
+    return receiptRepository.findReceiptByBusinessIdAndUserIdAndLinked(businessId, userId, false);
   }
 
   private String getReceiptPath(
@@ -79,17 +78,15 @@ public class ReceiptService {
     Receipt receipt = getReceipt(businessId, receiptId);
 
     // if this receipt is already linked to an existing adjustment, unlink it
-    if (receipt.getAdjustmentId() != null) {
-      Receipt finalReceipt = receipt;
+    if (receipt.isLinked()) {
       AccountActivity previousAccountActivity =
           accountActivityService.findByReceiptId(businessId, receipt.getId());
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
-      receipt.setAdjustmentId(null);
+      receipt.setLinked(true);
       previousAccountActivity.getReceipt().getReceiptIds().remove(receiptId);
       accountActivityRepository.save(previousAccountActivity);
     }
-
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
     ReceiptDetails receiptDetails =
@@ -98,7 +95,7 @@ public class ReceiptService {
     accountActivity.setReceipt(receiptDetails);
     receipt.setAllocationId(accountActivity.getAllocationId());
     receipt.setAccountId(accountActivity.getAccountId());
-    receipt.setAdjustmentId(accountActivity.getAdjustmentId());
+    receipt.setLinked(true);
 
     receipt = receiptRepository.save(receipt);
     accountActivity = accountActivityRepository.save(accountActivity);
@@ -116,11 +113,9 @@ public class ReceiptService {
       TypedId<ReceiptId> receiptId,
       TypedId<AccountActivityId> accountActivityId) {
     Receipt receipt = getReceipt(businessId, receiptId);
-
-    if (receipt.getAdjustmentId() == null) {
+    if (!receipt.isLinked()) {
       throw new InvalidRequestException("Receipt not linked");
     }
-
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
     accountActivity.getReceipt().getReceiptIds().remove(receiptId);
@@ -128,7 +123,7 @@ public class ReceiptService {
 
     receipt.setAllocationId(null);
     receipt.setAccountId(null);
-    receipt.setAdjustmentId(null);
+    receipt.setLinked(false);
     receiptRepository.save(receipt);
     log.debug(
         "Unlinked receipt {} to accountActivity {} ({})",
@@ -142,12 +137,11 @@ public class ReceiptService {
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId) {
     Receipt receipt = getReceipt(businessId, receiptId);
 
-    if (receipt.getAdjustmentId() != null) {
+    if (receipt.isLinked()) {
       AccountActivity accountActivity =
           accountActivityService.findByReceiptId(businessId, receipt.getId());
       accountActivity.getReceipt().getReceiptIds().remove(receiptId);
       accountActivityRepository.save(accountActivity);
-
       log.debug(
           "unlinked (delete) receipt {} from accountActivity {} ({})",
           receipt.getId(),

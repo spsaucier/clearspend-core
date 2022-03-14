@@ -1,7 +1,6 @@
 package com.clearspend.capital.controller.type.receipt;
 
 import com.clearspend.capital.common.typedid.data.AccountId;
-import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -43,9 +42,6 @@ public class Receipt {
   @JsonProperty("accountId")
   private TypedId<AccountId> accountId;
 
-  @JsonProperty("adjustmentId")
-  private TypedId<AdjustmentId> adjustmentId;
-
   @JsonProperty("amount")
   @NonNull
   @NotNull(message = "ledgerBalance required")
@@ -58,7 +54,6 @@ public class Receipt {
         account.getBusinessId(),
         account.getAllocationId(),
         account.getAccountId(),
-        account.getAdjustmentId(),
         Amount.of(account.getAmount()));
   }
 }

@@ -3,7 +3,6 @@ package com.clearspend.capital.data.model;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.AccountId;
-import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -51,13 +50,11 @@ public class Receipt extends TypedMutable<ReceiptId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
 
-  @JoinColumn(referencedColumnName = "id", table = "adjustment")
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<AdjustmentId> adjustmentId;
-
   @Embedded private Amount amount;
 
   private String path;
 
   private String contentType;
+
+  private boolean linked;
 }

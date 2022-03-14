@@ -14,8 +14,8 @@ public interface ReceiptRepository extends JpaRepository<Receipt, TypedId<Receip
   Optional<Receipt> findReceiptByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<ReceiptId> id);
 
-  List<Receipt> findReceiptByBusinessIdAndUserIdAndAdjustmentIdIsNull(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId);
+  List<Receipt> findReceiptByBusinessIdAndUserIdAndLinked(
+      TypedId<BusinessId> businessId, TypedId<UserId> userId, boolean linked);
 
   Optional<Receipt> findReceiptByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> id);
