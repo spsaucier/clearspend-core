@@ -11,6 +11,7 @@ import io.fusionauth.domain.api.TwoFactorRequest;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +33,14 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
 
-  private record TwoFactorEnabled(TwoFactorRequest request, List<String> recoveryCodes) {}
+  private record TwoFactorEnabled(
+      TwoFactorRequest request, List<TwoFactorMethod> methods, List<String> recoveryCodes) {}
 
-  private record TwoFactorPending(LoginResponse success, String code) {}
+  private record TwoFactorPending(UUID userId, LoginResponse success, String code) {}
 
   private final Map<UUID, TwoFactorEnable> pendingEnable = new HashMap<>();
   private final Map<UUID, TwoFactorEnabled> twoFactorEnabled = new HashMap<>();
-  private final Map<UUID, TwoFactorPending> twoFactorPending = new HashMap<>();
+  private final Map<String, TwoFactorPending> twoFactorPending = new HashMap<>();
 
   public void reset() {
     pendingEnable.clear();
@@ -50,7 +52,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     return pendingEnable.get(userId).code;
   }
 
-  public String getTwoFactorCodeForLogin(UUID twoFactorId) {
+  public String getTwoFactorCodeForLogin(String twoFactorId) {
     return twoFactorPending.get(twoFactorId).code;
   }
 
@@ -98,13 +100,22 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       }
 
       response.status = 200;
-      twoFactorEnabled.put(
-          userId,
-          new TwoFactorEnabled(
-              request,
-              IntStream.range(0, 10)
-                  .mapToObj(i -> generateNextTwoFactorCode())
-                  .collect(Collectors.toList())));
+      TwoFactorMethod method = new TwoFactorMethod(request.method);
+      method.id = RandomStringUtils.randomAlphanumeric(5);
+      method.mobilePhone = enableRequest.mobilePhone;
+      method.email = enableRequest.email;
+
+      if (!twoFactorEnabled.containsKey(userId)) {
+        twoFactorEnabled.put(
+            userId,
+            new TwoFactorEnabled(
+                request,
+                new ArrayList<>(),
+                IntStream.range(0, 10)
+                    .mapToObj(i -> generateNextTwoFactorCode())
+                    .collect(Collectors.toList())));
+      }
+      twoFactorEnabled.get(userId).methods.add(method);
       pendingEnable.remove(userId);
       response.successResponse = new TwoFactorResponse(twoFactorEnabled.get(userId).recoveryCodes);
       response.status = 200;
@@ -121,26 +132,44 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     if (response.successResponse != null
         && response.successResponse.user != null
         && twoFactorEnabled.containsKey(response.successResponse.user.id)) {
-      UUID twoFactorId = UUID.randomUUID();
-      twoFactorPending.put(twoFactorId, new TwoFactorPending(response.successResponse, null));
+      TwoFactorEnabled twoFactorEnableRec = twoFactorEnabled.get(response.successResponse.user.id);
+      String twoFactorId = RandomStringUtils.randomAscii(45);
+      twoFactorPending.put(
+          twoFactorId,
+          new TwoFactorPending(response.successResponse.user.id, response.successResponse, null));
 
       response = new ClientResponse<>();
       response.successResponse = new LoginResponse();
-      response.successResponse.twoFactorId = twoFactorId.toString();
-      response.successResponse.methods = List.of(new TwoFactorMethod("sms"));
+      response.successResponse.twoFactorId = twoFactorId;
+      response.successResponse.methods = twoFactorEnableRec.methods;
 
       response.status = 242;
     }
     return response;
   }
 
+  /**
+   * /api/two-factor/send
+   *
+   * @param twoFactorId the ID sent to the client with the 242 login response
+   * @param request only the MethodId
+   * @return not much, errors only
+   */
   @Override
   public ClientResponse<Void, Errors> sendTwoFactorCodeForLoginUsingMethod(
       String twoFactorId, TwoFactorSendRequest request) {
+    TwoFactorPending pending = twoFactorPending.get(twoFactorId);
+    TwoFactorMethod method =
+        twoFactorEnabled.get(pending.userId).methods.stream()
+            .filter(fa -> fa.id.equals(request.methodId))
+            .findFirst()
+            .orElseThrow();
     String code = generateNextTwoFactorCode();
-    final UUID twoFactorUUID = UUID.fromString(twoFactorId);
+
     twoFactorPending.put(
-        twoFactorUUID, new TwoFactorPending(twoFactorPending.get(twoFactorUUID).success, code));
+        twoFactorId,
+        new TwoFactorPending(pending.userId, twoFactorPending.get(twoFactorId).success, code));
+
     ClientResponse<Void, Errors> response = new ClientResponse<>();
     response.status = 200;
     return response;
@@ -149,7 +178,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     ClientResponse<LoginResponse, Errors> response = new ClientResponse<>();
 
-    UUID twoFactorId = UUID.fromString(request.twoFactorId);
+    String twoFactorId = request.twoFactorId;
     if (!twoFactorPending.containsKey(twoFactorId)) {
       response.status = 400;
       response.errorResponse = new Errors();

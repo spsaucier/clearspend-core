@@ -101,8 +101,7 @@ public class AuthenticationController2FATest extends BaseCapitalTest {
     UserLoginResponse twoFactorAuthenticationStart =
         objectMapper.readValue(response.getContentAsString(), UserLoginResponse.class);
     final String twoFactorCode =
-        faClient.getTwoFactorCodeForLogin(
-            UUID.fromString(twoFactorAuthenticationStart.getTwoFactorId()));
+        faClient.getTwoFactorCodeForLogin(twoFactorAuthenticationStart.getTwoFactorId());
     assertThat(twoFactorCode).isNotNull();
 
     // and confirm the 2F

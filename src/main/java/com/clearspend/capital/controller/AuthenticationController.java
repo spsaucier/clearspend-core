@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import com.nimbusds.jwt.JWTParser;
+import io.fusionauth.domain.TwoFactorMethod;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
@@ -97,7 +98,12 @@ public class AuthenticationController {
 
     if (loginResponse.status == 242) {
       fusionAuthService.sendTwoFactorCodeForLoginUsingMethod(
-          loginResponse.successResponse.twoFactorId, TwoFactorAuthenticationMethod.sms.name());
+          loginResponse.successResponse.twoFactorId,
+          loginResponse.successResponse.methods.stream()
+              .filter(m -> m.method.equals(TwoFactorMethod.SMS))
+              .findFirst()
+              .orElseThrow()
+              .id);
       return UserLoginResponse.twoFactorChallenge(loginResponse.successResponse.twoFactorId);
     }
 
