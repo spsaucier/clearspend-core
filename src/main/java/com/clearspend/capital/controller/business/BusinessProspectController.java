@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.validation.annotation.Validated;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/business-prospects")
 @RequiredArgsConstructor
+@Slf4j
 public class BusinessProspectController {
 
   public static final boolean CREATOR_CONSIDER_AS_DEFAULT_REPRESENTATIVE = true;
@@ -54,6 +56,8 @@ public class BusinessProspectController {
     if (!request.getTosAndPrivacyPolicyAcceptance()) {
       throw new TosAndPrivacyPolicyException();
     }
+    String clientIp = HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest);
+    log.info("ip of client: {} and userAgent: {}", clientIp, userAgent);
     BusinessProspectRecord businessProspect =
         businessProspectService.createOrUpdateBusinessProspect(
             request.getFirstName(),
@@ -67,7 +71,7 @@ public class BusinessProspectController {
             request.getRelationshipExecutive(),
             false, // for now we decide to ignore director option
             request.getEmail(),
-            HttpReqRespUtils.getClientIpAddressIfServletRequestExist(httpServletRequest),
+            clientIp,
             userAgent,
             onboardingEmailPhoneValidation);
 
