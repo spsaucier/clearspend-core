@@ -112,6 +112,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
 
     // This merchant does not exist in the suppliers
@@ -149,6 +150,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
 
@@ -195,6 +197,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
     // Supplier does not exist, will need to be made

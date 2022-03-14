@@ -47,13 +47,11 @@ public class AllocationServiceTest extends BaseCapitalTest {
 
   private CreateBusinessRecord createBusinessRecord;
   private Allocation rootAllocation;
-  private User rootAllocationOwner;
 
   @BeforeEach
   void init() {
     createBusinessRecord = testHelper.createBusiness();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
-    rootAllocationOwner = entityManager.getReference(User.class, rootAllocation.getOwnerId());
     testHelper.setCurrentUser(createBusinessRecord.user());
   }
 
@@ -138,6 +136,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
         admin,
         rootAllocation,
         adjustmentRecord.account(),
+        amount,
         amount);
 
     amount = Amount.of(createBusinessRecord.business().getCurrency(), BigDecimal.ONE.negate());
@@ -175,6 +174,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
         admin,
         rootAllocation,
         adjustmentRecord.account(),
+        amount,
         amount);
   }
 

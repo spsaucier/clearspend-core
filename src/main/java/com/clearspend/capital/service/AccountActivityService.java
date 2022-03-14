@@ -87,6 +87,7 @@ public class AccountActivityService {
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
+            adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     adjustmentAccountActivity.setAdjustmentId(adjustment.getId());
 
@@ -102,6 +103,7 @@ public class AccountActivityService {
               type,
               AccountActivityStatus.PENDING,
               hold.getCreated(),
+              adjustment.getAmount(),
               adjustment.getAmount(),
               AccountActivityIntegrationSyncStatus.NOT_READY);
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
@@ -126,6 +128,7 @@ public class AccountActivityService {
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
+            adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
 
@@ -144,6 +147,7 @@ public class AccountActivityService {
             AccountActivityType.FEE,
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
+            adjustment.getAmount(),
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
@@ -181,6 +185,7 @@ public class AccountActivityService {
             AccountActivityStatus.PROCESSED,
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
+            adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
     accountActivity.setNotes(notes);
@@ -217,6 +222,7 @@ public class AccountActivityService {
             common.getAccountActivityDetails().getAccountActivityStatus(),
             common.getAccountActivityDetails().getActivityTime(),
             amount,
+            common.getRequestedAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setUserId(common.getCard().getUserId());
 

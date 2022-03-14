@@ -49,6 +49,11 @@ public class AccountActivityResponse {
   @NonNull
   private Amount amount;
 
+  // the amount we received from Stripe or a copy of amount otherwise
+  @JsonProperty("requestedAmount")
+  @NonNull
+  private Amount requestedAmount;
+
   @JsonProperty("receipt")
   private ReceiptDetails receipt;
 
@@ -72,6 +77,7 @@ public class AccountActivityResponse {
     this.type = accountActivity.getType();
     this.status = accountActivity.getStatus();
     this.amount = accountActivity.getAmount();
+    this.requestedAmount = accountActivity.getRequestedAmount();
     this.notes = accountActivity.getNotes();
     this.expenseDetails = ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails());
     this.syncStatus = accountActivity.getIntegrationSyncStatus();

@@ -129,14 +129,22 @@ public class AssertionHelper {
       User user,
       Allocation allocation,
       Account account,
-      Amount amount) {
+      @NonNull Amount amount,
+      @NonNull Amount requestedAmount) {
     AccountActivity accountActivity =
         accountActivityRepository.findByAdjustmentId(adjustment.getId()).stream()
             .min(Comparator.comparing(Versioned::getCreated))
             .orElseThrow();
 
     assertAccountActivity(
-        type, AccountActivityStatus.PROCESSED, accountActivity, user, allocation, account, amount);
+        type,
+        AccountActivityStatus.PROCESSED,
+        accountActivity,
+        user,
+        allocation,
+        account,
+        amount,
+        requestedAmount);
   }
 
   public void assertNetworkMessageRequestAccountActivity(
@@ -168,7 +176,8 @@ public class AssertionHelper {
         user,
         common.getAllocation(),
         common.getAccount(),
-        amount);
+        amount,
+        common.getRequestedAmount());
     assertCardAccountActivity(accountActivity, common.getUser(), common.getCard());
     if (authorization != null) {
       assertMerchantAccountActivity(
@@ -208,7 +217,8 @@ public class AssertionHelper {
         user,
         common.getAllocation(),
         common.getAccount(),
-        common.getApprovedAmount());
+        common.getApprovedAmount(),
+        common.getRequestedAmount());
     assertThat(accountActivity.getHoldId()).isNull();
 
     assertThat(accountActivity.getHideAfter()).isNull();
@@ -286,7 +296,8 @@ public class AssertionHelper {
       @NonNull User user,
       @NonNull Allocation allocation,
       @NonNull Account account,
-      @NonNull Amount amount) {
+      @NonNull Amount amount,
+      @NonNull Amount requestedAmount) {
 
     assertThat(accountActivity.getBusinessId()).isEqualTo(account.getBusinessId());
     assertThat(accountActivity.getAllocationId()).isEqualTo(account.getAllocationId());
@@ -304,6 +315,7 @@ public class AssertionHelper {
 
     assertThat(accountActivity.getReceipt()).isNull();
     assertThat(accountActivity.getAmount()).isEqualTo(amount);
+    assertThat(accountActivity.getRequestedAmount()).isEqualTo(requestedAmount);
   }
 
   private void assertAdjustmentAccountActivity(

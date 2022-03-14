@@ -39,6 +39,7 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setReceipt(null);
     accountActivity = accountActivityRepository.save(accountActivity);

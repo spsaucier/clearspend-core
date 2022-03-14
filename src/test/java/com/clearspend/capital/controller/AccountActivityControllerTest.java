@@ -69,11 +69,12 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
 
+    Amount amount = Amount.of(Currency.USD, new BigDecimal("1000"));
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
         BankAccountTransactType.DEPOSIT,
-        Amount.of(Currency.USD, new BigDecimal("1000")),
+        amount,
         false);
     Account account =
         accountService.retrieveRootAllocationAccount(
@@ -129,6 +130,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     assertEquals(1, pagedData.getContent().size());
     assertEquals(pagedData.getTotalElements(), 1);
     log.info(response.getContentAsString());
+    assertThat(pagedData.getContent().get(0).getAmount()).isEqualTo(amount);
+    assertThat(pagedData.getContent().get(0).getRequestedAmount()).isEqualTo(amount);
   }
 
   @SneakyThrows

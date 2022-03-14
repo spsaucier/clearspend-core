@@ -19,7 +19,12 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
-import com.clearspend.capital.data.model.enums.*;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
@@ -267,6 +272,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
 
     accountActivityRepository.save(approvedAccountActivity);
@@ -346,6 +352,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
             Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
     accountActivity.setUserId(activityOwner.getId());
@@ -398,6 +405,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
             Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
     accountActivity.setUserId(activityOwner.getId());
@@ -448,6 +456,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     log.info("AccountActivity: {}", accountActivity);

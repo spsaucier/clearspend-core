@@ -10,9 +10,9 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.embedded.*;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
@@ -112,6 +112,9 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @NonNull private OffsetDateTime activityTime;
 
   @NonNull @Embedded private Amount amount;
+
+  // the amount we received from Stripe or a copy of amount otherwise
+  @NonNull @Embedded private Amount requestedAmount;
 
   private String notes;
 
