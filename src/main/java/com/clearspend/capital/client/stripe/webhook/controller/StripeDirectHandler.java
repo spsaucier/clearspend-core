@@ -126,6 +126,9 @@ public class StripeDirectHandler {
     return common;
   }
 
+  @CardService.CardNetworkAccess(
+      reviewer = "patrick.morton",
+      explaination = "Card Network events have no Security Context")
   void processCard(StripeEventType stripeEventType, ParseRecord parseRecord) {
     if (stripeEventType == StripeEventType.ISSUING_CARD_UPDATED) {
       Card card = (Card) parseRecord.stripeObject();

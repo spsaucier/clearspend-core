@@ -47,6 +47,7 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
       business = createBusinessRecord.business();
       allocation = createBusinessRecord.allocationRecord().allocation();
       user = createBusinessRecord.user();
+      testHelper.setCurrentUser(user);
       card =
           testHelper.issueCard(
               business,

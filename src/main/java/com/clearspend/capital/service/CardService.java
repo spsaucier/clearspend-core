@@ -2,11 +2,9 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
-import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -25,7 +23,6 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
-import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
@@ -38,6 +35,8 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.type.CurrentUser;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -61,6 +60,10 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PostFilter;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PreFilter;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -87,6 +90,7 @@ public class CardService {
   public record CardRecord(Card card, Account account) {}
 
   @Transactional
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_CARDS')")
   public CardRecord issueCard(
       BinType binType,
       FundingType fundingType,
@@ -244,12 +248,16 @@ public class CardService {
     return new CardRecord(card, account);
   }
 
+  @PostAuthorize(
+      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_CARDS')")
   public Card retrieveCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
     return cardRepository
         .findByBusinessIdAndId(businessId, cardId)
         .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
   }
 
+  @PostAuthorize(
+      "isSelfOwned(returnObject.card()) or hasAllocationPermission(returnObject.allocation().id, 'MANAGE_CARDS')")
   public CardDetailsRecord getCard(
       TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
     return cardRepository
@@ -257,93 +265,68 @@ public class CardService {
         .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
   }
 
-  // should only be used by NetworkService
-  public CardRecord getCardByExternalRef(@NonNull String externalRef) {
-    Card card =
-        cardRepository
-            .findByExternalRef(externalRef)
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, externalRef));
-
-    return new CardRecord(card, accountService.retrieveAccountById(card.getAccountId(), true));
+  @PostFilter("isSelfOwned(filterObject.card())")
+  public List<CardDetailsRecord> getCardsForCurrentUser() {
+    return cardRepository.findDetailsByBusinessIdAndUserId(
+        CurrentUser.getBusinessId(), CurrentUser.getUserId());
   }
 
-  public List<CardDetailsRecord> getUserCards(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-
-    return cardRepository.findDetailsByBusinessIdAndUserId(businessId, userId);
-  }
-
-  public CardDetailsRecord getUserCard(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> cardId) {
-
+  @PostAuthorize("isSelfOwned(returnObject.card())")
+  public CardDetailsRecord getMyCard(TypedId<CardId> cardId) {
     return cardRepository
-        .findDetailsByBusinessIdAndUserIdAndId(businessId, cardId, userId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
+        .findDetailsById(cardId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.CARD, cardId));
+  }
+
+  @PostAuthorize("isSelfOwned(returnObject)")
+  public Card getMyCardByIdAndLastFour(TypedId<CardId> cardId, String lastFour) {
+    return cardRepository
+        .findByBusinessIdAndIdAndLastFour(CurrentUser.getBusinessId(), cardId, lastFour)
+        .orElseThrow(
+            () ->
+                new RecordNotFoundException(
+                    Table.CARD,
+                    CurrentUser.getBusinessId(),
+                    CurrentUser.getUserId(),
+                    cardId,
+                    lastFour));
+  }
+
+  @PostFilter("isSelfOwned(filterObject)")
+  public List<Card> getMyUnactivatedCardsByLastFour(String lastFour) {
+    return cardRepository.findNonActivatedByBusinessIdAndLastFour(
+        CurrentUser.getBusinessId(), lastFour);
   }
 
   @Transactional
-  public Card activateCard(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      UserType userType,
-      TypedId<CardId> cardId,
-      String lastFour,
-      CardStatusReason statusReason) {
-    Card card =
-        (switch (userType) {
-              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndIdAndLastFour(
-                  businessId, cardId, lastFour);
-              case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndIdAndLastFour(
-                  businessId, userId, cardId, lastFour);
-            })
-            .orElseThrow(
-                () ->
-                    new RecordNotFoundException(Table.CARD, businessId, userId, cardId, lastFour));
-
-    return activateCard(businessId, userId, userType, card, statusReason);
+  @PreAuthorize("isSelfOwned(#card)")
+  public Card activateMyCard(Card card, CardStatusReason statusReason) {
+    return activateCard(card, statusReason);
   }
 
   @Transactional
-  public Card activateCards(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      UserType userType,
-      String lastFour,
-      CardStatusReason statusReason) {
-    List<Card> cards =
-        switch (userType) {
-          case EMPLOYEE -> cardRepository.findNonActivatedByBusinessIdAndUserIdAndLastFour(
-              businessId, userId, lastFour);
-          case BUSINESS_OWNER -> cardRepository.findNonActivatedByBusinessIdAndLastFour(
-              businessId, lastFour);
-        };
+  @PreFilter(filterTarget = "cards", value = "isSelfOwned(filterObject)")
+  public Card activateMyCards(List<Card> cards, CardStatusReason statusReason) {
 
     if (cards.isEmpty()) {
-      throw new RecordNotFoundException(Table.CARD, businessId, userId, lastFour);
+      throw new RecordNotFoundException(
+          Table.CARD, CurrentUser.getBusinessId(), CurrentUser.getUserId());
     }
 
-    Card activatedCard = activateCard(businessId, userId, userType, cards.get(0), statusReason);
+    Card activatedCard = activateMyCard(cards.get(0), statusReason);
 
     if (cards.size() > 1) {
       log.warn(
-          "Found a card collision during card activation for businessId={}, lastFour={}. Total activated cards: {}",
-          businessId,
-          lastFour,
+          "Found a card collision during card activation for businessId={}. Total activated cards: {}",
+          CurrentUser.getBusinessId(),
           cards.size());
-      cards
-          .subList(1, cards.size())
-          .forEach(card -> activateCard(businessId, userId, userType, card, statusReason));
+      cards.subList(1, cards.size()).forEach(card -> activateMyCard(card, statusReason));
     }
 
     return activatedCard;
   }
 
-  private Card activateCard(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      UserType userType,
-      Card card,
-      CardStatusReason statusReason) {
+  private Card activateCard(Card card, CardStatusReason statusReason) {
 
     if (card.isActivated()) {
       throw new InvalidRequestException("Card is already activated");
@@ -356,27 +339,21 @@ public class CardService {
     card.setActivated(true);
     card.setActivationDate(OffsetDateTime.now());
 
-    return updateCardStatus(
-        businessId, userId, userType, card.getId(), CardStatus.ACTIVE, statusReason, true);
+    return updateCardStatus(card, CardStatus.ACTIVE, statusReason, true);
   }
 
+  /*
+   * Note that the @PreAuthorize here is only applied to invocations from outside the Proxy that
+   * Spring will wrap this class with. The only calls that will have Permissions evaluated
+   * will be those from OUTSIDE this class (see: UserController)
+   */
   @Transactional
+  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
   public Card updateCardStatus(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      UserType userType,
-      TypedId<CardId> cardId,
+      Card card,
       CardStatus cardStatus,
       CardStatusReason statusReason,
       boolean isInitialActivation) {
-
-    Card card =
-        (switch (userType) {
-              case BUSINESS_OWNER -> cardRepository.findByBusinessIdAndId(businessId, cardId);
-              case EMPLOYEE -> cardRepository.findByBusinessIdAndUserIdAndId(
-                  businessId, userId, cardId);
-            })
-            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, userId, cardId));
 
     if (!card.isActivated()) {
       throw new InvalidRequestException("Cannot update status for non activated cards");
@@ -411,22 +388,13 @@ public class CardService {
     return card;
   }
 
-  public List<Account> getCardAccounts(
-      @NonNull TypedId<BusinessId> businessId,
-      @NonNull TypedId<UserId> userId,
-      @NonNull TypedId<CardId> cardId,
-      AccountType type) {
+  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  public List<Account> getCardAccounts(@NonNull Card card, AccountType type) {
     // make sure we can look up the business
     Business business =
         businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
-
-    // lookup card and ensure it's owned by the user
-    Card card = retrieveCard(business.getId(), cardId);
-    if (!card.getUserId().equals(userId)) {
-      throw new DataAccessViolationException(Table.CARD, card.getId(), userId, card.getUserId());
-    }
+            .findById(card.getBusinessId())
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, card.getBusinessId()));
 
     // lookup allocation accounts for the business
     List<Account> accounts = new ArrayList<>();
@@ -439,7 +407,7 @@ public class CardService {
     // lookup account for the card (may not exist)
     if (type == null || type == AccountType.CARD) {
       Optional<Account> accountOptional =
-          accountRepository.findByBusinessIdAndCardId(business.getId(), cardId);
+          accountRepository.findByBusinessIdAndCardId(business.getId(), card.getId());
       accountOptional.ifPresent(accounts::add);
     }
 
@@ -447,38 +415,14 @@ public class CardService {
   }
 
   @Transactional
+  @PreAuthorize("hasAllocationPermission(#allocation.id, 'MANAGE_CARDS')")
   public Card updateCardAccount(
-      @NonNull TypedId<BusinessId> businessId,
-      @NonNull TypedId<UserId> userId,
-      @NonNull TypedId<CardId> cardId,
-      @NonNull TypedId<AllocationId> allocationId,
-      @NonNull TypedId<AccountId> accountId) {
+      @NonNull Card card, @NonNull Allocation allocation, @NonNull Account account) {
     // make sure we can look up the business
     Business business =
         businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
-
-    // lookup card and ensure it's owned by the user
-    Card card = retrieveCard(business.getId(), cardId);
-    if (!card.getUserId().equals(userId)) {
-      throw new DataAccessViolationException(Table.CARD, card.getId(), userId, card.getUserId());
-    }
-
-    // lookup allocation and ensure that it's owned by the business
-    Allocation allocation =
-        allocationRepository
-            .findByBusinessIdAndId(business.getId(), allocationId)
-            .orElseThrow(
-                () ->
-                    new RecordNotFoundException(Table.ALLOCATION, business.getId(), allocationId));
-
-    // lookup account and ensure it's owned by the business
-    Account account = accountService.retrieveAccountById(accountId, false);
-    if (!account.getBusinessId().equals(business.getId())) {
-      throw new DataAccessViolationException(
-          Table.ACCOUNT, account.getId(), business.getId(), account.getBusinessId());
-    }
+            .findById(card.getBusinessId())
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, card.getBusinessId()));
 
     // update the card with the new allocation and accounts
     card.setAllocationId(allocation.getId());
@@ -488,18 +432,20 @@ public class CardService {
   }
 
   @Transactional
+  @PreAuthorize("hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
   public void updateCard(
-      TypedId<BusinessId> businessId,
-      TypedId<CardId> cardId,
+      Card card,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
       Set<PaymentType> disabledPaymentTypes) {
 
-    // check if this card does belong to the business
-    Card card = retrieveCard(businessId, cardId);
-
+    // TODO: When we add permissions to the TransactionLimitService, pass in the Entities not IDs
     transactionLimitService.updateCardSpendLimit(
-        businessId, card.getId(), transactionLimits, disabledMccGroups, disabledPaymentTypes);
+        card.getBusinessId(),
+        card.getId(),
+        transactionLimits,
+        disabledMccGroups,
+        disabledPaymentTypes);
   }
 
   public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {
@@ -542,6 +488,18 @@ public class CardService {
     return csvFile.toByteArray();
   }
 
+  @RestrictedApi(
+      explanation =
+          "This unsecured service method must be called by the Stripe Webhook"
+              + "handler. If we can formalize a SYSTEM user we should be able to use standard"
+              + "@Pre / @Post Authorize annotations",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {CardNetworkAccess.class})
+  @CardNetworkAccess(
+      reviewer = "patrick.morton",
+      explaination = "Card Network events have no Security Context")
   public void processCardShippingEvents(com.stripe.model.issuing.Card stripeCard) {
     cardRepository.flush();
     Card card;
@@ -577,5 +535,29 @@ public class CardService {
         cardRepository.save(card);
       }
     }
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This unsecured service method must be called by the Stripe Webhook"
+              + "handler. If we can formalize a SYSTEM user we should be able to use standard"
+              + "@Pre / @Post Authorize annotations",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {CardNetworkAccess.class})
+  public CardRecord getCardByExternalRef(@NonNull String externalRef) {
+    Card card =
+        cardRepository
+            .findByExternalRef(externalRef)
+            .orElseThrow(() -> new RecordNotFoundException(Table.CARD, externalRef));
+
+    return new CardRecord(card, accountService.retrieveAccountById(card.getAccountId(), true));
+  }
+
+  public @interface CardNetworkAccess {
+    public String reviewer();
+
+    public String explaination();
   }
 }

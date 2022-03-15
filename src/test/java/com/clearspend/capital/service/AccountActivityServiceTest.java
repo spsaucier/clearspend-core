@@ -159,7 +159,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         parentAllocationRecord.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    UserService.CreateUpdateUserRecord user = testHelper.createUser(business);
+    UserService.CreateUpdateUserRecord user =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Card card =
         testHelper.issueCard(
             business,

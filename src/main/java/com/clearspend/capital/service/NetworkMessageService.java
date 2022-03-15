@@ -111,6 +111,9 @@ public class NetworkMessageService {
     }
   }
 
+  @CardService.CardNetworkAccess(
+      reviewer = "patrick.morton",
+      explaination = "Card Network events have no Security Context")
   private void retrieveCardAndNetworkMessages(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord;

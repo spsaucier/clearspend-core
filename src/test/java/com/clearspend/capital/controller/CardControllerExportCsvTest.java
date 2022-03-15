@@ -38,6 +38,7 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
 
     User user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
     testHelper.issueCard(
         business,
         createBusinessRecord.allocationRecord().allocation(),

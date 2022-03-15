@@ -59,6 +59,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
@@ -893,14 +894,8 @@ public class TestHelper {
                 business.getClearAddress().toAddress())
             .card();
     if (activateCard) {
-      card =
-          cardService.activateCard(
-              card.getBusinessId(),
-              card.getUserId(),
-              UserType.EMPLOYEE,
-              card.getId(),
-              card.getLastFour(),
-              CardStatusReason.NONE);
+      setCurrentUser(user);
+      card = cardService.activateMyCard(card, CardStatusReason.NONE);
     }
 
     return card;
@@ -1003,7 +998,7 @@ public class TestHelper {
       int transactions) {
     Allocation allocation = createBusinessRecord.allocationRecord.allocation();
     Account account = createBusinessRecord.allocationRecord.account();
-    CreateUpdateUserRecord user = createUser(business);
+    CreateUpdateUserRecord user = createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE);
     int maxAmount = 99;
     if (sourceAccount != null) {
       AllocationRecord allocationRecord =
@@ -1019,6 +1014,7 @@ public class TestHelper {
       allocation = allocationRecord.allocation();
       account = allocationRecord.account();
     }
+    setCurrentUser(createBusinessRecord.user());
     Card card =
         issueCard(
             business,

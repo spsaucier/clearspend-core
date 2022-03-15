@@ -25,6 +25,8 @@ public interface CardRepositoryCustom {
 
   Page<FilteredCardRecord> filter(CardFilterCriteria filterCriteria);
 
+  Optional<CardDetailsRecord> findDetailsById(@NotNull TypedId<CardId> cardId);
+
   Optional<CardDetailsRecord> findDetailsByBusinessIdAndId(
       @NotNull TypedId<BusinessId> businessId, @NotNull TypedId<CardId> cardId);
 

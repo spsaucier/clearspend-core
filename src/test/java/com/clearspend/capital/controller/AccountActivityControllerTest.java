@@ -26,6 +26,7 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -172,7 +173,9 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
 
-    CreateUpdateUserRecord user = testHelper.createUser(business);
+    CreateUpdateUserRecord user =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
     Card card =
         testHelper.issueCard(
             business,

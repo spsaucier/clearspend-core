@@ -34,6 +34,8 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
+import com.clearspend.capital.service.AccountService;
+import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.CardService;
@@ -72,12 +74,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
 
+  private final AccountService accountService;
   private final AccountActivityService accountActivityService;
+  private final AllocationService allocationService;
+  private final BusinessOwnerService businessOwnerService;
+  private final BusinessProspectService businessProspectService;
   private final CardService cardService;
   private final ReceiptService receiptService;
   private final UserService userService;
-  private final BusinessProspectService businessProspectService;
-  private final BusinessOwnerService businessOwnerService;
 
   @PostMapping("")
   CreateUserResponse createUser(@RequestBody CreateUserRequest request) {
@@ -190,11 +194,7 @@ public class UserController {
 
   @GetMapping("/cards")
   List<CardDetailsResponse> getUserCards() {
-    CurrentUser currentUser = CurrentUser.get();
-
-    return cardService.getUserCards(currentUser.businessId(), currentUser.userId()).stream()
-        .map(CardDetailsResponse::of)
-        .toList();
+    return cardService.getCardsForCurrentUser().stream().map(CardDetailsResponse::of).toList();
   }
 
   @GetMapping("/cards/{cardId}")
@@ -206,9 +206,7 @@ public class UserController {
               description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
-    CurrentUser currentUser = CurrentUser.get();
-    CardDetailsRecord userCardRecord =
-        cardService.getUserCard(currentUser.businessId(), currentUser.userId(), cardId);
+    CardDetailsRecord userCardRecord = cardService.getMyCard(cardId);
 
     return CardDetailsResponse.of(userCardRecord);
   }
@@ -227,17 +225,14 @@ public class UserController {
 
     return new Card(
         cardService.updateCardStatus(
-            currentUser.businessId(),
-            currentUser.userId(),
-            currentUser.userType(),
-            cardId,
+            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
             CardStatus.INACTIVE,
             request.getStatusReason(),
             false));
   }
 
   @PatchMapping("/cards/{cardId}/activate")
-  Card activateCard(
+  Card activateMyCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -246,28 +241,17 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody ActivateCardRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
-
     return new Card(
-        cardService.activateCard(
-            currentUser.businessId(),
-            currentUser.userId(),
-            currentUser.userType(),
-            cardId,
-            request.getLastFour(),
+        cardService.activateMyCard(
+            cardService.getMyCardByIdAndLastFour(cardId, request.getLastFour()),
             request.getStatusReason()));
   }
 
   @PatchMapping("/cards/activate")
-  Card activateCards(@Validated @RequestBody ActivateCardRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
-
+  Card activateMyCards(@Validated @RequestBody ActivateCardRequest request) {
     return new Card(
-        cardService.activateCards(
-            currentUser.businessId(),
-            currentUser.userId(),
-            currentUser.userType(),
-            request.getLastFour(),
+        cardService.activateMyCards(
+            cardService.getMyUnactivatedCardsByLastFour(request.getLastFour()),
             request.getStatusReason()));
   }
 
@@ -281,14 +265,10 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
 
     return new Card(
         cardService.updateCardStatus(
-            currentUser.businessId(),
-            currentUser.userId(),
-            currentUser.userType(),
-            cardId,
+            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
             CardStatus.ACTIVE,
             request.getStatusReason(),
             false));
@@ -308,14 +288,9 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
-
     return new Card(
         cardService.updateCardStatus(
-            currentUser.businessId(),
-            currentUser.userId(),
-            currentUser.userType(),
-            cardId,
+            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
             CardStatus.CANCELLED,
             request.getStatusReason(),
             false));
@@ -331,10 +306,8 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @RequestParam(required = false) AccountType type) {
-    CurrentUser currentUser = CurrentUser.get();
-
     return cardService
-        .getCardAccounts(currentUser.businessId(), currentUser.userId(), cardId, type)
+        .getCardAccounts(cardService.retrieveCard(CurrentUser.getBusinessId(), cardId), type)
         .stream()
         .map(
             e ->
@@ -357,11 +330,10 @@ public class UserController {
 
     return new Card(
         cardService.updateCardAccount(
-            currentUser.businessId(),
-            currentUser.userId(),
-            cardId,
-            request.getAllocationId(),
-            request.getAccountId()));
+            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
+            allocationService.retrieveAllocation(
+                CurrentUser.getBusinessId(), request.getAllocationId()),
+            accountService.retrieveAccountById(request.getAccountId(), false)));
   }
 
   @GetMapping("/cards/{cardId}/account-activity")

@@ -76,6 +76,7 @@ public class CardControllerTest extends BaseCapitalTest {
       business = createBusinessRecord.business();
       userId = createBusinessRecord.allocationRecord().allocation().getOwnerId();
       userCookie = createBusinessRecord.authCookie();
+      testHelper.setCurrentUser(createBusinessRecord.user());
       card =
           testHelper.issueCard(
               business,

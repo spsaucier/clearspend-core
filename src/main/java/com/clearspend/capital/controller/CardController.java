@@ -113,8 +113,7 @@ public class CardController {
 
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
     cardService.updateCard(
-        businessId,
-        cardId,
+        cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
         request.getDisabledPaymentTypes());

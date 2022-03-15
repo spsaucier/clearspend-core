@@ -19,12 +19,14 @@ import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
+import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -118,6 +120,11 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
       TypedId<BusinessId> businessId, TypedId<CardId> cardId) {
 
     return toOptional(findDetails(businessId, cardId, null));
+  }
+
+  @Override
+  public Optional<CardDetailsRecord> findDetailsById(@NotNull TypedId<CardId> cardId) {
+    return findDetailsByBusinessIdAndId(CurrentUser.getBusinessId(), cardId);
   }
 
   @Override

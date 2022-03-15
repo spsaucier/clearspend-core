@@ -82,6 +82,7 @@ public class CodatServiceTest extends BaseCapitalTest {
       allocation = createBusinessRecord.allocationRecord().allocation();
       user = createBusinessRecord.user();
       userCookie = testHelper.login(user);
+      testHelper.setCurrentUser(user);
       card =
           testHelper.issueCard(
               business,

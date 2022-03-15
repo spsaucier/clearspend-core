@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -47,8 +48,10 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
 
-    CreateUpdateUserRecord user = testHelper.createUser(business);
     testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord user =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
     Card card =
         testHelper.issueCard(
             business,

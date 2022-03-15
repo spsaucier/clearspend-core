@@ -46,6 +46,7 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
       createBusinessRecord = testHelper.createBusiness();
       business = createBusinessRecord.business();
       user = createBusinessRecord.user();
+      testHelper.setCurrentUser(user);
       card =
           testHelper.issueCard(
               business,

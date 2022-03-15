@@ -39,6 +39,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
@@ -92,7 +93,10 @@ class UserControllerTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.init();
       business = createBusinessRecord.business();
-      user = testHelper.createUser(createBusinessRecord.business());
+      user =
+          testHelper.createUserWithRole(
+              createBusinessRecord.allocationRecord().allocation(),
+              DefaultRoles.ALLOCATION_EMPLOYEE);
       userCookie = testHelper.login(user.user());
       testHelper.setCurrentUser(createBusinessRecord.user());
       card =
@@ -355,6 +359,7 @@ class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUserCards() {
+    testHelper.setCurrentUser(user.user());
     MockHttpServletResponse response =
         mvc.perform(get("/users/cards").contentType("application/json").cookie(userCookie))
             .andExpect(status().isOk())
@@ -584,6 +589,7 @@ class UserControllerTest extends BaseCapitalTest {
     assertThat(receivedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
 
     // check db for the activated card
+    testHelper.setCurrentUser(createBusinessRecord.user());
     assertThat(cardService.getCard(business.getId(), receivedCard.getCardId()).card().isActivated())
         .isTrue();
   }
@@ -592,8 +598,10 @@ class UserControllerTest extends BaseCapitalTest {
   @Test
   void getCardAccountActivity() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
-
-    CreateUpdateUserRecord userRecord = testHelper.createUser(createBusinessRecord.business());
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
 
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
@@ -972,6 +980,7 @@ class UserControllerTest extends BaseCapitalTest {
                 .constructParametricType(PagedData.class, UserPageData.class));
     log.debug("userPageData: {}", userPageData);
     Assertions.assertEquals(2, userPageData.getTotalElements());
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Assertions.assertTrue(
         userPageData.getContent().get(0).getCardInfoList().stream()
             .anyMatch(

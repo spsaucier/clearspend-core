@@ -354,7 +354,7 @@ public class AccountActivityService {
   }
 
   @PostAuthorize(
-      "isSelfOwned() or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
+      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity getAccountActivity(TypedId<AccountActivityId> accountActivityId) {
 
     return accountActivityRepository
