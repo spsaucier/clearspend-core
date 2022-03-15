@@ -1,6 +1,6 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.common.error.LoginException;
+import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
@@ -74,7 +74,7 @@ public class AuthenticationController {
       explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
   ResponseEntity<UserLoginResponse> login(@Validated @RequestBody LoginRequest request)
-      throws ParseException, LoginException {
+      throws ParseException, FusionAuthException {
     ClientResponse<LoginResponse, Errors> loginResponse;
     try {
       loginResponse = fusionAuthService.login(request.getUsername(), request.getPassword());
@@ -87,7 +87,7 @@ public class AuthenticationController {
       return null;
     }
     if (!loginResponse.wasSuccessful()) {
-      throw new LoginException(loginResponse.status, loginResponse.errorResponse);
+      throw new FusionAuthException(loginResponse.status, loginResponse.errorResponse);
     }
 
     if (loginResponse.status == 203) {

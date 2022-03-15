@@ -64,6 +64,12 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     super(fusionAuthProperties.getApiKey(), fusionAuthProperties.getBaseUrl());
   }
 
+  /**
+   * "/api/two-factor/send"
+   *
+   * @param request the request to get started
+   * @return nothing useful
+   */
   @Override
   public ClientResponse<Void, Errors> sendTwoFactorCodeForEnableDisable(
       TwoFactorSendRequest request) {
@@ -74,15 +80,25 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     return response;
   }
 
+  /**
+   * "/api/user/two-factor"
+   *
+   * @param userId
+   * @param request
+   * @return
+   */
   @Override
   public ClientResponse<TwoFactorResponse, Errors> enableTwoFactor(
       UUID userId, TwoFactorRequest request) {
     ClientResponse<TwoFactorResponse, Errors> response = new ClientResponse<>();
 
     if (!pendingEnable.containsKey(userId)) {
+      if (!retrieveUser(userId).wasSuccessful()) {
+        response.status = 404;
+        return response;
+      }
       response.status = 400;
       response.errorResponse = new Errors();
-      Error error = new Error();
       response.errorResponse.fieldErrors.put(
           "userId", List.of(new Error("NO2FA", "No pending 2FA request - this error is a stub")));
       // Better detail in the response would be nice
@@ -93,7 +109,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       String sentCode = pendingEnable.get(userId).code;
       assert enableRequest.mobilePhone.equals(request.mobilePhone);
       assert enableRequest.method.equals(request.method);
-      // TODO at least mock the behavior of a bad code
+
       if (!request.code.equals(sentCode)) {
         response.status = 421;
         return response;
@@ -123,6 +139,13 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     }
   }
 
+  /**
+   * /api/login
+   *
+   * @param request the request
+   * @return the response
+   * @throws com.clearspend.capital.common.error.FusionAuthException if things don't work out
+   */
   @Override
   public ClientResponse<LoginResponse, Errors> login(LoginRequest request) {
     ClientResponse<LoginResponse, Errors> response = super.login(request);
@@ -175,12 +198,19 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     return response;
   }
 
+  /**
+   * /api/two-factor/login
+   *
+   * @param request the request, with a 2FA code
+   * @return the response, 200 if it's ducky.
+   * @throws com.clearspend.capital.common.error.FusionAuthException if things go sideways
+   */
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     ClientResponse<LoginResponse, Errors> response = new ClientResponse<>();
 
     String twoFactorId = request.twoFactorId;
     if (!twoFactorPending.containsKey(twoFactorId)) {
-      response.status = 400;
+      response.status = 404;
       response.errorResponse = new Errors();
       response.errorResponse.addFieldError(
           "twoFactorId", "unknown", "Doesn't match an outstanding code");
@@ -191,7 +221,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       response.successResponse = twoFactorPending.remove(twoFactorId).success;
       response.status = 200;
     } else {
-      response.status = 403;
+      response.status = 421;
     }
     return response;
   }

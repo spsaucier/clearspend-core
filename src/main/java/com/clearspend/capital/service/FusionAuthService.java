@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
 import com.clearspend.capital.common.error.ForbiddenException;
+import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -229,6 +230,12 @@ public class FusionAuthService {
     return Set.copyOf((List<String>) user.data.getOrDefault(ROLES, Collections.emptyList()));
   }
 
+  /**
+   * "/api/two-factor/login"
+   *
+   * @param request
+   * @return
+   */
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     final ClientResponse<LoginResponse, Errors> response = client.twoFactorLogin(request);
     validateResponse(response);
@@ -361,17 +368,7 @@ public class FusionAuthService {
       return response.successResponse;
     }
 
-    if (response.errorResponse != null) {
-      Errors errors = response.errorResponse;
-      throw new InvalidRequestException(errors.toString());
-    }
-
-    if (response.exception != null) {
-      Exception exception = response.exception;
-      throw new RuntimeException(exception);
-    }
-
-    throw new RuntimeException("shouldn't have gotten here");
+    throw new FusionAuthException(response.status, response.errorResponse, response.exception);
   }
 
   public User retrieveUserByEmail(String email) {

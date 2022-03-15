@@ -4,13 +4,14 @@ import com.clearspend.capital.common.error.AmountException;
 import com.clearspend.capital.common.error.CurrencyMismatchException;
 import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.ForbiddenException;
+import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
-import com.clearspend.capital.common.error.LoginException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.inversoft.error.Errors;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -39,8 +40,9 @@ public class GlobalControllerExceptionHandler {
     return new ControllerError(exception.getMessage());
   }
 
-  @ExceptionHandler({LoginException.class})
-  public ResponseEntity<Errors> handleLoginException(LoginException exception) {
+  @ExceptionHandler({FusionAuthException.class})
+  public ResponseEntity<Errors> handleLoginException(FusionAuthException exception) {
+    Optional.ofNullable(exception.getCause()).ifPresent(e -> log.error(e.getMessage(), e));
     return new ResponseEntity<>(
         exception.getErrors(), HttpStatus.valueOf(exception.getHttpStatus()));
   }
