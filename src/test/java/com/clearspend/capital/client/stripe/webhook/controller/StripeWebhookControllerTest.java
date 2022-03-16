@@ -759,6 +759,33 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   }
 
   @Test
+  public void spendControl_exceedCardDailyLimitForACardWithoutHistory() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card =
+        testHelper.issueCard(
+            business,
+            userRecord.allocation,
+            userRecord.user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    transactionLimitService.updateCardSpendLimit(
+        business.getId(),
+        card.getId(),
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(5L)))),
+        Collections.emptySet(),
+        Collections.emptySet());
+
+    authorize_decline(allocation, user, card, BigDecimal.TEN, 700);
+  }
+
+  @Test
   public void spendControl_exceedCardMonthlyLimit() {
     UserRecord userRecord = createUser(BigDecimal.TEN);
     Allocation allocation = userRecord.allocation;

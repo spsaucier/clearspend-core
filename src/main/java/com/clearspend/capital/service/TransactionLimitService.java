@@ -203,7 +203,7 @@ public class TransactionLimitService {
         cardId,
         TransactionLimitType.CARD,
         amount,
-        cardAllocationSpendingDaily.getCardSpendings().get(amount.getCurrency()),
+        cardAllocationSpendingDaily.getCardSpendings().getOrDefault(amount.getCurrency(), Map.of()),
         cardTransactionLimits);
 
     // check allocation limits
@@ -211,7 +211,9 @@ public class TransactionLimitService {
         allocationId,
         TransactionLimitType.ALLOCATION,
         amount,
-        cardAllocationSpendingDaily.getAllocationSpendings().get(amount.getCurrency()),
+        cardAllocationSpendingDaily
+            .getAllocationSpendings()
+            .getOrDefault(amount.getCurrency(), Map.of()),
         allocationTransactionLimits);
   }
 
@@ -221,7 +223,7 @@ public class TransactionLimitService {
       Amount amount,
       Map<LocalDate, Amount> totalSpendings,
       TransactionLimit transactionLimit) {
-    if (totalSpendings != null && transactionLimit != null && amount.isLessThanZero()) {
+    if (transactionLimit != null && amount.isLessThanZero()) {
       Map<LimitPeriod, BigDecimal> limits =
           transactionLimit
               .getLimits()
