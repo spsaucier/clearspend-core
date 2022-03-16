@@ -22,6 +22,7 @@ import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,7 +135,7 @@ public class CodatClient {
   }
 
   public CreateCompanyResponse createCodatCompanyForBusiness(String legalName)
-      throws RuntimeException {
+      throws CodatApiCallException {
 
     Map<String, String> formData = Map.of("name", legalName);
 
@@ -142,7 +143,7 @@ public class CodatClient {
       return callCodatApi(
           "/companies", objectMapper.writeValueAsString(formData), CreateCompanyResponse.class);
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to create company in Codat", e);
+      throw new CodatApiCallException("/companies", e);
     }
   }
 
@@ -231,14 +232,15 @@ public class CodatClient {
       String companyRef,
       String connectionId,
       CodatCreateBankAccountRequest createBankAccountRequest)
-      throws RuntimeException {
+      throws CodatApiCallException {
     try {
       return callCodatApi(
           "/companies/%s/connections/%s/push/bankAccounts".formatted(companyRef, connectionId),
           objectMapper.writeValueAsString(createBankAccountRequest),
           CodatCreateBankAccountResponse.class);
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to sync transaction to Codat", e);
+      throw new CodatApiCallException(
+          "/companies/COMPANY/connections/CONNECTION/push/bankAccounts", e);
     }
   }
 
@@ -250,7 +252,8 @@ public class CodatClient {
           objectMapper.writeValueAsString(supplier),
           CodatPushDataResponse.class);
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to sync transaction to Codat", e);
+      throw new CodatApiCallException(
+          "/companies/COMPANY/connections/CONNECTION/push/suppliers", e);
     }
   }
 

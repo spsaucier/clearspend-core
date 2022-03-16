@@ -20,6 +20,7 @@ import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
+import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -57,7 +58,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
-      throws RuntimeException {
+      throws CodatApiCallException {
     Business business = businessService.retrieveBusiness(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
@@ -86,7 +87,7 @@ public class CodatService {
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public SyncTransactionResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
-      throws RuntimeException {
+      throws CodatApiCallException {
     Business business = businessService.retrieveBusiness(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
@@ -220,7 +221,7 @@ public class CodatService {
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CodatCreateBankAccountRequest createBankAccountRequest)
-      throws RuntimeException {
+      throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
     return codatClient.createBankAccountForBusiness(
@@ -232,7 +233,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean deleteCodatIntegrationConnection(TypedId<BusinessId> businessId)
-      throws RuntimeException {
+      throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusiness(businessId, true);
 
     Boolean deleteResult =
