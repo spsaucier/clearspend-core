@@ -160,8 +160,8 @@ public class NetworkCommon {
       allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
       amount = Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
     }
-    // amounts from Stripe for authorization requests are always debits and positive
-    amount = amount.negate().ensureNegative();
+    // amounts from Stripe for authorization requests are always debits and zero or positive
+    amount = amount.negate().ensureLessThanOrEqualToZero();
     networkMessageType = type;
     isIncrementalAuthorization = authorization.getApproved();
     if (isIncrementalAuthorization) {
@@ -230,9 +230,9 @@ public class NetworkCommon {
     return new ClearAddress(
         "",
         "",
-        merchantData.getCity(),
-        merchantData.getState(),
-        merchantData.getPostalCode(),
+        merchantData.getCity() != null ? merchantData.getCity() : "",
+        merchantData.getState() != null ? merchantData.getState() : "",
+        merchantData.getPostalCode() != null ? merchantData.getPostalCode() : "",
         Country.of(merchantData.getCountry()));
   }
 

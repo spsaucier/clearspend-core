@@ -277,7 +277,7 @@ public class NetworkMessageService {
       common.setNetworkMessageGroupId(common.earliestNetworkMessage.getNetworkMessageGroupId());
       // TODO(kuchlein): handle the case when the hold amount changes
       if (common.getPriorHold() != null
-          && common.getPriorHold().getAmount().isLessThan(common.getRequestedAmount())) {
+          && common.getPriorHold().getAmount().isNotEqual(common.getRequestedAmount())) {
         releasePriorHold(common);
         common.setApprovedAmount(common.getRequestedAmount());
         common.setHoldAmount(common.getApprovedAmount());

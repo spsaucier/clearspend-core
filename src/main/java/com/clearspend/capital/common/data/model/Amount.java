@@ -106,6 +106,14 @@ public class Amount {
     return amount.compareTo(that.amount) < 0;
   }
 
+  public boolean isEqual(@NonNull Amount that) {
+    return amount.compareTo(that.amount) == 0;
+  }
+
+  public boolean isNotEqual(@NonNull Amount that) {
+    return !isEqual(that);
+  }
+
   public boolean isGreaterThan(@NonNull Amount that) {
     return amount.compareTo(that.amount) > 0;
   }
@@ -142,6 +150,14 @@ public class Amount {
 
   public Amount ensureNegative() {
     if (!isNegative()) {
+      throw new AmountException(AmountType.NEGATIVE, this);
+    }
+
+    return this;
+  }
+
+  public Amount ensureLessThanOrEqualToZero() {
+    if (!isLessThanOrEqualToZero()) {
       throw new AmountException(AmountType.NEGATIVE, this);
     }
 
