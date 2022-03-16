@@ -8,6 +8,8 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
+import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
+import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.Account;
@@ -44,6 +46,7 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
+import com.github.javafaker.Faker;
 import com.google.gson.Gson;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.RequestHistory;
@@ -70,6 +73,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 public class StripeWebhookControllerTest extends BaseCapitalTest {
+
+  private final Faker faker = new Faker();
 
   @Autowired private AssertionHelper assertionHelper;
   @Autowired private TestHelper testHelper;
@@ -997,6 +1002,17 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     financialAccount.setId(business.getStripeData().getFinancialAccountRef());
     financialAccount.setPendingFeatures(List.of());
     financialAccount.setRestrictedFeatures(List.of());
+
+    FinancialAccountAddress financialAccountAddress = new FinancialAccountAddress();
+    financialAccountAddress.setType("aba");
+    financialAccountAddress.setAbaAddress(
+        new FinancialAccountAbaAddress(
+            "2323",
+            faker.numerify("##########2323"),
+            faker.numerify("##############"),
+            faker.name().name()));
+
+    financialAccount.setFinancialAddresses(List.of(financialAccountAddress));
 
     List<PendingStripeTransfer> pendingStripeTransfers =
         pendingStripeTransferService.retrievePendingTransfers(business.getId());

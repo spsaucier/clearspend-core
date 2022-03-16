@@ -48,7 +48,6 @@ public class BusinessService {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
-  private final TwilioService twilioService;
   private final RetrievalService retrievalService;
 
   private final StripeClient stripeClient;
@@ -296,10 +295,5 @@ public class BusinessService {
         allocation, adjustmentAndHoldRecord.adjustment(), notes);
 
     return adjustmentAndHoldRecord;
-  }
-
-  public void notifyFinancialAccountReady(Business business) {
-    twilioService.sendFinancialAccountReadyEmail(
-        business.getBusinessEmail().getEncrypted(), business.getLegalName());
   }
 }

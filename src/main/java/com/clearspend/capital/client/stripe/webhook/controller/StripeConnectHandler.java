@@ -17,12 +17,14 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
+import com.clearspend.capital.service.TwilioService;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.FieldNamingPolicy;
@@ -53,6 +55,7 @@ public class StripeConnectHandler {
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
   private final PendingStripeTransferService pendingStripeTransferService;
+  private final TwilioService twilioService;
   private final StripeClient stripeClient;
   private final long achReturnFee;
   private final boolean standardHold;
@@ -63,6 +66,7 @@ public class StripeConnectHandler {
       BusinessService businessService,
       BusinessBankAccountService businessBankAccountService,
       PendingStripeTransferService pendingStripeTransferService,
+      TwilioService twilioService,
       StripeClient stripeClient,
       StripeProperties stripeProperties,
       @Value("${clearspend.ach.hold.standard:true}") boolean standardHold,
@@ -72,6 +76,7 @@ public class StripeConnectHandler {
     this.businessService = businessService;
     this.businessBankAccountService = businessBankAccountService;
     this.pendingStripeTransferService = pendingStripeTransferService;
+    this.twilioService = twilioService;
     this.stripeClient = stripeClient;
     this.stripeProperties = stripeProperties;
     this.achReturnFee = achReturnFee;
@@ -248,18 +253,13 @@ public class StripeConnectHandler {
       Business business =
           businessService.retrieveBusinessByStripeFinancialAccount(financialAccount.getId());
       FinancialAccountAbaAddress financialAccountAddress =
-          stripeClient
-              .getFinancialAccount(
-                  businessId,
-                  business.getStripeData().getAccountRef(),
-                  business.getStripeData().getFinancialAccountRef())
-              .getFinancialAddresses()
-              .stream()
+          financialAccount.getFinancialAddresses().stream()
               .filter(a -> a.getAbaAddress() != null)
               .findFirst()
               .orElseThrow(
                   () ->
-                      new RuntimeException("Stripe returned 0 aba addresses for an active account"))
+                      new RuntimeException(
+                          "Stripe didn't send any aba addresses for an active account"))
               .getAbaAddress();
 
       businessService.updateBusinessStripeData(
@@ -272,7 +272,12 @@ public class StripeConnectHandler {
 
       pendingStripeTransferService.executePendingStripeTransfers(businessId);
 
-      businessService.notifyFinancialAccountReady(business);
+      // send notification only to onboarded customers who haven't selected plaid route
+      if (business.getStatus() == BusinessStatus.ACTIVE
+          && businessBankAccountService.getBusinessBankAccounts(businessId, true).isEmpty()) {
+        twilioService.sendFinancialAccountReadyEmail(
+            business.getBusinessEmail().getEncrypted(), business.getLegalName());
+      }
     }
   }
 
