@@ -361,7 +361,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_UPDATED;
     Authorization authorizationUpdated = authorizationRecord.authorization();
     authorizationUpdated.setMetadata(new HashMap<>());
-    boolean amountUpdated = authorizationUpdated.getPendingRequest().getAmount() != updatedAmount;
+    boolean amountUpdated =
+        authorizationUpdated.getPendingRequest().getAmount() != updatedAmount && updatedAmount != 0;
     authorizationUpdated.getPendingRequest().setAmount(updatedAmount);
     // TODO(kuchlein): in the StipeObject we receive there is a type called
     //  {@link com.stripe.model.EventData} that includes what's changed since between this request
@@ -483,6 +484,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     NetworkCommon networkCommon =
         authorizeUpdate(allocation, authorizationRecord, 900L, BigDecimal.TEN, BigDecimal.ONE);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_zeroDollarUpdate() {
+    BigDecimal openBalance = BigDecimal.TEN;
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    AuthorizationRecord authorizationRecord =
+        authorize(
+            allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
+
+    NetworkCommon networkCommon =
+        authorizeUpdate(allocation, authorizationRecord, 0L, BigDecimal.TEN, BigDecimal.TEN);
   }
 
   @SneakyThrows

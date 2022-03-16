@@ -285,7 +285,7 @@ public class NetworkMessageService {
             common.getMerchantType() == MerchantType.AUTOMATED_FUEL_DISPENSERS
                 ? OffsetDateTime.now().plusDays(3)
                 : common.getPriorHold().getExpirationDate());
-        common.setPostHold(true);
+        common.setPostHold(common.getRequestedAmount().isLessThanZero());
         common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
       }
     }
