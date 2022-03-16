@@ -1,8 +1,10 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
+import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardStatementService;
 import com.clearspend.capital.service.CardStatementService.CardStatementRecord;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -22,12 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class CardStatementController {
 
   private final CardStatementService cardStatementService;
+  private final CardService cardService;
 
   @PostMapping("")
   ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request)
       throws IOException {
 
-    CardStatementRecord result = cardStatementService.generatePdf(request);
+    final var card = cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
+    CardStatementRecord result = cardStatementService.generatePdf(request, card);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_PDF);

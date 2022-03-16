@@ -1,15 +1,11 @@
 package com.clearspend.capital.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
-import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.controller.nonprod.TestDataController;
-import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
@@ -17,21 +13,20 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.type.NetworkCommon;
-import com.lowagie.text.pdf.PdfReader;
-import com.lowagie.text.pdf.parser.PdfTextExtractor;
-import java.math.BigDecimal;
+import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.testutils.ThrowingBiConsumer;
+import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -40,166 +35,105 @@ public class CardStatementControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
-  private final NetworkMessageService networkMessageService;
+  private final StatementHelper statementHelper;
 
-  @SneakyThrows
-  @Test
-  void getCardStatement() {
-    String email = testHelper.generateEmail();
-    String password = testHelper.generatePassword();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(1000L);
+  private CreateBusinessRecord createBusinessRecord;
+  private Card card;
+  private User businessOwnerUser;
+
+  private record RequestObjAndString(CardStatementRequest request, String requestString) {}
+
+  @BeforeEach
+  public void setup() {
+    createBusinessRecord = testHelper.createBusiness(1000L);
     Business business = createBusinessRecord.business();
 
-    User user = createBusinessRecord.user();
-    testHelper.setCurrentUser(user);
-    Card card =
+    businessOwnerUser = createBusinessRecord.user();
+    testHelper.setCurrentUser(businessOwnerUser);
+    card =
         testHelper.issueCard(
             business,
             createBusinessRecord.allocationRecord().allocation(),
-            user,
+            businessOwnerUser,
             Currency.USD,
             FundingType.POOLED,
             CardType.PHYSICAL,
             true);
 
-    testHelper.setCurrentUser(user);
+    testHelper.setCurrentUser(businessOwnerUser);
+    statementHelper.setupStatementData(createBusinessRecord, card);
+  }
 
-    // generate auth 1
-    NetworkCommonAuthorization networkCommonAuthorization1 =
-        TestDataController.generateAuthorizationNetworkCommon(
-            user,
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(900)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization1.networkCommon());
-    assertThat(networkCommonAuthorization1.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization1.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization1.networkCommon().isPostHold()).isTrue();
+  @Test
+  @SneakyThrows
+  void getCardStatement_ValidateUserPermissions() {
+    final var request = getCardStatementRequest();
 
-    // generate capture 1
-    NetworkCommon common1 =
-        TestDataController.generateCaptureNetworkCommon(
-            business, networkCommonAuthorization1.authorization());
-    networkMessageService.processNetworkMessage(common1);
+    final ThrowingBiConsumer<Cookie, ResultMatcher> doRequest =
+        (cookie, statusMatcher) ->
+            mvc.perform(
+                    post("/card-statement")
+                        .contentType("application/json")
+                        .content(request.requestString())
+                        .cookie(cookie))
+                .andExpect(statusMatcher);
 
-    // generate auth 2
-    NetworkCommonAuthorization networkCommonAuthorization2 =
-        TestDataController.generateAuthorizationNetworkCommon(
-            user,
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(9)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization2.networkCommon());
+    testHelper.setCurrentUser(businessOwnerUser);
+    final var adminUser =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN);
+    final var adminUserCookie = testHelper.login(adminUser.user());
+    doRequest.accept(adminUserCookie, status().isOk());
 
-    assertThat(networkCommonAuthorization2.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization2.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization2.networkCommon().isPostHold()).isTrue();
+    testHelper.setCurrentUser(businessOwnerUser);
+    final var managerUser =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
+    final var managerUserCookie = testHelper.login(managerUser.user());
+    doRequest.accept(managerUserCookie, status().isOk());
 
-    // generate capture 2
-    NetworkCommon common2 =
-        TestDataController.generateCaptureNetworkCommon(
-            business, networkCommonAuthorization2.authorization());
-    networkMessageService.processNetworkMessage(common2);
+    testHelper.setCurrentUser(businessOwnerUser);
+    final var employeeUser =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    final var employeeUserCookie = testHelper.login(employeeUser.user());
+    doRequest.accept(employeeUserCookie, status().isForbidden());
 
-    // generate auth 3 without capture, should not be found in PDF below
-    NetworkCommonAuthorization networkCommonAuthorization3 =
-        TestDataController.generateAuthorizationNetworkCommon(
-            user,
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            Amount.of(Currency.USD, new BigDecimal(13)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization3.networkCommon());
+    testHelper.setCurrentUser(businessOwnerUser);
+    final var viewOnlyUser =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(),
+            DefaultRoles.ALLOCATION_VIEW_ONLY);
+    final var viewOnlyCookie = testHelper.login(viewOnlyUser.user());
+    doRequest.accept(viewOnlyCookie, status().isForbidden());
+  }
 
-    assertThat(networkCommonAuthorization3.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization3.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization3.networkCommon().isPostHold()).isTrue();
-
-    CardStatementRequest cardStatementRequest = new CardStatementRequest();
+  @SneakyThrows
+  private RequestObjAndString getCardStatementRequest() {
+    final var cardStatementRequest = new CardStatementRequest();
     cardStatementRequest.setCardId(card.getId());
     cardStatementRequest.setStartDate(OffsetDateTime.now().minusDays(1));
     cardStatementRequest.setEndDate(OffsetDateTime.now().plusDays(1));
 
-    String body = objectMapper.writeValueAsString(cardStatementRequest);
+    final var body = objectMapper.writeValueAsString(cardStatementRequest);
+    return new RequestObjAndString(cardStatementRequest, body);
+  }
 
+  @SneakyThrows
+  @Test
+  void getCardStatement_ByBusinessOwnerUser_ValidateResponse() {
+    final var request = getCardStatementRequest();
     MockHttpServletResponse response =
         mvc.perform(
                 post("/card-statement")
                     .contentType("application/json")
-                    .content(body)
+                    .content(request.requestString())
                     .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
 
-    /*
-      Parse PDF back into text, and try to find several pieces which we know should be there
-      Expected string should look like below:
-
-       Monthly Statement
-       Total amount spent this period:VISA Statement 01/30/2022 - 02/01/2022
-       $909.00
-       Cardholder: Armand O'Conner
-       Card number: **** 4489
-       Allocation: Brekke, Franecki and Turner 32b546ee-c7a7-4823-ac3d-
-       79dca14502e9 - root
-       Available to spend as of 02/01/2022:
-       $91.00
-       Thank you for using ClearSpend. For details and upcoming payments,
-       log into your ClearSpend account
-       Transactions
-       DATE Merchant AMOUNT
-       01/31/2022 Tuscon Bakery$900.00
-       01/31/2022 Tuscon Bakery$9.00
-       $909.00
-
-    */
-
-    PdfTextExtractor pdfTextExtractor =
-        new PdfTextExtractor(new PdfReader(response.getContentAsByteArray()));
-
-    String pdfParsed = pdfTextExtractor.getTextFromPage(1);
-    boolean foundAvailableToSpend = false;
-    boolean foundHeader = false;
-    boolean foundLine1 = false;
-    boolean foundLine2 = false;
-    boolean foundLineWithoutCapture = false;
-    boolean foundCardholder = false;
-    boolean foundCardNumber = false;
-
-    String lastWord = null;
-
-    for (String line : pdfParsed.split("\n")) {
-
-      line = line.trim();
-      if (StringUtils.isEmpty(line)) {
-        continue;
-      }
-
-      if (line.contains("DATE Merchant AMOUNT")) {
-        foundHeader = true;
-      } else if (line.contains("$900.00")) {
-        foundLine1 = true;
-      } else if (line.contains("$9.00")) {
-        foundLine2 = true;
-      } else if (line.contains("$13.00")) {
-        foundLineWithoutCapture = true;
-      } else if (line.contains("$78.00")) {
-        foundAvailableToSpend = true;
-      } else if (line.contains(user.getFirstName() + " " + user.getLastName())) {
-        foundCardholder = true;
-      } else if (line.contains("**** " + card.getLastFour())) {
-        foundCardNumber = true;
-      }
-      lastWord = line;
-    }
-
-    Assertions.assertTrue(foundHeader);
-    Assertions.assertTrue(foundLine1);
-    Assertions.assertTrue(foundLine2);
-    Assertions.assertFalse(foundLineWithoutCapture);
-    Assertions.assertTrue(foundAvailableToSpend);
-    Assertions.assertTrue(foundCardholder);
-    Assertions.assertTrue(foundCardNumber);
-    Assertions.assertEquals("$909.00", lastWord);
+    statementHelper.validatePdfContent(
+        response.getContentAsByteArray(), createBusinessRecord.user(), card);
   }
 }

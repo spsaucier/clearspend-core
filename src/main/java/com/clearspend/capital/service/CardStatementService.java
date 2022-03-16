@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -96,7 +97,10 @@ public class CardStatementService {
     }
   }
 
-  public CardStatementRecord generatePdf(CardStatementRequest request) throws IOException {
+  @PreAuthorize(
+      "hasAllocationPermission(#card.allocation().getId(), 'READ') or hasGlobalPermission(#card.card.businessId, 'GLOBAL_READ')")
+  public CardStatementRecord generatePdf(
+      final CardStatementRequest request, final CardDetailsRecord card) throws IOException {
 
     CardStatementData generalStatementData =
         accountActivityRepository.findDataForCardStatement(
@@ -201,8 +205,6 @@ public class CardStatementService {
                     fontBold32Green))));
 
     // Column
-    CardDetailsRecord card =
-        cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
     Account account = accountService.retrieveAccountById(card.account().getId(), true);
 
     Font fontNormal8White = new Font(defaultBaseFont, 8, Font.NORMAL);

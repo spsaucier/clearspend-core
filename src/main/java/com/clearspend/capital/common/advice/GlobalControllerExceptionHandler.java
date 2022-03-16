@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -56,8 +57,12 @@ public class GlobalControllerExceptionHandler {
   }
 
   @ResponseStatus(HttpStatus.FORBIDDEN)
-  @ExceptionHandler({DataAccessViolationException.class, ForbiddenException.class})
-  public @ResponseBody ControllerError handleForbiddenException(ForbiddenException exception) {
+  @ExceptionHandler({
+    DataAccessViolationException.class,
+    ForbiddenException.class,
+    AccessDeniedException.class
+  })
+  public @ResponseBody ControllerError handleForbiddenException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError("");
   }
