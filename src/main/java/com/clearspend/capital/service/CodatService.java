@@ -260,7 +260,7 @@ public class CodatService {
 
               // Get rid of fluff
               String[] baseElements = account.getQualifiedName().split("\\.");
-              String[] elements = Arrays.copyOfRange(baseElements, 1, baseElements.length);
+              String[] elements = Arrays.copyOfRange(baseElements, 2, baseElements.length);
               for (String element : elements) {
                 if (currentAccount == null) {
                   currentAccount = findAccountInList(base, element);
