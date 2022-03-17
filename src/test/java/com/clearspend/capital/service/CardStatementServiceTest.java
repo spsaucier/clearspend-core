@@ -87,7 +87,8 @@ public class CardStatementServiceTest extends BaseCapitalTest {
     final CardStatementRequest request = getRequest(card.getId());
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
-    final CardStatementService.CardStatementRecord statementRecord = cardStatementService.generatePdf(request, cardDetails);
+    final CardStatementService.CardStatementRecord statementRecord =
+        cardStatementService.generatePdf(request, cardDetails);
     statementHelper.validatePdfContent(statementRecord.pdf(), createBusinessRecord.user(), card);
   }
 }
