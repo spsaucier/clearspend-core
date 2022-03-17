@@ -3,7 +3,6 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -13,10 +12,14 @@ import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.io.IOException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PostFilter;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,18 +53,25 @@ public class ReceiptService {
   }
 
   // returns data held in GCS (Google Cloud Storage)
-  public byte[] getReceiptImage(TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
-    return receiptImageService.getReceiptImage(getReceipt(businessId, receiptId).getPath());
+  @PreAuthorize("isSelfOwned(#receipt) or hasAllocationPermission(#receipt.allocationId, 'READ')")
+  public byte[] getReceiptImage(Receipt receipt) {
+    return receiptImageService.getReceiptImage(receipt.getPath());
   }
 
-  public Receipt getReceipt(TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
+  @PostAuthorize(
+      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'READ')")
+  public Receipt getReceipt(TypedId<ReceiptId> receiptId) {
     return receiptRepository
-        .findReceiptByBusinessIdAndId(businessId, receiptId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.RECEIPT, businessId, receiptId));
+        .findReceiptByBusinessIdAndId(CurrentUser.getBusinessId(), receiptId)
+        .orElseThrow(
+            () ->
+                new RecordNotFoundException(Table.RECEIPT, CurrentUser.getBusinessId(), receiptId));
   }
 
-  public List<Receipt> getReceipts(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-    return receiptRepository.findReceiptByBusinessIdAndUserIdAndLinked(businessId, userId, false);
+  @PostFilter("isSelfOwned(filterObject)")
+  public List<Receipt> getReceiptsForCurrentUser() {
+    return receiptRepository.findReceiptByBusinessIdAndUserIdAndLinked(
+        CurrentUser.getBusinessId(), CurrentUser.getUserId(), false);
   }
 
   private String getReceiptPath(
@@ -70,25 +80,22 @@ public class ReceiptService {
   }
 
   @Transactional
-  public void linkReceipt(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      TypedId<ReceiptId> receiptId,
-      TypedId<AccountActivityId> accountActivityId) {
-    Receipt receipt = getReceipt(businessId, receiptId);
+  @PreAuthorize(
+      "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
+          + "(hasAllocationPermission(#accountActivity.allocationId, 'LINK_RECEIPTS') and hasAllocationPermission(#receipt.allocationId, 'READ'))")
+  public void linkReceipt(Receipt receipt, AccountActivity accountActivity) {
 
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.isLinked()) {
       AccountActivity previousAccountActivity =
-          accountActivityService.findByReceiptId(businessId, receipt.getId());
+          accountActivityService.findByReceiptId(CurrentUser.getBusinessId(), receipt.getId());
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
       receipt.setLinked(true);
-      previousAccountActivity.getReceipt().getReceiptIds().remove(receiptId);
+      previousAccountActivity.getReceipt().getReceiptIds().remove(receipt.getId());
       accountActivityRepository.save(previousAccountActivity);
     }
-    AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
+
     ReceiptDetails receiptDetails =
         accountActivity.getReceipt() != null ? accountActivity.getReceipt() : new ReceiptDetails();
     receiptDetails.getReceiptIds().add(receipt.getId());
@@ -107,18 +114,16 @@ public class ReceiptService {
   }
 
   @Transactional
-  public void unlinkReceipt(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      TypedId<ReceiptId> receiptId,
-      TypedId<AccountActivityId> accountActivityId) {
-    Receipt receipt = getReceipt(businessId, receiptId);
+  @PreAuthorize(
+      "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
+          + "(hasAllocationPermission(#accountActivity.allocationId, 'LINK_RECEIPTS') and hasAllocationPermission(#receipt.allocationId, 'READ'))")
+  public void unlinkReceipt(Receipt receipt, AccountActivity accountActivity) {
+
     if (!receipt.isLinked()) {
       throw new InvalidRequestException("Receipt not linked");
     }
-    AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivity(businessId, accountActivityId);
-    accountActivity.getReceipt().getReceiptIds().remove(receiptId);
+
+    accountActivity.getReceipt().getReceiptIds().remove(receipt.getId());
     accountActivityRepository.save(accountActivity);
 
     receipt.setAllocationId(null);
@@ -133,15 +138,14 @@ public class ReceiptService {
   }
 
   @Transactional
-  public void deleteReceipt(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> receiptId) {
-    Receipt receipt = getReceipt(businessId, receiptId);
-
+  @PreAuthorize("isSelfOwned(#receipt)")
+  public void deleteReceipt(Receipt receipt) {
     if (receipt.isLinked()) {
       AccountActivity accountActivity =
-          accountActivityService.findByReceiptId(businessId, receipt.getId());
-      accountActivity.getReceipt().getReceiptIds().remove(receiptId);
+          accountActivityService.findByReceiptId(CurrentUser.getBusinessId(), receipt.getId());
+      accountActivity.getReceipt().getReceiptIds().remove(receipt.getId());
       accountActivityRepository.save(accountActivity);
+
       log.debug(
           "unlinked (delete) receipt {} from accountActivity {} ({})",
           receipt.getId(),

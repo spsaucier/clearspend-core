@@ -410,10 +410,9 @@ public class UserController {
               description = "ID of the receipt record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<ReceiptId> receiptId) {
-    CurrentUser currentUser = CurrentUser.get();
-
     receiptService.linkReceipt(
-        currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
+        receiptService.getReceipt(receiptId),
+        accountActivityService.getAccountActivity(accountActivityId));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/unlink")
@@ -435,16 +434,15 @@ public class UserController {
     CurrentUser currentUser = CurrentUser.get();
 
     receiptService.unlinkReceipt(
-        currentUser.businessId(), currentUser.userId(), receiptId, accountActivityId);
+        receiptService.getReceipt(receiptId),
+        accountActivityService.getAccountActivity(accountActivityId));
   }
 
   @GetMapping("/receipts")
   List<Receipt> getReceipts() {
     CurrentUser currentUser = CurrentUser.get();
 
-    return receiptService.getReceipts(currentUser.businessId(), currentUser.userId()).stream()
-        .map(Receipt::of)
-        .toList();
+    return receiptService.getReceiptsForCurrentUser().stream().map(Receipt::of).toList();
   }
 
   @DeleteMapping("/receipts/{receiptId}/delete")
@@ -458,7 +456,7 @@ public class UserController {
           TypedId<ReceiptId> receiptId) {
     CurrentUser currentUser = CurrentUser.get();
 
-    receiptService.deleteReceipt(currentUser.businessId(), currentUser.userId(), receiptId);
+    receiptService.deleteReceipt(receiptService.getReceipt(receiptId));
   }
 
   @PatchMapping("/{userId}/archive")

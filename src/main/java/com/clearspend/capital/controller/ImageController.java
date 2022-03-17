@@ -67,7 +67,7 @@ public class ImageController {
     headers.add("Expires", "0");
 
     CurrentUser currentUser = CurrentUser.get();
-    Receipt receipt = receiptService.getReceipt(currentUser.businessId(), receiptId);
+    Receipt receipt = receiptService.getReceipt(receiptId);
     if (StringUtils.isNotEmpty(receipt.getContentType())) {
       headers.add(
           HttpHeaders.CONTENT_TYPE,
@@ -75,7 +75,7 @@ public class ImageController {
       log.info("headers: {}", headers);
     }
 
-    byte[] receiptImage = receiptService.getReceiptImage(currentUser.businessId(), receiptId);
+    byte[] receiptImage = receiptService.getReceiptImage(receipt);
     log.info(
         "returning image: businessIid {}, userId {}, receiptId {} ({} bytes)",
         currentUser.businessId(),

@@ -7,6 +7,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.type.receipt.CreateReceiptResponse;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,14 @@ class ImageControllerTest extends BaseCapitalTest {
   @BeforeEach
   @SneakyThrows
   void init() {
-    testHelper.init();
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.init();
 
     if (userCookie == null) {
       Business business = testHelper.retrieveBusiness();
-      CreateUpdateUserRecord user = testHelper.createUser(business);
+      CreateUpdateUserRecord user =
+          testHelper.createUserWithRole(
+              createBusinessRecord.allocationRecord().allocation(),
+              DefaultRoles.ALLOCATION_EMPLOYEE);
       userCookie = testHelper.login(user.user().getEmail().getEncrypted(), user.password());
     }
   }

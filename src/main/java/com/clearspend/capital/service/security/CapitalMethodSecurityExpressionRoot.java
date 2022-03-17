@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Ownable;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
+import com.clearspend.capital.service.type.CurrentUser;
 import org.springframework.security.access.expression.SecurityExpressionRoot;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionOperations;
 import org.springframework.security.core.Authentication;
@@ -44,7 +45,7 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
 
   public boolean hasAllocationPermission(TypedId<AllocationId> allocationId, String permissions) {
     return permissionEnrichmentService.evaluatePermission(
-        getAuthentication(), null, allocationId, permissions);
+        getAuthentication(), CurrentUser.getBusinessId(), allocationId, permissions);
   }
 
   public boolean hasGlobalPermission(TypedId<BusinessId> businessId, String permissions) {

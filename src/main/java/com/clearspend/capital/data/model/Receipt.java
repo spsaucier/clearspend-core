@@ -28,7 +28,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Receipt extends TypedMutable<ReceiptId> {
+public class Receipt extends TypedMutable<ReceiptId> implements Ownable {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
