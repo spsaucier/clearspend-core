@@ -252,14 +252,23 @@ public class StripeConnectHandler {
         && financialAccount.getRestrictedFeatures().isEmpty()) {
       Business business =
           businessService.retrieveBusinessByStripeFinancialAccount(financialAccount.getId());
+      // although we have financial addresses in the event we still need to get them from stripe
+      // since account number is truncated in the event object
       FinancialAccountAbaAddress financialAccountAddress =
-          financialAccount.getFinancialAddresses().stream()
+          stripeClient
+              .getFinancialAccount(
+                  businessId,
+                  business.getStripeData().getAccountRef(),
+                  business.getStripeData().getFinancialAccountRef())
+              .getFinancialAddresses()
+              .stream()
               .filter(a -> a.getAbaAddress() != null)
               .findFirst()
               .orElseThrow(
                   () ->
                       new RuntimeException(
-                          "Stripe didn't send any aba addresses for an active account"))
+                          "Stripe returned 0 aba addresses for an active financial account: "
+                              + financialAccount.getId()))
               .getAbaAddress();
 
       businessService.updateBusinessStripeData(

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.InsufficientFundsException;
+import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -60,7 +60,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
     // over limit
     assertThrows(
-        InsufficientFundsException.class,
+        LimitViolationException.class,
         () ->
             businessLimitService.withinLimit(
                 businessId,
@@ -97,7 +97,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
     // over monthly limit
     assertThrows(
-        InsufficientFundsException.class,
+        LimitViolationException.class,
         () ->
             businessLimitService.withinLimit(
                 businessId,

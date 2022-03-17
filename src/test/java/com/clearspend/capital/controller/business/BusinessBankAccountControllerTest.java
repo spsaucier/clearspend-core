@@ -289,4 +289,26 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         .andExpect(status().isBadRequest())
         .andReturn();
   }
+
+  @Test
+  @SneakyThrows
+  void unregisterBankAccount() {
+    BusinessBankAccount businessBankAccount =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+
+    assertThat(businessBankAccount.getDeleted()).isFalse();
+
+    mvc.perform(
+            post(String.format(
+                    "/business-bank-accounts/%s/unregister", businessBankAccount.getId()))
+                .contentType("application/json")
+                .cookie(authCookie))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    businessBankAccount =
+        businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
+
+    assertThat(businessBankAccount.getDeleted()).isTrue();
+  }
 }

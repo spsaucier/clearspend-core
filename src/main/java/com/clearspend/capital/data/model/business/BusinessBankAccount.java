@@ -48,4 +48,6 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId> {
   private String stripeBankAccountRef;
 
   private String stripeSetupIntentRef;
+
+  @NonNull private Boolean deleted;
 }

@@ -9,6 +9,7 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.inversoft.error.Errors;
 import java.util.Optional;
@@ -34,7 +35,8 @@ public class GlobalControllerExceptionHandler {
     CurrencyMismatchException.class,
     IdMismatchException.class,
     InsufficientFundsException.class,
-    InvalidRequestException.class
+    InvalidRequestException.class,
+    LimitViolationException.class
   })
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);

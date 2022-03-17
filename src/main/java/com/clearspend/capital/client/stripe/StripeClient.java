@@ -952,17 +952,25 @@ public class StripeClient {
             .putExtraParam("attach_to_self", true)
             .build();
 
-    return callStripe(
-        "createSetupIntent",
-        params,
-        () ->
-            SetupIntent.create(
-                params,
-                RequestOptions.builder()
-                    .setStripeAccount(stripeAccountId)
-                    .setIdempotencyKey(bankAccountId)
-                    .setStripeVersionOverride(STRIPE_BETA_HEADER)
-                    .build()));
+    SetupIntent setupIntent =
+        callStripe(
+            "createSetupIntent",
+            params,
+            () ->
+                SetupIntent.create(
+                    params,
+                    RequestOptions.builder()
+                        .setStripeAccount(stripeAccountId)
+                        .setIdempotencyKey(bankAccountId)
+                        .setStripeVersionOverride(STRIPE_BETA_HEADER)
+                        .build()));
+
+    if (!setupIntent.getStatus().equals("succeeded")) {
+      throw new RuntimeException(
+          "Error creating setup intent for stripe bank account id " + bankAccountId);
+    }
+
+    return setupIntent;
   }
 
   public InboundTransfer executeInboundTransfer(

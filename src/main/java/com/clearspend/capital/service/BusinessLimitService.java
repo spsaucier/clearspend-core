@@ -1,8 +1,8 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
@@ -167,7 +168,12 @@ public class BusinessLimitService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
-          throw new InsufficientFundsException("Business", businessId, type, amount);
+          throw new LimitViolationException(
+              businessId,
+              TransactionLimitType.BUSINESS,
+              type == AdjustmentType.DEPOSIT ? LimitType.ACH_DEPOSIT : LimitType.ACH_WITHDRAW,
+              limit.getKey(),
+              amount);
         }
       }
     }

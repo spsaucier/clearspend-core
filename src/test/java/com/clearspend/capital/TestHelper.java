@@ -247,7 +247,7 @@ public class TestHelper {
     } else {
       log.debug("Default businessID {} already exists, not creating.", businessId);
     }
-    if (businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId).isEmpty()) {
+    if (businessBankAccountRepository.findByBusinessId(businessId).isEmpty()) {
       createBusinessBankAccount(businessId);
     } else {
       log.debug("Business bank account already exists for default business. Not creating");
@@ -669,7 +669,7 @@ public class TestHelper {
 
   public BusinessBankAccount retrieveBusinessBankAccount() {
     List<BusinessBankAccount> businessBankAccounts =
-        businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessIds.get(0));
+        businessBankAccountRepository.findByBusinessId(businessIds.get(0));
     assertThat(businessBankAccounts).isNotEmpty();
 
     return businessBankAccounts.get(0);

@@ -144,4 +144,22 @@ public class BusinessBankAccountController {
 
     return ResponseEntity.ok().build();
   }
+
+  @PostMapping(
+      value = "/{businessBankAccountId}/unregister",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  ResponseEntity<?> unregister(
+      @PathVariable(value = "businessBankAccountId")
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessBankAccountId> businessBankAccountId) {
+    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+
+    businessBankAccountService.unregisterExternalBank(businessId, businessBankAccountId);
+
+    return ResponseEntity.ok().build();
+  }
 }

@@ -9,6 +9,7 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
@@ -41,15 +42,17 @@ import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Owner;
 import com.stripe.model.Account;
 import com.stripe.model.ExternalAccount;
-import com.stripe.model.SetupIntent;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.NonNull;
@@ -100,7 +103,8 @@ public class BusinessBankAccountService {
             new RequiredEncryptedStringWithHash(routingNumber),
             new RequiredEncryptedStringWithHash(accountNumber),
             new RequiredEncryptedStringWithHash(accessToken),
-            new RequiredEncryptedStringWithHash(accountRef));
+            new RequiredEncryptedStringWithHash(accountRef),
+            false);
     businessBankAccount.setName(accountName);
 
     log.debug(
@@ -171,29 +175,7 @@ public class BusinessBankAccountService {
       }
     }
 
-    Map<String, AccountBalance> accountBalances =
-        accountsResponse.accounts().stream()
-            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getBalances));
-
-    List<BusinessBankAccount> accounts =
-        accountsResponse.achList().stream()
-            .map(
-                ach -> {
-                  BusinessBankAccount businessBankAccount =
-                      createBusinessBankAccount(
-                          ach.getRouting(),
-                          ach.getAccount(),
-                          accountNames.get(ach.getAccountId()),
-                          accountsResponse.accessToken(),
-                          ach.getAccountId(),
-                          businessId);
-
-                  businessBankAccountBalanceService.createBusinessBankAccountBalance(
-                      businessBankAccount.getId(), accountBalances.get(ach.getAccountId()));
-
-                  return businessBankAccount;
-                })
-            .toList();
+    List<BusinessBankAccount> accounts = synchronizeAccounts(businessId, accountsResponse);
 
     Business business = retrievalService.retrieveBusiness(businessId, true);
     twilioService.sendBankDetailsAddedEmail(
@@ -202,9 +184,79 @@ public class BusinessBankAccountService {
     return accounts;
   }
 
+  private List<BusinessBankAccount> synchronizeAccounts(
+      TypedId<BusinessId> businessId, PlaidClient.AccountsResponse accountsResponse) {
+
+    List<BusinessBankAccount> result = new ArrayList<>();
+
+    // plaid related data
+    Map<String, NumbersACH> plaidAccounts =
+        accountsResponse.achList().stream()
+            .collect(Collectors.toMap(NumbersACH::getAccountId, Function.identity()));
+
+    Map<String, String> plaidAccountNames =
+        accountsResponse.accounts().stream()
+            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
+
+    Map<String, AccountBalance> plaidAccountBalances =
+        accountsResponse.accounts().stream()
+            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getBalances));
+
+    // existing data
+    Map<String, BusinessBankAccount> businessBankAccounts =
+        businessBankAccountRepository.findByBusinessId(businessId).stream()
+            .collect(
+                Collectors.toMap(a -> a.getPlaidAccountRef().getEncrypted(), Function.identity()));
+
+    // logically delete obsolete
+    businessBankAccounts.entrySet().stream()
+        .filter(entry -> !plaidAccounts.containsKey(entry.getKey()))
+        .map(Entry::getValue)
+        .forEach(account -> account.setDeleted(true));
+
+    // add new
+    plaidAccounts.entrySet().stream()
+        .filter(entry -> !businessBankAccounts.containsKey(entry.getKey()))
+        .map(Entry::getValue)
+        .forEach(
+            plaidAccount -> {
+              BusinessBankAccount businessBankAccount =
+                  createBusinessBankAccount(
+                      plaidAccount.getRouting(),
+                      plaidAccount.getAccount(),
+                      plaidAccountNames.get(plaidAccount.getAccountId()),
+                      accountsResponse.accessToken(),
+                      plaidAccount.getAccountId(),
+                      businessId);
+
+              businessBankAccountBalanceService.createBusinessBankAccountBalance(
+                  businessBankAccount.getId(),
+                  plaidAccountBalances.get(plaidAccount.getAccountId()));
+
+              result.add(businessBankAccount);
+            });
+
+    // update existing
+    businessBankAccounts.entrySet().stream()
+        .filter(entry -> plaidAccounts.containsKey(entry.getKey()))
+        .map(Entry::getValue)
+        .forEach(
+            account -> {
+              account.setName(
+                  plaidAccountNames.getOrDefault(
+                      account.getPlaidAccountRef().getEncrypted(), account.getName()));
+              account.setDeleted(false);
+
+              result.add(account);
+            });
+
+    return result;
+  }
+
   public List<BusinessBankAccount> getBusinessBankAccounts(
       TypedId<BusinessId> businessId, boolean stripeRegisteredOnly) {
-    return businessBankAccountRepository.findBusinessBankAccountsByBusinessId(businessId).stream()
+    return businessBankAccountRepository.findByBusinessId(businessId).stream()
+        .filter(businessBankAccount -> !businessBankAccount.getDeleted())
         .filter(
             businessBankAccount ->
                 !stripeRegisteredOnly
@@ -527,20 +579,17 @@ public class BusinessBankAccountService {
     String stripeBankAccountRef = extAccountsData.get(0).getId();
 
     // Create setup intent, which will activate bank account as a successful payment method
-    SetupIntent setupIntent =
-        stripeClient.createSetupIntent(
-            stripeAccountId,
-            stripeBankAccountRef,
-            customerAcceptanceIpAddress,
-            customerAcceptanceUserAgent);
-
-    if (!setupIntent.getStatus().equals("succeeded")) {
-      throw new RuntimeException(
-          "Error creating setup intent for bank account id " + businessBankAccountId);
-    }
+    String setupIntentId =
+        stripeClient
+            .createSetupIntent(
+                stripeAccountId,
+                stripeBankAccountRef,
+                customerAcceptanceIpAddress,
+                customerAcceptanceUserAgent)
+            .getId();
 
     businessBankAccount.setStripeBankAccountRef(stripeBankAccountRef);
-    businessBankAccount.setStripeSetupIntentRef(setupIntent.getId());
+    businessBankAccount.setStripeSetupIntentRef(setupIntentId);
 
     if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       business
@@ -553,5 +602,30 @@ public class BusinessBankAccountService {
     }
 
     businessBankAccountRepository.save(businessBankAccount);
+  }
+
+  @Transactional
+  public void unregisterExternalBank(
+      TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankaccountId) {
+    BusinessBankAccount businessBankAccount =
+        businessBankAccountRepository
+            .findByBusinessIdAndId(businessId, businessBankaccountId)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_BANK_ACCOUNT, businessBankaccountId, businessId));
+
+    if (pendingStripeTransferService.retrievePendingTransfers(businessId).size() > 0) {
+      throw new RuntimeException(
+          "Cannot unregister bank account %s due to pending ach transfers"
+              .formatted(businessBankaccountId));
+    }
+
+    // Stripe doesn't allow to delete an external bank account saying that it is the default one. It
+    // doesn't allow to unlink it from the connected account either. But if we link another external
+    // bank account then the first one disappears (an api method that returns a list of bank
+    // accounts returns 1 record). Setup intent also cannot be deleted/updated once verified. So
+    // just marking business bank account as deleted
+    businessBankAccount.setDeleted(true);
   }
 }
