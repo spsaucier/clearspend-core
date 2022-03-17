@@ -492,10 +492,15 @@ class CardServiceTest extends BaseCapitalTest {
 
     // The Manager should be able to block the card
     testHelper.setCurrentUser(manager);
+
     assertThat(
             cardService.updateCardStatus(
                 card, CardStatus.INACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false))
         .isNotNull();
+
+    assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
+        .extracting(c -> c.getStatus())
+        .isEqualTo(CardStatus.INACTIVE);
 
     // A different employee within the same business also cannot Update the Card Status
     testHelper.setCurrentUser(snooper);
@@ -505,12 +510,16 @@ class CardServiceTest extends BaseCapitalTest {
             cardService.updateCardStatus(
                 card, CardStatus.INACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false));
 
-    // The Card Owner should be able to Update their Card Status
+    // The Card Owner should be able to Update their Card Status (reactivation)
     testHelper.setCurrentUser(employee);
     assertThat(
             cardService.updateCardStatus(
                 card, CardStatus.ACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false))
         .isNotNull();
+
+    assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
+        .extracting(c -> c.getStatus())
+        .isEqualTo(CardStatus.ACTIVE);
   }
 
   @SneakyThrows

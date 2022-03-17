@@ -221,8 +221,6 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
-
     return new Card(
         cardService.updateCardStatus(
             cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
