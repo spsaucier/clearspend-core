@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -794,6 +795,32 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         EnumSet.noneOf(GlobalUserPermission.class),
         false,
         rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId()));
+  }
+
+  @SneakyThrows
+  @Test
+  void ensureMinimumAllocationPermissions_properlyAddsEmployeePermissions() {
+    User noPermissionsUser = testHelper.createUser(createBusinessRecord.business()).user();
+
+    // Ensure that the createUser(...) method does not grant any Permissions
+    assertThat(
+            rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+                rootAllocation.getId()))
+        .isNotNull()
+        .extracting(i -> i.get(noPermissionsUser.getId()))
+        .isNull();
+
+    // Execute the method that will should ensure that we have the 'base' level of permissions
+    rolesAndPermissionsService.ensureMinimumAllocationPermissions(
+        noPermissionsUser, rootAllocation, DefaultRoles.ALLOCATION_EMPLOYEE);
+
+    // Run the same test as above but we should now have permissions
+    assertThat(
+            rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+                rootAllocation.getId()))
+        .isNotNull()
+        .extracting(i -> i.get(noPermissionsUser.getId()))
+        .isNotNull();
   }
 
   private void setCurrentUser(User user) {

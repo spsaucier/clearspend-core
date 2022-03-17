@@ -454,7 +454,14 @@ public class RolesAndPermissionsService {
       User user, Allocation allocation, String defaultRole) {
     if (user.getType().equals(UserType.EMPLOYEE)) {
       UserRolesAndPermissions existingRole =
-          getUserRolesAndPermissionsForAllocation(allocation.getId());
+          ensureNonNullPermissions(
+              userAllocationRoleRepository.getUserPermissionAtAllocation(
+                  allocation.getBusinessId(),
+                  allocation.getId(),
+                  user.getId(),
+                  Collections.emptySet()),
+              allocation.getId());
+
       EnumSet<AllocationPermission> minimumPermissions =
           EnumSet.copyOf(
               Arrays.asList(

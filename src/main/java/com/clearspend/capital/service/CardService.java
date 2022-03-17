@@ -226,8 +226,8 @@ public class CardService {
 
     rolesAndPermissionsService.ensureMinimumAllocationPermissions(
         user,
-        entityManager.getReference(Allocation.class, allocationId),
-        DefaultRoles.ALLOCATION_VIEW_ONLY);
+        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId),
+        DefaultRoles.ALLOCATION_EMPLOYEE);
 
     twilioService.sendCardIssuedNotifyOwnerEmail(
         business.getBusinessEmail().getEncrypted(),
