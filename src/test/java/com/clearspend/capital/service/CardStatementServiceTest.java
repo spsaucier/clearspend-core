@@ -12,6 +12,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
 import lombok.SneakyThrows;
@@ -30,7 +31,7 @@ public class CardStatementServiceTest extends BaseCapitalTest {
   private TestHelper.CreateBusinessRecord createBusinessRecord;
 
   private CardStatementRequest getRequest(final TypedId<CardId> id) {
-    final var request = new CardStatementRequest();
+    final CardStatementRequest request = new CardStatementRequest();
     request.setCardId(id);
     request.setStartDate(OffsetDateTime.now().minusDays(1));
     request.setEndDate(OffsetDateTime.now().plusDays(1));
@@ -57,14 +58,14 @@ public class CardStatementServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void generatePdf_ValidateUserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    final var request = getRequest(card.getId());
-    final var cardDetails =
+    final CardStatementRequest request = getRequest(card.getId());
+    final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
 
     final ThrowingConsumer<String> doGenerate =
         (role) -> {
           testHelper.setCurrentUser(createBusinessRecord.user());
-          final var user =
+          final UserService.CreateUpdateUserRecord user =
               testHelper.createUserWithRole(
                   createBusinessRecord.allocationRecord().allocation(), role);
           testHelper.setCurrentUser(user.user());
@@ -83,10 +84,10 @@ public class CardStatementServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void generatePdf_ValidatePdf() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    final var request = getRequest(card.getId());
-    final var cardDetails =
+    final CardStatementRequest request = getRequest(card.getId());
+    final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
-    final var statementRecord = cardStatementService.generatePdf(request, cardDetails);
+    final CardStatementService.CardStatementRecord statementRecord = cardStatementService.generatePdf(request, cardDetails);
     statementHelper.validatePdfContent(statementRecord.pdf(), createBusinessRecord.user(), card);
   }
 }

@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
+import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardStatementService;
 import com.clearspend.capital.service.CardStatementService.CardStatementRecord;
@@ -30,7 +31,7 @@ public class CardStatementController {
   ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request)
       throws IOException {
 
-    final var card = cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
+    final CardRepositoryCustom.CardDetailsRecord card = cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
     CardStatementRecord result = cardStatementService.generatePdf(request, card);
 
     HttpHeaders headers = new HttpHeaders();

@@ -14,6 +14,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.testutils.ThrowingBiConsumer;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
@@ -67,7 +68,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void getCardStatement_ValidateUserPermissions() {
-    final var request = getCardStatementRequest();
+    final RequestObjAndString request = getCardStatementRequest();
 
     final ThrowingBiConsumer<Cookie, ResultMatcher> doRequest =
         (cookie, statusMatcher) ->
@@ -79,50 +80,50 @@ public class CardStatementControllerTest extends BaseCapitalTest {
                 .andExpect(statusMatcher);
 
     testHelper.setCurrentUser(businessOwnerUser);
-    final var adminUser =
+    final UserService.CreateUpdateUserRecord adminUser =
         testHelper.createUserWithRole(
             createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN);
-    final var adminUserCookie = testHelper.login(adminUser.user());
+    final Cookie adminUserCookie = testHelper.login(adminUser.user());
     doRequest.accept(adminUserCookie, status().isOk());
 
     testHelper.setCurrentUser(businessOwnerUser);
-    final var managerUser =
+    final UserService.CreateUpdateUserRecord managerUser =
         testHelper.createUserWithRole(
             createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
-    final var managerUserCookie = testHelper.login(managerUser.user());
+    final Cookie managerUserCookie = testHelper.login(managerUser.user());
     doRequest.accept(managerUserCookie, status().isOk());
 
     testHelper.setCurrentUser(businessOwnerUser);
-    final var employeeUser =
+    final UserService.CreateUpdateUserRecord employeeUser =
         testHelper.createUserWithRole(
             createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
-    final var employeeUserCookie = testHelper.login(employeeUser.user());
+    final Cookie employeeUserCookie = testHelper.login(employeeUser.user());
     doRequest.accept(employeeUserCookie, status().isForbidden());
 
     testHelper.setCurrentUser(businessOwnerUser);
-    final var viewOnlyUser =
+    final UserService.CreateUpdateUserRecord viewOnlyUser =
         testHelper.createUserWithRole(
             createBusinessRecord.allocationRecord().allocation(),
             DefaultRoles.ALLOCATION_VIEW_ONLY);
-    final var viewOnlyCookie = testHelper.login(viewOnlyUser.user());
+    final Cookie viewOnlyCookie = testHelper.login(viewOnlyUser.user());
     doRequest.accept(viewOnlyCookie, status().isForbidden());
   }
 
   @SneakyThrows
   private RequestObjAndString getCardStatementRequest() {
-    final var cardStatementRequest = new CardStatementRequest();
+    final CardStatementRequest cardStatementRequest = new CardStatementRequest();
     cardStatementRequest.setCardId(card.getId());
     cardStatementRequest.setStartDate(OffsetDateTime.now().minusDays(1));
     cardStatementRequest.setEndDate(OffsetDateTime.now().plusDays(1));
 
-    final var body = objectMapper.writeValueAsString(cardStatementRequest);
+    final String body = objectMapper.writeValueAsString(cardStatementRequest);
     return new RequestObjAndString(cardStatementRequest, body);
   }
 
   @SneakyThrows
   @Test
   void getCardStatement_ByBusinessOwnerUser_ValidateResponse() {
-    final var request = getCardStatementRequest();
+    final RequestObjAndString request = getCardStatementRequest();
     MockHttpServletResponse response =
         mvc.perform(
                 post("/card-statement")
