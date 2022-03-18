@@ -52,10 +52,18 @@ public class GlobalControllerExceptionHandler {
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ExceptionHandler({DataIntegrityViolationException.class, InvalidStateException.class})
-  public @ResponseBody ControllerError handleDataIntegrityViolationException(
-      DataIntegrityViolationException exception) {
+  public @ResponseBody ControllerError handleDataIntegrityViolationException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
-    return new ControllerError(exception.getMostSpecificCause().getMessage());
+    Throwable root = getRootCause(exception);
+    return new ControllerError(root.getMessage());
+  }
+
+  private static Throwable getRootCause(Throwable exception) {
+    Throwable root = exception;
+    while (root.getCause() != null) {
+      root = root.getCause();
+    }
+    return root;
   }
 
   @ResponseStatus(HttpStatus.FORBIDDEN)

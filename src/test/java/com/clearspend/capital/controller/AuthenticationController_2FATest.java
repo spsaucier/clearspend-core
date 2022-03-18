@@ -3,23 +3,33 @@ package com.clearspend.capital.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorSendRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
+import com.clearspend.capital.controller.AuthenticationController.TwoFactorStartLoggedInResponse;
 import com.clearspend.capital.controller.security.TestFusionAuthClient;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
+import com.inversoft.error.Errors;
 import io.fusionauth.client.FusionAuthClient;
+import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -68,54 +78,90 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     // Confirm receipt of the code to enable 2FA
     final String twoFactorCodeForEnable = faClient.getTwoFactorCodeForEnable(userId);
 
-    String wrong2FCodeForEnable;
-    do { // it is unlikely this loop will execute more than once, but it's for good measure.
-      wrong2FCodeForEnable = RandomStringUtils.randomNumeric(6);
-    } while (wrong2FCodeForEnable.equals(twoFactorCodeForEnable));
+    String wrong2FCodeForEnable =
+        generateWrongCode(() -> RandomStringUtils.randomNumeric(6), Set.of(twoFactorCodeForEnable));
 
     response = enable2FA(userCookie, wrong2FCodeForEnable, userPhone);
     assertEquals(421, response.getStatus());
 
-    response = enable2FA(userCookie, twoFactorCodeForEnable, userPhone);
-    assertEquals(200, response.getStatus());
+    List<String> recoveryCodes =
+        validateResponse(
+                enable2FA(userCookie, twoFactorCodeForEnable, userPhone), TwoFactorResponse.class)
+            .recoveryCodes;
 
     // 2FA is enabled, now try logging in
     final String username = user.getEmail().getEncrypted();
     final String password = testHelper.getPassword(user);
 
     UserLoginResponse twoFactorAuthenticationStart = login(username, password);
+
     final String twoFactorId = twoFactorAuthenticationStart.getTwoFactorId();
-    final String twoFactorCode = faClient.getTwoFactorCodeForLogin(twoFactorId);
+    String twoFactorCodeForLogin = faClient.getTwoFactorCodeForLogin(twoFactorId);
     assertThat(twoFactorId).isNotNull();
-    assertThat(twoFactorCode).isNotNull();
+    assertThat(twoFactorCodeForLogin).isNotNull();
 
     // and confirm the 2F
-    String wrong2FCode;
-    do {
-      wrong2FCode = RandomStringUtils.randomNumeric(6);
-    } while (wrong2FCode.equals(twoFactorCode));
+    final String wrong2FCode =
+        generateWrongCode(() -> RandomStringUtils.randomNumeric(6), Set.of(twoFactorCodeForLogin));
 
-    String wrong2FId;
-    do {
-      wrong2FId = RandomStringUtils.randomAlphanumeric(13);
-    } while (wrong2FId.equals(twoFactorId));
+    final String wrong2FId =
+        generateWrongCode(() -> RandomStringUtils.randomAlphanumeric(13), Set.of(twoFactorId));
 
     // Try with a bad TwoFactorID and get a 404
-    MockHttpServletResponse loginCompleteResponse = complete2FALogin(wrong2FId, twoFactorCode);
+    MockHttpServletResponse loginCompleteResponse =
+        complete2FALogin(wrong2FId, twoFactorCodeForLogin);
     assertThat(loginCompleteResponse.getStatus()).isEqualTo(404);
 
     // Try with a bad code and get 421
     loginCompleteResponse = complete2FALogin(twoFactorId, wrong2FCode);
     assertThat(loginCompleteResponse.getStatus()).isEqualTo(421);
 
-    loginCompleteResponse = complete2FALogin(twoFactorId, twoFactorCode);
+    loginCompleteResponse = complete2FALogin(twoFactorId, twoFactorCodeForLogin);
+    assertThat(loginCompleteResponse.getStatus()).isEqualTo(200);
     Cookie authCookie = loginCompleteResponse.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
     assertNotNull(authCookie);
+
+    // Start to disable 2FA
+    @NotNull TwoFactorStartLoggedInResponse startResponse = start2FALoggedIn(authCookie);
+    final String twoFactorCodeForDisable =
+        faClient.getTwoFactorCodeForLogin(startResponse.twoFactorId());
+
+    // Try to disable with the wrong code
+    disable2FA(
+        userCookie,
+        generateWrongCode(
+            () -> RandomStringUtils.randomNumeric(6),
+            makeSet(twoFactorCodeForDisable, recoveryCodes)),
+        startResponse.methodId());
+
+    // Actually disable it
+    disable2FA(userCookie, twoFactorCodeForDisable, startResponse.methodId());
+
+    // Try to disable again
+    assertThrows(
+        FusionAuthException.class,
+        () -> disable2FA(userCookie, twoFactorCodeForDisable, startResponse.methodId()));
+
+    // log in again without 2FA
+    authCookie = testHelper.login(username, password);
+    assertThat(authCookie).isNotNull();
+  }
+
+  private Set<String> makeSet(String one, List<String> others) {
+    return Stream.concat(Stream.of(one), others.stream()).collect(Collectors.toSet());
+  }
+
+  @NotNull
+  private String generateWrongCode(Supplier<String> generator, Set<String> exclusionsSet) {
+    String wrong = generator.get();
+    while (exclusionsSet.contains(wrong)) {
+      wrong = generator.get();
+    }
+    return wrong;
   }
 
   private MockHttpServletResponse complete2FALogin(String twoFactorId, String twoFactorCode)
       throws Exception {
-    MockHttpServletResponse response;
     TwoFactorLoginRequest twoFactorLoginRequest = new TwoFactorLoginRequest();
     twoFactorLoginRequest.code = twoFactorCode;
     twoFactorLoginRequest.twoFactorId = twoFactorId;
@@ -135,12 +181,11 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     response =
         mvc.perform(post("/authentication/login").contentType("application/json").content(body))
-            .andExpect(status().is(200))
             .andReturn()
             .getResponse();
 
     log.info("response: {}", response);
-    return objectMapper.readValue(response.getContentAsString(), UserLoginResponse.class);
+    return validateResponse(response, UserLoginResponse.class);
   }
 
   @NotNull
@@ -162,6 +207,36 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
   }
 
   @NotNull
+  private TwoFactorStartLoggedInResponse start2FALoggedIn(Cookie userCookie) throws Exception {
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/authentication/two-factor/start")
+                    .contentType("application/json")
+                    .cookie(userCookie))
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response);
+    return validateResponse(response, TwoFactorStartLoggedInResponse.class);
+  }
+
+  private void disable2FA(Cookie userCookie, String code, String methodId) throws Exception {
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                delete("/authentication/two-factor")
+                    .contentType("application/json")
+                    .param("code", code)
+                    .param("methodId", methodId)
+                    .cookie(userCookie))
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response);
+    validateResponse(response, Void.class);
+  }
+
+  @NotNull
   private MockHttpServletResponse enable2FA(
       Cookie userCookie, String twoFactorCodeForEnable, String userPhone) throws Exception {
     MockHttpServletResponse response;
@@ -180,5 +255,22 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     log.info("response: {}", response);
     return response;
+  }
+
+  @SneakyThrows
+  private <T> T validateResponse(MockHttpServletResponse response, Class<T> clazz) {
+    if (response.getStatus() > 299) {
+      Errors errors = null;
+      try {
+        errors = objectMapper.readValue(response.getContentAsString(), Errors.class);
+      } catch (Exception e) {
+        // pass
+      }
+      throw new FusionAuthException(response.getStatus(), errors);
+    }
+    if (clazz.equals(Void.class) || clazz.equals(Void.TYPE)) {
+      return null;
+    }
+    return objectMapper.readValue(response.getContentAsString(), clazz);
   }
 }

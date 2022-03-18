@@ -29,6 +29,8 @@ import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordRequest;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
@@ -37,6 +39,7 @@ import io.fusionauth.domain.api.user.RegistrationResponse;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -103,7 +106,7 @@ public class FusionAuthService {
       String password) {
     return createUser(
         businessId,
-        new TypedId<UserId>(businessOwnerId.toUuid()),
+        new TypedId<>(businessOwnerId.toUuid()),
         username,
         password,
         UserType.BUSINESS_OWNER,
@@ -199,9 +202,7 @@ public class FusionAuthService {
       Optional<ChangePasswordReason> changePasswordReason) {
     User user = new User();
 
-    if (fusionAuthId != null) {
-      user.id = fusionAuthId;
-    }
+    user.id = fusionAuthId;
 
     email.ifPresent(s -> user.email = s);
     password.ifPresent(s -> user.password = s);
@@ -233,8 +234,8 @@ public class FusionAuthService {
   /**
    * "/api/two-factor/login"
    *
-   * @param request
-   * @return
+   * @param request with parameters including a code and twoFactorId
+   * @return the User if successful, several codes in the 400s for bad submissions
    */
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     final ClientResponse<LoginResponse, Errors> response = client.twoFactorLogin(request);
@@ -248,6 +249,11 @@ public class FusionAuthService {
     authenticator
   }
 
+  @RestrictedApi(
+      explanation = "Only for sending 2FA code for initializing 2FA",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {FusionAuthUserModifier.class})
   public void sendInitialTwoFactorCode(
       @NonNull UUID fusionAuthUserId,
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
@@ -266,6 +272,41 @@ public class FusionAuthService {
     validateResponse(client.sendTwoFactorCodeForEnableDisable(request));
   }
 
+  @RestrictedApi(
+      explanation = "Only for preparing 2FA cycle for disabling 2FA or changing password",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {FusionAuthUserModifier.class})
+  public TwoFactorStartResponse startTwoFactorLogin(
+      com.clearspend.capital.data.model.User user, Map<String, Object> state) {
+    TwoFactorStartRequest request = new TwoFactorStartRequest();
+    request.applicationId = getApplicationId();
+    request.loginId = user.getEmail().getEncrypted();
+    request.state = Optional.ofNullable(state).orElse(Collections.emptyMap());
+    return validateResponse(client.startTwoFactorLogin(request));
+  }
+
+  /**
+   * Preceded by {@link #startTwoFactorLogin(com.clearspend.capital.data.model.User, Map)}
+   *
+   * @param userId The FusionAuth User ID (clearspend User.getSubjectRef())
+   * @param methodId the method ID to disable (from the request initiating the flow)
+   * @param code the 2FA code
+   */
+  @RestrictedApi(
+      explanation = "Only for turning off 2FA",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {FusionAuthUserModifier.class})
+  public void disableTwoFactor(UUID userId, String methodId, String code) {
+    client.disableTwoFactor(userId, methodId, code);
+  }
+
+  @RestrictedApi(
+      explanation = "Only for starting 2FA cycle",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {FusionAuthUserModifier.class})
   public TwoFactorResponse validateFirstTwoFactorCode(
       @NonNull UUID fusionAuthUserId,
       @NonNull String code,
@@ -338,13 +379,11 @@ public class FusionAuthService {
     UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
 
     User user = userFactory(email, password, fusionAuthUserId);
-    if (email != null && password != null) {
 
-      final ClientResponse<UserResponse, Errors> response =
-          client.updateUser(fusionAuthUserId, new UserRequest(user));
+    final ClientResponse<UserResponse, Errors> response =
+        client.updateUser(fusionAuthUserId, new UserRequest(user));
 
-      validateResponse(response);
-    }
+    validateResponse(response);
 
     final ClientResponse<RegistrationResponse, Errors> response1 =
         client.updateRegistration(
@@ -422,9 +461,8 @@ public class FusionAuthService {
             request.getChangePasswordId(), new ChangePasswordRequest(request.getNewPassword()));
 
     switch (changePasswordResponse.status) {
-      case 200 -> {
-        twilioService.sendPasswordResetSuccessEmail(fusionAuthUser.successResponse.user.email, "");
-      }
+      case 200 -> twilioService.sendPasswordResetSuccessEmail(
+          fusionAuthUser.successResponse.user.email, "");
       case 404 -> throw new ForbiddenException();
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", changePasswordResponse.exception);
@@ -464,7 +502,7 @@ public class FusionAuthService {
     return client.login(request);
   }
 
-  public void sendTwoFactorCodeForLoginUsingMethod(String twoFactorId, String methodId) {
+  public void sendTwoFactorCodeUsingMethod(String twoFactorId, String methodId) {
     TwoFactorSendRequest request = new TwoFactorSendRequest(methodId);
     validateResponse(client.sendTwoFactorCodeForLoginUsingMethod(twoFactorId, request));
   }

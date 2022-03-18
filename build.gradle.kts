@@ -90,7 +90,7 @@ tasks {
         violationRules {
             rule {
                 limit {
-                    minimum = BigDecimal(0.68)
+                    minimum = BigDecimal(0.69)
                     // This number should ideally be around .8 or .9, but not
                     // higher because of diminishing returns for the effort.
                     // It is set lower now so that we canmore gracefully

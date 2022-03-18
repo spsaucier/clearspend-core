@@ -478,6 +478,7 @@ public class TestHelper {
             .getResponse();
 
     log.info("response: {}", response);
+
     defaultAuthCookie = response.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
     return defaultAuthCookie;
   }

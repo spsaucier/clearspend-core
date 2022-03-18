@@ -9,18 +9,28 @@ import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorRequest;
 import io.fusionauth.domain.api.TwoFactorResponse;
+import io.fusionauth.domain.api.UserResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -29,18 +39,31 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient {
 
-  private static final Random random = new Random(0);
-
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
 
   private record TwoFactorEnabled(
       TwoFactorRequest request, List<TwoFactorMethod> methods, List<String> recoveryCodes) {}
 
-  private record TwoFactorPending(UUID userId, LoginResponse success, String code) {}
+  private record TwoFactorPending(UUID userId, Map<String, Object> context, String code) {}
 
   private final Map<UUID, TwoFactorEnable> pendingEnable = new HashMap<>();
   private final Map<UUID, TwoFactorEnabled> twoFactorEnabled = new HashMap<>();
-  private final Map<String, TwoFactorPending> twoFactorPending = new HashMap<>();
+  private final Map<TwoFactorId, TwoFactorPending> twoFactorPending = new HashMap<>();
+
+  @Getter
+  @EqualsAndHashCode
+  private static class TwoFactorId {
+
+    private final String twoFactorId;
+
+    TwoFactorId() {
+      this.twoFactorId = RandomStringUtils.randomAscii(15);
+    }
+
+    TwoFactorId(String twoFactorId) {
+      this.twoFactorId = twoFactorId;
+    }
+  }
 
   public void reset() {
     pendingEnable.clear();
@@ -53,7 +76,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   }
 
   public String getTwoFactorCodeForLogin(String twoFactorId) {
-    return twoFactorPending.get(twoFactorId).code;
+    return twoFactorPending.get(new TwoFactorId(twoFactorId)).code;
   }
 
   private static String generateNextTwoFactorCode() {
@@ -67,43 +90,131 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   /**
    * "/api/two-factor/send"
    *
-   * @param request the request to get started
-   * @return nothing useful
+   * @param request instructions to send
+   * @return status 200, no content
    */
   @Override
   public ClientResponse<Void, Errors> sendTwoFactorCodeForEnableDisable(
       TwoFactorSendRequest request) {
     String code = generateNextTwoFactorCode();
+
     pendingEnable.put(request.userId, new TwoFactorEnable(request, code));
-    ClientResponse<Void, Errors> response = new ClientResponse<>();
-    response.status = 200;
+    return clientResponseFactory(200);
+  }
+
+  /**
+   * "/api/two-factor/start" see <a
+   * href="https://fusionauth.io/docs/v1/tech/apis/two-factor#start-multi-factor">Start Multi-Factor
+   * docs</a>
+   *
+   * @param request maybe the TenantId, loginId = email
+   * @return lots of info about the user's 2FA config
+   */
+  @Override
+  public ClientResponse<TwoFactorStartResponse, Errors> startTwoFactorLogin(
+      TwoFactorStartRequest request) {
+    @NonNull String loginId = request.loginId;
+
+    final ClientResponse<UserResponse, Errors> findUserResponse = retrieveUserByLoginId(loginId);
+    if (!findUserResponse.wasSuccessful()) {
+      return clientResponseFactory(404);
+    }
+    UUID userId = findUserResponse.successResponse.user.id;
+    Map<String, Object> state = request.state;
+
+    TwoFactorId twoFactorId = new TwoFactorId();
+    twoFactorPending.put(
+        twoFactorId, new TwoFactorPending(userId, state, generateNextTwoFactorCode()));
+
+    List<TwoFactorMethod> methods = twoFactorEnabled.get(userId).methods;
+    String code = RandomStringUtils.randomNumeric(6);
+    TwoFactorStartResponse response =
+        new TwoFactorStartResponse(code, methods, twoFactorId.getTwoFactorId());
+
+    return clientResponseFactory(200, response);
+  }
+
+  private static <T, U> ClientResponse<T, U> clientResponseFactory(int httpStatus) {
+    ClientResponse<T, U> response = new ClientResponse<>();
+    response.status = httpStatus;
     return response;
+  }
+
+  private static <T, U> ClientResponse<T, U> clientResponseFactory(
+      @Max(399) int httpStatus, T successResponse) {
+    ClientResponse<T, U> response = new ClientResponse<>();
+    response.status = httpStatus;
+    response.successResponse = successResponse;
+    return response;
+  }
+
+  private static <T, U> ClientResponse<T, U> clientResponseFactoryErr(
+      @Min(300) int httpStatus, U errorResponse) {
+    ClientResponse<T, U> response = new ClientResponse<>();
+    response.status = httpStatus;
+    response.errorResponse = errorResponse;
+    return response;
+  }
+
+  @Override
+  public ClientResponse<Void, Errors> disableTwoFactor(UUID userId, String methodId, String code) {
+    if (!retrieveUser(userId).wasSuccessful()) {
+      return clientResponseFactory(404);
+    }
+    // This is stupid slow, but it doesn't matter because it's not going to get prod traffic
+    Entry<TwoFactorId, TwoFactorPending> pendingAuth =
+        twoFactorPending.entrySet().stream()
+            .filter(p -> p.getValue().userId.equals(userId) && p.getValue().code.equals(code))
+            .findFirst()
+            .orElse(null);
+
+    boolean disableAll =
+        pendingAuth == null && twoFactorEnabled.get(userId).recoveryCodes.remove(code);
+
+    if (pendingAuth == null && !disableAll) {
+      return clientResponseFactory(421);
+    } else {
+      if (pendingAuth != null) {
+        twoFactorPending.remove(pendingAuth.getKey());
+      }
+      if (disableAll) {
+        twoFactorEnabled.remove(userId);
+      } else {
+        Iterator<TwoFactorMethod> methods = twoFactorEnabled.get(userId).methods.iterator();
+        while (methods.hasNext()) {
+          TwoFactorMethod m = methods.next();
+          if (m.id.equals(methodId)) {
+            methods.remove();
+            break;
+          }
+        }
+        if (twoFactorEnabled.get(userId).methods.isEmpty()) {
+          twoFactorEnabled.remove(userId);
+        }
+      }
+    }
+    return clientResponseFactory(200);
   }
 
   /**
    * "/api/user/two-factor"
    *
-   * @param userId
-   * @param request
-   * @return
+   * @param userId FusionAuth UUID for the user
+   * @param request some particulars
+   * @return about the same as what FusionAuth returns
    */
   @Override
   public ClientResponse<TwoFactorResponse, Errors> enableTwoFactor(
       UUID userId, TwoFactorRequest request) {
-    ClientResponse<TwoFactorResponse, Errors> response = new ClientResponse<>();
 
     if (!pendingEnable.containsKey(userId)) {
       if (!retrieveUser(userId).wasSuccessful()) {
-        response.status = 404;
-        return response;
+        return clientResponseFactory(404);
       }
-      response.status = 400;
-      response.errorResponse = new Errors();
-      response.errorResponse.fieldErrors.put(
-          "userId", List.of(new Error("NO2FA", "No pending 2FA request - this error is a stub")));
+      return clientResponseFactoryErr(
+          400, "userId", "NO2FA", "No pending 2FA request - this error is a stub");
       // Better detail in the response would be nice
       // better to wait sending it until all the errors have been identified
-      return response;
     } else {
       TwoFactorSendRequest enableRequest = pendingEnable.get(userId).request;
       String sentCode = pendingEnable.get(userId).code;
@@ -111,11 +222,9 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       assert enableRequest.method.equals(request.method);
 
       if (!request.code.equals(sentCode)) {
-        response.status = 421;
-        return response;
+        return clientResponseFactory(421);
       }
 
-      response.status = 200;
       TwoFactorMethod method = new TwoFactorMethod(request.method);
       method.id = RandomStringUtils.randomAlphanumeric(5);
       method.mobilePhone = enableRequest.mobilePhone;
@@ -133,9 +242,8 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       }
       twoFactorEnabled.get(userId).methods.add(method);
       pendingEnable.remove(userId);
-      response.successResponse = new TwoFactorResponse(twoFactorEnabled.get(userId).recoveryCodes);
-      response.status = 200;
-      return response;
+      return clientResponseFactory(
+          200, new TwoFactorResponse(twoFactorEnabled.get(userId).recoveryCodes));
     }
   }
 
@@ -156,17 +264,19 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
         && response.successResponse.user != null
         && twoFactorEnabled.containsKey(response.successResponse.user.id)) {
       TwoFactorEnabled twoFactorEnableRec = twoFactorEnabled.get(response.successResponse.user.id);
-      String twoFactorId = RandomStringUtils.randomAscii(45);
+      TwoFactorId twoFactorId = new TwoFactorId();
       twoFactorPending.put(
           twoFactorId,
-          new TwoFactorPending(response.successResponse.user.id, response.successResponse, null));
+          new TwoFactorPending(
+              response.successResponse.user.id,
+              Map.of("successResponse", response.successResponse),
+              null));
 
-      response = new ClientResponse<>();
-      response.successResponse = new LoginResponse();
-      response.successResponse.twoFactorId = twoFactorId;
-      response.successResponse.methods = twoFactorEnableRec.methods;
+      LoginResponse loginResponse = new LoginResponse();
+      loginResponse.twoFactorId = twoFactorId.getTwoFactorId();
+      loginResponse.methods = twoFactorEnableRec.methods;
 
-      response.status = 242;
+      response = clientResponseFactory(242, loginResponse);
     }
     return response;
   }
@@ -181,21 +291,45 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   @Override
   public ClientResponse<Void, Errors> sendTwoFactorCodeForLoginUsingMethod(
       String twoFactorId, TwoFactorSendRequest request) {
-    TwoFactorPending pending = twoFactorPending.get(twoFactorId);
+    TwoFactorId twoFactorId1 = new TwoFactorId(twoFactorId);
+    TwoFactorPending pending = twoFactorPending.get(twoFactorId1);
+    if (pending == null) {
+      return clientResponseFactoryErr(
+          400, "twoFactorId", "[invalid]twoFactorId", "The given twoFactorId was not found.");
+    }
     TwoFactorMethod method =
         twoFactorEnabled.get(pending.userId).methods.stream()
             .filter(fa -> fa.id.equals(request.methodId))
             .findFirst()
-            .orElseThrow();
+            .orElse(null);
+
+    if (method == null) {
+      // this is the actual message we got when sending "sms" instead of the code:
+      // {"message":"{\n  \"fieldErrors\" : {\n    \"methodId\" : [ {\n      \"code\" :
+      // \"[invalid]methodId\",\n      \"message\" : \"The [methodId] is not valid. No two-factor
+      // method with this Id was found enabled for the user.\"\n    } ]\n  },\n  \"generalErrors\" :
+      // [ ]\n}"}
+      return clientResponseFactoryErr(
+          400,
+          "methodId",
+          "[invalid]methodId",
+          "The [methodId] is not valid. No two-factor method with this Id was found enabled for the user.");
+    }
     String code = generateNextTwoFactorCode();
 
     twoFactorPending.put(
-        twoFactorId,
-        new TwoFactorPending(pending.userId, twoFactorPending.get(twoFactorId).success, code));
+        twoFactorId1,
+        new TwoFactorPending(pending.userId, twoFactorPending.get(twoFactorId1).context, code));
 
-    ClientResponse<Void, Errors> response = new ClientResponse<>();
-    response.status = 200;
-    return response;
+    return clientResponseFactory(200);
+  }
+
+  @NotNull
+  private <T> ClientResponse<T, Errors> clientResponseFactoryErr(
+      int httpStatus, String field, String code, String message) {
+    Errors errors = new Errors();
+    errors.fieldErrors.put(field, List.of(new Error(code, message)));
+    return clientResponseFactoryErr(httpStatus, errors);
   }
 
   /**
@@ -208,17 +342,17 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     ClientResponse<LoginResponse, Errors> response = new ClientResponse<>();
 
-    String twoFactorId = request.twoFactorId;
+    TwoFactorId twoFactorId = new TwoFactorId(request.twoFactorId);
     if (!twoFactorPending.containsKey(twoFactorId)) {
-      response.status = 404;
-      response.errorResponse = new Errors();
-      response.errorResponse.addFieldError(
-          "twoFactorId", "unknown", "Doesn't match an outstanding code");
-      return response;
+      return clientResponseFactoryErr(
+          404, "twoFactorId", "[invalid]twoFactorId", "Doesn't match an outstanding code");
     }
 
-    if (request.code.equals(twoFactorPending.get(twoFactorId).code)) {
-      response.successResponse = twoFactorPending.remove(twoFactorId).success;
+    final TwoFactorPending twoFactorPending = this.twoFactorPending.get(twoFactorId);
+    if (request.code.equals(twoFactorPending.code)
+        || twoFactorEnabled.get(twoFactorPending.userId).recoveryCodes.contains(request.code)) {
+      response.successResponse =
+          (LoginResponse) this.twoFactorPending.remove(twoFactorId).context.get("successResponse");
       response.status = 200;
     } else {
       response.status = 421;

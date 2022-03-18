@@ -187,58 +187,52 @@ public class RolesAndPermissionsService {
     // - Whenever allocation owner permissions are set (or owners changed), check for
     //     descendant allocations with permissions and update according to the above
     // - Permissions cannot be taken away lower in the tree
-    if (oldEffectivePermissions != null) {
-      // See where they got the existing role from
-      TypedId<AllocationId> foundRoleAllocationId = oldEffectivePermissions.allocationId();
+    // See where they got the existing role from
+    TypedId<AllocationId> foundRoleAllocationId = oldEffectivePermissions.allocationId();
 
-      List<TypedId<AllocationId>> allocationIds =
-          new ArrayList<>(allocation.getAncestorAllocationIds());
-      allocationIds.add(allocation.getId());
-      Collections.reverse(allocationIds); // sort leaf to root
-      // TODO see that this check is working its way up the tree,
+    List<TypedId<AllocationId>> allocationIds =
+        new ArrayList<>(allocation.getAncestorAllocationIds());
+    allocationIds.add(allocation.getId());
+    Collections.reverse(allocationIds); // sort leaf to root
+    // TODO see that this check is working its way up the tree,
 
-      // See if they own any of the allocations with the role
-      List<TypedId<AllocationId>> maybeOwnedAllocationIds =
-          allocationIds.subList(allocationIds.indexOf(foundRoleAllocationId), allocationIds.size());
-      Map<TypedId<AllocationId>, Allocation> ancestorAllocations =
-          allocationRepository.findAllById(maybeOwnedAllocationIds).stream()
-              .collect(Collectors.toMap(Allocation::getId, a -> a));
-      Optional<Allocation> ownedAllocationOptional =
-          maybeOwnedAllocationIds.stream()
-              .map(ancestorAllocations::get)
-              .filter(a -> a.getOwnerId().equals(grantee.getId()))
-              .findFirst();
+    // See if they own any of the allocations with the role
+    List<TypedId<AllocationId>> maybeOwnedAllocationIds =
+        allocationIds.subList(allocationIds.indexOf(foundRoleAllocationId), allocationIds.size());
+    Map<TypedId<AllocationId>, Allocation> ancestorAllocations =
+        allocationRepository.findAllById(maybeOwnedAllocationIds).stream()
+            .collect(Collectors.toMap(Allocation::getId, a -> a));
+    Optional<Allocation> ownedAllocationOptional =
+        maybeOwnedAllocationIds.stream()
+            .map(ancestorAllocations::get)
+            .filter(a -> a.getOwnerId().equals(grantee.getId()))
+            .findFirst();
 
-      boolean isAllocationOwner = ownedAllocationOptional.isPresent();
-      EnumSet<AllocationPermission> requiredPermissions =
-          EnumSet.noneOf(AllocationPermission.class);
-      if (isAllocationOwner) {
-        requiredPermissions.addAll(
-            userAllocationRoleRepository.getRolePermissions(
-                allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER));
-      }
-      if (allocation.getParentAllocationId() != null) {
-        requiredPermissions.addAll(
-            ensureNonNullPermissions(
-                    userAllocationRoleRepository.getUserPermissionAtAllocation(
-                        grantee.getBusinessId(),
-                        allocation.getParentAllocationId(),
-                        grantee.getId(),
-                        granteeGlobalRoles),
-                    allocation.getParentAllocationId())
-                .allocationPermissions());
-      }
-
-      // Enforce the minimum
-      if (!newPerms.containsAll(requiredPermissions)) {
-        throw new InvalidRequestException("Cannot reduce permissions");
-      }
+    boolean isAllocationOwner = ownedAllocationOptional.isPresent();
+    EnumSet<AllocationPermission> requiredPermissions = EnumSet.noneOf(AllocationPermission.class);
+    if (isAllocationOwner) {
+      requiredPermissions.addAll(
+          userAllocationRoleRepository.getRolePermissions(
+              allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER));
+    }
+    if (allocation.getParentAllocationId() != null) {
+      requiredPermissions.addAll(
+          ensureNonNullPermissions(
+                  userAllocationRoleRepository.getUserPermissionAtAllocation(
+                      grantee.getBusinessId(),
+                      allocation.getParentAllocationId(),
+                      grantee.getId(),
+                      granteeGlobalRoles),
+                  allocation.getParentAllocationId())
+              .allocationPermissions());
     }
 
-    EnumSet<AllocationPermission> oldPerms =
-        oldEffectivePermissions == null
-            ? EnumSet.noneOf(AllocationPermission.class)
-            : oldEffectivePermissions.allocationPermissions();
+    // Enforce the minimum
+    if (!newPerms.containsAll(requiredPermissions)) {
+      throw new InvalidRequestException("Cannot reduce permissions");
+    }
+
+    EnumSet<AllocationPermission> oldPerms = oldEffectivePermissions.allocationPermissions();
     EnumSet<AllocationPermission> unchangedPerms = EnumSet.copyOf(oldPerms);
     unchangedPerms.retainAll(newPerms);
     EnumSet<AllocationPermission> allPerms = EnumSet.copyOf(oldPerms);
@@ -428,10 +422,6 @@ public class RolesAndPermissionsService {
     }
   }
 
-  public Set<String> getGlobalRoles(@NonNull TypedId<UserId> userId) {
-    return getGlobalRoles(entityManager.getReference(User.class, userId));
-  }
-
   @FusionAuthUserAccessor(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
@@ -472,9 +462,8 @@ public class RolesAndPermissionsService {
                       .map(AllocationRolePermissions::getPermissions)
                       .findFirst()
                       .orElseThrow()));
-      if (existingRole == null
-          || (existingRole.allocationPermissions().isEmpty()
-              && existingRole.globalUserPermissions().isEmpty())) {
+      if (existingRole.allocationPermissions().isEmpty()
+          && existingRole.globalUserPermissions().isEmpty()) {
         createUserAllocationRole(user, allocation, defaultRole);
       } else {
         if (!existingRole.allocationPermissions().containsAll(minimumPermissions)) {

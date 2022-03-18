@@ -8,6 +8,7 @@ import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
@@ -24,10 +25,12 @@ import io.fusionauth.domain.TwoFactorMethod;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
+import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.text.ParseException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -40,10 +43,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -99,7 +104,7 @@ public class AuthenticationController {
     }
 
     if (loginResponse.status == 242) {
-      fusionAuthService.sendTwoFactorCodeForLoginUsingMethod(
+      fusionAuthService.sendTwoFactorCodeUsingMethod(
           loginResponse.successResponse.twoFactorId,
           loginResponse.successResponse.methods.stream()
               .filter(m -> m.method.equals(TwoFactorMethod.SMS))
@@ -203,6 +208,9 @@ public class AuthenticationController {
 
   record FirstTwoFactorSendRequest(String destination, TwoFactorAuthenticationMethod method) {}
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Modifying user from AuthenticationController")
   @PostMapping("/two-factor/first/send")
   void firstTwoFactorSend(
       @Validated @RequestBody FirstTwoFactorSendRequest firstTwoFactorSendRequest) {
@@ -215,6 +223,9 @@ public class AuthenticationController {
   record FirstTwoFactorValidateRequest(
       String code, TwoFactorAuthenticationMethod method, String destination) {}
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Modifying user from AuthenticationController")
   @PostMapping("/two-factor/first/validate")
   TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
@@ -223,6 +234,51 @@ public class AuthenticationController {
         firstTwoFactorValidateRequest.code,
         firstTwoFactorValidateRequest.method,
         firstTwoFactorValidateRequest.destination);
+  }
+
+  /**
+   * Some 2FA actions are done while the user is logged in. These have a twoFactorId and possibly a
+   * methodId which could be needed for follow-up with the code.
+   */
+  public record TwoFactorStartLoggedInResponse(String twoFactorId, String methodId) {}
+
+  /**
+   * This is for things requiring a very fresh code, such as disabling 2FA and changing password.
+   * This is not how a 2FA login begins - that begins the same as every other login.
+   *
+   * @return
+   */
+  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Starting to change the user")
+  @PostMapping("/two-factor/start")
+  TwoFactorStartLoggedInResponse sendCodeToBegin2FA() {
+    TwoFactorStartResponse initResponse =
+        fusionAuthService.startTwoFactorLogin(
+            userService.retrieveUser(CurrentUser.getUserId()), Collections.emptyMap());
+    final String methodId =
+        initResponse.methods.stream()
+            .filter(m -> m.method.equals(TwoFactorMethod.SMS))
+            .findFirst()
+            .map(m -> m.id)
+            .orElseThrow();
+    fusionAuthService.sendTwoFactorCodeUsingMethod(initResponse.twoFactorId, methodId);
+    return new TwoFactorStartLoggedInResponse(initResponse.twoFactorId, methodId);
+  }
+
+  /**
+   * Disable a user's 2FA config
+   *
+   * @param methodId the method to be disabled. If a recovery code is provided, this can be any
+   *     valid method Id, and all methods will be disabled.
+   * @param code the 2FA code
+   */
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Authentication Controller has responsibility for changing users")
+  @DeleteMapping("/two-factor")
+  void disable2FA(@RequestParam String methodId, @RequestParam String code) {
+    User user = userService.retrieveUser(CurrentUser.getUserId());
+
+    fusionAuthService.disableTwoFactor(UUID.fromString(user.getSubjectRef()), methodId, code);
   }
 
   @PostMapping("/logout")
