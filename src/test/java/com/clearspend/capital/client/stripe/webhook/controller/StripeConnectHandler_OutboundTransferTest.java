@@ -61,6 +61,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     createBusinessRecord = testHelper.createBusiness(1000L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
     business = createBusinessRecord.business();
     businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
 
@@ -135,6 +136,8 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     assertThat(stripeMockClient.countCreatedObjectsByType(OutboundPayment.class)).isOne();
 
     outboundTransfer.setAmount(amount.toAmount().toStripeAmount());
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     // when
     stripeConnectHandler.processOutboundTransferResult(outboundTransfer);

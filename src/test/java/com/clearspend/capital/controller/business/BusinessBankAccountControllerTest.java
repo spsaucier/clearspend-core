@@ -56,6 +56,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @BeforeEach
   void init() {
     createBusinessRecord = testHelper.createBusiness(1000L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
     businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     this.authCookie = createBusinessRecord.authCookie();
@@ -124,6 +125,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void transact_withoutFinancialAccount() {
     CreateBusinessRecord business = testHelper.createBusiness();
+    testHelper.setCurrentUser(business.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(business.business().getId());
 
@@ -150,6 +152,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void transact_withFinancialAccount() {
     CreateBusinessRecord business = testHelper.createBusiness();
+    testHelper.setCurrentUser(business.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(business.business().getId());
 
@@ -189,6 +192,8 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
                 .cookie(authCookie))
         .andExpect(status().isOk())
         .andReturn();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccount =
         businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
@@ -293,6 +298,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void unregisterBankAccount() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
 
@@ -305,6 +311,8 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
                 .cookie(authCookie))
         .andExpect(status().isOk())
         .andReturn();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     businessBankAccount =
         businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());

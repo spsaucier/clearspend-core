@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.BusinessRelated;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -26,7 +27,8 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId> {
+public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
+    implements BusinessRelated {
   // TODO CAP-219 persist the plaid Account ID (as plaidAccountRef)
 
   @NonNull

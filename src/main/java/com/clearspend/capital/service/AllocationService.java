@@ -202,7 +202,7 @@ public class AllocationService {
   // TODO: improve entity retrieval to make a single db call
   @PreAuthorize(
       "hasAllocationPermission(#allocationId, 'READ') or "
-          + "hasGlobalPermission(#business.id, 'GLOBAL_READ|CUSTOMER_SERVICE')")
+          + "hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
   public AllocationDetailsRecord getAllocation(
       Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
@@ -262,7 +262,7 @@ public class AllocationService {
 
   @PreAuthorize(
       "hasAllocationPermission(#allocationId, 'READ') or "
-          + "hasGlobalPermission(#business.id, 'CUSTOMER_SERVICE|GLOBAL_READ')")
+          + "hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> getAllocationChildren(
       Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId

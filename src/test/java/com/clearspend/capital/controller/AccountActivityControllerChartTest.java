@@ -47,6 +47,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @Test
   void getChartDataFilterTypeEmployee() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -180,6 +181,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @Test
   void getChartDataFilterTypeMerchant() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -243,6 +245,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   @Test
   void getChartDataFilterTypeMerchantCategory() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();

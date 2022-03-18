@@ -597,6 +597,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     // The next 2 lines will have to be updated if the default manager permissions change in the DB
     EnumSet<AllocationPermission> managerPermissions = EnumSet.allOf(AllocationPermission.class);
     managerPermissions.remove(AllocationPermission.MANAGE_USERS);
+    managerPermissions.remove(AllocationPermission.LINK_BANK_ACCOUNTS);
 
     assertEquals(managerPermissions, queriedPermissions.allocationPermissions());
     assertEquals(

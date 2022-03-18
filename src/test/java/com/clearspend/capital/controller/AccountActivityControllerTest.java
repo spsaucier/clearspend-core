@@ -72,6 +72,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getLatestAccountActivityPageData() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -145,6 +146,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredByTextAccountActivityPageData() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -239,6 +241,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredAccountActivityPageDataForVisibleAfterCase() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -291,6 +294,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredAccountActivityPageDataForHideAfterCase() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -357,6 +361,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredAccountActivityPageDataWithReceipt() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -455,6 +460,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredAccountActivityPageDataWithOutReceipt() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();
@@ -553,6 +559,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @Test
   void getFilteredAccountActivityPageDataForAmountMinMax() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();

@@ -214,6 +214,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void retrieveAllAccountActivityFilterByAllocationType() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
     Business business = createBusinessRecord.business();

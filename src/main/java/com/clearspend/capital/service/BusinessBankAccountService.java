@@ -62,6 +62,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +92,7 @@ public class BusinessBankAccountService {
   private long achReturnFee;
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public BusinessBankAccount createBusinessBankAccount(
       String routingNumber,
       String accountNumber,
@@ -115,20 +118,24 @@ public class BusinessBankAccountService {
     return businessBankAccountRepository.save(businessBankAccount);
   }
 
+  @PostAuthorize("hasRootPermission(returnObject, 'LINK_BANK_ACCOUNTS')")
   public BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
     return retrievalService.retrieveBusinessBankAccount(businessBankAccountId);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public String getLinkToken(TypedId<BusinessId> businessId) throws IOException {
     return plaidClient.createLinkToken(businessId);
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public List<BusinessBankAccount> linkBusinessBankAccounts(
       String linkToken, TypedId<BusinessId> businessId) throws IOException {
     // TODO: Check for already existing access token
-    // Will need some unique ID to look up in the database but can't use routing/account since that
+    // Will need some unique ID to look up in the database but can't use routing/account since
+    // that
     // is not in the plaid metadata
     String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
     PlaidClient.AccountsResponse accountsResponse =
@@ -230,8 +237,7 @@ public class BusinessBankAccountService {
                       businessId);
 
               businessBankAccountBalanceService.createBusinessBankAccountBalance(
-                  businessBankAccount.getId(),
-                  plaidAccountBalances.get(plaidAccount.getAccountId()));
+                  businessBankAccount, plaidAccountBalances.get(plaidAccount.getAccountId()));
 
               result.add(businessBankAccount);
             });
@@ -253,6 +259,7 @@ public class BusinessBankAccountService {
     return result;
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public List<BusinessBankAccount> getBusinessBankAccounts(
       TypedId<BusinessId> businessId, boolean stripeRegisteredOnly) {
     return businessBankAccountRepository.findByBusinessId(businessId).stream()
@@ -265,6 +272,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public AdjustmentAndHoldRecord processExternalAchTransfer(
       TypedId<BusinessId> businessId, Amount amount, boolean standardHold) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
@@ -300,6 +308,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public AdjustmentAndHoldRecord transactBankAccount(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
@@ -392,6 +401,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void processBankAccountWithdrawFailure(
       TypedId<BusinessId> businessId, Amount amount, List<DeclineReason> declineReasons) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
@@ -439,6 +449,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void processBankAccountDepositOutcome(
       TypedId<BusinessId> businessId,
       TypedId<AdjustmentId> adjustmentId,
@@ -456,7 +467,8 @@ public class BusinessBankAccountService {
 
       accountActivityService.recordHoldReleaseAccountActivity(hold);
 
-      // make sure the adjustment account activity becomes visible because hold related one is now
+      // make sure the adjustment account activity becomes visible because hold related one is
+      // now
       // hidden due to the recordHoldReleaseAccountActivity method invocation
       accountActivity.setVisibleAfter(OffsetDateTime.now(Clock.systemUTC()));
 
@@ -513,7 +525,7 @@ public class BusinessBankAccountService {
     try {
       @NonNull
       BusinessBankAccountBalance balance =
-          businessBankAccountBalanceService.getNewBalance(businessBankAccountId);
+          businessBankAccountBalanceService.getNewBalance(businessBankAccount);
       if (Stream.of(balance.getCurrent(), balance.getAvailable())
           .filter(Objects::nonNull)
           .filter(a -> a.getCurrency().equals(amount.getCurrency()))
@@ -538,6 +550,7 @@ public class BusinessBankAccountService {
    * requirement is to make sure that only one bank account may be configured in Stripe
    */
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void registerExternalBank(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,

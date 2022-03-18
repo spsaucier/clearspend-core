@@ -3,8 +3,10 @@ package com.clearspend.capital.data.model.business;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
+import com.clearspend.capital.data.model.BusinessRelated;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
@@ -35,7 +37,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Business extends TypedMutable<BusinessId> {
+public class Business extends TypedMutable<BusinessId> implements BusinessRelated {
 
   @NonNull private String legalName;
 
@@ -131,4 +133,9 @@ public class Business extends TypedMutable<BusinessId> {
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;
+
+  @Override
+  public TypedId<BusinessId> getBusinessId() {
+    return getId();
+  }
 }

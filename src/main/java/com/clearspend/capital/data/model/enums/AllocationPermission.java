@@ -10,5 +10,6 @@ public enum AllocationPermission {
   MANAGE_USERS,
   MANAGE_PERMISSIONS,
   MANAGE_CONNECTIONS,
-  VIEW_OWN
+  VIEW_OWN,
+  LINK_BANK_ACCOUNTS
 }
