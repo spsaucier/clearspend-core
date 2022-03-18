@@ -45,6 +45,18 @@ public class AccountActivityRequest {
   @JsonProperty("statuses")
   private List<AccountActivityStatus> statuses;
 
+  @JsonProperty("amount")
+  private FilterAmount filterAmount;
+
+  @JsonProperty("categories")
+  private List<String> categories;
+
+  @JsonProperty("withReceipt")
+  private Boolean withReceipt;
+
+  @JsonProperty("withoutReceipt")
+  private Boolean withoutReceipt;
+
   @NonNull
   @NotNull(message = "Page request is mandatory")
   @JsonProperty("pageRequest")

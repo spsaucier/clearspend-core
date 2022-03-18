@@ -5,6 +5,7 @@ import com.clearspend.capital.client.stripe.types.Account;
 import com.clearspend.capital.client.stripe.types.Capabilities;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.review.StripeAccountDisabledReason;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
@@ -75,7 +76,10 @@ public abstract class BusinessKycStep {
   private Boolean noOtherCheckRequiredForKYCStep(Requirements requirements) {
     boolean disabled =
         requirements.getDisabledReason() != null
-            && requirements.getDisabledReason().startsWith(REQUIREMENTS);
+            && (requirements.getDisabledReason().startsWith(REQUIREMENTS)
+                || requirements
+                    .getDisabledReason()
+                    .startsWith(StripeAccountDisabledReason.LISTED.getCodeName()));
     boolean pastDue =
         CollectionUtils.isEmpty(requirements.getPastDue())
             || (EXTERNAL_ACCOUNT_CODE_REQUIREMENT.equals(requirements.getPastDue().get(0))

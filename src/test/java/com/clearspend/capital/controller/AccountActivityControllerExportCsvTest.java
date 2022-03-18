@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.NetworkMessageService;
 import java.time.OffsetDateTime;
+import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
   private final TestHelper testHelper;
 
   private final NetworkMessageService networkMessageService;
+  private final EntityManager entityManager;
 
   @SneakyThrows
   @Test
@@ -69,6 +71,7 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    entityManager.flush();
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));

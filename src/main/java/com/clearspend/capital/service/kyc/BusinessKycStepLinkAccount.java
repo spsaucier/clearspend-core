@@ -22,30 +22,28 @@ public class BusinessKycStepLinkAccount extends BusinessKycStep {
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
 
-    if (Boolean.FALSE.equals(applicationRequireAdditionalCheck(account, requirements))) {
-      return business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT);
-    }
-
-    return false;
+    return Boolean.FALSE.equals(applicationRequireAdditionalCheck(account, requirements));
   }
 
   @Override
   public List<String> execute(Requirements requirements, Business business, Account account) {
 
-    updateBusiness(
-        business.getId(), null, BusinessOnboardingStep.LINK_ACCOUNT, KnowYourBusinessStatus.PASS);
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByBusinessIdAndEmailHash(
-                business.getId(),
-                HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-            .orElse(
-                businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                    .findAny()
-                    .orElseThrow());
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT)) {
+      updateBusiness(
+          business.getId(), null, BusinessOnboardingStep.LINK_ACCOUNT, KnowYourBusinessStatus.PASS);
+      BusinessOwner businessOwner =
+          businessOwnerRepository
+              .findByBusinessIdAndEmailHash(
+                  business.getId(),
+                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
+              .orElse(
+                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
+                      .findAny()
+                      .orElseThrow());
 
-    twilioService.sendKybKycPassEmail(
-        business.getBusinessEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
+      twilioService.sendKybKycPassEmail(
+          business.getBusinessEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
+    }
 
     return extractErrorMessages(requirements);
   }

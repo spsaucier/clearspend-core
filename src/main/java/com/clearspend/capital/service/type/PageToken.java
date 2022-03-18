@@ -26,4 +26,8 @@ public class PageToken {
 
     private Sort.Direction direction;
   }
+
+  public Integer getFirstResult() {
+    return pageNumber * pageSize;
+  }
 }

@@ -23,7 +23,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
@@ -51,6 +50,7 @@ public class AccountActivityController {
         accountActivityService.find(
             CurrentUser.get().businessId(),
             new AccountActivityFilterCriteria(
+                CurrentUser.get().businessId(),
                 request.getAllocationId(),
                 request.getUserId(),
                 request.getCardId(),
@@ -59,6 +59,11 @@ public class AccountActivityController {
                 request.getFrom(),
                 request.getTo(),
                 request.getStatuses(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
+                request.getCategories(),
+                request.getWithReceipt(),
+                request.getWithoutReceipt(),
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, AccountActivityResponse::new);
@@ -92,14 +97,14 @@ public class AccountActivityController {
                 request.getTo()));
 
     BigDecimal averageSpend =
-        dashboardData.getGraphData().size() > 0
+        !dashboardData.getGraphData().isEmpty()
             ? dashboardData
                 .getTotalAmount()
                 .divide(new BigDecimal(dashboardData.getGraphData().size()), 2, RoundingMode.DOWN)
             : BigDecimal.ZERO;
 
     List<GraphData> graphDataList =
-        dashboardData.getGraphData().size() > 0
+        !dashboardData.getGraphData().isEmpty()
             ? dashboardData.getGraphData().stream()
                 .map(
                     graphData ->
@@ -108,7 +113,7 @@ public class AccountActivityController {
                             graphData.getEndDate(),
                             graphData.getAmount(),
                             graphData.getCount()))
-                .collect(Collectors.toList())
+                .toList()
             : Collections.emptyList();
 
     return new DashboardGraphData(dashboardData.getTotalAmount(), averageSpend, graphDataList);
@@ -131,6 +136,7 @@ public class AccountActivityController {
     byte[] csvFile =
         accountActivityService.createCSVFile(
             new AccountActivityFilterCriteria(
+                CurrentUser.get().businessId(),
                 request.getAllocationId(),
                 request.getUserId(),
                 request.getCardId(),
@@ -139,6 +145,11 @@ public class AccountActivityController {
                 request.getFrom(),
                 request.getTo(),
                 request.getStatuses(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
+                request.getCategories(),
+                request.getWithReceipt(),
+                request.getWithoutReceipt(),
                 PageRequest.toPageToken(request.getPageRequest())));
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transactions.csv");

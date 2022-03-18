@@ -24,6 +24,8 @@ public class JDBCUtils {
 
   static final UUID NULL_UUID = new UUID(0L, 0L);
 
+  public record CountObjectForSqlQuery(Boolean count) {}
+
   /**
    * Run a query in the current context.
    *

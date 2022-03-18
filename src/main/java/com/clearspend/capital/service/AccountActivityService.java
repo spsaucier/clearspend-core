@@ -18,7 +18,6 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
-import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.embedded.CardDetails;
@@ -274,7 +273,7 @@ public class AccountActivityService {
       AccountActivity accountActivity, String notes, Optional<Integer> iconRef) {
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
-    ExpenseCategory expenseCategory;
+    // FIXME
     if (iconRef != null) {
       accountActivity.setExpenseDetails(
           iconRef
@@ -297,6 +296,15 @@ public class AccountActivityService {
       AccountActivityIntegrationSyncStatus status) {
     AccountActivity accountActivity = retrieveAccountActivity(businessId, accountActivityId);
     accountActivity.setIntegrationSyncStatus(status);
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  public AccountActivity updateAccountActivityStatus(
+      TypedId<BusinessId> businessId,
+      TypedId<AccountActivityId> accountActivityId,
+      AccountActivityStatus status) {
+    AccountActivity accountActivity = retrieveAccountActivity(businessId, accountActivityId);
+    accountActivity.setStatus(status);
     return accountActivityRepository.save(accountActivity);
   }
 

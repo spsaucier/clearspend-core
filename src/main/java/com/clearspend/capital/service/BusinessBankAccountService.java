@@ -410,7 +410,9 @@ public class BusinessBankAccountService {
                 new PageToken(0, 1, Collections.emptyList())));
 
     if (!accountActivities.getContent().isEmpty()) {
-      accountActivities.getContent().get(0).setStatus(AccountActivityStatus.DECLINED);
+      AccountActivity accountActivity = accountActivities.getContent().get(0);
+      accountActivityService.updateAccountActivityStatus(
+          businessId, accountActivity.getId(), AccountActivityStatus.DECLINED);
     } else {
       log.error(
           "Failed to find a corresponding account activity for the bank withdraw operation for business: %s and amount %s"

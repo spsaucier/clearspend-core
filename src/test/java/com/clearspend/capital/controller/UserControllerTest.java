@@ -12,12 +12,15 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
+import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
@@ -54,6 +57,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -646,9 +650,293 @@ class UserControllerTest extends BaseCapitalTest {
     log.info(response.getContentAsString());
   }
 
-  void getAccountActivity() {}
+  @SneakyThrows
+  @Test
+  void getAccountActivity() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
 
-  void updateAccountActivity() {}
+    Cookie authCookie = testHelper.login(userRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CardRecord cardRecord =
+        cardService.issueCard(
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userRecord.user().getId(),
+            Currency.USD,
+            true,
+            createBusinessRecord.business().getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            createBusinessRecord.business().getClearAddress().toAddress());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    TypedId<AccountActivityId> id =
+        networkCommonAuthorization.networkCommon().getAccountActivity().getId();
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(String.format("/users/account-activity/%s", id))
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        id,
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getAccountActivityId());
+  }
+
+  @SneakyThrows
+  @Test
+  void updateAccountActivity() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
+
+    Cookie authCookie = testHelper.login(userRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CardRecord cardRecord =
+        cardService.issueCard(
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userRecord.user().getId(),
+            Currency.USD,
+            true,
+            createBusinessRecord.business().getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            createBusinessRecord.business().getClearAddress().toAddress());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    TypedId<AccountActivityId> id =
+        networkCommonAuthorization.networkCommon().getAccountActivity().getId();
+
+    UpdateAccountActivityRequest updateAccountActivityRequest =
+        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                patch(String.format("/users/account-activity/%s", id))
+                    .content(objectMapper.writeValueAsString(updateAccountActivityRequest))
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        "notesTest",
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getNotes());
+    Assertions.assertEquals(
+        3,
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getExpenseDetails()
+            .getIconRef());
+  }
+
+  @SneakyThrows
+  @Test
+  void updateAccountActivity_IconRefOptionalEmptyCase() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
+
+    Cookie authCookie = testHelper.login(userRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CardRecord cardRecord =
+        cardService.issueCard(
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userRecord.user().getId(),
+            Currency.USD,
+            true,
+            createBusinessRecord.business().getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            createBusinessRecord.business().getClearAddress().toAddress());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    TypedId<AccountActivityId> id =
+        networkCommonAuthorization.networkCommon().getAccountActivity().getId();
+
+    UpdateAccountActivityRequest updateAccountActivityRequest =
+        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                patch(String.format("/users/account-activity/%s", id))
+                    .content(objectMapper.writeValueAsString(updateAccountActivityRequest))
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        "notesTest",
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getNotes());
+    Assertions.assertEquals(
+        3,
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getExpenseDetails()
+            .getIconRef());
+
+    // For case when iconRef will be Optional.empty the values should be deleted
+    updateAccountActivityRequest = new UpdateAccountActivityRequest("notesTest", Optional.empty());
+
+    response =
+        mvc.perform(
+                patch(String.format("/users/account-activity/%s", id))
+                    .content(objectMapper.writeValueAsString(updateAccountActivityRequest))
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        "notesTest",
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getNotes());
+    Assertions.assertNull(
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getExpenseDetails());
+  }
+
+  @SneakyThrows
+  @Test
+  void updateAccountActivity_IconRefNullCase() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(100L);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
+
+    Cookie authCookie = testHelper.login(userRecord.user());
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    CardRecord cardRecord =
+        cardService.issueCard(
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            userRecord.user().getId(),
+            Currency.USD,
+            true,
+            createBusinessRecord.business().getLegalName(),
+            Map.of(Currency.USD, new HashMap<>()),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            createBusinessRecord.business().getClearAddress().toAddress());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
+    NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(
+            userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
+    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
+    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    TypedId<AccountActivityId> id =
+        networkCommonAuthorization.networkCommon().getAccountActivity().getId();
+
+    UpdateAccountActivityRequest updateAccountActivityRequest =
+        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                patch(String.format("/users/account-activity/%s", id))
+                    .content(objectMapper.writeValueAsString(updateAccountActivityRequest))
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        "notesTest",
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getNotes());
+    Assertions.assertEquals(
+        3,
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getExpenseDetails()
+            .getIconRef());
+
+    // For case when iconRef will be null the expense category values should be deleted
+    response =
+        mvc.perform(
+                patch(String.format("/users/account-activity/%s", id))
+                    .content("{\"notes\":\"notesTest\"}")
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Assertions.assertEquals(
+        "notesTest",
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getNotes());
+    Assertions.assertNull(
+        objectMapper
+            .readValue(response.getContentAsString(), AccountActivityResponse.class)
+            .getExpenseDetails());
+  }
 
   void linkReceipt() {}
 

@@ -120,6 +120,7 @@ tasks {
 dependencies {
     val testContainersVersion = "1.16.3"
     val blazePersistenceVersion = "1.6.6"
+    val jmustacheVersion = "1.15"
 
 //annotation processor and dependencies
     annotationProcessor("org.projectlombok:lombok")
@@ -155,6 +156,7 @@ dependencies {
     implementation("com.blazebit:blaze-persistence-core-api:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-integration-hibernate-5.6:$blazePersistenceVersion")
+    implementation("com.samskivert:jmustache:$jmustacheVersion")
 
 //client libs
     implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java

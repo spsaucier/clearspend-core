@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import javax.persistence.EntityManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -55,6 +56,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired TestHelper testHelper;
   @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired ExpenseCategoryService expenseCategoryService;
+  @Autowired EntityManager entityManager;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -184,12 +186,27 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
+    entityManager.flush();
 
     Page<AccountActivity> accountActivity =
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
-                null, null, null, null, null, null, null, null, new PageToken(0, 10, null)));
+                business.getId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new PageToken(0, 10, null)));
 
     assertThat(accountActivity).hasSize(3);
   }
@@ -228,15 +245,22 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
+    entityManager.flush();
 
     Page<AccountActivity> withdrawalFilteredAccountActivity =
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
+                business.getId(),
                 null,
                 null,
                 null,
                 List.of(AccountActivityType.REALLOCATE),
+                null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -249,10 +273,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityRepository.find(
             business.getId(),
             new AccountActivityFilterCriteria(
+                business.getId(),
                 null,
                 null,
                 null,
                 List.of(AccountActivityType.BANK_DEPOSIT),
+                null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -280,7 +310,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
 
-    accountActivityRepository.save(approvedAccountActivity);
+    accountActivityRepository.saveAndFlush(approvedAccountActivity);
 
     Page<AccountActivity> depositFilteredAccountActivity =
         accountActivityRepository.find(
@@ -293,7 +323,13 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 null,
+                null,
                 List.of(AccountActivityStatus.APPROVED),
+                null,
+                null,
+                null,
+                null,
+                null,
                 new PageToken(0, 10, null)));
 
     assertThat(depositFilteredAccountActivity).hasSize(1);
@@ -302,6 +338,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityRepository.find(
             businessRecord.business().getId(),
             new AccountActivityFilterCriteria(
+                businessRecord.business().getId(),
                 null,
                 null,
                 null,
@@ -310,6 +347,11 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 null,
                 null,
                 List.of(AccountActivityStatus.CANCELED),
+                null,
+                null,
+                null,
+                null,
+                null,
                 new PageToken(0, 10, null)));
 
     assertThat(canceledFilteredAccountActivity).hasSize(0);
