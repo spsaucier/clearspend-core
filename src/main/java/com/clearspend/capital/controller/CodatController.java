@@ -78,19 +78,18 @@ public class CodatController {
   }
 
   @GetMapping("/chart-of-accounts")
-  private CodatAccountNestedResponse getChartOfAccountsForBusiness() {
+  CodatAccountNestedResponse getChartOfAccountsForBusiness() {
     return codatService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId());
   }
 
   @GetMapping("/chart-of-accounts/expense")
-  private CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
+  CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
     return codatService.getChartOfAccountsForBusiness(
         CurrentUser.getBusinessId(), CodatAccountType.EXPENSE);
   }
 
   @PostMapping("/sync-log")
-  private PagedData<SyncLogResponse> retreiveSyncLogByPage(
-      @Validated @RequestBody SyncLogRequest request) {
+  PagedData<SyncLogResponse> retreiveSyncLogByPage(@Validated @RequestBody SyncLogRequest request) {
     Page<TransactionSyncLog> transactionSyncLogs =
         transactionSyncLogRepository.find(
             CurrentUser.get().businessId(),

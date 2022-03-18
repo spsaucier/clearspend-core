@@ -159,6 +159,11 @@ logging:
   level:
     root: INFO
     com.clearspend.capital: DEBUG
+  execution-time:
+    enabled: ${CAPITAL_LOGGING_EXECUTION_TIME_ENABLED:true}
+    level: ${CAPITAL_LOGGING_EXECUTION_TIME_LEVEL:WARN}       # logging level
+    mode: ${CAPITAL_LOGGING_EXECUTION_TIME_MODE:all}          # all - all spring methods/annotation - annotated methods only
+    threshold: ${CAPITAL_LOGGING_EXECUTION_TIME_THRESHOLD:300}  # if execution time exceeds threshold - execution will be logged
 
 management:
   metrics:

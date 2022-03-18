@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.common.advice.LogExecutionTime;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -73,6 +74,7 @@ public class AuthenticationController {
       reviewer = "jscarbor",
       explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
+  @LogExecutionTime
   ResponseEntity<UserLoginResponse> login(@Validated @RequestBody LoginRequest request)
       throws ParseException, FusionAuthException {
     ClientResponse<LoginResponse, Errors> loginResponse;
