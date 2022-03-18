@@ -236,7 +236,7 @@ public class StripeConnectHandler {
           "Skipping received credit event for an ach transfer for business since it is not found in the db by stripe financial account {}",
           receivedCredit.getFinancialAccount());
     } catch (Exception e) {
-      log.error("Failed to create outbound payment", e);
+      log.error("Failed to process credit event for an ach transfer", e);
     }
   }
 

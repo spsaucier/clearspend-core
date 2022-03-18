@@ -16,7 +16,7 @@ public class ReceivedCredit {
   public String object;
 
   @SerializedName("amount")
-  public Integer amount;
+  public Long amount;
 
   @SerializedName("created")
   public Integer created;

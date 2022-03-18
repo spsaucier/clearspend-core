@@ -99,10 +99,13 @@ public class AccountService {
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
       Amount amount,
-      boolean standardHold) {
+      boolean standardHold,
+      boolean withinLimits) {
     amount.ensureNonNegative();
 
-    businessLimitService.ensureWithinDepositLimit(businessId, amount);
+    if (withinLimits) {
+      businessLimitService.ensureWithinDepositLimit(businessId, amount);
+    }
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));

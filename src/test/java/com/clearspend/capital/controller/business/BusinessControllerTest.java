@@ -116,7 +116,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
         createBusinessRecord.business().getId(),
         createBusinessRecord.allocationRecord().account(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
+        false,
+        true);
 
     // move $100 from root allocation (balance $1000) to newly created allocation (balance $0)
     BusinessReallocationRequest request =
@@ -211,6 +212,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
         businessRecord.business().getId(),
         allocationService.getRootAllocation(businessRecord.business().getId()).account(),
         Amount.of(Currency.USD, new BigDecimal(200)),
+        true,
         true);
 
     MockHttpServletResponse response =
@@ -344,6 +346,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
         business.getId(),
         allocationService.getRootAllocation(business.getId()).account(),
         Amount.of(Currency.USD, new BigDecimal(200)),
+        true,
         true);
     MockHttpServletResponse response =
         mvc.perform(get("/businesses/accounts").contentType("application/json").cookie(authCookie))

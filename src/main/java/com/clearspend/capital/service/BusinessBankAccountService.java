@@ -276,7 +276,8 @@ public class BusinessBankAccountService {
     AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
 
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
-        accountService.depositFunds(businessId, allocationRecord.account(), amount, standardHold);
+        accountService.depositFunds(
+            businessId, allocationRecord.account(), amount, standardHold, false);
 
     accountActivityService.recordBankAccountAccountActivity(
         allocationRecord.allocation(),
@@ -324,7 +325,7 @@ public class BusinessBankAccountService {
           case DEPOSIT -> {
             checkBalance(amount, businessBankAccount);
             yield accountService.depositFunds(
-                businessId, allocationRecord.account(), amount, standardHold);
+                businessId, allocationRecord.account(), amount, standardHold, true);
           }
           case WITHDRAW -> accountService.withdrawFunds(
               businessId, allocationRecord.account(), amount);
@@ -417,7 +418,8 @@ public class BusinessBankAccountService {
     }
 
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
-        accountService.depositFunds(businessId, rootAllocation.account(), amount, false);
+        accountService.depositFunds(businessId, rootAllocation.account(), amount, false, false);
+
     accountActivityService.recordBankAccountAccountActivity(
         rootAllocation.allocation(),
         AccountActivityType.BANK_WITHDRAWAL_RETURN,

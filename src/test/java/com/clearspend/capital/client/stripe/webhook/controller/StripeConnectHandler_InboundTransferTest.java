@@ -15,6 +15,7 @@ import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
@@ -27,6 +28,7 @@ import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
+import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.BusinessService;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -53,6 +55,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   private final StripeMockClient stripeMockClient;
   private final HoldRepository holdRepository;
   private final AccountActivityRepository accountActivityRepository;
+  private final AccountService accountService;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -178,7 +181,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   public void externalAch_creditsReceived() {
     ReceivedCredit receivedCredit = new ReceivedCredit();
     receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
-    receivedCredit.setAmount(100);
+    receivedCredit.setAmount(100L);
     receivedCredit.setCurrency("usd");
 
     stripeConnectHandler.onAchCreditsReceived(receivedCredit);
@@ -209,5 +212,25 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     assertThat(holdAccountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
     assertThat(adjustmentAccountActivity.getVisibleAfter())
         .isBefore(OffsetDateTime.now(Clock.systemUTC()));
+  }
+
+  @Test
+  public void externalAch_businessLimitsShouldNotBeApplied() {
+    long tonsOfMoney = 1_000_000_000;
+    ReceivedCredit receivedCredit = new ReceivedCredit();
+    receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
+    receivedCredit.setAmount(tonsOfMoney * 100);
+    receivedCredit.setCurrency("usd");
+
+    for (int i = 0; i < 30; i++) {
+      stripeConnectHandler.onAchCreditsReceived(receivedCredit);
+    }
+
+    Account account =
+        accountService.retrieveAccountById(
+            createBusinessRecord.allocationRecord().account().getId(), true);
+
+    assertThat(account.getAvailableBalance().getAmount())
+        .isEqualByComparingTo(new BigDecimal(30 * tonsOfMoney));
   }
 }
