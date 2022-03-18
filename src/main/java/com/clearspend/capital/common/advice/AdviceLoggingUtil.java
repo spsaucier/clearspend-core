@@ -1,5 +1,6 @@
 package com.clearspend.capital.common.advice;
 
+import com.clearspend.capital.common.masking.MaskAnnotationIntrospector;
 import com.clearspend.capital.common.typedid.codec.TypedIdModule;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -38,9 +39,8 @@ public class AdviceLoggingUtil {
           .configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false)
           .configure(JsonGenerator.Feature.IGNORE_UNKNOWN, true)
           .configure(JsonParser.Feature.IGNORE_UNDEFINED, true)
-          .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-
-  private static final Map<String, Boolean> noisyEndpoints = Map.of();
+          .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+          .setAnnotationIntrospector(new MaskAnnotationIntrospector());
 
   void logRequestResponse(
       String prefix,
@@ -48,10 +48,6 @@ public class AdviceLoggingUtil {
       Object requestBody,
       HttpServletResponse httpServletResponse,
       Object responseBody) {
-
-    if (noisyEndpoints.containsKey(httpServletRequest.getRequestURI())) {
-      return;
-    }
 
     StringBuilder stringBuilder =
         new StringBuilder(prefix)

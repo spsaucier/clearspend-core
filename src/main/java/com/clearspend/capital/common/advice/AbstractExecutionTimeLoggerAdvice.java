@@ -1,6 +1,5 @@
 package com.clearspend.capital.common.advice;
 
-import com.clearspend.capital.configuration.LoggingExecutionTimeProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;

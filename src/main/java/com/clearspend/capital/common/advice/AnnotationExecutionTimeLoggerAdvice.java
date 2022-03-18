@@ -1,6 +1,5 @@
 package com.clearspend.capital.common.advice;
 
-import com.clearspend.capital.configuration.LoggingExecutionTimeProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

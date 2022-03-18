@@ -1,4 +1,4 @@
-package com.clearspend.capital.configuration;
+package com.clearspend.capital.common.advice;
 
 import lombok.Getter;
 import lombok.Setter;
