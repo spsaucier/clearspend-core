@@ -1,7 +1,5 @@
 package com.clearspend.capital.service;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -11,12 +9,16 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.testutils.permission.PermissionValidationRole;
+import com.clearspend.capital.testutils.permission.PermissionValidator;
+import com.clearspend.capital.testutils.permission.RootAllocationRole;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import lombok.SneakyThrows;
-import org.assertj.core.api.ThrowingConsumer;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +29,10 @@ public class CardStatementServiceTest extends BaseCapitalTest {
   @Autowired private CardStatementService cardStatementService;
   @Autowired private CardService cardService;
   @Autowired private StatementHelper statementHelper;
+  @Autowired private PermissionValidationHelper permissionValidationHelper;
   private Card card;
   private TestHelper.CreateBusinessRecord createBusinessRecord;
+  private PermissionValidator permissionValidator;
 
   private CardStatementRequest getRequest(final TypedId<CardId> id) {
     final CardStatementRequest request = new CardStatementRequest();
@@ -52,6 +56,7 @@ public class CardStatementServiceTest extends BaseCapitalTest {
             CardType.PHYSICAL,
             true);
     statementHelper.setupStatementData(createBusinessRecord, card);
+    permissionValidator = permissionValidationHelper.validator(createBusinessRecord);
   }
 
   @Test
@@ -62,22 +67,11 @@ public class CardStatementServiceTest extends BaseCapitalTest {
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
 
-    final ThrowingConsumer<String> doGenerate =
-        (role) -> {
-          testHelper.setCurrentUser(createBusinessRecord.user());
-          final UserService.CreateUpdateUserRecord user =
-              testHelper.createUserWithRole(
-                  createBusinessRecord.allocationRecord().allocation(), role);
-          testHelper.setCurrentUser(user.user());
-          cardStatementService.generatePdf(request, cardDetails);
-        };
+    final Map<PermissionValidationRole, Class<? extends Exception>> failingRoles =
+        Map.of(RootAllocationRole.ALLOCATION_EMPLOYEE, AccessDeniedException.class);
 
-    // If no exception thrown, permissions are good
-    doGenerate.accept(DefaultRoles.ALLOCATION_ADMIN);
-    doGenerate.accept(DefaultRoles.ALLOCATION_MANAGER);
-    assertThrows(
-        AccessDeniedException.class, () -> doGenerate.accept(DefaultRoles.ALLOCATION_EMPLOYEE));
-    doGenerate.accept(DefaultRoles.ALLOCATION_VIEW_ONLY);
+    final ThrowingRunnable action = () -> cardStatementService.generatePdf(request, cardDetails);
+    permissionValidator.validateServiceAllocationRoles(failingRoles, action);
   }
 
   @Test

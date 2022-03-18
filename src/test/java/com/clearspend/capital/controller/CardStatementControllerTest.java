@@ -13,11 +13,13 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.model.security.DefaultRoles;
-import com.clearspend.capital.service.UserService;
-import com.clearspend.capital.testutils.ThrowingBiConsumer;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.testutils.permission.PermissionValidationRole;
+import com.clearspend.capital.testutils.permission.PermissionValidator;
+import com.clearspend.capital.testutils.permission.RootAllocationRole;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -27,7 +29,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.testcontainers.utility.ThrowingFunction;
 
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -37,10 +41,12 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final StatementHelper statementHelper;
+  private final PermissionValidationHelper permissionValidationHelper;
 
   private CreateBusinessRecord createBusinessRecord;
   private Card card;
   private User businessOwnerUser;
+  private PermissionValidator permissionValidator;
 
   private record RequestObjAndString(CardStatementRequest request, String requestString) {}
 
@@ -63,6 +69,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(businessOwnerUser);
     statementHelper.setupStatementData(createBusinessRecord, card);
+    permissionValidator = permissionValidationHelper.validator(createBusinessRecord);
   }
 
   @Test
@@ -70,43 +77,18 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   void getCardStatement_ValidateUserPermissions() {
     final RequestObjAndString request = getCardStatementRequest();
 
-    final ThrowingBiConsumer<Cookie, ResultMatcher> doRequest =
-        (cookie, statusMatcher) ->
+    final ThrowingFunction<Cookie, ResultActions> action =
+        (cookie) ->
             mvc.perform(
-                    post("/card-statement")
-                        .contentType("application/json")
-                        .content(request.requestString())
-                        .cookie(cookie))
-                .andExpect(statusMatcher);
-
-    testHelper.setCurrentUser(businessOwnerUser);
-    final UserService.CreateUpdateUserRecord adminUser =
-        testHelper.createUserWithRole(
-            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN);
-    final Cookie adminUserCookie = testHelper.login(adminUser.user());
-    doRequest.accept(adminUserCookie, status().isOk());
-
-    testHelper.setCurrentUser(businessOwnerUser);
-    final UserService.CreateUpdateUserRecord managerUser =
-        testHelper.createUserWithRole(
-            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_MANAGER);
-    final Cookie managerUserCookie = testHelper.login(managerUser.user());
-    doRequest.accept(managerUserCookie, status().isOk());
-
-    testHelper.setCurrentUser(businessOwnerUser);
-    final UserService.CreateUpdateUserRecord employeeUser =
-        testHelper.createUserWithRole(
-            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
-    final Cookie employeeUserCookie = testHelper.login(employeeUser.user());
-    doRequest.accept(employeeUserCookie, status().isForbidden());
-
-    testHelper.setCurrentUser(businessOwnerUser);
-    final UserService.CreateUpdateUserRecord viewOnlyUser =
-        testHelper.createUserWithRole(
-            createBusinessRecord.allocationRecord().allocation(),
-            DefaultRoles.ALLOCATION_VIEW_ONLY);
-    final Cookie viewOnlyCookie = testHelper.login(viewOnlyUser.user());
-    doRequest.accept(viewOnlyCookie, status().isForbidden());
+                post("/card-statement")
+                    .contentType("application/json")
+                    .content(request.requestString())
+                    .cookie(cookie));
+    final Map<PermissionValidationRole, ResultMatcher> failingStatuses =
+        Map.of(
+            RootAllocationRole.ALLOCATION_EMPLOYEE, status().isForbidden(),
+            RootAllocationRole.ALLOCATION_VIEW_ONLY, status().isForbidden());
+    permissionValidator.validateMvcAllocationRoles(failingStatuses, action);
   }
 
   @SneakyThrows
