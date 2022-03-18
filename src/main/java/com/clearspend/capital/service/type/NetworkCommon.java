@@ -1,6 +1,5 @@
 package com.clearspend.capital.service.type;
 
-import com.clearspend.capital.client.stripe.StripeMetadataEntry;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeEventType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
@@ -31,11 +30,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -259,46 +255,5 @@ public class NetworkCommon {
     networkMessage.setSubType(networkMessageSubType);
 
     return networkMessage;
-  }
-
-  public Map<String, String> getMetadata() {
-    Map<String, String> metadata = new HashMap<>();
-
-    if (getBusinessId() != null) {
-      metadata.put(StripeMetadataEntry.BUSINESS_ID.getKey(), getBusinessId().toString());
-    }
-    if (getAllocation() != null && getAllocation().getId() != null) {
-      metadata.put(StripeMetadataEntry.ALLOCATION_ID.getKey(), getAllocation().getId().toString());
-    }
-    if (getCard() != null && getCard().getId() != null) {
-      metadata.put(StripeMetadataEntry.CARD_ID.getKey(), getCard().getId().toString());
-    }
-    if (getAccount() != null && getAccount().getId() != null) {
-      metadata.put(StripeMetadataEntry.ACCOUNT_ID.getKey(), getAllocation().getId().toString());
-    }
-    if (getDeclineReasons() != null && !getDeclineReasons().isEmpty()) {
-      metadata.put(
-          StripeMetadataEntry.DECLINE_REASONS.getKey(),
-          getDeclineReasons().stream().map(Enum::toString).collect(Collectors.joining(",")));
-    }
-
-    if (getNetworkMessage() != null) {
-      if (getNetworkMessage().getId() != null) {
-        metadata.put(
-            StripeMetadataEntry.NETWORK_MESSAGE_ID.getKey(),
-            getNetworkMessage().getId().toString());
-      }
-      if (getNetworkMessage().getAdjustmentId() != null) {
-        metadata.put(
-            StripeMetadataEntry.ADJUSTMENT_ID.getKey(),
-            getNetworkMessage().getAdjustmentId().toString());
-      }
-      if (getNetworkMessage().getHoldId() != null) {
-        metadata.put(
-            StripeMetadataEntry.HOLD_ID.getKey(), getNetworkMessage().getHoldId().toString());
-      }
-    }
-
-    return metadata;
   }
 }

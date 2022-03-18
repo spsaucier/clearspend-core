@@ -19,7 +19,6 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.service.BeanUtils;
-import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.StripeException;
@@ -29,7 +28,6 @@ import com.stripe.model.File;
 import com.stripe.model.Person;
 import com.stripe.model.PersonCollection;
 import com.stripe.model.SetupIntent;
-import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
 import com.stripe.net.ApiRequestParams;
@@ -61,8 +59,6 @@ import com.stripe.param.PersonUpdateParams.Verification.Document;
 import com.stripe.param.SetupIntentCreateParams;
 import com.stripe.param.SetupIntentCreateParams.MandateData;
 import com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance;
-import com.stripe.param.issuing.AuthorizationApproveParams;
-import com.stripe.param.issuing.AuthorizationDeclineParams;
 import com.stripe.param.issuing.CardCreateParams;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
@@ -1124,42 +1120,5 @@ public class StripeClient {
         fromAccountRef,
         "sp_" + adjustmentId,
         OutboundPayment.class);
-  }
-
-  public void declineAuthorization(Authorization authorization, NetworkCommon networkCommon) {
-    AuthorizationDeclineParams params =
-        AuthorizationDeclineParams.builder().setMetadata(networkCommon.getMetadata()).build();
-
-    callStripe(
-        "authorizationDecline",
-        params,
-        () ->
-            authorization.decline(
-                params,
-                RequestOptions.builder()
-                    .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
-                    .build()));
-  }
-
-  public void approveAuthorization(Authorization authorization, NetworkCommon networkCommon) {
-    authorization.setApproved(true);
-    AuthorizationApproveParams.Builder builder =
-        AuthorizationApproveParams.builder().setMetadata(networkCommon.getMetadata());
-    if (networkCommon.isAllowPartialApproval()) {
-      // amounts going back to Stripe for authorizations should be positive
-      builder.setAmount(networkCommon.getApprovedAmount().abs().toStripeAmount());
-    }
-
-    AuthorizationApproveParams params = builder.build();
-
-    callStripe(
-        "authorizationApprove",
-        params,
-        () ->
-            authorization.approve(
-                params,
-                RequestOptions.builder()
-                    .setStripeAccount(stripeProperties.getClearspendConnectedAccountId())
-                    .build()));
   }
 }

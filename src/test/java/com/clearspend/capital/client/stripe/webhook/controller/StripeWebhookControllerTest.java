@@ -311,7 +311,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             0L,
             stripeId);
     authorizationCreated.setApproved(false);
-    authorizationCreated.setMetadata(networkCommon.getMetadata());
+    authorizationCreated.setMetadata(stripeDirectHandler.getMetadata(networkCommon));
     ArrayList<RequestHistory> requestHistoryArrayList = new ArrayList<>();
     RequestHistory requestHistory = new RequestHistory();
     requestHistory.setAmount(authorization.getPendingRequest().getAmount());

@@ -19,7 +19,6 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
-import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import com.google.gson.FieldNamingPolicy;
@@ -36,7 +35,6 @@ import com.stripe.model.File;
 import com.stripe.model.Person;
 import com.stripe.model.SetupIntent;
 import com.stripe.model.StripeObject;
-import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Card;
 import com.stripe.model.issuing.Cardholder;
 import com.stripe.net.ApiResource;
@@ -55,7 +53,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -66,7 +63,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @SuppressWarnings("StringSplitter")
-@Slf4j
 @Component
 @Profile("test")
 public class StripeMockClient extends StripeClient {
@@ -741,29 +737,5 @@ public class StripeMockClient extends StripeClient {
     return createdObjects.values().stream()
         .filter(v -> clazz.isAssignableFrom(v.getClass()))
         .count();
-  }
-
-  @Override
-  public void declineAuthorization(Authorization authorization, NetworkCommon networkCommon) {
-    log.debug(
-        "Stripe authorization {} for {} declined in {} for {}",
-        authorization.getId(),
-        networkCommon.getRequestedAmount(),
-        networkCommon.getNetworkMessage() != null
-            ? networkCommon.getNetworkMessage().getId()
-            : "n/a",
-        networkCommon.getRequestedAmount());
-  }
-
-  @Override
-  public void approveAuthorization(Authorization authorization, NetworkCommon networkCommon) {
-    authorization.setApproved(true);
-    log.debug(
-        "Stripe authorization {} for {} approved in {} for {}",
-        authorization.getId(),
-        networkCommon.getRequestedAmount(),
-        networkCommon.getNetworkMessage().getId(),
-        // amounts going back to Stripe for authorizations should be positive
-        networkCommon.getRequestedAmount().abs());
   }
 }

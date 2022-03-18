@@ -13,13 +13,9 @@ public enum StripeMetadataEntry {
   BUSINESS_OWNER_ID("business_owner_id"),
   USER_ID("user_id"),
   ADJUSTMENT_ID("adjustment_id"),
-  ALLOCATION_ID("allocation_id"),
-  ACCOUNT_ID("account_id"),
-  DECLINE_REASONS("decline_reasons"),
   HOLD_ID("hold_id"),
   CARD_ID("card_id"),
-  STRIPE_ACCOUNT_ID("stripe_account_id"),
-  NETWORK_MESSAGE_ID("network_message_id");
+  STRIPE_ACCOUNT_ID("stripe_account_id");
 
   private final String key;
 
