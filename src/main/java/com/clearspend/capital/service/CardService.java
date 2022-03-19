@@ -356,12 +356,15 @@ public class CardService {
       boolean isInitialActivation) {
 
     // This seems unnecessary however the Card method parameter is detached from the Hibernate
-    // persistance manager because the entity was fetched outside of the Transaction. Passing
+    // persistence manager because the entity was fetched outside of the Transaction. Passing
     // an CardId in would break the Permissions annotations, and we're reluctant to push the
     // Transactional annotation out to the Controller method(s). A possible alternative
     // solution is to see if there is a way to reattach the entity to Hibernate so that the
-    // entity is properly managed.
-    card = cardRepository.findById(card.getId()).get();
+    // entity is properly managed. I've wrapped the 'findById' in the conditional to protect
+    // the changes made by the activateCard method (which is already Transactional).
+    if (!entityManager.contains(card)) {
+      card = cardRepository.findById(card.getId()).get();
+    }
 
     if (!card.isActivated()) {
       throw new InvalidRequestException("Cannot update status for non activated cards");
