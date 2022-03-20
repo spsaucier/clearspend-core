@@ -37,7 +37,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CardStatementService {
 
-  @Value("classpath:reports/logo_300px.png")
+  @Value("classpath:reports/logo_black_300px.png")
   Resource logoResource;
 
   private final AccountService accountService;
@@ -116,11 +116,11 @@ public class CardStatementService {
     // Draw background pattern, which consists of a thick angular line, a straight thick line
     // and a circle which creates effect of the curly edge
     // Use this value to adjust the background pattern's vertical position
-    float deltaY = -20;
+    float deltaY = 30;
     PdfContentByte directContent = writer.getDirectContent();
 
     directContent.setLineWidth(500);
-    directContent.setRGBColorStroke(15, 50, 51);
+    directContent.setRGBColorStroke(230, 230, 230);
     directContent.moveTo(document.left() - 100, 650 + deltaY);
     directContent.lineTo(document.right() - 48, 753 + deltaY);
     directContent.stroke();
@@ -153,10 +153,10 @@ public class CardStatementService {
     // Table for Monthly Statement text
     PdfPTable headerTable = new PdfPTable(1);
     headerTable.setWidthPercentage(100);
-    Font fontNormal40White = new Font(defaultBaseFont, 40, Font.NORMAL);
-    fontNormal40White.setColor(Color.white);
+    Font fontNormal40 = new Font(defaultBaseFont, 40, Font.NORMAL);
+    fontNormal40.setColor(Color.black);
     headerTable.addCell(
-        new PdfPCellLeft(new Paragraph(new Chunk("Monthly Statement", fontNormal40White))));
+        new PdfPCellLeft(new Paragraph(new Chunk("Monthly Statement", fontNormal40))));
     headerTable.addCell(new PdfPCellLeft(emptyParagraph));
     document.add(headerTable);
 
@@ -172,83 +172,57 @@ public class CardStatementService {
     midTable.addCell(new PdfPCellLeft(emptyParagraph));
     midTable.addCell(new PdfPCellLeft(emptyParagraph));
 
-    Font fontBoldItalic9White = new Font(defaultBaseFont, 9, Font.BOLDITALIC);
-    fontBoldItalic9White.setColor(Color.white);
-    Font fontNormal9White = new Font(defaultBaseFont, 9, Font.NORMAL);
-    fontNormal9White.setColor(Color.white);
+    Font fontBoldItalic9 = new Font(defaultBaseFont, 9, Font.BOLDITALIC);
+    fontBoldItalic9.setColor(Color.black);
+    Font fontNormal9 = new Font(defaultBaseFont, 9, Font.NORMAL);
+    fontNormal9.setColor(Color.black);
 
     // Column
     midTable.addCell(
-        new PdfPCellLeft(
-            new Paragraph(new Chunk("Total amount spent this period:", fontNormal9White))));
+        new PdfPCellLeft(new Paragraph(new Chunk("Total amount spent this period:", fontNormal9))));
 
     // Column
     Paragraph statementParagraph = new Paragraph();
-    statementParagraph.add(new Chunk("VISA ", fontBoldItalic9White));
+    statementParagraph.add(new Chunk("VISA ", fontBoldItalic9));
     statementParagraph.add(
         new Chunk(
             "Statement "
                 + dateFormatter.format(request.getStartDate())
                 + " - "
                 + dateFormatter.format(request.getEndDate()),
-            fontNormal9White));
+            fontNormal9));
     midTable.addCell(new PdfPCellRight(statementParagraph));
 
     // Column
-    Font fontBold32Green = new Font(defaultBaseFont, 32, Font.BOLD);
-    fontBold32Green.setColor(125, 245, 133);
+    Font fontBold32 = new Font(defaultBaseFont, 32, Font.BOLD);
+    fontBold32.setColor(Color.black);
     midTable.addCell(
         new PdfPCellLeft(
             new Paragraph(
                 new Chunk(
                     "$" + String.format("%,.2f", generalStatementData.getTotalAmount()),
-                    fontBold32Green))));
+                    fontBold32))));
 
     // Column
     Account account = accountService.retrieveAccountById(card.account().getId(), true);
 
-    Font fontNormal8White = new Font(defaultBaseFont, 8, Font.NORMAL);
-    fontNormal8White.setColor(Color.white);
-    Font fontBold8White = new Font(defaultBaseFont, 8, Font.BOLD);
-    fontBold8White.setColor(Color.white);
+    Font fontNormal8 = new Font(defaultBaseFont, 8, Font.NORMAL);
+    fontNormal8.setColor(Color.black);
+    Font fontBold8 = new Font(defaultBaseFont, 8, Font.BOLD);
+    fontBold8.setColor(Color.black);
 
     User user = userService.retrieveUser(card.card().getUserId());
     Paragraph paragraph = new Paragraph();
-    paragraph.add(new Chunk("Cardholder: ", fontBold8White));
-    paragraph.add(
-        new Chunk(user.getFirstName() + " " + user.getLastName() + "\n\n", fontNormal8White));
+    paragraph.add(new Chunk("Cardholder: ", fontBold8));
+    paragraph.add(new Chunk(user.getFirstName() + " " + user.getLastName() + "\n\n", fontNormal8));
 
-    paragraph.add(new Chunk("Card number: **** ", fontBold8White));
-    paragraph.add(new Chunk(card.card().getLastFour() + "\n\n", fontNormal8White));
+    paragraph.add(new Chunk("Card number: **** ", fontBold8));
+    paragraph.add(new Chunk(card.card().getLastFour() + "\n\n", fontNormal8));
 
-    paragraph.add(new Chunk("Allocation: ", fontBold8White));
-    paragraph.add(new Chunk(card.allocation().getName() + "\n\n", fontNormal8White));
+    paragraph.add(new Chunk("Allocation: ", fontBold8));
+    paragraph.add(new Chunk(card.allocation().getName() + "\n\n", fontNormal8));
 
     midTable.addCell(new PdfPCellRight(paragraph));
-
-    // Column
-    midTable.addCell(
-        new PdfPCellLeft(
-            new Paragraph(
-                new Chunk(
-                    "Available to spend as of " + dateFormatter.format(request.getEndDate()) + ": ",
-                    fontNormal9White))));
-
-    // Column
-    midTable.addCell(new PdfPCellLeft(emptyParagraph));
-
-    // Column
-    Font fontBold16 = new Font(defaultBaseFont, 16, Font.BOLD);
-    fontBold16.setColor(Color.white);
-    midTable.addCell(
-        new PdfPCellLeft(
-            new Paragraph(
-                new Chunk(
-                    "$" + String.format("%,.2f", account.getAvailableBalance().getAmount()),
-                    fontBold16))));
-
-    // Column
-    midTable.addCell(new PdfPCellLeft(emptyParagraph));
 
     // Empty line
     midTable.addCell(new PdfPCellLeft(emptyParagraph));
@@ -259,8 +233,8 @@ public class CardStatementService {
         new PdfPCellLeft(
             new Paragraph(
                 new Chunk(
-                    "Thank you for using ClearSpend. For details and upcoming payments, \n\n log into your ClearSpend account",
-                    fontNormal8White))));
+                    "Thank you for using ClearSpend.\n\nFor details and upcoming payments, log into your ClearSpend account",
+                    fontNormal8))));
 
     midTable.addCell(new PdfPCellLeft(emptyParagraph));
 

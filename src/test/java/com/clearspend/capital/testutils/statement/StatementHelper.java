@@ -92,8 +92,6 @@ public class StatementHelper {
        Card number: **** 4489
        Allocation: Brekke, Franecki and Turner 32b546ee-c7a7-4823-ac3d-
        79dca14502e9 - root
-       Available to spend as of 02/01/2022:
-       $91.00
        Thank you for using ClearSpend. For details and upcoming payments,
        log into your ClearSpend account
        Transactions
@@ -107,9 +105,7 @@ public class StatementHelper {
     PdfTextExtractor pdfTextExtractor = new PdfTextExtractor(new PdfReader(content));
 
     String pdfParsed = pdfTextExtractor.getTextFromPage(1);
-    System.out.println("PDF"); // TODO delete this
-    System.out.println(pdfParsed); // TODO delete this
-    boolean foundAvailableToSpend = false;
+
     boolean foundHeader = false;
     boolean foundLine1 = false;
     boolean foundLine2 = false;
@@ -134,8 +130,6 @@ public class StatementHelper {
         foundLine2 = true;
       } else if (line.contains("$13.00")) {
         foundLineWithoutCapture = true;
-      } else if (line.contains("$78.00")) {
-        foundAvailableToSpend = true;
       } else if (line.contains(
           businessOwnerUser.getFirstName() + " " + businessOwnerUser.getLastName())) {
         foundCardholder = true;
@@ -149,7 +143,6 @@ public class StatementHelper {
     Assertions.assertTrue(foundLine1);
     Assertions.assertTrue(foundLine2);
     Assertions.assertFalse(foundLineWithoutCapture);
-    Assertions.assertTrue(foundAvailableToSpend);
     Assertions.assertTrue(foundCardholder);
     Assertions.assertTrue(foundCardNumber);
     Assertions.assertEquals("$909.00", lastWord);
