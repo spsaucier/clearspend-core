@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.stripe.webhook.controller;
 
+import com.clearspend.capital.client.stripe.StripeClientException;
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
@@ -156,7 +157,7 @@ public class StripeWebhookController {
           parseRecord.stripeWebhookLog.setError(errorMessage);
         }
       }
-    } catch (StripeException e) {
+    } catch (StripeException | StripeClientException e) {
       log.error("Failed to process direct request", e);
     } catch (RecordNotFoundException e) {
       // For test webhooks we might want to delegate the auth request to another endpoint since
