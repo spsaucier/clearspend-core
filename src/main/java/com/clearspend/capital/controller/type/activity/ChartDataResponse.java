@@ -22,7 +22,14 @@ public class ChartDataResponse {
       @JsonProperty("amount") Amount amount) {}
 
   record UserChartData(
-      @JsonProperty("user") UserChartInfo user, @JsonProperty("amount") Amount amount) {}
+      @JsonProperty("user") UserChartInfo user, @JsonProperty("amount") Amount amount)
+      implements Comparable<UserChartData> {
+
+    @Override
+    public int compareTo(UserChartData o) {
+      return this.amount.getAmount().compareTo(o.amount.getAmount());
+    }
+  }
 
   record MerchantChartData(
       @JsonProperty("merchant") MerchantInfo merchant, @JsonProperty("amount") Amount amount) {}

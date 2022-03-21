@@ -9,6 +9,7 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.springframework.data.domain.Sort;
 
 @Data
 @NoArgsConstructor
@@ -34,4 +35,7 @@ public class ChartDataRequest {
   @NonNull
   @NotNull
   private OffsetDateTime to;
+
+  @JsonProperty("sortDirection")
+  private Sort.Direction direction;
 }

@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
+import org.springframework.data.domain.Sort;
 
 @AllArgsConstructor
 @Getter
@@ -19,6 +20,7 @@ public class ChartFilterCriteria {
   private TypedId<UserId> userId;
   @NonNull private OffsetDateTime from;
   @NonNull private OffsetDateTime to;
+  private Sort.Direction direction;
 
   public ChartFilterCriteria(ChartDataRequest request) {
     this.chartFilterType = request.getChartFilter();
@@ -26,5 +28,6 @@ public class ChartFilterCriteria {
     this.userId = request.getUserId();
     this.from = request.getFrom();
     this.to = request.getTo();
+    this.direction = request.getDirection();
   }
 }

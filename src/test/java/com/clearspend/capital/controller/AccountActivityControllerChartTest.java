@@ -23,12 +23,17 @@ import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.NetworkMessageService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -44,8 +49,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   private final NetworkMessageService networkMessageService;
 
   @SneakyThrows
-  @Test
-  void getChartDataFilterTypeEmployee() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void getChartDataFilterTypeEmployee(boolean sortedDesc) {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount businessBankAccount =
@@ -94,6 +100,9 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     chartDataRequest.setChartFilter(ChartFilterType.EMPLOYEE);
     chartDataRequest.setFrom(OffsetDateTime.now().minusDays(1));
     chartDataRequest.setTo(OffsetDateTime.now().plusDays(1));
+    if (sortedDesc) {
+      chartDataRequest.setDirection(Direction.DESC);
+    }
 
     String body = objectMapper.writeValueAsString(chartDataRequest);
 
@@ -110,6 +119,11 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     ChartDataResponse chartData =
         objectMapper.readValue(response.getContentAsString(), ChartDataResponse.class);
     assertEquals(5, chartData.getUserChartData().size());
+    assertEquals(
+        chartData.getUserChartData().stream()
+            .sorted(sortedDesc ? Comparator.reverseOrder() : Comparator.naturalOrder())
+            .collect(Collectors.toList()),
+        chartData.getUserChartData());
     log.info(response.getContentAsString());
   }
 

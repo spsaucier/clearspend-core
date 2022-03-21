@@ -75,6 +75,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 
@@ -397,9 +398,13 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           .groupBy("accountActivity.merchant.type");
     }
 
-    query.select("coalesce(sum(accountActivity.amount.amount), 0)", "s");
+    query.select("coalesce(sum(accountActivity.amount.amount), 0)", "sumAmount");
     query.select("accountActivity.amount.currency");
-    query.orderByDesc("s");
+    if (criteria.getDirection() == Direction.DESC) {
+      query.orderByDesc("sumAmount");
+    } else {
+      query.orderByAsc("sumAmount");
+    }
 
     query.setMaxResults(LIMIT_SIZE_FOR_CHART);
 
