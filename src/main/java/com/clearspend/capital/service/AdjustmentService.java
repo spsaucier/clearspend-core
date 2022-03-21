@@ -1,9 +1,6 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
@@ -40,7 +37,7 @@ public class AdjustmentService {
   public record AdjustmentRecord(JournalEntry journalEntry, Adjustment adjustment) {}
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment recordDepositFunds(Account account, Amount amount) {
+  Adjustment recordDepositFunds(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
 
@@ -58,7 +55,7 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment recordWithdrawFunds(Account account, Amount amount) {
+  Adjustment recordWithdrawFunds(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordWithdrawFunds(account.getLedgerAccountId(), amount);
 
@@ -76,7 +73,7 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Adjustment recordApplyFee(Account account, Amount amount) {
+  Adjustment recordApplyFee(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordApplyFee(account.getLedgerAccountId(), amount);
 
@@ -94,8 +91,7 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public ReallocateFundsRecord reallocateFunds(
-      Account fromAccount, Account toAccount, Amount amount) {
+  ReallocateFundsRecord reallocateFunds(Account fromAccount, Account toAccount, Amount amount) {
     ReallocationJournalEntry bankJournalEntry =
         ledgerService.recordReallocateFunds(
             fromAccount.getLedgerAccountId(), toAccount.getLedgerAccountId(), amount);
@@ -130,7 +126,7 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord recordManualAdjustment(Account account, Amount amount) {
+  AdjustmentRecord recordManualAdjustment(Account account, Amount amount) {
     ManualAdjustmentJournalEntry manualAdjustmentJournalEntry =
         ledgerService.recordManualAdjustment(account.getLedgerAccountId(), amount);
 
@@ -154,7 +150,7 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord recordNetworkAdjustment(Account account, Amount amount) {
+  AdjustmentRecord recordNetworkAdjustment(Account account, Amount amount) {
     NetworkJournalEntry networkJournalEntry =
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
@@ -174,13 +170,7 @@ public class AdjustmentService {
     return new AdjustmentRecord(networkJournalEntry.journalEntry(), adjustment);
   }
 
-  public Adjustment retrieveAdjustment(TypedId<AdjustmentId> id) {
-    return adjustmentRepository
-        .findById(id)
-        .orElseThrow(() -> new RecordNotFoundException(Table.ADJUSTMENT, id));
-  }
-
-  public List<Adjustment> retrieveBusinessAdjustments(
+  List<Adjustment> retrieveBusinessAdjustments(
       TypedId<BusinessId> businessId, List<AdjustmentType> adjustmentTypes, int daysAgo) {
     OffsetDateTime before = OffsetDateTime.now().minusDays(daysAgo);
     return adjustmentRepository.findByBusinessIdAndTypeInAndEffectiveDateAfter(
