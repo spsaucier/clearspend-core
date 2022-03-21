@@ -87,6 +87,7 @@ import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
@@ -186,6 +187,7 @@ public class TestHelper {
   private final TransactionLimitRepository transactionLimitRepository;
   private final UserRepository userRepository;
   private final ChartOfAccountsMappingRepository mappingRepository;
+  private final ServiceHelper serviceHelper;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -1009,10 +1011,12 @@ public class TestHelper {
               generateAccountName(),
               createBusinessRecord.allocationRecord().allocation().getId(),
               user.user());
-      accountService.reallocateFunds(
-          sourceAccount.getId(),
-          allocationRecord.account().getId(),
-          new Amount(Currency.USD, BigDecimal.valueOf((long) maxAmount * transactions)));
+      serviceHelper
+          .accountService()
+          .reallocateFunds(
+              sourceAccount.getId(),
+              allocationRecord.account().getId(),
+              new Amount(Currency.USD, BigDecimal.valueOf((long) maxAmount * transactions)));
       allocation = allocationRecord.allocation();
       account = allocationRecord.account();
     }

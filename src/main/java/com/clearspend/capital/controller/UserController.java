@@ -324,14 +324,11 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardAccountRequest request) {
-    CurrentUser currentUser = CurrentUser.get();
-
     return new Card(
         cardService.updateCardAccount(
             cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
-            allocationService.retrieveAllocation(
-                CurrentUser.getBusinessId(), request.getAllocationId()),
-            accountService.retrieveAccountById(request.getAccountId(), false)));
+            allocationService.getSingleAllocation(
+                CurrentUser.getBusinessId(), request.getAllocationId())));
   }
 
   @GetMapping("/cards/{cardId}/account-activity")

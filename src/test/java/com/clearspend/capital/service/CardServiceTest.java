@@ -586,19 +586,17 @@ class CardServiceTest extends BaseCapitalTest {
 
     // The Manager should be able to update the card account
     testHelper.setCurrentUser(manager);
-    assertThat(cardService.updateCardAccount(card, allocation, account)).isNotNull();
+    assertThat(cardService.updateCardAccount(card, allocation)).isNotNull();
 
     // A different employee within the same business also cannot Update the Card Account
     testHelper.setCurrentUser(snooper);
     assertThrows(
-        AccessDeniedException.class,
-        () -> cardService.updateCardAccount(card, allocation, account));
+        AccessDeniedException.class, () -> cardService.updateCardAccount(card, allocation));
 
     // The Card Owner should NOT be able to update their Card Account
     testHelper.setCurrentUser(employee);
     assertThrows(
-        AccessDeniedException.class,
-        () -> cardService.updateCardAccount(card, allocation, account));
+        AccessDeniedException.class, () -> cardService.updateCardAccount(card, allocation));
   }
 
   @SneakyThrows
@@ -692,9 +690,7 @@ class CardServiceTest extends BaseCapitalTest {
             allocation.getId(),
             userRecord.user());
 
-    Card updatedCard =
-        cardService.updateCardAccount(
-            card, allocationRecord.allocation(), allocationRecord.account());
+    Card updatedCard = cardService.updateCardAccount(card, allocationRecord.allocation());
     assertThat(updatedCard.getAllocationId()).isEqualTo(allocationRecord.allocation().getId());
     assertThat(updatedCard.getAccountId()).isEqualTo(allocationRecord.account().getId());
   }

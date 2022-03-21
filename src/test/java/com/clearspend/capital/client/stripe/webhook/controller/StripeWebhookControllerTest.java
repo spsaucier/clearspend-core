@@ -117,30 +117,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     }
   }
 
-  private void unused_setBalance(Allocation allocation, BigDecimal balance) {
-    Account allocationAccount =
-        accountService.retrieveAllocationAccount(
-            business.getId(), business.getCurrency(), allocation.getId());
-    if (allocationAccount
-        .getAvailableBalance()
-        .isLessThan(Amount.of(business.getCurrency(), balance))) {
-      testHelper.transactBankAccount(
-          businessBankAccount,
-          BankAccountTransactType.DEPOSIT,
-          balance.subtract(allocationAccount.getAvailableBalance().getAmount()),
-          false);
-    }
-    if (allocationAccount
-        .getAvailableBalance()
-        .isGreaterThan(Amount.of(business.getCurrency(), balance))) {
-      testHelper.transactBankAccount(
-          businessBankAccount,
-          BankAccountTransactType.WITHDRAW,
-          allocationAccount.getAvailableBalance().getAmount().subtract(balance),
-          false);
-    }
-  }
-
   private String generateStripeId(String prefix) {
     return prefix + RandomStringUtils.randomAlphanumeric(24);
   }

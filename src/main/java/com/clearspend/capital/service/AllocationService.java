@@ -181,9 +181,7 @@ public class AllocationService {
         user, allocation, DefaultRoles.ALLOCATION_MANAGER);
   }
 
-  // TODO fix NetworkMessageDemoControllerTest
-  // @PreAuthorize("hasPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
-  public Allocation retrieveAllocation(
+  Allocation retrieveAllocation(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
     Allocation allocation =
         allocationRepository
@@ -197,6 +195,14 @@ public class AllocationService {
     }
 
     return allocation;
+  }
+
+  @PreAuthorize(
+      "hasAllocationPermission(#allocationId, 'READ') or "
+          + "hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
+  public Allocation getSingleAllocation(
+      final TypedId<BusinessId> businessId, final TypedId<AllocationId> allocationId) {
+    return retrieveAllocation(businessId, allocationId);
   }
 
   // TODO: improve entity retrieval to make a single db call

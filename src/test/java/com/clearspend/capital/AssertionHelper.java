@@ -35,6 +35,7 @@ import com.clearspend.capital.data.repository.ledger.PostingRepository;
 import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.LedgerService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Transaction;
@@ -58,6 +59,7 @@ public class AssertionHelper {
   @Autowired private LedgerAccountRepository ledgerAccountRepository;
   @Autowired private NetworkMessageRepository networkMessageRepository;
   @Autowired private PostingRepository postingRepository;
+  @Autowired private ServiceHelper serviceHelper;
 
   @Autowired private AccountService accountService;
   @Autowired private LedgerService ledgerService;
@@ -71,8 +73,10 @@ public class AssertionHelper {
       BigDecimal ledgerBalance,
       BigDecimal availableBalance) {
     Account foundAccount =
-        accountService.retrieveAllocationAccount(
-            business.getId(), business.getCurrency(), allocation.getId());
+        serviceHelper
+            .accountService()
+            .retrieveAllocationAccount(
+                business.getId(), business.getCurrency(), allocation.getId());
     assertThat(foundAccount.getLedgerBalance().getAmount()).isEqualByComparingTo(ledgerBalance);
     assertThat(foundAccount.getAvailableBalance().getAmount())
         .isEqualByComparingTo(availableBalance);

@@ -428,8 +428,8 @@ public class CardService {
 
   @Transactional
   @PreAuthorize("hasAllocationPermission(#allocation.id, 'MANAGE_CARDS')")
-  public Card updateCardAccount(
-      @NonNull Card card, @NonNull Allocation allocation, @NonNull Account account) {
+  public Card updateCardAccount(@NonNull Card card, @NonNull Allocation allocation) {
+    final Account account = accountService.retrieveAccountById(allocation.getAccountId(), false);
     // make sure we can look up the business
     Business business =
         businessRepository

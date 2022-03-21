@@ -26,6 +26,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.ServiceHelper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -52,6 +53,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
   private final HoldRepository holdRepository;
   private final AccountService accountService;
   private final AccountActivityRepository accountActivityRepository;
+  private final ServiceHelper serviceHelper;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -126,7 +128,8 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
             CreateAdjustmentResponse.class);
 
     assertThat(
-            accountService
+            serviceHelper
+                .accountService()
                 .retrieveAccountById(
                     createBusinessRecord.allocationRecord().account().getId(), true)
                 .getAvailableBalance())
@@ -144,7 +147,8 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
 
     // then
     assertThat(
-            accountService
+            serviceHelper
+                .accountService()
                 .retrieveAccountById(
                     createBusinessRecord.allocationRecord().account().getId(), true)
                 .getAvailableBalance())

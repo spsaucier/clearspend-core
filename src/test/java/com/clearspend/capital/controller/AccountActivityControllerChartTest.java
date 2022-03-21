@@ -21,6 +21,7 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.ServiceHelper;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
@@ -47,6 +48,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
   private final BusinessBankAccountService businessBankAccountService;
   private final AccountService accountService;
   private final NetworkMessageService networkMessageService;
+  private final ServiceHelper serviceHelper;
 
   @SneakyThrows
   @ParameterizedTest
@@ -67,21 +69,25 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         Amount.of(Currency.USD, new BigDecimal("5000")),
         false);
     Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
+        serviceHelper
+            .accountService()
+            .retrieveRootAllocationAccount(
+                business.getId(),
+                business.getCurrency(),
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                false);
     AllocationRecord allocation =
         testHelper.createAllocation(
             business.getId(),
             "",
             createBusinessRecord.allocationRecord().allocation().getId(),
             testHelper.createUser(business).user());
-    accountService.reallocateFunds(
-        account.getId(),
-        allocation.account().getId(),
-        new Amount(Currency.USD, BigDecimal.valueOf(4000)));
+    serviceHelper
+        .accountService()
+        .reallocateFunds(
+            account.getId(),
+            allocation.account().getId(),
+            new Amount(Currency.USD, BigDecimal.valueOf(4000)));
 
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, null, 1);
@@ -145,11 +151,13 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
     Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
+        serviceHelper
+            .accountService()
+            .retrieveRootAllocationAccount(
+                business.getId(),
+                business.getCurrency(),
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                false);
 
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, account, 1);
@@ -209,11 +217,13 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
     Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
+        serviceHelper
+            .accountService()
+            .retrieveRootAllocationAccount(
+                business.getId(),
+                business.getCurrency(),
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                false);
 
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, null, 1);
@@ -273,11 +283,13 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
     Account account =
-        accountService.retrieveRootAllocationAccount(
-            business.getId(),
-            business.getCurrency(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            false);
+        serviceHelper
+            .accountService()
+            .retrieveRootAllocationAccount(
+                business.getId(),
+                business.getCurrency(),
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                false);
 
     testHelper.createUserAllocationCardAndNetworkTransaction(
         createBusinessRecord, business, null, 1);

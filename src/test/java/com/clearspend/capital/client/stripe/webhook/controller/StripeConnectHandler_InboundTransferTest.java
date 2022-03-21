@@ -30,6 +30,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.ServiceHelper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -56,6 +57,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   private final HoldRepository holdRepository;
   private final AccountActivityRepository accountActivityRepository;
   private final AccountService accountService;
+  private final ServiceHelper serviceHelper;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -232,8 +234,9 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     }
 
     Account account =
-        accountService.retrieveAccountById(
-            createBusinessRecord.allocationRecord().account().getId(), true);
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(createBusinessRecord.allocationRecord().account().getId(), true);
 
     assertThat(account.getAvailableBalance().getAmount())
         .isEqualByComparingTo(new BigDecimal(30 * tonsOfMoney));

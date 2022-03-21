@@ -36,6 +36,7 @@ import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecor
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.ServiceHelper;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -60,6 +61,7 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
   private final AllocationService allocationService;
+  private final ServiceHelper serviceHelper;
 
   private final Faker faker = new Faker();
   private CreateBusinessRecord createBusinessRecord;
@@ -175,8 +177,9 @@ class AllocationControllerTest extends BaseCapitalTest {
             false);
     Account businessAccount = allocationService.getRootAllocation(business.getId()).account();
     AccountReallocateFundsRecord reallocateFundsRecord =
-        accountService.reallocateFunds(
-            businessAccount.getId(), allocationRecord.account().getId(), amount);
+        serviceHelper
+            .accountService()
+            .reallocateFunds(businessAccount.getId(), allocationRecord.account().getId(), amount);
 
     AllocationFundCardRequest request =
         new AllocationFundCardRequest(

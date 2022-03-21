@@ -65,7 +65,7 @@ public class AccountService {
       Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {}
 
   @Transactional(TxType.REQUIRED)
-  public Account createAccount(
+  Account createAccount(
       TypedId<BusinessId> businessId,
       AccountType type,
       TypedId<AllocationId> allocationId,
@@ -82,7 +82,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord manualAdjustment(Account account, Amount amount) {
+  AdjustmentRecord manualAdjustment(Account account, Amount amount) {
     if (amount.isNegative() && account.getAvailableBalance().add(amount).isLessThanZero()) {
       throw new InsufficientFundsException(account, AdjustmentType.MANUAL, amount);
     }
@@ -129,7 +129,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord withdrawFunds(
+  AdjustmentAndHoldRecord withdrawFunds(
       TypedId<BusinessId> businessId, Account rootAllocationAccount, Amount amount) {
     amount.ensureNonNegative();
 
@@ -147,7 +147,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord applyFee(TypedId<AccountId> accountId, Amount amount) {
+  AdjustmentAndHoldRecord applyFee(TypedId<AccountId> accountId, Amount amount) {
     amount.ensureNonNegative();
 
     Account account = retrieveAccount(accountId, false);
@@ -159,8 +159,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public HoldRecord recordNetworkHold(
-      Account account, Amount amount, OffsetDateTime expirationDate) {
+  HoldRecord recordNetworkHold(Account account, Amount amount, OffsetDateTime expirationDate) {
     amount.ensureNegative();
     Hold hold =
         holdRepository.save(
@@ -178,7 +177,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentRecord recordNetworkAdjustment(Account account, @NonNull Amount amount) {
+  AdjustmentRecord recordNetworkAdjustment(Account account, @NonNull Amount amount) {
     AdjustmentService.AdjustmentRecord adjustmentRecord =
         adjustmentService.recordNetworkAdjustment(account, amount);
     account.setLedgerBalance(
@@ -191,7 +190,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public Decline recordNetworkDecline(
+  Decline recordNetworkDecline(
       Account account, Card card, Amount amount, List<DeclineReason> declineReasons) {
     return declineRepository.save(
         new Decline(
@@ -209,7 +208,7 @@ public class AccountService {
     return account;
   }
 
-  public Account retrieveRootAllocationAccount(
+  Account retrieveRootAllocationAccount(
       TypedId<BusinessId> businessId,
       Currency currency,
       TypedId<AllocationId> allocationId,
@@ -236,7 +235,7 @@ public class AccountService {
     }
   }
 
-  public Account retrieveAllocationAccount(
+  Account retrieveAllocationAccount(
       TypedId<BusinessId> businessId, Currency currency, TypedId<AllocationId> allocationId) {
     Account account =
         accountRepository
@@ -252,11 +251,11 @@ public class AccountService {
     return account;
   }
 
-  public Account retrieveAccountById(TypedId<AccountId> accountId, boolean fetchHolds) {
+  Account retrieveAccountById(TypedId<AccountId> accountId, boolean fetchHolds) {
     return retrieveAccount(accountId, fetchHolds);
   }
 
-  public List<Account> retrieveAllocationAccounts(
+  List<Account> retrieveAllocationAccounts(
       TypedId<BusinessId> businessId,
       Currency currency,
       List<TypedId<AllocationId>> allocationIds,
@@ -283,7 +282,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountReallocateFundsRecord reallocateFunds(
+  AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {
     amount.ensureNonNegative();
     if (fromAccountId.equals(toAccountId)) {
@@ -312,7 +311,7 @@ public class AccountService {
     return new AccountReallocateFundsRecord(fromAccount, toAccount, reallocateFundsRecord);
   }
 
-  public Hold retrieveHold(TypedId<HoldId> holdId) {
+  Hold retrieveHold(TypedId<HoldId> holdId) {
     return holdRepository
         .findById(holdId)
         .orElseThrow(() -> new RecordNotFoundException(Table.HOLD, holdId));
