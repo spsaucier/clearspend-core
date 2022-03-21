@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
@@ -17,10 +18,13 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
+import com.clearspend.capital.data.repository.HoldRepository;
+import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.PageToken.OrderBy;
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.math.BigDecimal;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +43,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final HoldRepository holdRepository;
+  private final AccountService accountService;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -55,11 +61,15 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   private Card rootCardB;
   private Card childCardA;
 
+  private SearchCardData rootCardASearchResult;
+  private SearchCardData rootCardBSearchResult;
+  private SearchCardData childCardASearchResult;
+
   @SneakyThrows
   @BeforeEach
   public void setup() {
     if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
+      createBusinessRecord = testHelper.createBusiness(1000L);
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord();
       testHelper.setCurrentUser(createBusinessRecord.user());
@@ -73,6 +83,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
       userB = testHelper.createUser(createBusinessRecord.business());
       authCookie = createBusinessRecord.authCookie();
 
+      // root card A
       rootCardA =
           testHelper.issueCard(
               business,
@@ -80,8 +91,17 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               userA.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL,
+              CardType.VIRTUAL,
               false);
+      rootCardASearchResult =
+          SearchCardData.of(
+              new FilteredCardRecord(
+                  rootCardA, rootAllocation.allocation(), rootAllocation.account(), userA.user()));
+      rootCardASearchResult.setBalance(
+          new com.clearspend.capital.controller.type.Amount(
+              Currency.USD, new BigDecimal("1000.00")));
+
+      // root card B
       rootCardB =
           testHelper.issueCard(
               business,
@@ -89,8 +109,17 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               userB.user(),
               Currency.USD,
               FundingType.POOLED,
-              CardType.PHYSICAL,
+              CardType.VIRTUAL,
               false);
+      rootCardBSearchResult =
+          SearchCardData.of(
+              new FilteredCardRecord(
+                  rootCardB, rootAllocation.allocation(), rootAllocation.account(), userB.user()));
+      rootCardASearchResult.setBalance(
+          new com.clearspend.capital.controller.type.Amount(
+              Currency.USD, new BigDecimal("1000.00")));
+
+      // child card A
       childCardA =
           testHelper.issueCard(
               business,
@@ -100,6 +129,17 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               FundingType.POOLED,
               CardType.PHYSICAL,
               false);
+      childCardASearchResult =
+          SearchCardData.of(
+              new FilteredCardRecord(
+                  childCardA,
+                  childAllocation.allocation(),
+                  childAllocation.account(),
+                  userA.user()));
+
+      // placing hold to make sure that available balance is returned for root cards A and B
+      accountService.depositFunds(
+          business.getId(), rootAllocation.account(), Amount.of(Currency.USD, 777), true, true);
     }
   }
 
@@ -112,24 +152,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardA,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userA.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardB,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userB.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    childCardA,
-                    childAllocation.allocation(),
-                    childAllocation.account(),
-                    userA.user())));
+            rootCardASearchResult, rootCardBSearchResult, childCardASearchResult);
   }
 
   @SneakyThrows
@@ -144,24 +167,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    childCardA,
-                    childAllocation.allocation(),
-                    childAllocation.account(),
-                    userA.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardB,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userB.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardA,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userA.user())));
+            childCardASearchResult, rootCardBSearchResult, rootCardASearchResult);
   }
 
   @SneakyThrows
@@ -172,14 +178,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     PagedData<SearchCardData> result = callSearchCards(request, 1);
 
-    assertThat(result.getContent())
-        .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    childCardA,
-                    childAllocation.allocation(),
-                    childAllocation.account(),
-                    userA.user())));
+    assertThat(result.getContent()).containsExactlyInAnyOrder(childCardASearchResult);
   }
 
   @SneakyThrows
@@ -191,19 +190,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     PagedData<SearchCardData> result = callSearchCards(request, 2);
 
     assertThat(result.getContent())
-        .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardA,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userA.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    childCardA,
-                    childAllocation.allocation(),
-                    childAllocation.account(),
-                    userA.user())));
+        .containsExactlyInAnyOrder(rootCardASearchResult, childCardASearchResult);
   }
 
   @SneakyThrows
@@ -214,14 +201,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     PagedData<SearchCardData> result = callSearchCards(request, 1);
 
-    assertThat(result.getContent())
-        .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    childCardA,
-                    childAllocation.allocation(),
-                    childAllocation.account(),
-                    userA.user())));
+    assertThat(result.getContent()).containsExactlyInAnyOrder(childCardASearchResult);
   }
 
   @SneakyThrows
@@ -234,19 +214,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     PagedData<SearchCardData> result = callSearchCards(request, 2);
 
     assertThat(result.getContent())
-        .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardA,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userA.user())),
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardB,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userB.user())));
+        .containsExactlyInAnyOrder(rootCardASearchResult, rootCardBSearchResult);
   }
 
   @SneakyThrows
@@ -257,14 +225,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
     PagedData<SearchCardData> result = callSearchCards(request, 1);
 
-    assertThat(result.getContent())
-        .containsExactlyInAnyOrder(
-            SearchCardData.of(
-                new FilteredCardRecord(
-                    rootCardB,
-                    rootAllocation.allocation(),
-                    rootAllocation.account(),
-                    userB.user())));
+    assertThat(result.getContent()).containsExactlyInAnyOrder(rootCardBSearchResult);
   }
 
   @SneakyThrows

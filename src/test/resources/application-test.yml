@@ -36,6 +36,9 @@ logging:
     root: INFO
     com.clearspend.capital: DEBUG
     org.springframework.security.access.expression.method: DEBUG
+  execution-time:
+    enabled: false
+
 
 clearspend:
   business:

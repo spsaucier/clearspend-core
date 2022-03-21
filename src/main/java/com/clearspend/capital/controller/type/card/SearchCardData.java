@@ -60,7 +60,7 @@ public class SearchCardData {
         card.isActivated() ? card.getLastFour() : null,
         new UserData(record.user()),
         new Item<>(record.allocation().getId(), record.allocation().getName()),
-        Amount.of(record.account().getLedgerBalance()),
+        Amount.of(record.account().getAvailableBalance()),
         card.getStatus(),
         card.getType(),
         card.isActivated(),
