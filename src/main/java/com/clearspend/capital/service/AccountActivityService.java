@@ -281,6 +281,14 @@ public class AccountActivityService {
               .map(
                   category -> new ExpenseDetails(category.getIconRef(), category.getCategoryName()))
               .orElse(null));
+      if (accountActivity
+          .getIntegrationSyncStatus()
+          .equals(AccountActivityIntegrationSyncStatus.NOT_READY)) {
+        accountActivity.setIntegrationSyncStatus(
+            accountActivity
+                .getIntegrationSyncStatus()
+                .validTransition(AccountActivityIntegrationSyncStatus.READY));
+      }
     }
     log.debug(
         "Set expense details {} to accountActivity {}",

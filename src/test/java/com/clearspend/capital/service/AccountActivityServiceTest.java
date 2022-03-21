@@ -521,4 +521,31 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityRepository.findById(accountActivity.getId()).orElseThrow();
     log.info(String.valueOf(accountActivityResult));
   }
+
+  @Test
+  void updateAccountActivity_settingExpenseCategoryUpdatesIntegrationStatus() {
+    CreateBusinessRecord businessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(businessRecord.user());
+    AccountActivity accountActivity =
+        new AccountActivity(
+            businessRecord.business().getId(),
+            businessRecord.allocationRecord().allocation().getId(),
+            businessRecord.allocationRecord().allocation().getName(),
+            businessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setNotes("");
+    accountActivity.setUserId(businessRecord.user().getId());
+    accountActivity = accountActivityRepository.save(accountActivity);
+    testHelper.setCurrentUser(businessRecord.user());
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "After Update", Optional.of(1)))
+        .extracting(it -> it.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+  }
 }
