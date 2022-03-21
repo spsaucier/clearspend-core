@@ -202,6 +202,11 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                         .getLedgerBalance()
                         .add(Amount.of(Currency.USD, tuple.get(1, BigDecimal.class))));
               });
+
+      // To make available balance equal to the ledger one for all accounts without holds
+      accounts.stream()
+          .filter(account -> account.getAvailableBalance() == null)
+          .forEach(account -> account.setAvailableBalance(account.getLedgerBalance()));
     }
   }
 }
