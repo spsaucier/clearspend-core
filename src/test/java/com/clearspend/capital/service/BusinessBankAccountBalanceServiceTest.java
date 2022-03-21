@@ -25,22 +25,18 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
-import com.clearspend.capital.testutils.permission.PermissionValidationRole;
-import com.clearspend.capital.testutils.permission.PermissionValidator;
-import com.clearspend.capital.testutils.permission.RootAllocationRole;
-import com.clearspend.capital.testutils.permission.TargetAllocationRole;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
 
 public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   private static final double CURRENT = 100;
@@ -50,22 +46,17 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   private static final Amount AVAILABLE_AMOUNT = toAmount(AVAILABLE);
   private static final Amount LIMIT_AMOUNT = toAmount(LIMIT);
   private static final String ACCESS_TOKEN = "access-mock-Token";
-  private static final Map<PermissionValidationRole, Class<? extends Exception>> FAILING_ROLES =
-      Map.of(
-          new RootAllocationRole(DefaultRoles.ALLOCATION_MANAGER),
-          AccessDeniedException.class,
-          new RootAllocationRole(DefaultRoles.ALLOCATION_EMPLOYEE),
-          AccessDeniedException.class,
-          new RootAllocationRole(DefaultRoles.ALLOCATION_VIEW_ONLY),
-          AccessDeniedException.class,
-          new TargetAllocationRole(DefaultRoles.ALLOCATION_ADMIN),
-          AccessDeniedException.class,
-          new TargetAllocationRole(DefaultRoles.ALLOCATION_MANAGER),
-          AccessDeniedException.class,
-          new TargetAllocationRole(DefaultRoles.ALLOCATION_EMPLOYEE),
-          AccessDeniedException.class,
-          new TargetAllocationRole(DefaultRoles.ALLOCATION_VIEW_ONLY),
-          AccessDeniedException.class);
+  private static final Set<String> rootAllocationFailingRoles =
+      Set.of(
+          DefaultRoles.ALLOCATION_MANAGER,
+          DefaultRoles.ALLOCATION_EMPLOYEE,
+          DefaultRoles.ALLOCATION_VIEW_ONLY);
+  private static final Set<String> childAllocationFailingRoles =
+      Set.of(
+          DefaultRoles.ALLOCATION_ADMIN,
+          DefaultRoles.ALLOCATION_MANAGER,
+          DefaultRoles.ALLOCATION_EMPLOYEE,
+          DefaultRoles.ALLOCATION_VIEW_ONLY);
 
   private static Amount toAmount(final double value) {
     return new Amount(Currency.USD, BigDecimal.valueOf(value));
@@ -79,7 +70,6 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   private TestHelper.CreateBusinessRecord createBusinessRecord;
   private BusinessBankAccount businessBankAccount;
-  private PermissionValidator permissionValidator;
 
   @BeforeEach
   public void setup() throws Exception {
@@ -99,11 +89,6 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
     businessBankAccount =
         businessBankAccountRepo.save(
             createAccount(createBusinessRecord.business().getId(), accountBase.getAccountId()));
-    permissionValidator =
-        permissionValidationHelper
-            .buildValidator(createBusinessRecord)
-            .defaultTargetAllocation()
-            .build();
   }
 
   private BusinessBankAccount createAccount(
@@ -150,7 +135,13 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
         () ->
             businessBankAccountBalanceService.createBusinessBankAccountBalance(
                 businessBankAccount, CURRENT_AMOUNT, AVAILABLE_AMOUNT, LIMIT_AMOUNT);
-    permissionValidator.validateServiceAllocationRoles(FAILING_ROLES, action);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
+        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
+        .useDefaultChildAllocation()
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
@@ -183,7 +174,13 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
         () ->
             businessBankAccountBalanceService.createBusinessBankAccountBalance(
                 businessBankAccount, balance);
-    permissionValidator.validateServiceAllocationRoles(FAILING_ROLES, action);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
+        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
+        .useDefaultChildAllocation()
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
@@ -222,6 +219,12 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   void getNewBalance_UserPermissions() {
     final ThrowingRunnable action =
         () -> businessBankAccountBalanceService.getNewBalance(businessBankAccount);
-    permissionValidator.validateServiceAllocationRoles(FAILING_ROLES, action);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
+        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
+        .useDefaultChildAllocation()
+        .build()
+        .validateServiceMethod(action);
   }
 }

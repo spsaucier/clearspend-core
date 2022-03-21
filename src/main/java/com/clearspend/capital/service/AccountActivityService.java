@@ -18,6 +18,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.embedded.CardDetails;
@@ -74,7 +75,7 @@ public class AccountActivityService {
   private final ExpenseCategoryService expenseCategoryService;
 
   @Transactional(TxType.REQUIRED)
-  public void recordBankAccountAccountActivity(
+  void recordBankAccountAccountActivity(
       Allocation allocation, AccountActivityType type, Adjustment adjustment, Hold hold) {
     AccountActivity adjustmentAccountActivity =
         new AccountActivity(
@@ -115,8 +116,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordReallocationAccountActivity(
-      Allocation allocation, Adjustment adjustment) {
+  AccountActivity recordReallocationAccountActivity(Allocation allocation, Adjustment adjustment) {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
@@ -156,7 +156,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordHoldReleaseAccountActivity(Hold hold) {
+  AccountActivity recordHoldReleaseAccountActivity(Hold hold) {
     AccountActivity accountActivity =
         accountActivityRepository.findByHoldId(hold.getId()).stream()
             .min(Comparator.comparing(Versioned::getCreated))
@@ -172,7 +172,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordManualAdjustmentActivity(
+  AccountActivity recordManualAdjustmentActivity(
       Allocation allocation, Adjustment adjustment, String notes) {
     final AccountActivity accountActivity =
         new AccountActivity(
@@ -193,17 +193,17 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkAdjustmentAccountActivity(NetworkCommon common, Adjustment adjustment) {
+  void recordNetworkAdjustmentAccountActivity(NetworkCommon common, Adjustment adjustment) {
     recordNetworkAccountActivity(common, adjustment.getAmount(), null, adjustment);
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkHoldAccountActivity(NetworkCommon common, Hold hold) {
+  void recordNetworkHoldAccountActivity(NetworkCommon common, Hold hold) {
     recordNetworkAccountActivity(common, hold.getAmount(), hold, null);
   }
 
   @Transactional(TxType.REQUIRED)
-  public void recordNetworkDeclineAccountActivity(NetworkCommon common) {
+  void recordNetworkDeclineAccountActivity(NetworkCommon common) {
     recordNetworkAccountActivity(common, common.getPaddedAmount(), null, null);
   }
 
@@ -298,7 +298,7 @@ public class AccountActivityService {
     return accountActivityRepository.save(accountActivity);
   }
 
-  public AccountActivity updateAccountActivitySyncStatus(
+  AccountActivity updateAccountActivitySyncStatus(
       TypedId<BusinessId> businessId,
       TypedId<AccountActivityId> accountActivityId,
       AccountActivityIntegrationSyncStatus status) {
@@ -307,7 +307,7 @@ public class AccountActivityService {
     return accountActivityRepository.save(accountActivity);
   }
 
-  public AccountActivity updateAccountActivityStatus(
+  AccountActivity updateAccountActivityStatus(
       TypedId<BusinessId> businessId,
       TypedId<AccountActivityId> accountActivityId,
       AccountActivityStatus status) {
@@ -316,6 +316,8 @@ public class AccountActivityService {
     return accountActivityRepository.save(accountActivity);
   }
 
+  @PostAuthorize(
+      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity retrieveAccountActivity(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
     return accountActivityRepository
@@ -323,6 +325,8 @@ public class AccountActivityService {
         .orElse(null);
   }
 
+  @PostAuthorize(
+      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity retrieveAccountActivityByAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId) {
     return accountActivityRepository
@@ -331,7 +335,10 @@ public class AccountActivityService {
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
-  public Page<AccountActivity> getCardAccountActivity(
+  public record CardAccountActivity(Card card, Page<AccountActivity> activityPage) {}
+
+  @PostAuthorize("hasAllocationPermission(returnObject.card().allocationId, 'MANAGE_FUNDS')")
+  public CardAccountActivity getCardAccountActivity(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
       TypedId<CardId> cardId,
@@ -345,11 +352,12 @@ public class AccountActivityService {
     accountActivityFilterCriteria.setAllocationId(cardDetailsRecord.card().getAllocationId());
     accountActivityFilterCriteria.setUserId(userId);
 
-    return accountActivityRepository.find(businessId, accountActivityFilterCriteria);
+    final Page<AccountActivity> activityPage =
+        accountActivityRepository.find(businessId, accountActivityFilterCriteria);
+    return new CardAccountActivity(cardDetailsRecord.card(), activityPage);
   }
 
-  public AccountActivity findByReceiptId(
-      TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
+  AccountActivity findByReceiptId(TypedId<BusinessId> businessId, TypedId<ReceiptId> receiptId) {
 
     List<AccountActivity> accountActivities =
         accountActivityRepository.findByReceiptId(receiptId.toUuid());

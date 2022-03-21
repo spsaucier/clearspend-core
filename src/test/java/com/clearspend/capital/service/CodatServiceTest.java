@@ -106,9 +106,9 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getId(),
-            allocation.getName(),
-            allocation.getAccountId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            createBusinessRecord.allocationRecord().allocation().getName(),
+            createBusinessRecord.allocationRecord().allocation().getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             OffsetDateTime.now(),

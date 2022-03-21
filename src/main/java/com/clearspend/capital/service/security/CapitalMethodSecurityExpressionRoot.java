@@ -27,10 +27,13 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
   }
 
   public boolean isSelfOwned(Ownable entity) {
+    if (entity == null) {
+      return false;
+    }
     return ((JwtAuthenticationToken) getAuthentication())
             .getToken()
             .getClaim("capitalUserId")
-            .equals(entity.getUserId().toString())
+            .equals(String.valueOf(entity.getUserId()))
         && permissionEnrichmentService.evaluatePermission(
             getAuthentication(),
             entity.getBusinessId(),

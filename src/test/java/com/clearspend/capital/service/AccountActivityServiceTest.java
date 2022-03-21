@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import static com.clearspend.capital.testutils.data.TestDataHelper.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -11,8 +12,11 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
 import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
+import com.clearspend.capital.controller.type.activity.ChartFilterType;
+import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
@@ -29,20 +33,28 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.type.ChartFilterCriteria;
+import com.clearspend.capital.service.type.GraphFilterCriteria;
 import com.clearspend.capital.service.type.PageToken;
+import com.clearspend.capital.testutils.data.TestDataHelper;
+import com.clearspend.capital.testutils.permission.CustomUser;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.persistence.EntityManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.Sort;
 
 @Slf4j
 public class AccountActivityServiceTest extends BaseCapitalTest {
@@ -57,6 +69,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired AccountActivityRepository accountActivityRepository;
   @Autowired ExpenseCategoryService expenseCategoryService;
   @Autowired EntityManager entityManager;
+  @Autowired PermissionValidationHelper permissionValidationHelper;
+  @Autowired TestDataHelper testDataHelper;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -371,51 +385,27 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     CreateBusinessRecord primaryBusinessRecord = testHelper.createBusiness();
 
     testHelper.setCurrentUser(primaryBusinessRecord.user());
-    User manager =
-        testHelper
-            .createUserWithRole(
-                primaryBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_MANAGER)
-            .user();
     User activityOwner =
         testHelper
             .createUserWithRole(
                 primaryBusinessRecord.allocationRecord().allocation(),
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
-    User snooper =
-        testHelper
-            .createUserWithRole(
-                primaryBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_EMPLOYEE)
-            .user();
 
-    AccountActivity accountActivity =
-        new AccountActivity(
-            primaryBusinessRecord.business().getId(),
-            primaryBusinessRecord.allocationRecord().allocation().getId(),
-            primaryBusinessRecord.allocationRecord().allocation().getName(),
-            primaryBusinessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
-            AccountActivityStatus.APPROVED,
-            OffsetDateTime.now(),
-            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
-            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
-            AccountActivityIntegrationSyncStatus.NOT_READY);
-    accountActivity.setNotes("");
-    accountActivity.setUserId(activityOwner.getId());
-    accountActivityRepository.save(accountActivity);
+    final AccountActivityConfig config =
+        AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
+            .ownerId(activityOwner.getId())
+            .build();
+    final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 
-    testHelper.setCurrentUser(manager);
-    assertThat(accountActivityService.getAccountActivity(accountActivity.getId())).isNotNull();
-
-    testHelper.setCurrentUser(activityOwner);
-    assertThat(accountActivityService.getAccountActivity(accountActivity.getId())).isNotNull();
-
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class,
-        () -> accountActivityService.getAccountActivity(accountActivity.getId()));
+    permissionValidationHelper
+        .buildValidator(primaryBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .build()
+        .validateServiceMethod(
+            () -> accountActivityService.getAccountActivity(accountActivity.getId()));
   }
 
   @SneakyThrows
@@ -424,71 +414,31 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     CreateBusinessRecord primaryBusinessRecord = testHelper.createBusiness();
 
     testHelper.setCurrentUser(primaryBusinessRecord.user());
-    User manager =
-        testHelper
-            .createUserWithRole(
-                primaryBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_MANAGER)
-            .user();
     User activityOwner =
         testHelper
             .createUserWithRole(
                 primaryBusinessRecord.allocationRecord().allocation(),
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
-    User snooper =
-        testHelper
-            .createUserWithRole(
-                primaryBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_EMPLOYEE)
-            .user();
 
-    AccountActivity accountActivity =
-        new AccountActivity(
-            primaryBusinessRecord.business().getId(),
-            primaryBusinessRecord.allocationRecord().allocation().getId(),
-            primaryBusinessRecord.allocationRecord().allocation().getName(),
-            primaryBusinessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
-            AccountActivityStatus.APPROVED,
-            OffsetDateTime.now(),
-            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
-            Amount.of(primaryBusinessRecord.business().getCurrency(), BigDecimal.ONE),
-            AccountActivityIntegrationSyncStatus.NOT_READY);
-    accountActivity.setNotes("");
-    accountActivity.setUserId(activityOwner.getId());
-    accountActivityRepository.save(accountActivity);
+    final AccountActivityConfig config =
+        AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
+            .ownerId(activityOwner.getId())
+            .build();
+    final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 
-    testHelper.setCurrentUser(manager);
-    assertThat(
-            accountActivityService.updateAccountActivity(
-                accountActivity, "I'm a manager and I can update Activities!", Optional.empty()))
-        .isNotNull();
-    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
-        .isEqualTo("I'm a manager and I can update Activities!");
-
-    testHelper.setCurrentUser(activityOwner);
-    assertThat(
-            accountActivityService.updateAccountActivity(
-                accountActivity, "I own the Activity. I can do whatever I want.", Optional.empty()))
-        .isNotNull();
-    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
-        .isEqualTo("I own the Activity. I can do whatever I want.");
-
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class,
+    final ThrowingRunnable action =
         () ->
-            assertThat(
-                    accountActivityService.updateAccountActivity(
-                        accountActivity,
-                        "I'm trying to update something I should NOT have access to",
-                        Optional.empty()))
-                .isNotNull());
+            accountActivityService.updateAccountActivity(
+                accountActivity, "I am updating this activity", Optional.empty());
 
-    // Should be unchanged from the Owner modification above
-    assertThat(accountActivityRepository.findById(accountActivity.getId()).get().getNotes())
-        .isEqualTo("I own the Activity. I can do whatever I want.");
+    permissionValidationHelper
+        .buildValidator(primaryBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
@@ -547,5 +497,299 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 accountActivity, "After Update", Optional.of(1)))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+  }
+
+  @Test
+  void retrieveAccountActivity_UserPermissions() {
+    final CreateBusinessRecord primaryBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(primaryBusinessRecord.user());
+    User activityOwner =
+        testHelper
+            .createUserWithRole(
+                primaryBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    final AccountActivityConfig config =
+        AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
+            .ownerId(activityOwner.getId())
+            .build();
+    final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
+
+    permissionValidationHelper
+        .buildValidator(primaryBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .build()
+        .validateServiceMethod(
+            () ->
+                accountActivityService.retrieveAccountActivity(
+                    primaryBusinessRecord.business().getId(), accountActivity.getId()));
+  }
+
+  @Test
+  void retrieveAccountActivityByAdjustmentId_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final AdjustmentRecord adjustmentRecord =
+        testDataHelper.createAdjustmentWithJoins(
+            AdjustmentWithJoinsConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User activityOwner =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .adjustmentId(adjustmentRecord.adjustment().getId())
+            .ownerId(activityOwner.getId())
+            .build());
+
+    final ThrowingRunnable action =
+        () ->
+            accountActivityService.retrieveAccountActivityByAdjustmentId(
+                createBusinessRecord.business().getId(), adjustmentRecord.adjustment().getId());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void getCardAccountActivity_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final CardAndLimit cardAndLimit =
+        testDataHelper.createCardAndLimit(
+            CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    final AccountActivityFilterCriteria criteria = createCriteria();
+
+    final ThrowingRunnable action =
+        () ->
+            accountActivityService.getCardAccountActivity(
+                createBusinessRecord.business().getId(),
+                createBusinessRecord.user().getId(),
+                cardAndLimit.card().getId(),
+                criteria);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Disabled
+  @Test
+  void findDataForChart_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Allocation",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final ChartFilterCriteria criteriaWithAllocation =
+        new ChartFilterCriteria(
+            ChartFilterType.ALLOCATION,
+            allocation.getId(),
+            createBusinessRecord.user().getId(),
+            OffsetDateTime.now(),
+            OffsetDateTime.now(),
+            Sort.Direction.ASC);
+
+    final ThrowingRunnable actionWithAllocation =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteriaWithAllocation);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(actionWithAllocation);
+
+    final ChartFilterCriteria criteriaWithoutAllocation =
+        new ChartFilterCriteria(
+            ChartFilterType.ALLOCATION,
+            null,
+            createBusinessRecord.user().getId(),
+            OffsetDateTime.now(),
+            OffsetDateTime.now(),
+            Sort.Direction.ASC);
+
+    final ThrowingRunnable actionWithoutAllocation =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteriaWithoutAllocation);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(DefaultRoles.ALL_ALLOCATION)
+        .build()
+        .validateServiceMethod(actionWithoutAllocation);
+  }
+
+  @Disabled
+  @Test
+  void findDataForLineGraph_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Allocation",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final GraphFilterCriteria criteriaWithAllocation =
+        new GraphFilterCriteria(
+            allocation.getId(),
+            createBusinessRecord.user().getId(),
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    final ThrowingRunnable actionWithAllocation =
+        () ->
+            accountActivityService.findDataForLineGraph(
+                createBusinessRecord.business().getId(), criteriaWithAllocation);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(actionWithAllocation);
+
+    final GraphFilterCriteria criteriaWithoutAllocation =
+        new GraphFilterCriteria(
+            null, createBusinessRecord.user().getId(), OffsetDateTime.now(), OffsetDateTime.now());
+
+    final ThrowingRunnable actionWithoutAllocation =
+        () ->
+            accountActivityService.findDataForLineGraph(
+                createBusinessRecord.business().getId(), criteriaWithoutAllocation);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(DefaultRoles.ALL_ALLOCATION)
+        .build()
+        .validateServiceMethod(actionWithoutAllocation);
+  }
+
+  private AccountActivityFilterCriteria createCriteria() {
+    final PageRequest pageRequest = new PageRequest();
+    pageRequest.setPageNumber(1);
+    pageRequest.setPageSize(1);
+    return new AccountActivityFilterCriteria(
+        new TypedId<>(), List.of(), OffsetDateTime.now(), OffsetDateTime.now(), pageRequest);
+  }
+
+  @Disabled
+  @Test
+  void find_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Allocation",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final AccountActivityFilterCriteria criteriaWithAllocation = createCriteria();
+    criteriaWithAllocation.setAllocationId(allocation.getId());
+
+    final ThrowingRunnable actionWithAllocation =
+        () ->
+            accountActivityService.find(
+                createBusinessRecord.business().getId(), criteriaWithAllocation);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(actionWithAllocation);
+
+    final AccountActivityFilterCriteria criteriaWithoutAllocation = createCriteria();
+
+    final ThrowingRunnable actionWithoutAllocation =
+        () ->
+            accountActivityService.find(
+                createBusinessRecord.business().getId(), criteriaWithoutAllocation);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(DefaultRoles.ALL_ALLOCATION)
+        .build()
+        .validateServiceMethod(actionWithoutAllocation);
+  }
+
+  @Disabled
+  @Test
+  void createCSVFile_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Allocation",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final AccountActivityFilterCriteria criteriaWithAllocation = createCriteria();
+    criteriaWithAllocation.setAllocationId(allocation.getId());
+
+    final ThrowingRunnable actionWithAllocation =
+        () -> accountActivityService.createCSVFile(criteriaWithAllocation);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(actionWithAllocation);
+
+    final AccountActivityFilterCriteria criteriaWithoutAllocation = createCriteria();
+
+    final ThrowingRunnable actionWithoutAllocation =
+        () -> accountActivityService.createCSVFile(criteriaWithoutAllocation);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .setChildAllocation(allocation)
+        .addAllChildAllocationFailingRoles(DefaultRoles.ALL_ALLOCATION)
+        .build()
+        .validateServiceMethod(actionWithoutAllocation);
   }
 }

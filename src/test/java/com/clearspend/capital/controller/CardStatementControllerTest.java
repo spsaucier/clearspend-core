@@ -13,13 +13,10 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
-import com.clearspend.capital.testutils.permission.PermissionValidationRole;
-import com.clearspend.capital.testutils.permission.PermissionValidator;
-import com.clearspend.capital.testutils.permission.RootAllocationRole;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
-import java.util.Map;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.ResultMatcher;
 import org.testcontainers.utility.ThrowingFunction;
 
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
@@ -46,7 +42,6 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   private CreateBusinessRecord createBusinessRecord;
   private Card card;
   private User businessOwnerUser;
-  private PermissionValidator permissionValidator;
 
   private record RequestObjAndString(CardStatementRequest request, String requestString) {}
 
@@ -69,7 +64,6 @@ public class CardStatementControllerTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(businessOwnerUser);
     statementHelper.setupStatementData(createBusinessRecord, card);
-    permissionValidator = permissionValidationHelper.validator(createBusinessRecord);
   }
 
   @Test
@@ -84,11 +78,12 @@ public class CardStatementControllerTest extends BaseCapitalTest {
                     .contentType("application/json")
                     .content(request.requestString())
                     .cookie(cookie));
-    final Map<PermissionValidationRole, ResultMatcher> failingStatuses =
-        Map.of(
-            RootAllocationRole.ALLOCATION_EMPLOYEE, status().isForbidden(),
-            RootAllocationRole.ALLOCATION_VIEW_ONLY, status().isForbidden());
-    permissionValidator.validateMvcAllocationRoles(failingStatuses, action);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_EMPLOYEE)
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @SneakyThrows

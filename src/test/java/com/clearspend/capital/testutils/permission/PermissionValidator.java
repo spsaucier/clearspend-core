@@ -1,162 +1,158 @@
 package com.clearspend.capital.testutils.permission;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.servlet.http.Cookie;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.function.ThrowingConsumer;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.testcontainers.utility.ThrowingFunction;
 
 /**
- * This is the validator that executes the permissions validation operations. Each method takes in
- * both the action to be tested, and a map of roles that should fail. Any permission not included in
- * the map is assumed to result in a successful operation. The result of the operation is ignored.
- *
- * <p>The configuration takes in a map where the keys are instances of the PermissionValidationRole
- * interface, and the values represent a permission failure. The PermissionValidationRole interface
- * allows for specifying a given role along with additional meta-instructions on how that role
- * should be evaluated. The instances of this are:
- *
- * <p>RootAllocationRole = The most common choice, when in doubt, use this one. It will generate a
- * user with the given role and test it against the root allocation.
- *
- * <p>TargetAllocationRole = If a target allocation is provided via the builder, this will generate
- * a user with the given role and test it against the target allocation. Useful if the root and
- * child allocations will have different behavior (such as with bank accounts).
+ * The actual validator that does all the testing of method permissions. Please see
+ * PermissionValidatorBuilder for a detailed breakdown of the different options for validation.
  */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class PermissionValidator {
-  @NonNull private final TestHelper testHelper;
-  @NonNull private final TestHelper.CreateBusinessRecord createBusinessRecord;
-  @NonNull private final Optional<Allocation> targetAllocation;
+  private final TestHelper testHelper;
+  private final TestHelper.CreateBusinessRecord createBusinessRecord;
+  private final Set<String> rootAllocationFailingRoles;
+  private final Set<String> childAllocationFailingRoles;
+  private final Set<CustomUser> rootAllocationCustomUsers;
+  private final Set<CustomUser> childAllocationCustomUsers;
+  private final Allocation childAllocation;
 
   /**
-   * Evaluates the action's permissions. The action is expected to be a service method call that
-   * will throw an exception if the permissions fail. The map of roles are mapped to the type of
-   * exception that should be thrown if the permission check fails. This will usually be an
-   * AccessDeniedException, but the map allows this to be specified.
+   * Validate a service method and its permissions.
    *
-   * <p>The operation should throw no exception whatsoever if it succeeds.
-   *
-   * @param failingExceptions the map of exceptions for failing role permission checks.
-   * @param action the action (a service method call) to perform.
+   * @param action a runnable that can throw an exception that wraps around the service method to
+   *     test.
    */
-  public void validateServiceAllocationRoles(
-      final Map<PermissionValidationRole, Class<? extends Exception>> failingExceptions,
-      final ThrowingRunnable action) {
-    validateAllocationRoles(
-        failingExceptions,
-        (user, failureValue) -> {
+  public void validateServiceMethod(final ThrowingRunnable action) {
+    final ThrowingConsumer<User> failAssertion =
+        user -> {
           testHelper.setCurrentUser(user);
-          failureValue.ifPresentOrElse(
-              exType -> assertThrows(exType, action::run), () -> assertDoesNotThrow(action::run));
+          assertThrows(AccessDeniedException.class, action::run);
+        };
+    final ThrowingConsumer<User> passAssertion =
+        user -> {
+          testHelper.setCurrentUser(user);
+          assertDoesNotThrow(action::run);
+        };
+    testRootAllocationRoles(failAssertion, passAssertion);
+    testChildAllocationRoles(failAssertion, passAssertion);
+    testRootAllocationCustomUsers(failAssertion, passAssertion);
+    testChildAllocationCustomUsers(failAssertion, passAssertion);
+  }
+
+  private void testChildAllocationCustomUsers(
+      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
+    childAllocationCustomUsers.forEach(
+        customUser -> {
+          final String failureMessage = "Child Allocation. User: %s".formatted(customUser.user());
+          if (customUser.isPassResult()) {
+            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(customUser.user()));
+          } else {
+            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(customUser.user()));
+          }
         });
   }
 
-  @FunctionalInterface
-  private interface PermissionTest<T> {
-    void test(final User user, final Optional<T> failureValue) throws Throwable;
+  private void testRootAllocationCustomUsers(
+      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
+    rootAllocationCustomUsers.forEach(
+        customUser -> {
+          final String failureMessage = "Root Allocation. User: %s".formatted(customUser.user());
+          if (customUser.isPassResult()) {
+            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(customUser.user()));
+          } else {
+            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(customUser.user()));
+          }
+        });
   }
 
-  private <T> void validateAllocationRoles(
-      final Map<PermissionValidationRole, T> failureMap, final PermissionTest<T> permissionTest) {
+  private void testChildAllocationRoles(
+      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
+    Optional.ofNullable(childAllocation)
+        .ifPresent(
+            allocation -> {
+              DefaultRoles.ALL_ALLOCATION.forEach(
+                  role -> {
+                    final String failureMessage = "Target Allocation. Role: %s".formatted(role);
+                    final User user = prepareUser(allocation, role);
+                    if (childAllocationFailingRoles.contains(role)) {
+                      assertWithFailureMessage(failureMessage, () -> failAssertion.accept(user));
+                    } else {
+                      assertWithFailureMessage(failureMessage, () -> passAssertion.accept(user));
+                    }
+                  });
+            });
+  }
+
+  private void testRootAllocationRoles(
+      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
     DefaultRoles.ALL_ALLOCATION.forEach(
         role -> {
+          final String failureMessage = "Root Allocation. Role: %s".formatted(role);
           final User user = prepareUser(createBusinessRecord.allocationRecord().allocation(), role);
-          final String failureMessage = String.format("Root Allocation. Role: %s", role);
-          final Optional<T> failureValue =
-              Optional.ofNullable(failureMap.get(new RootAllocationRole(role)));
-          handleValidationException(failureMessage, () -> permissionTest.test(user, failureValue));
+          if (rootAllocationFailingRoles.contains(role)) {
+            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(user));
+          } else {
+            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(user));
+          }
         });
-
-    targetAllocation.ifPresentOrElse(
-        allocation -> {
-          DefaultRoles.ALL_ALLOCATION.forEach(
-              role -> {
-                final User user = prepareUser(allocation, role);
-                final String failureMessage = String.format("Target Allocation. Role: %s", role);
-                final Optional<T> failureValue =
-                    Optional.ofNullable(failureMap.get(new TargetAllocationRole(role)));
-                handleValidationException(
-                    failureMessage, () -> permissionTest.test(user, failureValue));
-              });
-        },
-        noTargetAllocationConfigured(failureMap.keySet()));
   }
 
-  private void handleValidationException(
-      final String failureMessage, final ThrowingRunnable validationThatMayThrow) {
+  /**
+   * Validate a MockMvc call. This is done by taking in a function that is passed a cookie. That
+   * cookie represents the user being tested and should be passed into the MockMvc request. The
+   * function should return the ResultActions so that the status code can be evaluated.
+   *
+   * @param action the function wrapping the MockMvc call.
+   */
+  public void validateMockMvcCall(final ThrowingFunction<Cookie, ResultActions> action) {
+    final ThrowingConsumer<User> failAssertion =
+        user -> {
+          final Cookie cookie = testHelper.login(user);
+          final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
+          resultActions.andExpect(MockMvcResultMatchers.status().isForbidden());
+        };
+    final ThrowingConsumer<User> passAssertion =
+        user -> {
+          final Cookie cookie = testHelper.login(user);
+          final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
+          resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+        };
+    testRootAllocationRoles(failAssertion, passAssertion);
+    testChildAllocationRoles(failAssertion, passAssertion);
+    testRootAllocationCustomUsers(failAssertion, passAssertion);
+    testChildAllocationCustomUsers(failAssertion, passAssertion);
+  }
+
+  private void assertWithFailureMessage(
+      final String failureMessage, final ThrowingRunnable assertion) {
     try {
-      validationThatMayThrow.run();
+      assertion.run();
     } catch (AssertionError ex) {
-      System.err.println(failureMessage);
-      throw ex;
+      throw new AssertionError("Permission validation failure. %s".formatted(failureMessage), ex);
     } catch (Throwable ex) {
       throw new RuntimeException(ex);
     }
   }
 
-  private Runnable noTargetAllocationConfigured(final Set<PermissionValidationRole> failingRoles) {
-    return () ->
-        assertEquals(
-            0,
-            failingRoles.stream().filter(key -> key instanceof TargetAllocationRole).count(),
-            "Validation configured with TargetAllocationRole but no target allocation configured");
-  }
-
-  /**
-   * Evaluates the MVC operation to make sure the permission check passed. The map it takes in
-   * contains ResultMatchers to evaluate the response status. In general permissions failures should
-   * return a 403 status, but this map allows that to be specified. Any roles not included in the
-   * map will be assumed to have succeeded, which means they will be expected to return a 200
-   * response.
-   *
-   * <p>In this case, the action that is executed is a MockMvc call. The function in question that
-   * must be provided needs to accept a Cookie and pass that cookie with the request. This validator
-   * will be setting up different users with different permissions, and propagating the cookie is
-   * how the test will be evaluated. The action also must return the ResultActions that is returned
-   * from the MockMvc call.
-   *
-   * @param failingStatuses the failing statuses for roles without access.
-   * @param action the action to perform.
-   */
-  public void validateMvcAllocationRoles(
-      final Map<PermissionValidationRole, ResultMatcher> failingStatuses,
-      final ThrowingFunction<Cookie, ResultActions> action) {
-    validateAllocationRoles(
-        failingStatuses,
-        (user, failureValue) -> {
-          final Cookie cookie = testHelper.login(user);
-          final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
-          final ResultMatcher statusMatcher =
-              failureValue.orElse(MockMvcResultMatchers.status().isOk());
-          expectStatus(resultActions, statusMatcher);
-        });
-  }
-
   private User prepareUser(final Allocation allocation, final String role) {
     testHelper.setCurrentUser(createBusinessRecord.user());
     return testHelper.createUserWithRole(allocation, role).user();
-  }
-
-  @SneakyThrows
-  private static void expectStatus(
-      final ResultActions resultActions, final ResultMatcher statusMatcher) {
-    resultActions.andExpect(statusMatcher);
   }
 }

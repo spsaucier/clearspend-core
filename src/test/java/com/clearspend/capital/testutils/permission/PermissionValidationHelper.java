@@ -7,14 +7,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * A utility class to help test the user permissions on various methods. At the moment it has been
- * designed to validate all behavior of @PreAuthorize & @PostAuthorize annotations for
- * allocation-level permissions. Additional behavior can be built into it.
+ * A helper class designed to support permission validation tests throughout the codebase. Given the
+ * variety of different permission scenarios that are supported, it is important to have tests that
+ * guarantee that various methods are correctly restricted. This helper will validate all permission
+ * rules against a given method and confirm they are implemented correctly.
  *
- * <p>The goal is to have this be the single source of truth for permission-related validation.
- * Whenever anything changes for roles & permissions, simply change this helper and re-run the test
- * suite. All tests using the helper will be impacted, thus exposing any places where changes may
- * need to happen due to the permissions changes.
+ * <p>Each method is validated by using a builder API that allows for simply configuring how the
+ * method should respond to users with different permissions. Details on how to work with this are
+ * documented in the builder class.
  */
 @RequiredArgsConstructor
 @Component
@@ -23,24 +23,14 @@ public class PermissionValidationHelper {
   private final AllocationService allocationService;
 
   /**
-   * Build the validator to customize its settings.
+   * Begin building a validator, passing in the required CreateBusinessRecord so that the root
+   * business/allocation/user information is available for test configuration.
    *
-   * @param createBusinessRecord the CreateBusinessRecord for the test.
-   * @return the PermissionValidatorBuilder.
+   * @param createBusinessRecord the CreateBusinessRecord.
+   * @return the PermissionValidationBuilder.
    */
   public PermissionValidatorBuilder buildValidator(
       @NonNull final TestHelper.CreateBusinessRecord createBusinessRecord) {
     return new PermissionValidatorBuilder(testHelper, allocationService, createBusinessRecord);
-  }
-
-  /**
-   * Create a validator instance with the default settings.
-   *
-   * @param createBusinessRecord the CreateBusinessRecord for the test.
-   * @return the PermissionValidator.
-   */
-  public PermissionValidator validator(
-      @NonNull final TestHelper.CreateBusinessRecord createBusinessRecord) {
-    return buildValidator(createBusinessRecord).build();
   }
 }

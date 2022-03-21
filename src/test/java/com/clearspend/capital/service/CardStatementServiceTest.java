@@ -9,20 +9,16 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
-import com.clearspend.capital.testutils.permission.PermissionValidationRole;
-import com.clearspend.capital.testutils.permission.PermissionValidator;
-import com.clearspend.capital.testutils.permission.RootAllocationRole;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
-import java.util.Map;
 import lombok.SneakyThrows;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
 
 public class CardStatementServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
@@ -32,7 +28,6 @@ public class CardStatementServiceTest extends BaseCapitalTest {
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   private Card card;
   private TestHelper.CreateBusinessRecord createBusinessRecord;
-  private PermissionValidator permissionValidator;
 
   private CardStatementRequest getRequest(final TypedId<CardId> id) {
     final CardStatementRequest request = new CardStatementRequest();
@@ -56,7 +51,6 @@ public class CardStatementServiceTest extends BaseCapitalTest {
             CardType.PHYSICAL,
             true);
     statementHelper.setupStatementData(createBusinessRecord, card);
-    permissionValidator = permissionValidationHelper.validator(createBusinessRecord);
   }
 
   @Test
@@ -67,11 +61,13 @@ public class CardStatementServiceTest extends BaseCapitalTest {
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
 
-    final Map<PermissionValidationRole, Class<? extends Exception>> failingRoles =
-        Map.of(RootAllocationRole.ALLOCATION_EMPLOYEE, AccessDeniedException.class);
-
     final ThrowingRunnable action = () -> cardStatementService.generatePdf(request, cardDetails);
-    permissionValidator.validateServiceAllocationRoles(failingRoles, action);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_EMPLOYEE)
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test

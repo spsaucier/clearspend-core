@@ -351,13 +351,15 @@ public class UserController {
       PageRequest pageRequest) {
     CurrentUser currentUser = CurrentUser.get();
 
+    final AccountActivityFilterCriteria criteria =
+        new AccountActivityFilterCriteria(
+            cardId, type != null ? List.of(type) : List.of(), dateFrom, dateTo, pageRequest);
+
     Page<AccountActivity> accountActivity =
-        accountActivityService.getCardAccountActivity(
-            currentUser.businessId(),
-            currentUser.userId(),
-            cardId,
-            new AccountActivityFilterCriteria(
-                cardId, type != null ? List.of(type) : List.of(), dateFrom, dateTo, pageRequest));
+        accountActivityService
+            .getCardAccountActivity(
+                currentUser.businessId(), currentUser.userId(), cardId, criteria)
+            .activityPage();
 
     return PagedData.of(accountActivity, AccountActivityResponse::new);
   }
