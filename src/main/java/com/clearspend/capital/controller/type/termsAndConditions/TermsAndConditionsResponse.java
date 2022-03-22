@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.type.termsAndConditions;
 
-import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.service.TermsAndConditionsService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
@@ -11,8 +12,11 @@ import lombok.Data;
 @AllArgsConstructor
 public class TermsAndConditionsResponse {
 
-  @JsonProperty("user")
-  private User user;
+  @JsonProperty("userId")
+  private TypedId<UserId> userId;
+
+  @JsonProperty("acceptedTimestampByUser")
+  private LocalDateTime acceptedTimestampByUser;
 
   @JsonProperty("isAcceptedTermsAndConditions")
   private boolean isAcceptedTermsAndConditions;
@@ -24,8 +28,9 @@ public class TermsAndConditionsResponse {
       TermsAndConditionsService.TermsAndConditionsRecord termsAndConditionsRecord) {
 
     return new TermsAndConditionsResponse(
-        termsAndConditionsRecord.user(),
+        termsAndConditionsRecord.userId(),
+        termsAndConditionsRecord.acceptedTimestampByUser(),
         termsAndConditionsRecord.isAcceptedTermsAndConditions(),
-        termsAndConditionsRecord.documentTimestamp());
+        termsAndConditionsRecord.maxDocumentTimestamp());
   }
 }

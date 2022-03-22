@@ -62,7 +62,7 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
       privacyPolicyTimestamp = LocalDateTime.parse(privacyPolicyMatcher.group(), f);
     }
     LocalDateTime documentTimestamp =
-        termsAndConditionsService.calculateMaxDate(termsTimestamp, privacyPolicyTimestamp);
+        termsAndConditionsService.calculateMaxTimestamp(termsTimestamp, privacyPolicyTimestamp);
     log.info("documentTimestamp: {}", documentTimestamp);
     User user = userService.retrieveUser(createBusinessRecord.user().getId());
     user.setTermsAndConditionsAcceptanceTimestamp(

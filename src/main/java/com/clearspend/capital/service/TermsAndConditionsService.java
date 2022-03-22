@@ -1,5 +1,7 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.termsAndConditions.TermsAndConditionsResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -27,7 +29,10 @@ public class TermsAndConditionsService {
       Pattern.compile("[A-Za-z]+ [A-Za-z]+ [0-9 ]?\\d \\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2}");
 
   public record TermsAndConditionsRecord(
-      User user, boolean isAcceptedTermsAndConditions, LocalDateTime documentTimestamp) {}
+      TypedId<UserId> userId,
+      LocalDateTime acceptedTimestampByUser,
+      boolean isAcceptedTermsAndConditions,
+      LocalDateTime maxDocumentTimestamp) {}
 
   /***
    * Fetches document timestamp from two urls and getting the latest from two
@@ -50,8 +55,19 @@ public class TermsAndConditionsService {
       privacyPolicyTimestamp = LocalDateTime.parse(extractPolicyTimestamp, f);
     }
     return TermsAndConditionsResponse.of(
-        compareDocumentDateWithUserAcceptanceDate(
-            calculateMaxDate(termsTimestamp, privacyPolicyTimestamp)));
+        compareDocumentTimestampWithUserAcceptanceTimestamp(
+            calculateMaxTimestamp(termsTimestamp, privacyPolicyTimestamp)));
+  }
+
+  public LocalDateTime calculateMaxTimestamp(
+      LocalDateTime termsTimestamp, LocalDateTime privacyPolicyTimestamp) {
+    LocalDateTime maxDocumentTimestamp;
+    if (termsTimestamp.isAfter(privacyPolicyTimestamp)) {
+      maxDocumentTimestamp = termsTimestamp;
+    } else {
+      maxDocumentTimestamp = privacyPolicyTimestamp;
+    }
+    return maxDocumentTimestamp;
   }
 
   /**
@@ -60,9 +76,8 @@ public class TermsAndConditionsService {
    * @param maxDocumentTimestamp
    * @return
    */
-  public TermsAndConditionsRecord compareDocumentDateWithUserAcceptanceDate(
+  public TermsAndConditionsRecord compareDocumentTimestampWithUserAcceptanceTimestamp(
       LocalDateTime maxDocumentTimestamp) {
-    acceptTermsAndConditionsTimestamp();
     User user = userService.retrieveUser(CurrentUser.getUserId());
     user.getTermsAndConditionsAcceptanceTimestamp();
     log.debug("termsAndConditions : {}", user.getTermsAndConditionsAcceptanceTimestamp());
@@ -70,18 +85,11 @@ public class TermsAndConditionsService {
     if (user.getTermsAndConditionsAcceptanceTimestamp().isAfter(maxDocumentTimestamp)) {
       isAcceptedTermsAndConditions = true;
     }
-    return new TermsAndConditionsRecord(user, isAcceptedTermsAndConditions, maxDocumentTimestamp);
-  }
-
-  public LocalDateTime calculateMaxDate(
-      LocalDateTime termsTimestamp, LocalDateTime privacyPolicyTimestamp) {
-    LocalDateTime dateTimeTimestamp;
-    if (termsTimestamp.isAfter(privacyPolicyTimestamp)) {
-      dateTimeTimestamp = termsTimestamp;
-    } else {
-      dateTimeTimestamp = privacyPolicyTimestamp;
-    }
-    return dateTimeTimestamp;
+    return new TermsAndConditionsRecord(
+        user.getId(),
+        user.getTermsAndConditionsAcceptanceTimestamp(),
+        isAcceptedTermsAndConditions,
+        maxDocumentTimestamp);
   }
 
   public String getUrlContents(String theUrl) {

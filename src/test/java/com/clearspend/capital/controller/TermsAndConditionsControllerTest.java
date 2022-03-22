@@ -1,11 +1,10 @@
 package com.clearspend.capital.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
-import javax.servlet.http.Cookie;
+import com.clearspend.capital.controller.type.termsAndConditions.TermsAndConditionsResponse;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -13,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -33,15 +31,14 @@ public class TermsAndConditionsControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void testCheckingTimeStampDetails() {
-    Cookie authCookie = createBusinessRecord.authCookie();
-    MockHttpServletResponse response =
+    log.info(
         mvc.perform(
                 get("/terms-and-conditions/timestamp-details")
                     .contentType("application/json")
-                    .cookie(authCookie))
-            .andExpect(status().isOk())
+                    .cookie(createBusinessRecord.authCookie()))
             .andReturn()
-            .getResponse();
-    log.info(response.getContentAsString());
+            .getResponse()
+            .getContentAsString(),
+        TermsAndConditionsResponse.class);
   }
 }
