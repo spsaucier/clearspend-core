@@ -23,12 +23,8 @@ import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
@@ -47,6 +43,12 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Slf4j
 public class NetworkMessageService {
 
+  public @interface NetworkMessageProvider {
+    String reviewer();
+
+    String explanation();
+  }
+
   private final NetworkMessageRepository networkMessageRepository;
   private final NetworkMerchantRepository networkMerchantRepository;
 
@@ -57,17 +59,16 @@ public class NetworkMessageService {
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
 
-  public final ObjectMapper objectMapper =
-      new ObjectMapper()
-          .registerModule(new JavaTimeModule())
-          .registerModule(new Jdk8Module())
-          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-          .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
-          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
   private final ClearbitClient clearbitClient;
 
   @Transactional
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe handlers across package boundaries. These handler callbacks are not user-driven events and therefore cannot have user permissions enforced on them",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {NetworkMessageProvider.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void processNetworkMessage(NetworkCommon common) {
     retrieveCardAndNetworkMessages(common);
 

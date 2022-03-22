@@ -55,6 +55,7 @@ import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
@@ -190,6 +191,10 @@ public class TestDataController {
             .toList());
   }
 
+  @NetworkMessageProvider(
+      reviewer = "Craig Miller",
+      explanation =
+          "This controller exists to create test data in non-prod environments. It needs to generate Stripe messages to do so.")
   @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "This class is for testing only")
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
   CreateTestDataResponse createTestData(

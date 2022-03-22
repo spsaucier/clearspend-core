@@ -1,3 +1,4 @@
+import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
@@ -43,6 +44,12 @@ snyk {
 tasks {
     compileJava {
         options.compilerArgs.add("-parameters")
+    }
+
+    compileTestJava {
+        options.errorprone {
+            disable("RestrictedApiChecker")
+        }
     }
 
     test {

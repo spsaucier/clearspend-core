@@ -12,6 +12,7 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,10 @@ public class NetworkMessageDemoController {
 
   private final NetworkMessageService networkMessageService;
 
+  @NetworkMessageProvider(
+      reviewer = "Craig Miller",
+      explanation =
+          "This controller exists to create demo data in non-prod environments. It needs to generate Stripe messages to do so.")
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
   NetworkMessageResponse processNetworkMessage(
       @RequestBody @Validated NetworkMessageRequest request) throws JsonProcessingException {
