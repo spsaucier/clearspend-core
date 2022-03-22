@@ -337,12 +337,12 @@ public class CodatService {
     if (supplier != null) {
       GetAccountsResponse accountsResponse =
           codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
-      Optional<CodatAccount> checkingAccount =
+      Optional<CodatAccount> expenseAccount =
           accountsResponse.getResults().stream()
-              .filter(account -> account.getName().equalsIgnoreCase("checking"))
+              .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
               .findFirst();
 
-      if (checkingAccount.isPresent()) {
+      if (expenseAccount.isPresent()) {
         CodatSyncDirectCostResponse syncResponse =
             codatClient.syncTransactionAsDirectCost(
                 business.getCodatCompanyRef(),
@@ -350,7 +350,7 @@ public class CodatService {
                 accountActivity,
                 business.getCurrency().name(),
                 supplier,
-                checkingAccount.get());
+                expenseAccount.get());
 
         Optional<TransactionSyncLog> transactionSyncLogOptional =
             transactionSyncLogRepository.findById(transaction.getId());

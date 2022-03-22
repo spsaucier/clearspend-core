@@ -40,7 +40,7 @@ public class CodatMockClient extends CodatClient {
     List<CodatAccount> accountList = new ArrayList<CodatAccount>();
     accountList.add(
         new CodatAccount(
-            "checking",
+            "codat-card-id",
             "checking",
             CodatAccountStatus.ACTIVE,
             "category",
