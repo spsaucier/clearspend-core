@@ -41,6 +41,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,7 +140,6 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @Test
   void syncSupplierWhenExists() {
-
     testHelper.setCurrentUser(createBusinessRecord.user());
 
     AccountActivity newAccountActivity =
@@ -359,5 +359,88 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .getCodatCreditCardId()
                 .equals("1234"))
         .isTrue();
+  }
+
+  @Test
+  void canSyncMultipleTransactionsAtOnce() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity firstAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getId(),
+            allocation.getName(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    firstAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(firstAccountActivity);
+
+    AccountActivity secondAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getId(),
+            allocation.getName(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    secondAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business 2",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(secondAccountActivity);
+
+    codatService.syncMultipleTransactions(
+        List.of(firstAccountActivity.getId(), secondAccountActivity.getId()), business.getId());
+    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
+
+    assertThat(
+            loggedTransactions.stream()
+                .filter(
+                    transactionSyncLog ->
+                        transactionSyncLog
+                                .getAccountActivityId()
+                                .equals(firstAccountActivity.getId())
+                            || transactionSyncLog
+                                .getAccountActivityId()
+                                .equals(secondAccountActivity.getId()))
+                .collect(Collectors.toUnmodifiableList())
+                .size())
+        .isEqualTo(2);
+
+    PagedData<SyncLogResponse> syncLog =
+        mockMvcHelper.queryObject(
+            "/codat/sync-log",
+            HttpMethod.POST,
+            userCookie,
+            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
+            PagedData.class);
+
+    assertThat(syncLog.getTotalElements() > 1).isTrue();
   }
 }

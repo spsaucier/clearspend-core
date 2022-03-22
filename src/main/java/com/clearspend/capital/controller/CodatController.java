@@ -18,6 +18,7 @@ import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -64,6 +65,12 @@ public class CodatController {
           TypedId<AccountActivityId> accountActivityId)
       throws RuntimeException {
     return codatService.syncTransactionAsDirectCost(accountActivityId, CurrentUser.getBusinessId());
+  }
+
+  @PostMapping("/sync")
+  List<SyncTransactionResponse> syncTransactionListToCodat(
+      @Validated @RequestBody List<TypedId<AccountActivityId>> accountActivityIds) {
+    return codatService.syncMultipleTransactions(accountActivityIds, CurrentUser.getBusinessId());
   }
 
   @GetMapping("/bank-accounts")

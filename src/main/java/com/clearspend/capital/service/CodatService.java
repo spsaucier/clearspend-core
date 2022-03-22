@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -459,5 +460,12 @@ public class CodatService {
                   businessService.updateCodatCreditCardForBusiness(
                       business.getId(), accountStatus.getData().getId()));
     }
+  }
+
+  public List<SyncTransactionResponse> syncMultipleTransactions(
+      List<TypedId<AccountActivityId>> accountActivityIds, TypedId<BusinessId> businessId) {
+    return accountActivityIds.stream()
+        .map(accountActivityId -> syncTransactionAsDirectCost(accountActivityId, businessId))
+        .collect(Collectors.toUnmodifiableList());
   }
 }
