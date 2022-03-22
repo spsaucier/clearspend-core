@@ -94,7 +94,12 @@ public class TwilioServiceMock extends TwilioService {
   public void sendKybKycDocsReceivedEmail(String to, String firstName) {}
 
   @Override
-  public void sendBankDetailsAddedEmail(String to, String firstName) {}
+  public void sendBankDetailsAddedEmail(
+      String to,
+      String firstName,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {}
 
   @Override
   public void sendBankFundsAvailableEmail(String to, String firstName) {}

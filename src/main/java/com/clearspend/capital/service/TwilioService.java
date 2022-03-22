@@ -17,6 +17,9 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.PostConstruct;
@@ -40,6 +43,10 @@ public class TwilioService {
   private final String CARD_LAST_FOUR_KEY = "card_last_four";
   private final String AMOUNT_KEY = "amount";
   private final String EMPLOYEE_NAME_KEY = "employee_name";
+  private final String BANK_ACCOUNT_NAME_KEY = "bank_account_name";
+  private final String BANK_ACCOUNT_LAST_FOUR_KEY = "bank_account_last_four";
+  private final String BANK_ACCOUNT_OWNER_NAME_KEY = "bank_account_owner_name";
+  private final String DATE_KEY = "date";
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -243,6 +250,7 @@ public class TwilioService {
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
     mail.setTemplateId(templateId);
     personalization.addTo(new Email(to));
+    personalization.addDynamicTemplateData(ENV_URL, sendGridProperties.getEnvURL());
     mail.addPersonalization(personalization);
     return mail;
   }
@@ -278,9 +286,21 @@ public class TwilioService {
   }
 
   /* Bank Details Added */
-  public void sendBankDetailsAddedEmail(String to, String firstName) {
+  public void sendBankDetailsAddedEmail(
+      String to,
+      String firstName,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_OWNER_NAME_KEY, accountOwnerName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_NAME_KEY, accountName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_LAST_FOUR_KEY, accountLastFour);
+    personalization.addDynamicTemplateData(
+        DATE_KEY,
+        Instant.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getBankDetailsAddedTemplateId(), to, personalization);

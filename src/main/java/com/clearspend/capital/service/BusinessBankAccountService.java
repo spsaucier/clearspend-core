@@ -19,6 +19,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
@@ -34,6 +35,7 @@ import com.clearspend.capital.data.repository.business.BusinessBankAccountReposi
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ContactValidator.ValidationResult;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
@@ -87,6 +89,7 @@ public class BusinessBankAccountService {
   private final RetrievalService retrievalService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final TwilioService twilioService;
+  private final UserService userService;
 
   @Value("${clearspend.ach.return-fee:0}")
   private long achReturnFee;
@@ -182,13 +185,7 @@ public class BusinessBankAccountService {
       }
     }
 
-    List<BusinessBankAccount> accounts = synchronizeAccounts(businessId, accountsResponse);
-
-    Business business = retrievalService.retrieveBusiness(businessId, true);
-    twilioService.sendBankDetailsAddedEmail(
-        business.getBusinessEmail().getEncrypted(), business.getLegalName());
-
-    return accounts;
+    return synchronizeAccounts(businessId, accountsResponse);
   }
 
   private List<BusinessBankAccount> synchronizeAccounts(
@@ -619,6 +616,15 @@ public class BusinessBankAccountService {
     }
 
     businessBankAccountRepository.save(businessBankAccount);
+
+    String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
+    User currentUser = userService.retrieveUser(CurrentUser.get().userId());
+    twilioService.sendBankDetailsAddedEmail(
+        currentUser.getEmail().getEncrypted(),
+        currentUser.getFirstName().getEncrypted(),
+        getBankAccountOwnersString(businessBankAccount, businessId),
+        businessBankAccount.getName(),
+        accountNumber.substring(accountNumber.length() - 4));
   }
 
   @Transactional
@@ -644,5 +650,24 @@ public class BusinessBankAccountService {
     // accounts returns 1 record). Setup intent also cannot be deleted/updated once verified. So
     // just marking business bank account as deleted
     businessBankAccount.setDeleted(true);
+  }
+
+  private String getBankAccountOwnersString(
+      BusinessBankAccount businessBankAccount, TypedId<BusinessId> businessId) {
+    try {
+      PlaidClient.OwnersResponse ownersResponse =
+          plaidClient.getOwners(businessBankAccount.getAccessToken().getEncrypted(), businessId);
+      Map<String, List<Owner>> accountOwners =
+          ownersResponse.accounts().stream()
+              .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
+      List<Owner> owners =
+          accountOwners.get(businessBankAccount.getPlaidAccountRef().getEncrypted());
+      Owner firstOwner = owners.get(0);
+      List<String> ownerNamesList = firstOwner.getNames();
+      return String.join(",", ownerNamesList);
+    } catch (IOException ex) {
+      log.debug("Unable to obtain bank account owner names from plaid: {}", ex.toString());
+      return "";
+    }
   }
 }
