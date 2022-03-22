@@ -42,7 +42,7 @@ public class TransactionLimitService {
   private final AccountActivityRepository accountActivityRepository;
 
   @Transactional
-  public TransactionLimit initializeAllocationSpendLimit(
+  TransactionLimit initializeAllocationSpendLimit(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
 
     return transactionLimitRepository.save(
@@ -55,7 +55,7 @@ public class TransactionLimitService {
             new HashSet<>()));
   }
 
-  public TransactionLimit retrieveSpendLimit(
+  TransactionLimit retrieveSpendLimit(
       TypedId<BusinessId> businessId, TransactionLimitType type, UUID ownerId) {
     return transactionLimitRepository
         .findByBusinessIdAndTypeAndOwnerId(businessId, type, ownerId)
@@ -76,7 +76,7 @@ public class TransactionLimitService {
   }
 
   @Transactional
-  public TransactionLimit createAllocationSpendLimit(
+  TransactionLimit createAllocationSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
@@ -94,7 +94,7 @@ public class TransactionLimitService {
   }
 
   @Transactional
-  public TransactionLimit createCardSpendLimit(
+  TransactionLimit createCardSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<CardId> cardId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
@@ -112,7 +112,7 @@ public class TransactionLimitService {
   }
 
   @Transactional
-  public TransactionLimit updateAllocationSpendLimit(
+  TransactionLimit updateAllocationSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
@@ -129,7 +129,7 @@ public class TransactionLimitService {
   }
 
   @Transactional
-  public TransactionLimit updateCardSpendLimit(
+  TransactionLimit updateCardSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<CardId> cardId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
@@ -162,7 +162,7 @@ public class TransactionLimitService {
     return transactionLimitRepository.save(transactionLimit);
   }
 
-  public void ensureWithinLimit(
+  void ensureWithinLimit(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       TypedId<CardId> cardId,

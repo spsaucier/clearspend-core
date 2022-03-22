@@ -3,10 +3,19 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.LimitPeriod;
+import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.PaymentType;
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -24,9 +33,39 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServiceHelper {
   private final AccountService accountService;
+  private final TransactionLimitService transactionLimitService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
+  }
+
+  public TransactionLimitServiceWrapper transactionLimitService() {
+    return new TransactionLimitServiceWrapper(transactionLimitService);
+  }
+
+  @RequiredArgsConstructor
+  public static class TransactionLimitServiceWrapper {
+    private final TransactionLimitService transactionLimitService;
+
+    public TransactionLimit updateCardSpendLimit(
+        TypedId<BusinessId> businessId,
+        TypedId<CardId> cardId,
+        Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+        Set<MccGroup> disabledMccGroups,
+        Set<PaymentType> disabledTransactionChannels) {
+      return transactionLimitService.updateCardSpendLimit(
+          businessId, cardId, transactionLimits, disabledMccGroups, disabledTransactionChannels);
+    }
+
+    public TransactionLimit updateAllocationSpendLimit(
+        TypedId<BusinessId> businessId,
+        TypedId<AllocationId> allocationId,
+        Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
+        Set<MccGroup> disabledMccGroups,
+        Set<PaymentType> disabledPaymentTypes) {
+      return transactionLimitService.updateAllocationSpendLimit(
+          businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
+    }
   }
 
   @RequiredArgsConstructor
