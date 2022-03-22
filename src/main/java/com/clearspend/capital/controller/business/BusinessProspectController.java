@@ -13,6 +13,7 @@ import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBu
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
+import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
 import com.clearspend.capital.controller.type.business.prospect.ValidateIdentifierResponse;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.service.BusinessProspectService;
@@ -77,6 +78,27 @@ public class BusinessProspectController {
 
     return new CreateBusinessProspectResponse(
         businessProspect.businessProspect().getId(), businessProspect.businessProspectStatus());
+  }
+
+  @GetMapping("/{businessProspectId}/{otpType}/resend-otp")
+  void resendOtp(
+      @PathVariable(value = "businessProspectId")
+          @Parameter(
+              required = true,
+              name = "businessProspectId",
+              description = "ID of the businessProspect record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessProspectId> businessProspectId,
+      @PathVariable(value = "otpType")
+          @Parameter(
+              required = true,
+              name = "otpType",
+              description = "Where otp will be send.",
+              example = "EMAIL")
+          IdentifierType otpType) {
+    log.info("Resend otp code for {} on {}", businessProspectId, otpType);
+    businessProspectService.resendValidationCode(
+        businessProspectId, otpType, onboardingEmailPhoneValidation);
   }
 
   @PostMapping("/{businessProspectId}/validate-identifier")

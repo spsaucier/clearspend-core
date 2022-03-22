@@ -94,11 +94,149 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   }
 
   @Test
+  void resendOtpCodeForEmailValidation_success() throws Exception {
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+
+    mvc.perform(
+            get(String.format(
+                    "/business-prospects/%s/%s/resend-otp",
+                    businessProspect.getId(), IdentifierType.EMAIL))
+                .contentType("application/json"))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    assertThat(twilioServiceMock.getLastVerificationEmail())
+        .isEqualTo(businessProspect.getEmail().getEncrypted());
+  }
+
+  @Test
+  void resendOtpCodeForEmailValidation_Fail_EmailValidated() throws Exception {
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "123456");
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(String.format(
+                        "/business-prospects/%s/%s/resend-otp",
+                        businessProspect.getId(), IdentifierType.EMAIL))
+                    .contentType("application/json"))
+            .andExpect(status().is4xxClientError())
+            .andReturn()
+            .getResponse();
+
+    assertThat(response.getContentAsString()).contains("email already validated");
+  }
+
+  @Test
+  void resendOtpCodeForPhoneValidation_Fail_PhoneValidated() throws Exception {
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "123456");
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.PHONE, businessProspect.getId(), "766255906");
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(String.format(
+                        "/business-prospects/%s/%s/resend-otp",
+                        businessProspect.getId(), IdentifierType.PHONE))
+                    .contentType("application/json"))
+            .andExpect(status().is4xxClientError())
+            .andReturn()
+            .getResponse();
+
+    assertThat(response.getContentAsString()).contains("phone already validated");
+  }
+
+  @Test
+  void resendOtpCodeForPhoneValidation_Fail_PhoneNotSet() throws Exception {
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "123456");
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(String.format(
+                        "/business-prospects/%s/%s/resend-otp",
+                        businessProspect.getId(), IdentifierType.PHONE))
+                    .contentType("application/json"))
+            .andExpect(status().is4xxClientError())
+            .andReturn()
+            .getResponse();
+
+    assertThat(response.getContentAsString()).contains("Phone is not set");
+  }
+
+  @Test
+  void resendOtpCodeForEmailValidation_Fail_RecordNotFount() throws Exception {
+    mvc.perform(
+            get(String.format(
+                    "/business-prospects/%s/%s/resend-otp", new TypedId<>(), IdentifierType.EMAIL))
+                .contentType("application/json"))
+        .andExpect(status().is(404))
+        .andReturn()
+        .getResponse();
+  }
+
+  @Test
+  void resendOtpCodeForEmailValidation_Fail_InvalidOtpType() throws Exception {
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(String.format("/business-prospects/%s/%s/resend-otp", new TypedId<>(), "test"))
+                    .contentType("application/json"))
+            .andExpect(status().is5xxServerError())
+            .andReturn()
+            .getResponse();
+
+    assertThat(response.getContentAsString()).contains("Failed to convert value");
+  }
+
+  @Test
+  void resendOtpCodeForPhoneValidation_Fail_RecordNotFount() throws Exception {
+    mvc.perform(
+            get(String.format(
+                    "/business-prospects/%s/%s/resend-otp", new TypedId<>(), IdentifierType.PHONE))
+                .contentType("application/json"))
+        .andExpect(status().is(404))
+        .andReturn()
+        .getResponse();
+  }
+
+  @Test
+  void resendOtpCodeForPhoneValidation_success() throws Exception {
+    BusinessProspect businessProspect = testHelper.createBusinessProspect();
+    testHelper.validateBusinessProspectIdentifier(
+        IdentifierType.EMAIL, businessProspect.getId(), "123456");
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
+
+    mvc.perform(
+            get(String.format(
+                    "/business-prospects/%s/%s/resend-otp",
+                    businessProspect.getId(), IdentifierType.PHONE))
+                .contentType("application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
+
+    BusinessProspect dbRecord =
+        businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
+    assertThat(dbRecord.isEmailVerified()).isTrue();
+    assertThat(twilioServiceMock.getLastVerificationPhone())
+        .isEqualTo(dbRecord.getPhone().getEncrypted());
+
+    testHelper.testBusinessProspectState(
+        dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.EMAIL_VERIFIED);
+  }
+
+  @Test
   void setBusinessProspectPhone_success() throws Exception {
     // when
     BusinessProspect businessProspect = testHelper.createBusinessProspect();
     testHelper.validateBusinessProspectIdentifier(
         IdentifierType.EMAIL, businessProspect.getId(), "234567890");
+    testHelper.setBusinessProspectPhone(businessProspect.getId());
 
     // then
     BusinessProspect dbRecord =

@@ -176,6 +176,50 @@ public class BusinessProspectService {
     return businessProspectRepository.save(businessProspect);
   }
 
+  public void resendValidationCode(
+      TypedId<BusinessProspectId> businessProspectId, IdentifierType identifierType, Boolean live) {
+
+    if (Boolean.FALSE.equals(live)) {
+      return;
+    }
+
+    BusinessProspect businessProspect =
+        businessProspectRepository
+            .findById(businessProspectId)
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessProspectId));
+
+    switch (identifierType) {
+      case PHONE -> {
+        if (businessProspect.isPhoneVerified()) {
+          throw new InvalidRequestException("phone already validated");
+        }
+        if (businessProspect.getPhone() == null) {
+          throw new InvalidRequestException(
+              String.format("Phone is not set for %s.", businessProspectId));
+        }
+        Verification verification =
+            twilioService.sendVerificationSms(businessProspect.getPhone().getEncrypted());
+        log.debug("verification: {}", verification);
+      }
+      case EMAIL -> {
+        if (businessProspect.isEmailVerified()) {
+          throw new InvalidRequestException("email already validated");
+        }
+        Verification verification =
+            twilioService.sendVerificationEmail(
+                businessProspect.getEmail().getEncrypted(), businessProspect);
+        log.debug("createBusinessProspectVerificationEmail: {}", verification);
+        if (!"pending".equals(verification.getStatus())) {
+          throw new InvalidRequestException(
+              String.format(
+                  "expected pending, got %s for business prospect id %s",
+                  verification.getStatus(), businessProspect.getId()));
+        }
+      }
+    }
+  }
+
   @Transactional
   public ValidateIdentifierResponse validateBusinessProspectIdentifier(
       TypedId<BusinessProspectId> businessProspectId,

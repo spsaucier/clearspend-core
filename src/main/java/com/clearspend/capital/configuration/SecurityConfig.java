@@ -38,6 +38,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/business-prospects/*/password",
             "/business-prospects/*/phone",
             "/business-prospects/*/validate-identifier",
+            "/business-prospects/*/*/resend-otp",
             "/non-production/**",
             "/stripe/webhook/**",
             "/codat-webhook/**",
