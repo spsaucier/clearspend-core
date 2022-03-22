@@ -2,7 +2,9 @@ package com.clearspend.capital.service.type;
 
 import static com.clearspend.capital.controller.Common.BUSINESS_ID;
 import static com.clearspend.capital.controller.Common.CAPITAL_USER_ID;
+import static com.clearspend.capital.controller.Common.EMAIL;
 import static com.clearspend.capital.controller.Common.ROLES;
+import static com.clearspend.capital.controller.Common.USER_ID;
 import static com.clearspend.capital.controller.Common.USER_TYPE;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -12,6 +14,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.SneakyThrows;
@@ -65,5 +68,13 @@ public record CurrentUser(
     // TODO https://github.com/fusionauth/fusionauth-jwt#verify-and-decode-a-jwt-using-hmac
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     return ((JwtAuthenticationToken) authentication).getToken().getClaims();
+  }
+
+  public static UUID getFusionAuthUserId() {
+    return UUID.fromString(String.valueOf(getClaims().get(USER_ID)));
+  }
+
+  public static String getEmail() {
+    return String.valueOf(getClaims().get(EMAIL));
   }
 }

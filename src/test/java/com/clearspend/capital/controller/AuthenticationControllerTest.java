@@ -143,19 +143,28 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
-  void incorrectLoginId() {
+  void testIfIncorrectLoginIdOrPassword() {
+    Cookie authCookie = userCookie;
+    checkLoginDetailsAndUpdatePassword(
+        authCookie, user.user().getEmail().toString(), user.password(), "lucky1234");
+    checkLoginDetailsAndUpdatePassword(
+        authCookie, user.user().getEmail().toString(), "lucky1234", "lucky1234");
+  }
+
+  private void checkLoginDetailsAndUpdatePassword(
+      Cookie authCookie, String loginId, String currentPassword, String newPassword)
+      throws Exception {
+    // Check login details against fusion auth and throw errors as per the response
     ChangePasswordRequest changePasswordRequest =
-        new ChangePasswordRequest(user.user().getEmail().toString(), user.password(), "lucky1234");
+        new ChangePasswordRequest(loginId, currentPassword, newPassword);
     String body = objectMapper.writeValueAsString(changePasswordRequest);
-    MockHttpServletResponse response =
-        mvc.perform(
-                post("/authentication/change-password")
-                    .contentType("application/json")
-                    .content(body)
-                    .cookie(userCookie))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
+    mvc.perform(
+            post("/authentication/change-password")
+                .contentType("application/json")
+                .content(body)
+                .cookie(authCookie))
+        .andReturn()
+        .getResponse();
   }
 
   @Test

@@ -1,6 +1,6 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.common.advice.LogExecutionTime;
+import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.service.UserService;
@@ -78,7 +79,6 @@ public class AuthenticationController {
       reviewer = "jscarbor",
       explanation = "Migrates user to having a registration in FusionAuth upon FA's login response")
   @PostMapping("/login")
-  @LogExecutionTime
   ResponseEntity<UserLoginResponse> login(@Validated @RequestBody LoginRequest request)
       throws ParseException, FusionAuthException {
     ClientResponse<LoginResponse, Errors> loginResponse;
@@ -198,6 +198,9 @@ public class AuthenticationController {
     return JWTParser.parse(response.token).getJWTClaimsSet().getClaims();
   }
 
+  @FusionAuthUserAccessor(
+      explanation = "Accessing the user through 2FA as designed",
+      reviewer = "jscarbor")
   @PostMapping("/two-factor/login")
   ResponseEntity<UserLoginResponse> twoFactorLogin(
       @Validated @RequestBody TwoFactorLoginRequest request) throws ParseException {
@@ -208,13 +211,13 @@ public class AuthenticationController {
   record FirstTwoFactorSendRequest(String destination, TwoFactorAuthenticationMethod method) {}
 
   @FusionAuthUserModifier(
-      reviewer = "jscarbor",
-      explanation = "Modifying user from AuthenticationController")
+      explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
+      reviewer = "jscarbor")
   @PostMapping("/two-factor/first/send")
   void firstTwoFactorSend(
       @Validated @RequestBody FirstTwoFactorSendRequest firstTwoFactorSendRequest) {
     fusionAuthService.sendInitialTwoFactorCode(
-        UUID.fromString(userService.retrieveUser(CurrentUser.getUserId()).getSubjectRef()),
+        CurrentUser.getFusionAuthUserId(),
         firstTwoFactorSendRequest.method,
         firstTwoFactorSendRequest.destination);
   }
@@ -223,21 +226,21 @@ public class AuthenticationController {
       String code, TwoFactorAuthenticationMethod method, String destination) {}
 
   @FusionAuthUserModifier(
-      reviewer = "jscarbor",
-      explanation = "Modifying user from AuthenticationController")
+      explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
+      reviewer = "jscarbor")
   @PostMapping("/two-factor/first/validate")
   TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
     return fusionAuthService.validateFirstTwoFactorCode(
-        UUID.fromString(userService.retrieveUser(CurrentUser.getUserId()).getSubjectRef()),
+        CurrentUser.getFusionAuthUserId(),
         firstTwoFactorValidateRequest.code,
         firstTwoFactorValidateRequest.method,
         firstTwoFactorValidateRequest.destination);
   }
 
   /**
-   * Some 2FA actions are done while the user is logged in. These have a twoFactorId and possibly a
-   * methodId which could be needed for follow-up with the code.
+   * - * Some 2FA actions are done while the user is logged in. These have a twoFactorId and
+   * possibly a - * methodId which could be needed for follow-up with the code. -
    */
   public record TwoFactorStartLoggedInResponse(String twoFactorId, String methodId) {}
 
@@ -276,7 +279,6 @@ public class AuthenticationController {
   @DeleteMapping("/two-factor")
   void disable2FA(@RequestParam String methodId, @RequestParam String code) {
     User user = userService.retrieveUser(CurrentUser.getUserId());
-
     fusionAuthService.disableTwoFactor(UUID.fromString(user.getSubjectRef()), methodId, code);
   }
 
@@ -302,12 +304,21 @@ public class AuthenticationController {
     fusionAuthService.resetPassword(request);
   }
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Changing password, checking that it's the same user")
   @PostMapping("/change-password")
   void changePassword(@Validated @RequestBody ChangePasswordRequest request) {
+    if (!CurrentUser.getEmail().equals(request.getUsername())) {
+      throw new ForbiddenException();
+    }
     fusionAuthService.changePassword(
         request.getUsername(), request.getCurrentPassword(), request.getNewPassword());
   }
 
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "Changing password, ID ensures it's the same user doing it")
   @PostMapping("/change-password/{changePasswordId}")
   ChangePasswordResponse changePassword(
       @PathVariable(value = "changePasswordId")

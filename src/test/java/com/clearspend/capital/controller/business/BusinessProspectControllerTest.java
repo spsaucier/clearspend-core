@@ -26,6 +26,7 @@ import com.clearspend.capital.data.repository.business.BusinessProspectRepositor
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import io.fusionauth.domain.User;
 import javax.servlet.http.Cookie;
@@ -295,6 +296,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     return password;
   }
 
+  @FusionAuthUserAccessor(reviewer = "jscarbor", explanation = "testing")
   @Test
   void setBusinessProspectPassword_success() throws Exception {
     // when
@@ -335,6 +337,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
         dbRecord.getEmail().getEncrypted(), BusinessProspectStatus.COMPLETED);
   }
 
+  @FusionAuthUserAccessor(reviewer = "jscarbor", explanation = "testing")
   @Test
   void convertBusinessProspect_success() throws Exception {
     // when

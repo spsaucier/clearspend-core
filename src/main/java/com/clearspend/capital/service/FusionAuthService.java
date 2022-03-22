@@ -13,6 +13,8 @@ import com.clearspend.capital.controller.Common;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.service.security.OpenAccessAPI;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
@@ -227,6 +229,11 @@ public class FusionAuthService {
    * @param request with parameters including a code and twoFactorId
    * @return the User if successful, several codes in the 400s for bad submissions
    */
+  @RestrictedApi(
+      explanation = "This should only ever be used by AuthenticationController",
+      allowlistAnnotations = {FusionAuthUserAccessor.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
     final ClientResponse<LoginResponse, Errors> response = client.twoFactorLogin(request);
     validateResponse(response);
@@ -240,15 +247,17 @@ public class FusionAuthService {
   }
 
   @RestrictedApi(
-      explanation = "Only for sending 2FA code for initializing 2FA",
+      explanation = "This should only ever be used by AuthenticationController",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
       link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {FusionAuthUserModifier.class})
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void sendInitialTwoFactorCode(
       @NonNull UUID fusionAuthUserId,
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NotNull String destination) {
-
+    if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
+      throw new ForbiddenException();
+    }
     TwoFactorSendRequest request = new TwoFactorSendRequest();
     request.method = method.name();
     switch (method) {
@@ -293,15 +302,18 @@ public class FusionAuthService {
   }
 
   @RestrictedApi(
-      explanation = "Only for starting 2FA cycle",
+      explanation = "This should only ever be used by AuthenticationController",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
       link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {FusionAuthUserModifier.class})
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public TwoFactorResponse validateFirstTwoFactorCode(
       @NonNull UUID fusionAuthUserId,
       @NonNull String code,
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NonNull String destination) {
+    if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
+      throw new ForbiddenException();
+    }
 
     TwoFactorRequest request = new TwoFactorRequest();
     request.code = code;
@@ -369,11 +381,13 @@ public class FusionAuthService {
     UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
 
     User user = userFactory(email, password, fusionAuthUserId);
+    if (email != null && password != null) {
 
-    final ClientResponse<UserResponse, Errors> response =
-        client.updateUser(fusionAuthUserId, new UserRequest(user));
+      final ClientResponse<UserResponse, Errors> response =
+          client.updateUser(fusionAuthUserId, new UserRequest(user));
 
-    validateResponse(response);
+      validateResponse(response);
+    }
 
     final ClientResponse<RegistrationResponse, Errors> response1 =
         client.updateRegistration(
@@ -400,17 +414,25 @@ public class FusionAuthService {
     throw new FusionAuthException(response.status, response.errorResponse, response.exception);
   }
 
+  @RestrictedApi(
+      explanation = "User information is generally PII",
+      allowlistAnnotations = {FusionAuthUserAccessor.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public User retrieveUserByEmail(String email) {
     ClientResponse<UserResponse, Errors> userResponseErrorsClientResponse =
         client.retrieveUserByEmail(email);
     return validateResponse(userResponseErrorsClientResponse).user;
   }
 
-  public User getUser(UUID fusionAuthUserId) {
+  private User getUser(UUID fusionAuthUserId) {
     ClientResponse<UserResponse, Errors> user = client.retrieveUser(fusionAuthUserId);
     return validateResponse(user).user;
   }
 
+  @OpenAccessAPI(
+      explanation = "Users need to be able to reset their password not logged in",
+      reviewer = "jscarbor")
   public void forgotPassword(ForgotPasswordRequest request) {
     io.fusionauth.domain.api.user.ForgotPasswordRequest fusionAuthRequest =
         new io.fusionauth.domain.api.user.ForgotPasswordRequest();
@@ -441,6 +463,10 @@ public class FusionAuthService {
     }
   }
 
+  @OpenAccessAPI(
+      explanation =
+          "Users are authenticated in this call by a changePasswordId sent to their email",
+      reviewer = "jscarbor")
   public void resetPassword(ResetPasswordRequest request) {
 
     ClientResponse<UserResponse, Errors> fusionAuthUser =
@@ -451,8 +477,9 @@ public class FusionAuthService {
             request.getChangePasswordId(), new ChangePasswordRequest(request.getNewPassword()));
 
     switch (changePasswordResponse.status) {
-      case 200 -> twilioService.sendPasswordResetSuccessEmail(
-          fusionAuthUser.successResponse.user.email, "");
+      case 200 -> {
+        twilioService.sendPasswordResetSuccessEmail(fusionAuthUser.successResponse.user.email, "");
+      }
       case 404 -> throw new ForbiddenException();
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", changePasswordResponse.exception);
@@ -461,22 +488,28 @@ public class FusionAuthService {
     }
   }
 
-  public void changePassword(String loginId, String currentPassword, String password) {
+  @RestrictedApi(
+      explanation =
+          "This should only ever be used by AuthenticationController, and only "
+              + "after validating that the logged-in user is making the change.",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public void changePassword(
+      String loginId, @Sensitive String currentPassword, @Sensitive String password) {
+    final ChangePasswordRequest changePasswordRequest =
+        new ChangePasswordRequest(loginId, currentPassword, password);
+    changePasswordRequest.applicationId = getApplicationId();
     ClientResponse<Void, Errors> changePasswordResponse =
-        client.changePasswordByIdentity(
-            new ChangePasswordRequest(loginId, currentPassword, password));
-    StringBuilder builder = new StringBuilder();
-    builder.append("[status: ").append(changePasswordResponse.status);
-    builder.append(", success response: ").append(changePasswordResponse.successResponse);
-    builder.append(", error response: ").append(changePasswordResponse.errorResponse);
-    builder.append(", successful:").append(changePasswordResponse.wasSuccessful());
-    log.debug("clientResponse : {}", builder);
-    if (changePasswordResponse.status == 404) {
-      throw new InvalidRequestException("Incorrect password");
-    }
+        client.changePasswordByIdentity(changePasswordRequest);
     validateResponse(changePasswordResponse);
   }
 
+  @RestrictedApi(
+      explanation = "This should only ever be used by AuthenticationController",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public ChangePasswordResponse changePassword(
       String changePasswordId, String loginId, String currentPassword, String password) {
     final ChangePasswordRequest request =
@@ -487,16 +520,23 @@ public class FusionAuthService {
     return validateResponse(changePasswordResponse);
   }
 
+  @OpenAccessAPI(explanation = "This is the front door", reviewer = "jscarbor")
   public ClientResponse<LoginResponse, Errors> login(String loginId, @Sensitive String password) {
     LoginRequest request = new LoginRequest(getApplicationId(), loginId, password);
     return client.login(request);
   }
 
+  @OpenAccessAPI(
+      explanation = "Second step of login, authenticated by the twoFactorId provided",
+      reviewer = "jscarbor")
   public void sendTwoFactorCodeUsingMethod(String twoFactorId, String methodId) {
     TwoFactorSendRequest request = new TwoFactorSendRequest(methodId);
     validateResponse(client.sendTwoFactorCodeForLoginUsingMethod(twoFactorId, request));
   }
 
+  @OpenAccessAPI(
+      explanation = "This is directory information about the application",
+      reviewer = "jscarbor")
   public UUID getApplicationId() {
     return UUID.fromString(fusionAuthProperties.getApplicationId());
   }
