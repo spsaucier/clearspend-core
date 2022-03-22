@@ -181,31 +181,21 @@ public class FusionAuthService {
     return registration;
   }
 
-  private static User userFactory(
-      Optional<String> email, Optional<String> password, UUID fusionAuthId) {
+  private static User userFactory(String email, String password, UUID fusionAuthId) {
     return userFactory(email, password, fusionAuthId, Optional.empty());
   }
 
   private static User userFactory(
-      @NonNull String email,
-      @NonNull String password,
-      @NonNull UUID fusionAuthId,
-      @NonNull Optional<ChangePasswordReason> changePasswordReason) {
-    return userFactory(
-        Optional.of(email), Optional.of(password), fusionAuthId, changePasswordReason);
-  }
-
-  private static User userFactory(
-      Optional<String> email,
-      Optional<String> password,
+      String email,
+      String password,
       @NonNull UUID fusionAuthId,
       Optional<ChangePasswordReason> changePasswordReason) {
     User user = new User();
 
     user.id = fusionAuthId;
 
-    email.ifPresent(s -> user.email = s);
-    password.ifPresent(s -> user.password = s);
+    Optional.ofNullable(email).ifPresent(s -> user.email = s);
+    Optional.ofNullable(password).ifPresent(s -> user.password = s);
 
     changePasswordReason.ifPresent(
         r -> {
@@ -372,8 +362,8 @@ public class FusionAuthService {
   public UUID updateUser(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<UserId> userId,
-      @NonNull Optional<String> email,
-      @NonNull @Sensitive Optional<String> password,
+      @Sensitive String email,
+      @Sensitive String password,
       UserType userType,
       String fusionAuthUserIdStr) {
     UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);

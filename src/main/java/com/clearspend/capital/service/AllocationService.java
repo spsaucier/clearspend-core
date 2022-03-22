@@ -33,6 +33,7 @@ import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -67,7 +68,7 @@ public class AllocationService {
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
-  private final CardService cardService;
+  private final CardRepository cardRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
 
@@ -350,7 +351,8 @@ public class AllocationService {
           IdType.ACCOUNT_ID, accountId, allocationDetailsRecord.account().getId());
     }
 
-    CardDetailsRecord cardDetailsRecord = cardService.getCard(business.getId(), cardId);
+    CardDetailsRecord cardDetailsRecord =
+        cardRepository.findDetailsByBusinessIdAndId(business.getId(), cardId).orElseThrow();
 
     AccountReallocateFundsRecord reallocateFundsRecord;
     switch (allocationReallocationType) {

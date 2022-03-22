@@ -609,7 +609,7 @@ public class TestHelper {
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
     passwords.put(businessOwnerId, password);
-    return businessOwnerService.createMainBusinessOwnerAndRepresentative(
+    return businessProspectService.createMainBusinessOwnerAndRepresentative(
         new BusinessOwnerData(
             businessOwnerId,
             businessId,

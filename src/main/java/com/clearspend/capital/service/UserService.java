@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
@@ -12,6 +11,7 @@ import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.WithEncryptedString;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -48,7 +48,7 @@ public class UserService {
 
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
-  private final StripeClient stripeClient;
+  private final BusinessOwnerService businessOwnerService;
 
   /**
    * If the user has not already been assigned a subjectRef, generate a random password and send
@@ -194,13 +194,14 @@ public class UserService {
       boolean generatePassword) {
 
     User user = retrieveUser(userId);
-    if (StringUtils.isNotEmpty(firstName)) {
+    if (isChanged(firstName, user.getFirstName())) {
       user.setFirstName(new RequiredEncryptedStringWithHash(firstName));
     }
-    if (StringUtils.isNotEmpty(lastName)) {
+    if (isChanged(lastName, user.getLastName())) {
       user.setLastName(new RequiredEncryptedStringWithHash(lastName));
     }
-    if (StringUtils.isNotEmpty(email)) {
+    // TODO CAP-727 forbid changing email
+    if (isChanged(email, user.getEmail())) {
       // Ensure that this email address does NOT already exist within the database.
       RequiredEncryptedStringWithHash newHash = new RequiredEncryptedStringWithHash(email);
       Optional<User> duplicate = userRepository.findByEmailHash(HashUtil.calculateHash(email));
@@ -209,10 +210,10 @@ public class UserService {
       }
       user.setEmail(newHash);
     }
-    if (StringUtils.isNotEmpty(phone)) {
+    if (isChanged(phone, user.getPhone())) {
       user.setPhone(new NullableEncryptedStringWithHash(phone));
     }
-    if (address != null) {
+    if (isChanged(address, user.getAddress())) {
       user.setAddress(address);
     }
 
@@ -222,16 +223,15 @@ public class UserService {
       user.setSubjectRef(
           fusionAuthService
               .updateUser(
-                  businessId,
-                  user.getId(),
-                  Optional.of(email),
-                  Optional.of(password),
-                  user.getType(),
-                  user.getSubjectRef())
+                  businessId, user.getId(), email, password, user.getType(), user.getSubjectRef())
               .toString());
       twilioService.sendNotificationEmail(
           user.getEmail().getEncrypted(),
           String.format("Hello from ClearSpend, your new password is %s", password));
+    }
+
+    if (user.getType().equals(UserType.BUSINESS_OWNER)) {
+      businessOwnerService.updateBusinessOwnerAndStripePerson(user);
     }
 
     CreateUpdateUserRecord response =
@@ -239,6 +239,14 @@ public class UserService {
     twilioService.sendUserDetailsUpdatedEmail(
         user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
     return response;
+  }
+
+  private static boolean isChanged(Object newAddress, Object oldAddress) {
+    return newAddress != null && !newAddress.equals(oldAddress);
+  }
+
+  private static boolean isChanged(String newValue, WithEncryptedString oldValue) {
+    return StringUtils.isNotEmpty(newValue) && !oldValue.getEncrypted().equals(newValue);
   }
 
   public User retrieveUser(TypedId<UserId> userId) {

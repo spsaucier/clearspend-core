@@ -32,7 +32,9 @@ import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -68,9 +70,9 @@ public class AccountActivityService {
 
   private final AccountActivityRepository accountActivityRepository;
 
-  private final CardService cardService;
+  private final CardRepository cardRepository;
 
-  private final UserService userService;
+  private final UserRepository userRepository;
 
   private final ExpenseCategoryService expenseCategoryService;
 
@@ -236,7 +238,7 @@ public class AccountActivityService {
             common.getAccountActivityDetails().getMerchantLatitude(),
             common.getAccountActivityDetails().getMerchantLongitude()));
 
-    User cardOwner = userService.retrieveUser(common.getCard().getUserId());
+    User cardOwner = userRepository.findById(common.getCard().getUserId()).orElseThrow();
     accountActivity.setCard(
         new CardDetails(
             common.getCard().getId(),
@@ -343,7 +345,8 @@ public class AccountActivityService {
       TypedId<UserId> userId,
       TypedId<CardId> cardId,
       AccountActivityFilterCriteria accountActivityFilterCriteria) {
-    CardDetailsRecord cardDetailsRecord = cardService.getCard(businessId, cardId);
+    CardDetailsRecord cardDetailsRecord =
+        cardRepository.findDetailsByBusinessIdAndId(businessId, cardId).orElseThrow();
     if (!cardDetailsRecord.card().getUserId().equals(userId)) {
       throw new IdMismatchException(IdType.USER_ID, userId, cardDetailsRecord.card().getUserId());
     }

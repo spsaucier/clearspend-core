@@ -2,16 +2,15 @@ package com.clearspend.capital.crypto.data.model.embedded;
 
 import com.clearspend.capital.crypto.data.converter.EncryptionConverter;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Objects;
 import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Embeddable
 @Data
 @NoArgsConstructor
-@EqualsAndHashCode
 public class EncryptedString implements WithEncryptedString {
 
   @Convert(converter = EncryptionConverter.class)
@@ -25,5 +24,22 @@ public class EncryptedString implements WithEncryptedString {
   @JsonValue
   public String toString() {
     return encrypted;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    EncryptedString that = (EncryptedString) o;
+    return getEncrypted().equals(that.getEncrypted());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getEncrypted());
   }
 }

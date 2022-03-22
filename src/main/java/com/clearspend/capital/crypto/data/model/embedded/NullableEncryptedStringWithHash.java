@@ -4,10 +4,10 @@ import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.converter.HashConverter;
 import com.clearspend.capital.crypto.data.converter.NullableEncryptionConverter;
 import java.util.Locale;
+import java.util.Objects;
 import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 @Data
 @Embeddable
 @NoArgsConstructor
-@EqualsAndHashCode
 public class NullableEncryptedStringWithHash implements WithEncryptedString {
 
   private static final byte[] EMPTY = new byte[0];
@@ -39,5 +38,22 @@ public class NullableEncryptedStringWithHash implements WithEncryptedString {
   @Override
   public String toString() {
     return encrypted;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NullableEncryptedStringWithHash that = (NullableEncryptedStringWithHash) o;
+    return getEncrypted().equals(that.getEncrypted());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getEncrypted());
   }
 }

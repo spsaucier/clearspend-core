@@ -1,18 +1,17 @@
 package com.clearspend.capital.crypto.data.model.embedded;
 
 import com.clearspend.capital.crypto.data.converter.NullableEncryptionConverter;
+import java.util.Objects;
 import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @Embeddable
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode
 public class NullableEncryptedString implements WithEncryptedString {
 
   @Convert(converter = NullableEncryptionConverter.class)
@@ -21,5 +20,22 @@ public class NullableEncryptedString implements WithEncryptedString {
   @Override
   public String toString() {
     return encrypted;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NullableEncryptedString that = (NullableEncryptedString) o;
+    return getEncrypted().equals(that.getEncrypted());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getEncrypted());
   }
 }

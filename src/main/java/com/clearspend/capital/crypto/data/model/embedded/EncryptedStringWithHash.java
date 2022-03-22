@@ -5,17 +5,16 @@ import com.clearspend.capital.crypto.data.converter.EncryptionConverter;
 import com.clearspend.capital.crypto.data.converter.HashConverter;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;
+import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.persistence.Convert;
 import javax.persistence.Embeddable;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Embeddable
 @Getter
 @NoArgsConstructor
-@EqualsAndHashCode(exclude = {"encrypted"})
 public class EncryptedStringWithHash implements WithEncryptedString {
 
   private static final byte[] EMPTY = new byte[0];
@@ -42,5 +41,22 @@ public class EncryptedStringWithHash implements WithEncryptedString {
   @Nullable
   public static EncryptedString toEncryptedStringOrNull(@Nullable WithEncryptedString that) {
     return that != null ? new EncryptedString(that.getEncrypted()) : null;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    EncryptedStringWithHash that = (EncryptedStringWithHash) o;
+    return getEncrypted().equals(that.getEncrypted());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getEncrypted());
   }
 }

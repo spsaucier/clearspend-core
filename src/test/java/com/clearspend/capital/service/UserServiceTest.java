@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
@@ -13,6 +15,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.github.javafaker.Faker;
+import com.stripe.model.Person;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +32,8 @@ class UserServiceTest extends BaseCapitalTest {
   @Autowired private UserRepository userRepository;
 
   @Autowired private UserService userService;
+
+  @Autowired private StripeMockClient stripeMockClient;
 
   private CreateBusinessRecord createBusinessRecord;
 
@@ -84,7 +89,7 @@ class UserServiceTest extends BaseCapitalTest {
   void createUser_exceptionThrownWhenCreatingUserWithNullEmailAddress() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     assertThrows(
-        IllegalArgumentException.class,
+        NullPointerException.class,
         () ->
             userService.createUser(
                 createBusinessRecord.business().getId(),
@@ -144,6 +149,39 @@ class UserServiceTest extends BaseCapitalTest {
                 testHelper.generateEntityAddress(),
                 emailAddress,
                 faker.phoneNumber().phoneNumber()));
+  }
+
+  @SneakyThrows
+  @Test
+  void testUpdatingUserNameAndAddress() {
+    User user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
+
+    String newFirstName = testHelper.generateFirstName();
+    String newLastName = testHelper.generateLastName();
+    Address newAddress = testHelper.generateEntityAddress();
+    long stripePersonWrites = stripeMockClient.countCreatedObjectsByType(Person.class);
+    userService.updateUser(
+        user.getBusinessId(),
+        user.getId(),
+        newFirstName,
+        newLastName,
+        newAddress,
+        user.getEmail().getEncrypted(),
+        user.getPhone().getEncrypted(),
+        false);
+
+    // Check the change landed in the Users table
+    User revisedUser = userService.retrieveUser(user.getId());
+    assertThat(revisedUser.getFirstName().getEncrypted()).isEqualTo(newFirstName);
+    assertThat(revisedUser.getLastName().getEncrypted()).isEqualTo(newLastName);
+    assertThat(revisedUser.getAddress()).isEqualTo(newAddress);
+
+    // Names and addresses aren't in FusionAuth, so skipping that
+
+    // Check the change went to Stripe
+    assertThat(stripeMockClient.countCreatedObjectsByType(Person.class))
+        .isEqualTo(stripePersonWrites + 1);
   }
 
   @SneakyThrows

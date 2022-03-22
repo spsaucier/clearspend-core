@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.GlobalRole;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
@@ -68,14 +69,14 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class RolesAndPermissionsService {
 
+  // This uses repositories instead of services because it is responsible for securing the services
   private final UserAllocationRoleRepository userAllocationRoleRepository;
+  private final UserRepository userRepository;
   private final GlobalRoleRepository globalRoleRepository;
   private final FusionAuthService fusionAuthService;
   private final AllocationRepository allocationRepository;
   private final EntityManager entityManager;
   private final AllocationRolePermissionsRepository allocationRolePermissionsRepository;
-
-  private final UserService userService;
 
   /**
    * Create a user's role, adding the given permissions to any existing UserAllocationRole
@@ -91,7 +92,7 @@ public class RolesAndPermissionsService {
       TypedId<AllocationId> allocationId,
       @NonNull String newRole) {
     return createUserAllocationRole(
-        userService.retrieveUser(granteeId),
+        userRepository.getById(granteeId),
         retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
         newRole);
   }
@@ -126,7 +127,7 @@ public class RolesAndPermissionsService {
       TypedId<AllocationId> allocationId,
       @NonNull String newRole) {
     return updateUserAllocationRole(
-        userService.retrieveUser(granteeId),
+        userRepository.getById(granteeId),
         retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
         newRole);
   }
@@ -297,7 +298,7 @@ public class RolesAndPermissionsService {
       TypedId<AllocationId> allocationId, @NonNull TypedId<UserId> granteeId) {
     Optional<UserAllocationRole> doomedRecord =
         prepareUserAllocationRoleChange(
-            userService.retrieveUser(granteeId),
+            userRepository.getById(granteeId),
             retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
             null);
     UserAllocationRole record =

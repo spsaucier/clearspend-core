@@ -5,9 +5,11 @@ import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.fusionauth.domain.ChangePasswordReason;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.http.ResponseEntity;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class UserLoginResponse extends User {
 
   @JsonProperty private String twoFactorId;

@@ -4,16 +4,15 @@ import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.data.converter.EncryptionConverter;
 import com.clearspend.capital.crypto.data.converter.HashConverter;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 
 @Embeddable
 @Data
-@EqualsAndHashCode(exclude = {"encrypted"})
 public class RequiredEncryptedStringWithHash implements WithEncryptedString {
 
   @Column(nullable = false)
@@ -29,9 +28,6 @@ public class RequiredEncryptedStringWithHash implements WithEncryptedString {
   }
 
   public RequiredEncryptedStringWithHash(@NonNull String string) {
-    if (string == null) {
-      throw new IllegalArgumentException("string may not be null for a required encrypted string");
-    }
     this.encrypted = string;
     this.hash = HashUtil.calculateHash(string);
   }
@@ -40,5 +36,22 @@ public class RequiredEncryptedStringWithHash implements WithEncryptedString {
   @JsonValue
   public String toString() {
     return encrypted;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RequiredEncryptedStringWithHash that = (RequiredEncryptedStringWithHash) o;
+    return getEncrypted().equals(that.getEncrypted());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getEncrypted());
   }
 }

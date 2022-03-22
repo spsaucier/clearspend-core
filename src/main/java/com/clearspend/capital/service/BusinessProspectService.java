@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
@@ -342,7 +343,7 @@ public class BusinessProspectService {
 
     // On convert step we will create owner without the person stripe corespondent
     BusinessOwnerAndUserRecord businessOwner =
-        businessOwnerService.createMainBusinessOwnerAndRepresentative(businessOwnerData);
+        createMainBusinessOwnerAndRepresentative(businessOwnerData);
 
     // delete the business prospect so that the owner of the email could register a new business
     businessProspectRepository.delete(businessProspect);
@@ -358,6 +359,27 @@ public class BusinessProspectService {
         businessOwner.businessOwner(),
         businessOwner.user(),
         Collections.emptyList());
+  }
+
+  @Transactional
+  public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
+      BusinessOwnerData businessOwnerData) {
+
+    BusinessOwner businessOwner = businessOwnerService.createBusinessOwner(businessOwnerData);
+
+    User user =
+        userService.createUserForFusionAuthUser(
+            new TypedId<>(businessOwner.getId().toUuid()),
+            businessOwnerData.getBusinessId(),
+            UserType.BUSINESS_OWNER,
+            businessOwnerData.getFirstName(),
+            businessOwnerData.getLastName(),
+            businessOwnerData.getAddress(),
+            businessOwnerData.getEmail(),
+            businessOwnerData.getPhone(),
+            businessOwnerData.getSubjectRef());
+
+    return new BusinessOwnerAndUserRecord(businessOwner, user);
   }
 
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {

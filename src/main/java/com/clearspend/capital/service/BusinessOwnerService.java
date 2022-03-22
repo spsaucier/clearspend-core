@@ -21,7 +21,6 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
-import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.stripe.model.Person;
@@ -41,8 +40,6 @@ public class BusinessOwnerService {
 
   private final BusinessOwnerRepository businessOwnerRepository;
 
-  private final UserService userService;
-
   private final StripeClient stripeClient;
 
   private final BusinessService businessService;
@@ -52,29 +49,6 @@ public class BusinessOwnerService {
   public record BusinessOwnerAndStripePersonRecord(BusinessOwner businessOwner, Person person) {}
 
   public record BusinessAndAccountErrorMessages(Business business, List<String> errorMessages) {}
-
-  @Transactional
-  public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
-      BusinessOwnerData businessOwnerData) {
-
-    BusinessOwner businessOwner = businessOwnerData.toBusinessOwner();
-    businessOwner = businessOwnerRepository.save(businessOwner);
-    businessOwnerRepository.flush();
-
-    User user =
-        userService.createUserForFusionAuthUser(
-            new TypedId<>(businessOwner.getId().toUuid()),
-            businessOwnerData.getBusinessId(),
-            UserType.BUSINESS_OWNER,
-            businessOwnerData.getFirstName(),
-            businessOwnerData.getLastName(),
-            businessOwnerData.getAddress(),
-            businessOwnerData.getEmail(),
-            businessOwnerData.getPhone(),
-            businessOwnerData.getSubjectRef());
-
-    return new BusinessOwnerAndUserRecord(businessOwner, user);
-  }
 
   @Transactional
   public List<BusinessOwner> createOrUpdateBusinessOwners(
@@ -208,6 +182,32 @@ public class BusinessOwnerService {
     businessOwner.setStripePersonReference(stripePerson.getId());
 
     return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePerson);
+  }
+
+  @Transactional
+  public BusinessOwnerAndStripePersonRecord updateBusinessOwnerAndStripePerson(User user) {
+    BusinessOwner businessOwner =
+        businessOwnerRepository.findBySubjectRef(user.getSubjectRef()).orElseThrow();
+    BusinessOwnerData businessOwnerData =
+        new BusinessOwnerData(
+            businessOwner.getId(),
+            user.getBusinessId(),
+            user.getFirstName().getEncrypted(),
+            user.getLastName().getEncrypted(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            user.getAddress(),
+            null,
+            null,
+            user.getSubjectRef(),
+            false);
+    return updateBusinessOwnerAndStripePerson(user.getBusinessId(), businessOwnerData);
   }
 
   @Transactional

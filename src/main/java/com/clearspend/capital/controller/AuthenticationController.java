@@ -33,7 +33,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -139,8 +138,8 @@ public class AuthenticationController {
       fusionAuthService.updateUser(
           user.businessId(),
           user.userId(),
-          Optional.empty(),
-          Optional.empty(),
+          null,
+          null,
           user.userType(),
           response.user.id.toString());
       loginResponse.status = 200;
