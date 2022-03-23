@@ -44,12 +44,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessService {
 
   public @interface StripeBusinessOp {
+
     String reviewer();
 
     String explanation();
   }
 
   public @interface OnboardingBusinessOp {
+
     String reviewer();
 
     String explanation();
@@ -281,7 +283,7 @@ public class BusinessService {
   }
 
   @PostAuthorize(
-      "hasRootPermission(returnObject.businessId, 'READ') or hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ')")
+      "hasRootPermission(returnObject.businessId, 'VIEW_OWN') or hasRootPermission(returnObject.businessId, 'READ') or hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ')")
   public Business getBusiness(final TypedId<BusinessId> businessId, final boolean mustExist) {
     return retrieveBusiness(businessId, mustExist);
   }

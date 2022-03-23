@@ -82,7 +82,6 @@ class BusinessServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_EMPLOYEE)
         .build()
         .validateServiceMethod(action);
   }
