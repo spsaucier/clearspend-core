@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -24,7 +25,11 @@ public class JDBCUtils {
 
   static final UUID NULL_UUID = new UUID(0L, 0L);
 
-  public record CountObjectForSqlQuery(Boolean count) {}
+  public record CountObjectForSqlQuery(Boolean count, OffsetDateTime javaNow) {
+    public CountObjectForSqlQuery(Boolean count) {
+      this(count, OffsetDateTime.now());
+    }
+  }
 
   /**
    * Run a query in the current context.

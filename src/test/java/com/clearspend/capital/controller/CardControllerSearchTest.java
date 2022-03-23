@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
-import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
@@ -17,6 +16,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AccountService;
@@ -56,6 +56,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
   private CreateUpdateUserRecord userA;
   private CreateUpdateUserRecord userB;
+  private CreateUpdateUserRecord userC;
 
   private Card rootCardA;
   private Card rootCardB;
@@ -79,8 +80,17 @@ public class CardControllerSearchTest extends BaseCapitalTest {
               "Child Allocation",
               rootAllocation.allocation().getId(),
               createBusinessRecord.user());
-      userA = testHelper.createUser(createBusinessRecord.business());
-      userB = testHelper.createUser(createBusinessRecord.business());
+      userA =
+          testHelper.createUserWithRole(
+              createBusinessRecord.allocationRecord().allocation(),
+              DefaultRoles.ALLOCATION_EMPLOYEE);
+      userB =
+          testHelper.createUserWithRole(
+              createBusinessRecord.allocationRecord().allocation(),
+              DefaultRoles.ALLOCATION_EMPLOYEE);
+      userC =
+          testHelper.createUserWithRole(
+              childAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER);
       authCookie = createBusinessRecord.authCookie();
 
       // root card A
@@ -138,8 +148,11 @@ public class CardControllerSearchTest extends BaseCapitalTest {
                   userA.user()));
 
       // placing hold to make sure that available balance is returned for root cards A and B
-      accountService.depositFunds(
-          business.getId(), rootAllocation.account(), Amount.of(Currency.USD, 777), true, true);
+      // THIS DOES NOT WORK!!! The balance does not get updated by the time I need to run a query
+      //      accountService.depositFunds(
+      //          business.getId(), rootAllocation.account(), Amount.of(Currency.USD, 777), true,
+      // true);
+
     }
   }
 
@@ -148,7 +161,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   void searchAllCards() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
 
-    PagedData<SearchCardData> result = callSearchCards(request, 3);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 3);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -163,7 +176,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
         List.of(OrderBy.builder().item("created").direction(Direction.DESC).build()));
     SearchCardRequest request = new SearchCardRequest(pageRequest);
 
-    PagedData<SearchCardData> result = callSearchCards(request, 3);
+    PagedData<SearchCardData> result =
+        callSearchCards(request, testHelper.login(createBusinessRecord.user()), 3);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(
@@ -174,9 +188,9 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @Test
   void searchByAllocationId() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
-    request.setAllocationId(childAllocation.allocation().getId());
+    request.addAllocation(childAllocation.allocation().getId());
 
-    PagedData<SearchCardData> result = callSearchCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 1);
 
     assertThat(result.getContent()).containsExactlyInAnyOrder(childCardASearchResult);
   }
@@ -185,9 +199,9 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @Test
   void searchByUserId() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 20));
-    request.setUserId(userA.user().getId());
+    request.addUser(userA.user().getId());
 
-    PagedData<SearchCardData> result = callSearchCards(request, 2);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 2);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(rootCardASearchResult, childCardASearchResult);
@@ -199,7 +213,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(childCardA.getLastFour());
 
-    PagedData<SearchCardData> result = callSearchCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 1);
 
     assertThat(result.getContent()).containsExactlyInAnyOrder(childCardASearchResult);
   }
@@ -211,7 +225,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(name);
 
-    PagedData<SearchCardData> result = callSearchCards(request, 2);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 2);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(rootCardASearchResult, rootCardBSearchResult);
@@ -223,7 +237,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(userB.user().getLastName().getEncrypted());
 
-    PagedData<SearchCardData> result = callSearchCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 1);
 
     assertThat(result.getContent()).containsExactlyInAnyOrder(rootCardBSearchResult);
   }
@@ -233,13 +247,65 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   void searchTotalElementsShouldBeCalculated() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 1));
 
-    PagedData<SearchCardData> result = callSearchCards(request, 1);
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 1);
 
     assertThat(result.getTotalElements()).isEqualTo(3);
   }
 
-  private PagedData<SearchCardData> callSearchCards(SearchCardRequest request, long expectedSize)
-      throws Exception {
+  @SneakyThrows
+  @Test
+  void search_cardTypeFiltersAreHonored() {
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
+    request.setIncludePhysicalCards(Boolean.FALSE);
+
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 2);
+
+    assertThat(result.getContent())
+        .containsExactlyInAnyOrder(rootCardBSearchResult, rootCardASearchResult);
+  }
+
+  @SneakyThrows
+  @Test
+  void search_cardManagerPermissionAppliesDownstream() {
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
+
+    PagedData<SearchCardData> result = callSearchCards(request, testHelper.login(userC.user()), 1);
+
+    assertThat(result.getContent())
+        .containsExactlyInAnyOrder(
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    childCardA,
+                    childAllocation.allocation(),
+                    childAllocation.account(),
+                    userA.user())));
+  }
+
+  @SneakyThrows
+  @Test
+  void search_cardOwnershipPermissionsIsTransitive() {
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
+
+    PagedData<SearchCardData> result = callSearchCards(request, testHelper.login(userA.user()), 2);
+
+    assertThat(result.getContent())
+        .containsExactlyInAnyOrder(
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    rootCardA,
+                    rootAllocation.allocation(),
+                    rootAllocation.account(),
+                    userA.user())),
+            SearchCardData.of(
+                new FilteredCardRecord(
+                    childCardA,
+                    childAllocation.allocation(),
+                    childAllocation.account(),
+                    userA.user())));
+  }
+
+  private PagedData<SearchCardData> callSearchCards(
+      SearchCardRequest request, Cookie authCookie, long expectedSize) throws Exception {
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =

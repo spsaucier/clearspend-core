@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -32,7 +33,6 @@ import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
-import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -460,13 +460,13 @@ public class CardService {
         disabledPaymentTypes);
   }
 
-  public Page<FilteredCardRecord> filterCards(CardFilterCriteria filterCriteria) {
+  public Page<SearchCardData> filterCards(CardFilterCriteria filterCriteria) {
     return cardRepository.filter(filterCriteria);
   }
 
   public byte[] createCSVFile(CardFilterCriteria filterCriteria) {
 
-    Page<FilteredCardRecord> cardsPage = cardRepository.filter(filterCriteria);
+    Page<SearchCardData> cardsPage = cardRepository.filter(filterCriteria);
 
     List<String> headerFields =
         Arrays.asList("Card Number", "Employee", "Allocation", "Balance", "Status");
@@ -481,14 +481,14 @@ public class CardService {
                 try {
                   csvPrinter.printRecord(
                       Arrays.asList(
-                          "****" + record.card().getLastFour() + " " + record.card().getType(),
-                          record.user().getFirstName() + " " + record.user().getLastName(),
-                          record.allocation().getName(),
-                          record.account().getLedgerBalance().getCurrency()
+                          "****" + record.getCardNumber() + " " + record.getCardType(),
+                          record.getUser().getFirstName() + " " + record.getUser().getLastName(),
+                          record.getAllocation().getName(),
+                          record.getBalance().getCurrency()
                               + " "
-                              + record.account().getLedgerBalance().getAmount()
+                              + record.getBalance().getAmount()
                               + " [Limit]",
-                          record.card().getStatus()));
+                          record.getCardStatus()));
                 } catch (IOException e) {
                   throw new RuntimeException(e.getMessage());
                 }

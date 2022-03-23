@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +52,8 @@ public class CardControllerExportCsvTest extends BaseCapitalTest {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, Integer.MAX_VALUE));
 
     request.setSearchText(user.getLastName().getEncrypted());
-    request.setUserId(user.getId());
-    request.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
+    request.setUsers(List.of(user.getId()));
+    request.setAllocations(List.of(createBusinessRecord.allocationRecord().allocation().getId()));
 
     String body = objectMapper.writeValueAsString(request);
 

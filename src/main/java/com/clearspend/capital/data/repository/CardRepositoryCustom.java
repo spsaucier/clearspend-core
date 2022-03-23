@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -23,7 +24,7 @@ public interface CardRepositoryCustom {
 
   record FilteredCardRecord(Card card, Allocation allocation, Account account, User user) {}
 
-  Page<FilteredCardRecord> filter(CardFilterCriteria filterCriteria);
+  Page<SearchCardData> filter(CardFilterCriteria filterCriteria);
 
   Optional<CardDetailsRecord> findDetailsById(@NotNull TypedId<CardId> cardId);
 

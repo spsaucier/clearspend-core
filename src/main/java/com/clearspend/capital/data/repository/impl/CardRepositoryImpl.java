@@ -4,12 +4,16 @@ import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.JoinType;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.HashUtil;
+import com.clearspend.capital.controller.type.Item;
+import com.clearspend.capital.controller.type.card.SearchCardData;
+import com.clearspend.capital.controller.type.user.UserData;
+import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -18,35 +22,48 @@ import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.HoldStatus;
+import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.clearspend.capital.service.type.PageToken;
+import com.samskivert.mustache.Mustache;
+import com.samskivert.mustache.Template;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import javax.validation.constraints.NotNull;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 
 @Repository
-@RequiredArgsConstructor
 public class CardRepositoryImpl implements CardRepositoryCustom {
 
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
+  private final Crypto crypto;
+
+  private final Template template;
+  private final String filterCardsQueryText;
 
   public record CardDetailsWithUserRecord(
       Card card,
@@ -55,47 +72,72 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
       User user,
       TransactionLimit transactionLimit) {}
 
+  public CardRepositoryImpl(
+      EntityManager entityManager,
+      CriteriaBuilderFactory criteriaBuilderFactory,
+      Crypto crypto,
+      @Value("classpath:db/sql/cardRepository/filterCards.sql") Resource filterCardsQueryFile) {
+    this.entityManager = entityManager;
+    this.criteriaBuilderFactory = criteriaBuilderFactory;
+    this.crypto = crypto;
+    this.filterCardsQueryText = SqlResourceLoader.load(filterCardsQueryFile);
+    this.template = Mustache.compiler().compile(this.filterCardsQueryText);
+  }
+
   @Override
-  public Page<FilteredCardRecord> filter(CardFilterCriteria criteria) {
-    CriteriaBuilder<Tuple> builder = createDefaultBuilder(criteria.getBusinessId());
+  public Page<SearchCardData> filter(CardFilterCriteria criteria) {
+    StringWriter out = new StringWriter();
+    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(false), out);
+    String query = out.toString();
 
-    BeanUtils.setNotNull(criteria.getBusinessId(), id -> builder.where("card.businessId").eq(id));
-    BeanUtils.setNotNull(criteria.getUserId(), id -> builder.where("card.userId").eq(id));
-    BeanUtils.setNotNull(criteria.getAllocationId(), id -> builder.where("allocation.id").eq(id));
+    List<SearchCardData> rawOutput =
+        JDBCUtils.query(
+            entityManager,
+            query,
+            new MapSqlParameterSource(),
+            (resultSet, rowNumber) ->
+                new SearchCardData(
+                    new TypedId<>(resultSet.getObject("card_id", UUID.class)),
+                    resultSet.getString("card_number"),
+                    new UserData(
+                        new TypedId<>(resultSet.getObject("user_id", UUID.class)),
+                        UserType.valueOf(resultSet.getString("user_type")),
+                        new String(crypto.decrypt(resultSet.getBytes("user_first_name_enc"))),
+                        new String(crypto.decrypt(resultSet.getBytes("user_last_name_enc")))),
+                    new Item<>(
+                        new TypedId<>(resultSet.getObject("allocation_id", UUID.class)),
+                        resultSet.getString("allocation_name")),
+                    new com.clearspend.capital.controller.type.Amount(
+                        Currency.valueOf(resultSet.getString("ledger_balance_currency")),
+                        resultSet
+                            .getBigDecimal("ledger_balance_amount")
+                            .add(resultSet.getBigDecimal("hold_total"))),
+                    CardStatus.valueOf(resultSet.getString("card_status")),
+                    CardType.valueOf(resultSet.getString("card_type")),
+                    resultSet.getBoolean("card_activated"),
+                    resultSet.getObject("card_activation_date", OffsetDateTime.class)));
+    PageToken pageToken = criteria.getPageToken();
 
-    if (StringUtils.isNotEmpty(criteria.getSearchText())) {
-      byte[] encryptedValue = HashUtil.calculateHash(criteria.getSearchText());
-      builder
-          .whereOr()
-          .where("card.lastFour")
-          .eq(criteria.getSearchText())
-          .where("user.firstName.hash")
-          .eq(encryptedValue)
-          .where("user.lastName.hash")
-          .eq(encryptedValue)
-          .where("allocation.name")
-          .like(false)
-          .value("%" + criteria.getSearchText() + "%")
-          .noEscape()
-          .endOr();
+    if (rawOutput.size() < pageToken.getPageSize() && pageToken.getPageNumber() == 0) {
+      return new PageImpl<>(
+          rawOutput,
+          PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()),
+          rawOutput.size());
     }
 
-    Page<CardDetailsWithUserRecord> results =
-        BlazePersistenceUtils.queryPagedTuples(
-            CardDetailsWithUserRecord.class, builder, criteria.getPageToken(), false);
-
-    PageImpl<FilteredCardRecord> result =
-        new PageImpl<>(
-            results.stream()
-                .map(r -> new FilteredCardRecord(r.card, r.allocation, r.account, r.user))
-                .collect(Collectors.toList()),
-            results.getPageable(),
-            results.getTotalElements());
-
-    calculateAvailableBalance(
-        result.getContent().stream().map(FilteredCardRecord::account).distinct().toList());
-
-    return result;
+    StringWriter outputCounter = new StringWriter();
+    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(true), outputCounter);
+    long totalElements =
+        JDBCUtils.query(
+                entityManager,
+                outputCounter.toString(),
+                new MapSqlParameterSource(),
+                (resultSet, row) -> resultSet.getLong(1))
+            .get(0);
+    return new PageImpl<>(
+        rawOutput,
+        PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()),
+        totalElements);
   }
 
   private List<CardDetailsRecord> findDetails(

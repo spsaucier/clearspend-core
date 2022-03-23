@@ -124,9 +124,7 @@ public class CardController {
   @PostMapping("/search")
   PagedData<SearchCardData> search(@Validated @RequestBody SearchCardRequest request) {
     // TODO: Implement proper security restrictions based on the outcome of CAP-202
-    return PagedData.of(
-        cardService.filterCards(new CardFilterCriteria(CurrentUser.get().businessId(), request)),
-        SearchCardData::of);
+    return PagedData.of(cardService.filterCards(CardFilterCriteria.fromSearchRequest(request)));
   }
 
   @PostMapping("/reveal")
@@ -144,8 +142,7 @@ public class CardController {
     // export must return all records, regardless if pagination is set in "view records" mode
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
 
-    byte[] csvFile =
-        cardService.createCSVFile(new CardFilterCriteria(CurrentUser.get().businessId(), request));
+    byte[] csvFile = cardService.createCSVFile(CardFilterCriteria.fromSearchRequest(request));
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=cards.csv");
     headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
