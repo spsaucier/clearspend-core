@@ -70,28 +70,30 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     createBusinessRecord = testHelper.createBusiness();
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    business = createBusinessRecord.business();
-    businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
+    testHelper.runWithCurrentUser(
+        createBusinessRecord.user(),
+        () -> {
+          business = createBusinessRecord.business();
+          businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
 
-    businessService.updateBusinessStripeData(
-        business.getId(),
-        "stripeAccountRed",
-        "stripeFinancialAccountRef",
-        FinancialAccountState.READY,
-        "stripeAccountNumber",
-        "stripeRoutingNUmber");
+          businessService.updateBusinessStripeData(
+              business.getId(),
+              "stripeAccountRed",
+              "stripeFinancialAccountRef",
+              FinancialAccountState.READY,
+              "stripeAccountNumber",
+              "stripeRoutingNUmber");
 
-    assertThat(business.getStripeData().getFinancialAccountState())
-        .isEqualTo(FinancialAccountState.READY);
+          assertThat(business.getStripeData().getFinancialAccountState())
+              .isEqualTo(FinancialAccountState.READY);
 
-    stripeMockClient.reset();
+          stripeMockClient.reset();
+        });
   }
 
   @Test
   public void inboundTransfer_success() {
     Amount amount = new Amount(Currency.USD, new BigDecimal(9223));
-    testHelper.login(createBusinessRecord.user());
     CreateAdjustmentResponse createAdjustmentResponse =
         mvcHelper.queryObject(
             "/business-bank-accounts/%s/transactions".formatted(businessBankAccount.getId()),
@@ -108,7 +110,6 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     inboundTransfer.setCurrency("usd");
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
 
-    testHelper.setCurrentUser(createBusinessRecord.user());
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 
     assertThat(stripeMockClient.countCreatedObjectsByType(OutboundPayment.class)).isOne();
@@ -118,7 +119,6 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   public void inboundTransfer_failure() {
     // given
     Amount amount = new Amount(Currency.USD, new BigDecimal(9223));
-    testHelper.login(createBusinessRecord.user());
 
     // initiate the ach transfer
     CreateAdjustmentResponse createAdjustmentResponse =
@@ -149,7 +149,6 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
 
-    testHelper.setCurrentUser(createBusinessRecord.user());
     // when
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 

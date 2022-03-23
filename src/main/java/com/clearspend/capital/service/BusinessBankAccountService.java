@@ -37,6 +37,7 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ContactValidator.ValidationResult;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
+import com.google.errorprone.annotations.RestrictedApi;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
@@ -73,6 +74,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BusinessBankAccountService {
+
+  public @interface StripeBankAccountOp {
+    String reviewer();
+
+    String explanation();
+  }
 
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
@@ -269,7 +276,11 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  @RestrictedApi(
+      explanation = "This method is used by Stripe operations, where permissions are not available",
+      allowlistAnnotations = {StripeBankAccountOp.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public AdjustmentAndHoldRecord processExternalAchTransfer(
       TypedId<BusinessId> businessId, Amount amount, boolean standardHold) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
@@ -446,7 +457,11 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  @RestrictedApi(
+      explanation = "This method is used by Stripe operations, where permissions are not available",
+      allowlistAnnotations = {StripeBankAccountOp.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void processBankAccountDepositOutcome(
       TypedId<BusinessId> businessId,
       TypedId<AdjustmentId> adjustmentId,

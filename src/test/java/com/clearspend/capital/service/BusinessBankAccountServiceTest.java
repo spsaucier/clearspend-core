@@ -19,7 +19,6 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InsufficientFundsException;
-import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -344,41 +343,6 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void processBankAccountDepositOutcome_UserPermissions() {
-    final Amount amount = new Amount();
-    amount.setCurrency(Currency.USD);
-    amount.setAmount(new BigDecimal(10));
-
-    final TestDataHelper.AdjustmentWithJoinsConfig config =
-        TestDataHelper.AdjustmentWithJoinsConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .build();
-    final TestDataHelper.AdjustmentRecord adjustmentRecord =
-        testDataHelper.createAdjustmentWithJoins(config);
-    final TypedId<HoldId> holdId = new TypedId<>();
-    final TestDataHelper.AccountActivityConfig accountActivityConfig =
-        TestDataHelper.AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .adjustmentId(adjustmentRecord.adjustment().getId())
-            .build();
-    testDataHelper.createAccountActivity(accountActivityConfig);
-
-    final ThrowingRunnable action =
-        () ->
-            bankAccountService.processBankAccountDepositOutcome(
-                createBusinessRecord.business().getId(),
-                adjustmentRecord.adjustment().getId(),
-                holdId,
-                amount,
-                Collections.emptyList());
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
-        .build()
-        .validateServiceMethod(action);
-  }
-
-  @Test
   void processBankAccountWithdrawFailure_UserPermissions() {
     final Amount amount = new Amount();
     amount.setCurrency(Currency.USD);
@@ -387,24 +351,6 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         () ->
             bankAccountService.processBankAccountWithdrawFailure(
                 createBusinessRecord.business().getId(), amount, Collections.emptyList());
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
-        .build()
-        .validateServiceMethod(action);
-  }
-
-  @Test
-  void processExternalAchTransfer_UserPermissions() {
-    final Amount amount = new Amount();
-    amount.setCurrency(Currency.USD);
-    amount.setAmount(new BigDecimal(10));
-    final ThrowingRunnable action =
-        () ->
-            bankAccountService.processExternalAchTransfer(
-                createBusinessRecord.business().getId(), amount, false);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)

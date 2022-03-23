@@ -61,57 +61,6 @@ public class NetworkMessageService {
 
   private final ClearbitClient clearbitClient;
 
-  @Transactional
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe handlers across package boundaries. These handler callbacks are not user-driven events and therefore cannot have user permissions enforced on them",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {NetworkMessageProvider.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public void processNetworkMessage(NetworkCommon common) {
-    retrieveCardAndNetworkMessages(common);
-
-    storeMerchantAsync(common);
-
-    // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
-    //    potentially in a async batch job)
-    // common.getAccountActivity().setMerchantLogoUrl();
-
-    // TODO(kuchlein): lookup local merchantAddress table to retrieve lat/long (needs to be done
-    //    async and potentially in a async batch job)
-    // common.getAccountActivity().setMerchantLatitude();
-    // common.getAccountActivity().setMerchantLongitude();
-
-    // actually process the network message from Stripe
-    switch (common.getNetworkMessageType()) {
-      case AUTH_REQUEST -> processAuthorizationRequest(common);
-      case AUTH_CREATED -> processAuthorizationCreated(common);
-      case AUTH_UPDATED -> processAuthorizationUpdated(common);
-      case TRANSACTION_CREATED -> processTransactionCreated(common);
-      default -> throw new IllegalArgumentException(
-          "invalid networkMessageType " + common.getNetworkMessageType());
-    }
-
-    if (common.isPostAdjustment() || common.isPostDecline() || common.isPostHold()) {
-      // store any data that resulted from processing the network message from Stripe
-      NetworkMessage networkMessage = common.toNetworkMessage();
-
-      // card may be null in the case of Stripe sending us transactions for cards that we've not
-      // issued
-      // TODO(kuchlein): determine if Stripe handle this for us or not
-      if (common.getCard() != null) {
-        networkMessage.setCardId(common.getCard().getId());
-      }
-
-      postHold(common, networkMessage);
-      postAdjustment(common, networkMessage);
-      postDecline(common, networkMessage);
-
-      common.setNetworkMessage(networkMessageRepository.save(networkMessage));
-    }
-  }
-
   @CardService.CardNetworkAccess(
       reviewer = "patrick.morton",
       explaination = "Card Network events have no Security Context")
@@ -190,6 +139,57 @@ public class NetworkMessageService {
           networkMessage.getHoldId(),
           common.getAccount().getAvailableBalance(),
           common.getAccount().getLedgerBalance());
+    }
+  }
+
+  @Transactional
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe handlers across package boundaries. These handler callbacks are not user-driven events and therefore cannot have user permissions enforced on them",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {NetworkMessageProvider.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public void processNetworkMessage(NetworkCommon common) {
+    retrieveCardAndNetworkMessages(common);
+
+    storeMerchantAsync(common);
+
+    // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
+    //    potentially in a async batch job)
+    // common.getAccountActivity().setMerchantLogoUrl();
+
+    // TODO(kuchlein): lookup local merchantAddress table to retrieve lat/long (needs to be done
+    //    async and potentially in a async batch job)
+    // common.getAccountActivity().setMerchantLatitude();
+    // common.getAccountActivity().setMerchantLongitude();
+
+    // actually process the network message from Stripe
+    switch (common.getNetworkMessageType()) {
+      case AUTH_REQUEST -> processAuthorizationRequest(common);
+      case AUTH_CREATED -> processAuthorizationCreated(common);
+      case AUTH_UPDATED -> processAuthorizationUpdated(common);
+      case TRANSACTION_CREATED -> processTransactionCreated(common);
+      default -> throw new IllegalArgumentException(
+          "invalid networkMessageType " + common.getNetworkMessageType());
+    }
+
+    if (common.isPostAdjustment() || common.isPostDecline() || common.isPostHold()) {
+      // store any data that resulted from processing the network message from Stripe
+      NetworkMessage networkMessage = common.toNetworkMessage();
+
+      // card may be null in the case of Stripe sending us transactions for cards that we've not
+      // issued
+      // TODO(kuchlein): determine if Stripe handle this for us or not
+      if (common.getCard() != null) {
+        networkMessage.setCardId(common.getCard().getId());
+      }
+
+      postHold(common, networkMessage);
+      postAdjustment(common, networkMessage);
+      postDecline(common, networkMessage);
+
+      common.setNetworkMessage(networkMessageRepository.save(networkMessage));
     }
   }
 

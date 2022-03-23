@@ -327,9 +327,7 @@ public class AccountActivityService {
         .orElse(null);
   }
 
-  @PostAuthorize(
-      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
-  public AccountActivity retrieveAccountActivityByAdjustmentId(
+  AccountActivity retrieveAccountActivityByAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId) {
     return accountActivityRepository
         .findByBusinessIdAndAdjustmentId(businessId, adjustmentId)

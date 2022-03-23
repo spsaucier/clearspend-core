@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
+import com.clearspend.capital.service.BusinessBankAccountService.StripeBankAccountOp;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TwilioService;
@@ -115,6 +116,9 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
+  @StripeBankAccountOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a Stripe operation that needs to work with bank accounts")
   void processInboundTransferResult(InboundTransfer inboundTransfer) {
     Map<String, String> metadata = inboundTransfer.getMetadata();
 
@@ -220,6 +224,9 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
+  @StripeBankAccountOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a Stripe operation that needs to work with bank accounts")
   void onAchCreditsReceived(ReceivedCredit receivedCredit) {
     try {
       Business business =

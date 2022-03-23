@@ -141,6 +141,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.function.ThrowingRunnable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -420,6 +421,25 @@ public class TestHelper {
   public void setCurrentUser(@NonNull User user) {
     CurrentUserSwitcher.setCurrentUser(
         user, fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef())));
+  }
+
+  /**
+   * If there is test logic that should be run with a particular user, and then that user should be
+   * removed prior to any other code being executed, this helper is intended to support this.
+   *
+   * @param user the User to set before running the logic.
+   * @param action a wrapper around the logic to be run with the User set.
+   */
+  @SneakyThrows
+  public void runWithCurrentUser(@NonNull final User user, final ThrowingRunnable action) {
+    setCurrentUser(user);
+    action.run();
+    clearCurrentUser();
+  }
+
+  @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "For testing")
+  public void clearCurrentUser() {
+    CurrentUserSwitcher.clearCurrentUser();
   }
 
   /**

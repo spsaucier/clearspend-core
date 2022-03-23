@@ -529,40 +529,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void retrieveAccountActivityByAdjustmentId_UserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final AdjustmentRecord adjustmentRecord =
-        testDataHelper.createAdjustmentWithJoins(
-            AdjustmentWithJoinsConfig.fromCreateBusinessRecord(createBusinessRecord).build());
-
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final User activityOwner =
-        testHelper
-            .createUserWithRole(
-                createBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_EMPLOYEE)
-            .user();
-
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .adjustmentId(adjustmentRecord.adjustment().getId())
-            .ownerId(activityOwner.getId())
-            .build());
-
-    final ThrowingRunnable action =
-        () ->
-            accountActivityService.retrieveAccountActivityByAdjustmentId(
-                createBusinessRecord.business().getId(), adjustmentRecord.adjustment().getId());
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
-        .build()
-        .validateServiceMethod(action);
-  }
-
-  @Test
   void getCardAccountActivity_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     final CardAndLimit cardAndLimit =

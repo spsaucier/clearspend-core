@@ -99,6 +99,16 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
     SecurityContextHolder.getContext().setAuthentication(mockAuthentication(user));
   }
 
+  @RestrictedApi(
+      explanation = "This is only for manipulating the CurrentUser during testing.",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {SwitchesCurrentUser.class})
+  public static void clearCurrentUser() {
+    SecurityContextHolder.clearContext();
+  }
+
   private static Authentication mockAuthentication(CurrentUser user) {
     Signer signer = RSASigner.newSHA256Signer(privateKey);
     NimbusJwtDecoder jwtDecoder =
