@@ -51,7 +51,7 @@ public class CardFilterCriteria {
 
   public String getStatusString() {
     // If no Statuses are supplied, we should search for all Statuses
-    if (statuses != null) {
+    if (statuses != null && !statuses.isEmpty()) {
       return statuses.stream()
           .map(status -> String.format("'%s'", status.toString()))
           .collect(Collectors.joining(","));
@@ -62,7 +62,7 @@ public class CardFilterCriteria {
   }
 
   public String getTypeString() {
-    if (types != null) {
+    if (types != null && !types.isEmpty()) {
       return types.stream()
           .map(type -> String.format("'%s'", type.toString()))
           .collect(Collectors.joining(","));
