@@ -322,6 +322,11 @@ public class AccountActivityService {
       "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity retrieveAccountActivity(
       TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
+    return retrieveAccountActivityForService(businessId, accountActivityId);
+  }
+
+  AccountActivity retrieveAccountActivityForService(
+      final TypedId<BusinessId> businessId, final TypedId<AccountActivityId> accountActivityId) {
     return accountActivityRepository
         .findByBusinessIdAndId(businessId, accountActivityId)
         .orElse(null);

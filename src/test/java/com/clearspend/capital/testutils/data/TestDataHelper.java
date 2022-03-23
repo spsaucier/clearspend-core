@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -25,6 +26,8 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -140,6 +143,14 @@ public class TestDataHelper {
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
+
+    final MerchantDetails merchantDetails = new MerchantDetails();
+    merchantDetails.setName("");
+    merchantDetails.setType(MerchantType.AC_REFRIGERATION_REPAIR);
+    merchantDetails.setMerchantCategoryCode(1);
+    merchantDetails.setMerchantCategoryGroup(MccGroup.CHILD_CARE);
+    accountActivity.setMerchant(merchantDetails);
+
     config.getOwnerId().ifPresent(accountActivity::setUserId);
     config.getAdjustmentId().ifPresent(accountActivity::setAdjustmentId);
     return accountActivityRepo.save(accountActivity);

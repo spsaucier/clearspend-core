@@ -328,7 +328,7 @@ public class CodatService {
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
 
     AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivity(
+        accountActivityService.retrieveAccountActivityForService(
             businessId, transaction.getAccountActivityId());
 
     CodatSupplier supplier =
