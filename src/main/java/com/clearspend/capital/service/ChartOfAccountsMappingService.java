@@ -27,7 +27,7 @@ public class ChartOfAccountsMappingService {
   public List<ChartOfAccountsMappingResponse> getAllMappingsForBusiness(
       TypedId<BusinessId> businessId) {
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.getBusiness(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
       return null;

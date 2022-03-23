@@ -28,10 +28,13 @@ import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecor
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
+import com.google.errorprone.annotations.RestrictedApi;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +42,18 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessService {
+
+  public @interface StripeBusinessOp {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface OnboardingBusinessOp {
+    String reviewer();
+
+    String explanation();
+  }
 
   public static final String ACTIVE = "active";
 
@@ -58,7 +73,7 @@ public class BusinessService {
       Business business, com.stripe.model.Account stripeAccount) {}
 
   @Transactional
-  public BusinessAndStripeAccount createBusiness(
+  BusinessAndStripeAccount createBusiness(
       TypedId<BusinessId> businessId,
       BusinessType businessType,
       String businessEmail,
@@ -110,7 +125,7 @@ public class BusinessService {
   }
 
   @Transactional
-  public Business updateBusinessWithCodatCompanyRef(
+  Business updateBusinessWithCodatCompanyRef(
       TypedId<BusinessId> businessId, String codatCompanyRef) {
     Business business = retrieveBusiness(businessId, true);
 
@@ -120,7 +135,7 @@ public class BusinessService {
   }
 
   @Transactional
-  public Business updateBusinessWithCodatConnectionId(
+  Business updateBusinessWithCodatConnectionId(
       TypedId<BusinessId> businessId, String codatConnectionId) {
     Business business = retrieveBusiness(businessId, true);
 
@@ -129,7 +144,7 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
-  public Business deleteCodatConnectionForBusiness(TypedId<BusinessId> businessId) {
+  Business deleteCodatConnectionForBusiness(TypedId<BusinessId> businessId) {
     Business business = retrieveBusiness(businessId, true);
 
     business.setCodatConnectionId(null);
@@ -147,6 +162,7 @@ public class BusinessService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public Business updateBusinessAccountingSetupStep(
       TypedId<BusinessId> businessId, AccountingSetupStep accountingSetupStep) {
     Business business = retrieveBusiness(businessId, true);
@@ -157,7 +173,12 @@ public class BusinessService {
   }
 
   @Transactional
-  public Business updateBusiness(
+  @RestrictedApi(
+      explanation = "This method is used exclusively to support onboarding operations",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessOp.class})
+  public Business updateBusinessForOnboarding(
       TypedId<BusinessId> businessId,
       BusinessStatus status,
       BusinessOnboardingStep onboardingStep,
@@ -172,6 +193,7 @@ public class BusinessService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public com.clearspend.capital.controller.type.business.Business updateBusiness(
       TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
     Business business = retrieveBusiness(businessId, true);
@@ -201,6 +223,12 @@ public class BusinessService {
   }
 
   @Transactional
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe operations for which user permissions are not available.",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {StripeBusinessOp.class})
   public Business updateBusinessStripeData(
       TypedId<BusinessId> businessId,
       String stripeAccountRef,
@@ -222,36 +250,80 @@ public class BusinessService {
     return business;
   }
 
-  public Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
+  private Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
     return retrievalService.retrieveBusiness(businessId, mustExist);
   }
 
-  public Business retrieveBusinessByEmployerIdentificationNumber(
-      String employerIdentificationNumber) {
+  Business retrieveBusinessForService(
+      final TypedId<BusinessId> businessId, final boolean mustExist) {
+    return retrieveBusiness(businessId, mustExist);
+  }
+
+  @RestrictedApi(
+      explanation = "This method is used exclusively to support onboarding operations",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessOp.class})
+  public Business retrieveBusinessForOnboarding(
+      final TypedId<BusinessId> businessId, final boolean mustExist) {
+    return retrieveBusiness(businessId, mustExist);
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe operations for which user permissions are not available.",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {StripeBusinessOp.class})
+  public Business retrieveBusinessForStripe(
+      final TypedId<BusinessId> businessIdTypedId, final boolean mustExist) {
+    return retrieveBusiness(businessIdTypedId, mustExist);
+  }
+
+  @PostAuthorize(
+      "hasRootPermission(returnObject.businessId, 'READ') or hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ')")
+  public Business getBusiness(final TypedId<BusinessId> businessId, final boolean mustExist) {
+    return retrieveBusiness(businessId, mustExist);
+  }
+
+  Business retrieveBusinessByEmployerIdentificationNumber(String employerIdentificationNumber) {
     return businessRepository
         .findByEmployerIdentificationNumber(employerIdentificationNumber)
         .orElse(null);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe operations for which user permissions are not available.",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {StripeBusinessOp.class})
   public Business retrieveBusinessByStripeFinancialAccount(String stripeFinancialAccountRef) {
     return businessRepository
         .findByStripeFinancialAccountRef(stripeFinancialAccountRef)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeFinancialAccountRef));
   }
 
+  @RestrictedApi(
+      explanation =
+          "This method is used by Stripe operations for which user permissions are not available.",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {StripeBusinessOp.class})
   public Business retrieveBusinessByStripeAccountReference(String stripeAccountReference) {
     return businessRepository
         .findByStripeAccountRef(stripeAccountReference)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeAccountReference));
   }
 
-  public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
+  BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
     Business business = retrieveBusiness(businessId, true);
     Account account = allocationService.getRootAllocation(businessId).account();
     return new BusinessRecord(business, account);
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateBusinessFunds(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> allocationIdFrom,
@@ -280,7 +352,7 @@ public class BusinessService {
   }
 
   @Transactional
-  public AdjustmentAndHoldRecord applyFee(
+  AdjustmentAndHoldRecord applyFee(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
       Amount amount,

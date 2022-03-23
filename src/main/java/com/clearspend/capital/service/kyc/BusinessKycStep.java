@@ -12,6 +12,7 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessService.OnboardingBusinessOp;
 import com.clearspend.capital.service.TwilioService;
 import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
@@ -45,12 +46,16 @@ public abstract class BusinessKycStep {
 
   abstract List<String> execute(Requirements requirements, Business business, Account account);
 
+  @OnboardingBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This method uses the Business for onboarding tasks")
   public void updateBusiness(
       TypedId<BusinessId> businessId,
       BusinessStatus status,
       BusinessOnboardingStep onboardingStep,
       KnowYourBusinessStatus knowYourBusinessStatus) {
-    businessService.updateBusiness(businessId, status, onboardingStep, knowYourBusinessStatus);
+    businessService.updateBusinessForOnboarding(
+        businessId, status, onboardingStep, knowYourBusinessStatus);
   }
 
   public Boolean businessOrCompanyRequirementsMatch(String s) {

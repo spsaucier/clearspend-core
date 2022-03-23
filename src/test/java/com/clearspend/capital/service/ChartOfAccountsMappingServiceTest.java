@@ -35,6 +35,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
   @Test
   public void getAllMappingsForBusiness() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.createCodatExpenseCategoryMappings(business);
 
     List<ChartOfAccountsMappingResponse> result =

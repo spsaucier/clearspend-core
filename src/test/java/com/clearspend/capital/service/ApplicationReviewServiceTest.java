@@ -30,6 +30,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @Autowired private ApplicationReviewService applicationReviewService;
   @Autowired private StripeClient stripeClient;
   @Autowired private BusinessKycStepHandler stepHandler;
+  @Autowired private ServiceHelper serviceHelper;
 
   @Test
   @SneakyThrows
@@ -45,7 +46,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             onboardBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(onboardBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
@@ -70,7 +74,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             onboardBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(onboardBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredFields().isEmpty());
@@ -95,7 +102,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -121,7 +131,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -144,7 +157,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -167,7 +183,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -191,7 +210,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.REVIEW, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -216,7 +238,10 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             createBusinessRecord.business().getId());
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.REVIEW, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -238,7 +263,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 
-    Business business = businessService.retrieveBusiness(business1.getId(), true);
+    Business business = serviceHelper.businessService().getBusiness(business1.getId()).business();
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -260,7 +285,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 
-    Business business = businessService.retrieveBusiness(business1.getId(), true);
+    Business business = serviceHelper.businessService().getBusiness(business1.getId()).business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());
@@ -284,7 +309,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());
 
-    Business business = businessService.retrieveBusiness(business1.getId(), true);
+    Business business = serviceHelper.businessService().getBusiness(business1.getId()).business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
     Assertions.assertTrue(stripeApplicationRequirements.getKybRequiredDocuments().isEmpty());

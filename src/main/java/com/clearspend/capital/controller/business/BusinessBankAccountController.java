@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessService.OnboardingBusinessOp;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
@@ -60,6 +61,9 @@ public class BusinessBankAccountController {
   @GetMapping(
       value = "/link-token/{linkToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)
+  @OnboardingBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This method uses the Business for onboarding tasks")
   List<BankAccount> linkBusinessBankAccounts(@PathVariable String linkToken) throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
@@ -67,9 +71,9 @@ public class BusinessBankAccountController {
         toListBankAccount(
             businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId));
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.getBusiness(businessId, true);
     if (business.getStatus() == BusinessStatus.ONBOARDING) {
-      businessService.updateBusiness(
+      businessService.updateBusinessForOnboarding(
           businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY, null);
     }
 

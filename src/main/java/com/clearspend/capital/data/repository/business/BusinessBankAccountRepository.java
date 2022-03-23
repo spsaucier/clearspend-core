@@ -14,6 +14,8 @@ public interface BusinessBankAccountRepository
 
   List<BusinessBankAccount> findByBusinessId(TypedId<BusinessId> businessId);
 
+  void deleteAllByBusinessId(final TypedId<BusinessId> businessId);
+
   Optional<BusinessBankAccount> findByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId);
 

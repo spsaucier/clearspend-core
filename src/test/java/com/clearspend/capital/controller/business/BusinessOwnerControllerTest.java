@@ -24,6 +24,7 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
@@ -53,6 +54,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final StripeConnectHandler stripeConnectHandler;
+  private final ServiceHelper serviceHelper;
 
   private final Resource createAccount;
   private final Resource requiredDocumentsForPersonAndSSNLast4;
@@ -75,6 +77,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
       BusinessService businessService,
       BusinessOwnerService businessOwnerService,
       StripeConnectHandler stripeConnectHandler,
+      ServiceHelper serviceHelper,
       @Value("classpath:stripeResponses/createAccount.json") Resource createAccount,
       @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
           Resource requiredDocumentsForPersonAndSSNLast4) {
@@ -85,6 +88,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     this.stripeConnectHandler = stripeConnectHandler;
     this.createAccount = createAccount;
     this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
+    this.serviceHelper = serviceHelper;
   }
 
   @BeforeEach
@@ -237,7 +241,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
-    Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
+    Business businessResponse =
+        serviceHelper.businessService().getBusiness(business.getId()).business();
     assertThat(businessResponse.getOnboardingStep())
         .isEqualTo(BusinessOnboardingStep.BUSINESS_OWNERS);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.CLOSED);
@@ -294,7 +299,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
 
     stripeConnectHandler.accountUpdated(event);
 
-    Business businessResponse = businessService.retrieveBusiness(business.getId(), true);
+    Business businessResponse =
+        serviceHelper.businessService().getBusiness(business.getId()).business();
     assertThat(businessResponse.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.SOFT_FAIL);
     assertThat(businessResponse.getStatus()).isEqualTo(BusinessStatus.ONBOARDING);
   }

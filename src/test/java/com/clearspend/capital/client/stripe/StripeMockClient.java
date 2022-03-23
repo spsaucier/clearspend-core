@@ -729,6 +729,11 @@ public class StripeMockClient extends StripeClient {
     return new Account();
   }
 
+  @Override
+  public Account updateAccount(final Business business) {
+    return new Account();
+  }
+
   public Person updatePersonDocuments(String personId, String accountId, Document document) {
     return new Person();
   }

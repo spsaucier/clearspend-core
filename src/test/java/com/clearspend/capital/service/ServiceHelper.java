@@ -8,11 +8,16 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.TransactionLimit;
+import com.clearspend.capital.data.model.business.TosAcceptance;
+import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
+import com.clearspend.capital.service.BusinessService.BusinessRecord;
+import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +39,7 @@ import org.springframework.stereotype.Component;
 public class ServiceHelper {
   private final AccountService accountService;
   private final TransactionLimitService transactionLimitService;
+  private final BusinessService businessService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -41,6 +47,29 @@ public class ServiceHelper {
 
   public TransactionLimitServiceWrapper transactionLimitService() {
     return new TransactionLimitServiceWrapper(transactionLimitService);
+  }
+
+  public BusinessServiceWrapper businessService() {
+    return new BusinessServiceWrapper(businessService);
+  }
+
+  @RequiredArgsConstructor
+  public static class BusinessServiceWrapper {
+    private final BusinessService businessService;
+
+    public BusinessAndStripeAccount createBusiness(
+        TypedId<BusinessId> businessId,
+        BusinessType businessType,
+        String businessEmail,
+        ConvertBusinessProspect convertBusinessProspect,
+        TosAcceptance tosAcceptance) {
+      return businessService.createBusiness(
+          businessId, businessType, businessEmail, convertBusinessProspect, tosAcceptance);
+    }
+
+    public BusinessRecord getBusiness(TypedId<BusinessId> businessId) {
+      return businessService.getBusiness(businessId);
+    }
   }
 
   @RequiredArgsConstructor

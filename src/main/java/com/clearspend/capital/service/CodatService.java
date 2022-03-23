@@ -60,7 +60,7 @@ public class CodatService {
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
       CreateCompanyResponse response =
@@ -75,7 +75,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean getIntegrationConnectionStatus(TypedId<BusinessId> businessId) {
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
       return false;
@@ -89,7 +89,7 @@ public class CodatService {
   public SyncTransactionResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
       throws CodatApiCallException {
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
 
     if (business.getCodatCompanyRef() == null) {
       return null;
@@ -181,7 +181,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     CodatBankAccountsResponse bankAccounts =
         codatClient.getBankAccountsForBusiness(
@@ -193,7 +193,7 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     GetAccountsResponse chartOfAccounts =
         codatClient.getAccountsForBusiness(currentBusiness.getCodatCompanyRef());
@@ -205,7 +205,7 @@ public class CodatService {
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, CodatAccountType type) {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     GetAccountsResponse chartOfAccounts =
         codatClient.getAccountsForBusiness(currentBusiness.getCodatCompanyRef());
@@ -223,7 +223,7 @@ public class CodatService {
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CodatCreateBankAccountRequest createBankAccountRequest)
       throws CodatApiCallException {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     return codatClient.createBankAccountForBusiness(
         currentBusiness.getCodatCompanyRef(),
@@ -235,7 +235,7 @@ public class CodatService {
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean deleteCodatIntegrationConnection(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
-    Business currentBusiness = businessService.retrieveBusiness(businessId, true);
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     Boolean deleteResult =
         codatClient.deleteCodatIntegrationConnectionForBusiness(
@@ -322,7 +322,7 @@ public class CodatService {
 
   private void syncTransactionIfSupplierExists(
       TransactionSyncLog transaction, TypedId<BusinessId> businessId) {
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
 
     GetSuppliersResponse suppliersResponse =
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
@@ -395,7 +395,8 @@ public class CodatService {
   }
 
   private void updateSyncStatusIfComplete(TransactionSyncLog transaction) {
-    Business business = businessService.retrieveBusiness(transaction.getBusinessId(), true);
+    Business business =
+        businessService.retrieveBusinessForService(transaction.getBusinessId(), true);
     CodatPushStatusResponse status =
         codatClient.getPushStatus(
             transaction.getDirectCostPushOperationKey(), business.getCodatCompanyRef());

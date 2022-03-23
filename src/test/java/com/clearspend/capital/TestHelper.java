@@ -65,6 +65,7 @@ import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
@@ -189,6 +190,7 @@ public class TestHelper {
   private final UserRepository userRepository;
   private final ChartOfAccountsMappingRepository mappingRepository;
   private final ServiceHelper serviceHelper;
+  private final BusinessBankAccountBalanceRepository businessBankAccountBalanceRepo;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -385,7 +387,7 @@ public class TestHelper {
         convertBusinessProspect(businessProspect.getId());
 
     return new OnboardBusinessRecord(
-        businessService.retrieveBusiness(businessProspect.getBusinessId(), true),
+        serviceHelper.businessService().getBusiness(businessProspect.getBusinessId()).business(),
         businessOwnerService.retrieveBusinessOwner(
             convertBusinessProspectResponse.getBusinessOwnerId()),
         businessProspect,
@@ -605,7 +607,12 @@ public class TestHelper {
   }
 
   public Business retrieveBusiness() {
-    return businessService.retrieveBusiness(businessIds.get(0), true);
+    return serviceHelper.businessService().getBusiness(businessIds.get(0)).business();
+  }
+
+  public void deleteBusinessBankAccount(final TypedId<BusinessId> businessId) {
+    businessBankAccountBalanceRepo.deleteAllByBusinessId(businessId);
+    businessBankAccountRepository.deleteAllByBusinessId(businessId);
   }
 
   public void deleteBusiness(TypedId<BusinessId> businessId) {
@@ -799,7 +806,8 @@ public class TestHelper {
     String password = generatePassword();
     String legalName = faker.company().name() + " " + UUID.randomUUID(); // more unique names
     Business business =
-        businessService
+        serviceHelper
+            .businessService()
             .createBusiness(
                 businessId,
                 BusinessType.SINGLE_MEMBER_LLC,
@@ -887,7 +895,8 @@ public class TestHelper {
 
   public CreateUpdateUserRecord createUserWithRole(Allocation allocation, String role) {
     CreateUpdateUserRecord result =
-        createUser(businessService.getBusiness(allocation.getBusinessId()).business());
+        createUser(
+            serviceHelper.businessService().getBusiness(allocation.getBusinessId()).business());
     rolesAndPermissionsService.createUserAllocationRole(
         result.user().getId(), allocation.getId(), role);
     return result;

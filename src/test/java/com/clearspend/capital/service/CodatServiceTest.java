@@ -73,6 +73,7 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired TransactionSyncLogRepository transactionSyncLogRepository;
   @Autowired CodatMockClient mockClient;
   @Autowired BusinessService businessService;
+  @Autowired ServiceHelper serviceHelper;
 
   @BeforeEach
   public void setup() {
@@ -305,8 +306,10 @@ public class CodatServiceTest extends BaseCapitalTest {
             .getResponse();
 
     assertThat(
-            businessService
-                .retrieveBusiness(business.getId(), true)
+            serviceHelper
+                .businessService()
+                .getBusiness(business.getId())
+                .business()
                 .getCodatConnectionId()
                 .equals("new-codat-dataconnection-id"))
         .isTrue();
@@ -319,14 +322,21 @@ public class CodatServiceTest extends BaseCapitalTest {
     codatService.deleteCodatIntegrationConnection(business.getId());
 
     assertThat(
-            businessService.retrieveBusiness(business.getId(), true).getCodatConnectionId() == null)
+            serviceHelper
+                    .businessService()
+                    .getBusiness(business.getId())
+                    .business()
+                    .getCodatConnectionId()
+                == null)
         .isTrue();
 
     businessService.updateBusinessWithCodatConnectionId(business.getId(), "codat-connection-id");
 
     assertThat(
-            businessService
-                .retrieveBusiness(business.getId(), true)
+            serviceHelper
+                .businessService()
+                .getBusiness(business.getId())
+                .business()
                 .getCodatConnectionId()
                 .equals("codat-connection-id"))
         .isTrue();
@@ -354,8 +364,10 @@ public class CodatServiceTest extends BaseCapitalTest {
             .getResponse();
 
     assertThat(
-            businessService
-                .retrieveBusiness(business.getId(), true)
+            serviceHelper
+                .businessService()
+                .getBusiness(business.getId())
+                .business()
                 .getCodatCreditCardId()
                 .equals("1234"))
         .isTrue();

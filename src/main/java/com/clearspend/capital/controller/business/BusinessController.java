@@ -22,6 +22,7 @@ import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessLimitService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessService.OnboardingBusinessOp;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
@@ -79,7 +80,7 @@ public class BusinessController {
     Map<TypedId<AllocationId>, Allocation> result =
         allocationService
             .searchBusinessAllocations(
-                businessService.retrieveBusiness(CurrentUser.getBusinessId(), true))
+                businessService.getBusiness(CurrentUser.getBusinessId(), true))
             .stream()
             .map(Allocation::of)
             .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
@@ -106,7 +107,7 @@ public class BusinessController {
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
         .searchBusinessAllocations(
-            businessService.retrieveBusiness(CurrentUser.getBusinessId(), true), request.getName())
+            businessService.getBusiness(CurrentUser.getBusinessId(), true), request.getName())
         .stream()
         .map(Allocation::of)
         .toList();
@@ -140,7 +141,7 @@ public class BusinessController {
   @GetMapping
   ResponseEntity<Business> getBusiness() {
     return ResponseEntity.ok(
-        new Business(businessService.retrieveBusiness(CurrentUser.getBusinessId(), false)));
+        new Business(businessService.getBusiness(CurrentUser.getBusinessId(), false)));
   }
 
   @GetMapping("/business-limit")
@@ -150,12 +151,16 @@ public class BusinessController {
   }
 
   @PostMapping("/complete-onboarding")
+  @OnboardingBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This method uses the Business for onboarding tasks")
   ResponseEntity<?> completeOnboarding() {
     TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
-    Business business = new Business(businessService.retrieveBusiness(businessId, false));
+    Business business =
+        new Business(businessService.retrieveBusinessForOnboarding(businessId, false));
 
     if (COMPLETABLE_ONBOARDING_STEPS.contains(business.getOnboardingStep())) {
-      businessService.updateBusiness(
+      businessService.updateBusinessForOnboarding(
           businessId, BusinessStatus.ACTIVE, BusinessOnboardingStep.COMPLETE, null);
     } else {
       throw new RuntimeException(

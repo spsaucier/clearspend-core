@@ -31,6 +31,7 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.util.List;
@@ -61,6 +62,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   private final AccountService accountService;
   private final AllocationService allocationService;
+  private final ServiceHelper serviceHelper;
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
@@ -293,7 +295,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  public void getRootAllocation_ForUnknownBusinessId_expectStatus204() {
+  public void getRootAllocation_ForUnknownBusinessId_expectStatus404() {
     Business business = createBusinessRecord.business();
 
     testHelper.deleteBusinessOwner(createBusinessRecord.businessOwner().getId());
@@ -302,6 +304,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     testHelper.deleteUser(userRepository.findByBusinessId(business.getId()).get(0).getId());
     testHelper.deleteBusinessLimit(business.getId());
     testHelper.deleteSpendLimit(business.getId());
+    testHelper.deleteBusinessBankAccount(business.getId());
     testHelper.deleteBusiness(business.getId());
 
     mvc.perform(
@@ -375,7 +378,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void completeOnboarding() {
-    businessService.updateBusiness(
+    businessService.updateBusinessForOnboarding(
         createBusinessRecord.business().getId(),
         BusinessStatus.ONBOARDING,
         BusinessOnboardingStep.LINK_ACCOUNT,
@@ -390,7 +393,10 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .getResponse();
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.COMPLETE);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.ACTIVE);
   }

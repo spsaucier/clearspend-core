@@ -9,6 +9,7 @@ import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -30,6 +31,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
   @Autowired private BusinessService businessService;
   @Autowired private StripeConnectHandler stripeConnectHandler;
+  @Autowired private ServiceHelper serviceHelper;
 
   private final Resource successOnboarding;
   private final Resource accountAddRepresentative;
@@ -120,7 +122,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(onboardBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
   }
@@ -147,7 +152,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(onboardBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(onboardBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
   }
@@ -172,7 +180,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
   }
@@ -202,7 +213,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS, business.getOnboardingStep());
   }
@@ -227,7 +241,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
   }
@@ -254,7 +271,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.BUSINESS_OWNERS, business.getOnboardingStep());
   }
@@ -282,7 +302,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.REVIEW, business.getOnboardingStep());
   }
@@ -310,7 +333,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.REVIEW, business.getOnboardingStep());
   }
@@ -337,7 +363,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
   }
@@ -362,7 +391,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
   }
@@ -388,7 +420,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.SOFT_FAIL, business.getOnboardingStep());
   }
@@ -413,7 +448,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.LINK_ACCOUNT, business.getOnboardingStep());
   }
@@ -422,7 +460,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
   @SneakyThrows
   void accountUpdate_whenBusinessCompleteOnboarding_shouldNotImpactCurrentStatus() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    businessService.updateBusiness(
+    businessService.updateBusinessForOnboarding(
         createBusinessRecord.business().getId(),
         BusinessStatus.ACTIVE,
         BusinessOnboardingStep.COMPLETE,
@@ -443,7 +481,10 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(event);
 
     Business business =
-        businessService.retrieveBusiness(createBusinessRecord.business().getId(), true);
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
 
     Assertions.assertEquals(BusinessOnboardingStep.COMPLETE, business.getOnboardingStep());
   }

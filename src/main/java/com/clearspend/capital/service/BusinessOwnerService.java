@@ -66,7 +66,7 @@ public class BusinessOwnerService {
                         : createBusinessOwner(businessOwner))
             .toList();
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
     String stripeAccountReference = business.getStripeData().getAccountRef();
 
     businessOwners.forEach(
@@ -78,7 +78,7 @@ public class BusinessOwnerService {
 
   public BusinessAndAccountErrorMessages allOwnersProvided(
       TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
     List<BusinessOwner> businessOwners = findBusinessOwnerByBusinessId(business.getId());
 
     stripeClient.triggerAccountValidationAfterPersonsProvided(
@@ -93,14 +93,16 @@ public class BusinessOwnerService {
                 .anyMatch(BusinessOwner::getRelationshipExecutive));
 
     return new BusinessAndAccountErrorMessages(
-        businessService.retrieveBusiness(businessId, true), java.util.Collections.emptyList());
+        businessService.retrieveBusinessForService(businessId, true),
+        java.util.Collections.emptyList());
   }
 
   public void validateOwner(BusinessOwnerData businessOwnerData) {
 
     Assert.notNull(businessOwnerData);
 
-    Business business = businessService.retrieveBusiness(businessOwnerData.getBusinessId(), true);
+    Business business =
+        businessService.retrieveBusinessForService(businessOwnerData.getBusinessId(), true);
 
     List<BusinessOwner> ownersForBusinessId =
         businessOwnerRepository.findByBusinessId(businessOwnerData.getBusinessId());
@@ -133,7 +135,7 @@ public class BusinessOwnerService {
   public void validateBusinessOwners(
       TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
 
     List<BusinessOwner> ownersForBusinessId = businessOwnerRepository.findByBusinessId(businessId);
 
@@ -174,7 +176,7 @@ public class BusinessOwnerService {
     // what will be the flow to validate email and phone before this method
     BusinessOwner businessOwner = createBusinessOwner(businessOwnerData);
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
     String stripeAccountReference = business.getStripeData().getAccountRef();
 
     Person stripePerson;
@@ -219,7 +221,7 @@ public class BusinessOwnerService {
     // what will be the flow to validate email and phone before this method
     BusinessOwner businessOwner = updateBusinessOwner(businessOwnerData);
 
-    Business business = businessService.retrieveBusiness(businessId, true);
+    Business business = businessService.retrieveBusinessForService(businessId, true);
     String stripeAccountReference = business.getStripeData().getAccountRef();
 
     Person stripePerson;

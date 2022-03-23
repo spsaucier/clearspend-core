@@ -24,6 +24,7 @@ import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessBankAccountService.StripeBankAccountOp;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessService.StripeBusinessOp;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TwilioService;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
@@ -85,6 +86,9 @@ public class StripeConnectHandler {
     this.stepHandler = stepHandler;
   }
 
+  @StripeBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessService")
   public void accountUpdated(StripeObject stripeObject) {
     try {
       Account account =
@@ -192,6 +196,9 @@ public class StripeConnectHandler {
    *
    * @param receivedCredit Received credit event object from Stripe
    */
+  @StripeBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessService")
   private void onStripeCreditsReceived(ReceivedCredit receivedCredit) {
     if (StringUtils.equals(
         stripeProperties.getClearspendFinancialAccountId(), receivedCredit.getFinancialAccount())) {
@@ -224,6 +231,9 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
+  @StripeBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessService")
   @StripeBankAccountOp(
       reviewer = "Craig Miller",
       explanation = "This is a Stripe operation that needs to work with bank accounts")
@@ -253,6 +263,9 @@ public class StripeConnectHandler {
             event -> financialAccountFeaturesUpdated(event.getBusinessId(), event.getEvent()));
   }
 
+  @StripeBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessService")
   public void financialAccountFeaturesUpdated(
       TypedId<BusinessId> businessId, FinancialAccount financialAccount) {
     if (financialAccount.getPendingFeatures().isEmpty()
@@ -338,6 +351,9 @@ public class StripeConnectHandler {
 
   public void outboundPaymentReturned(StripeObject stripeObject) {}
 
+  @StripeBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a Stripe action that needs business information")
   private <T extends StripeWebhookEventWrapper<?>> Optional<T> parseBetaApiEvent(
       StripeObject stripeObject, Class<T> clazz) {
     T event = null;
@@ -350,7 +366,7 @@ public class StripeConnectHandler {
       TypedId<BusinessId> businessId = event.getBusinessId();
       if (businessId != null) {
         try {
-          businessService.retrieveBusiness(businessId, true);
+          businessService.retrieveBusinessForStripe(businessId, true);
         } catch (RecordNotFoundException e) {
           log.info("Skipping event for business id {} since it is not found in the db", businessId);
           return Optional.empty();
