@@ -28,10 +28,12 @@ import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
@@ -43,7 +45,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import javax.persistence.EntityManager;
 import lombok.SneakyThrows;
@@ -71,6 +72,8 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired EntityManager entityManager;
   @Autowired PermissionValidationHelper permissionValidationHelper;
   @Autowired TestDataHelper testDataHelper;
+
+  @Autowired ExpenseCategoryRepository expenseCategoryRepository;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -430,7 +433,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action =
         () ->
             accountActivityService.updateAccountActivity(
-                accountActivity, "I am updating this activity", Optional.empty());
+                accountActivity, "I am updating this activity", null);
 
     permissionValidationHelper
         .buildValidator(primaryBusinessRecord)
@@ -459,12 +462,17 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             AccountActivityIntegrationSyncStatus.NOT_READY);
     log.info("AccountActivity: {}", accountActivity);
     accountActivity.setNotes("");
-    ExpenseCategory expenseCategory;
     Integer iconRef = 0;
+
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+
+    expenseCategoryRepository.save(expenseCategory);
+
     if (null != iconRef && iconRef != 0) {
-      expenseCategory = expenseCategoryService.retrieveExpenseCategory(iconRef);
       accountActivity.setExpenseDetails(
-          new ExpenseDetails(expenseCategory.getIconRef(), expenseCategory.getCategoryName()));
+          new ExpenseDetails(0, expenseCategory.getId(), expenseCategory.getCategoryName()));
     }
     accountActivityRepository.save(accountActivity);
     AccountActivity accountActivityResult =
@@ -492,9 +500,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountActivity.setUserId(businessRecord.user().getId());
     accountActivity = accountActivityRepository.save(accountActivity);
     testHelper.setCurrentUser(businessRecord.user());
+
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+
+    expenseCategoryRepository.save(expenseCategory);
+
     assertThat(
             accountActivityService.updateAccountActivity(
-                accountActivity, "After Update", Optional.of(1)))
+                accountActivity, "After Update", expenseCategory.getId()))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
   }

@@ -17,8 +17,15 @@ public class ExpenseCategory {
   @NonNull
   private String categoryName;
 
+  @JsonProperty("expenseCategoryId")
+  @NonNull
+  private String expenseCategoryId;
+
   public static ExpenseCategory of(
       com.clearspend.capital.data.model.ExpenseCategory expenseCategory) {
-    return new ExpenseCategory(expenseCategory.getIconRef(), expenseCategory.getCategoryName());
+    return new ExpenseCategory(
+        expenseCategory.getIconRef(),
+        expenseCategory.getCategoryName(),
+        expenseCategory.getId().toString());
   }
 }

@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.CardId;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -50,7 +51,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
@@ -272,16 +273,17 @@ public class AccountActivityService {
   @PreAuthorize(
       "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity updateAccountActivity(
-      AccountActivity accountActivity, String notes, Optional<Integer> iconRef) {
+      AccountActivity accountActivity,
+      String notes,
+      @Nullable TypedId<ExpenseCategoryId> expenseCategoryId) {
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
     // FIXME
-    if (iconRef != null) {
+    if (expenseCategoryId != null) {
       accountActivity.setExpenseDetails(
-          iconRef
-              .map(expenseCategoryService::retrieveExpenseCategory)
-              .map(
-                  category -> new ExpenseDetails(category.getIconRef(), category.getCategoryName()))
+          expenseCategoryService
+              .getExpenseCategoryById(expenseCategoryId)
+              .map(category -> new ExpenseDetails(0, category.getId(), category.getCategoryName()))
               .orElse(null));
       if (accountActivity
           .getIntegrationSyncStatus()
@@ -291,6 +293,8 @@ public class AccountActivityService {
                 .getIntegrationSyncStatus()
                 .validTransition(AccountActivityIntegrationSyncStatus.READY));
       }
+    } else {
+      accountActivity.setExpenseDetails(null);
     }
     log.debug(
         "Set expense details {} to accountActivity {}",

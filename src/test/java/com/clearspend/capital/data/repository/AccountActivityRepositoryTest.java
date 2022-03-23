@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +51,8 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
     accountActivity.setReceipt(new ReceiptDetails(Set.of(new TypedId<>())));
     accountActivity = accountActivityRepository.save(accountActivity);
     accountActivity = accountActivityRepository.findById(accountActivity.getId()).orElseThrow();
-    accountActivity.setExpenseDetails(new ExpenseDetails(5, "Test"));
+    accountActivity.setExpenseDetails(
+        new ExpenseDetails(5, new TypedId<>(UUID.randomUUID()), "Test"));
     accountActivity = accountActivityRepository.save(accountActivity);
     accountActivity = accountActivityRepository.findById(accountActivity.getId()).orElseThrow();
     log.info("accountActivity: {}", accountActivity.getExpenseDetails());

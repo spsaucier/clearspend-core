@@ -1,7 +1,9 @@
 package com.clearspend.capital.controller.type.activity;
 
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,6 +19,7 @@ public class UpdateAccountActivityRequest {
   private String notes;
 
   /** Expense category code */
-  @JsonProperty("iconRef")
-  private Optional<Integer> iconRef;
+  @JsonProperty("expenseCategoryId")
+  @Nullable
+  private TypedId<ExpenseCategoryId> expenseCategoryId;
 }

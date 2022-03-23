@@ -34,8 +34,10 @@ import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
@@ -44,6 +46,7 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -57,7 +60,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -81,6 +83,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
   private final CardRepository cardRepository;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   private final Faker faker = new Faker();
 
@@ -743,8 +746,17 @@ class UserControllerTest extends BaseCapitalTest {
     TypedId<AccountActivityId> id =
         networkCommonAuthorization.networkCommon().getAccountActivity().getId();
 
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            createBusinessRecord.business().getId(),
+            0,
+            "TestCategory",
+            ExpenseCategoryStatus.ACTIVE);
+
+    expenseCategoryRepository.save(expenseCategory);
+
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -761,11 +773,11 @@ class UserControllerTest extends BaseCapitalTest {
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getNotes());
     Assertions.assertEquals(
-        3,
+        expenseCategory.getId(),
         objectMapper
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getExpenseDetails()
-            .getIconRef());
+            .getExpenseCategoryId());
   }
 
   @SneakyThrows
@@ -807,8 +819,17 @@ class UserControllerTest extends BaseCapitalTest {
     TypedId<AccountActivityId> id =
         networkCommonAuthorization.networkCommon().getAccountActivity().getId();
 
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            createBusinessRecord.business().getId(),
+            0,
+            "TestCategory",
+            ExpenseCategoryStatus.ACTIVE);
+
+    expenseCategoryRepository.save(expenseCategory);
+
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -825,14 +846,14 @@ class UserControllerTest extends BaseCapitalTest {
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getNotes());
     Assertions.assertEquals(
-        3,
+        expenseCategory.getId(),
         objectMapper
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getExpenseDetails()
-            .getIconRef());
+            .getExpenseCategoryId());
 
     // For case when iconRef will be Optional.empty the values should be deleted
-    updateAccountActivityRequest = new UpdateAccountActivityRequest("notesTest", Optional.empty());
+    updateAccountActivityRequest = new UpdateAccountActivityRequest("notesTest", null);
 
     response =
         mvc.perform(
@@ -893,8 +914,17 @@ class UserControllerTest extends BaseCapitalTest {
     TypedId<AccountActivityId> id =
         networkCommonAuthorization.networkCommon().getAccountActivity().getId();
 
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            createBusinessRecord.business().getId(),
+            0,
+            "TestCategory",
+            ExpenseCategoryStatus.ACTIVE);
+
+    expenseCategoryRepository.save(expenseCategory);
+
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", Optional.of(3));
+        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -911,11 +941,11 @@ class UserControllerTest extends BaseCapitalTest {
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getNotes());
     Assertions.assertEquals(
-        3,
+        expenseCategory.getId(),
         objectMapper
             .readValue(response.getContentAsString(), AccountActivityResponse.class)
             .getExpenseDetails()
-            .getIconRef());
+            .getExpenseCategoryId());
 
     // For case when iconRef will be null the expense category values should be deleted
     response =

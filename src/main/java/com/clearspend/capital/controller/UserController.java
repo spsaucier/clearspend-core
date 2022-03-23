@@ -379,7 +379,7 @@ public class UserController {
         accountActivityService.updateAccountActivity(
             accountActivityService.getAccountActivity(accountActivityId),
             request.getNotes(),
-            request.getIconRef()));
+            request.getExpenseCategoryId()));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")

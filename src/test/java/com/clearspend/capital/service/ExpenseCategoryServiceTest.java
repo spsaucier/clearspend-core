@@ -22,6 +22,6 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
     log.info("AllCategories: {}", expenseCategoryRepository.findAll());
     List<ExpenseCategory> foundCategories = expenseCategoryService.retrieveExpenseCategories();
     assertThat(foundCategories).isNotNull();
-    assertThat(foundCategories.size()).isEqualTo(23);
+    assertThat(foundCategories.size()).isEqualTo(0);
   }
 }

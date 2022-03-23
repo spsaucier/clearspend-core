@@ -148,10 +148,14 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                   adjustmentId, id -> accountActivity.setAdjustmentId(new TypedId<>(id)));
               accountActivity.setNotes(resultSet.getString("notes"));
               BigDecimal iconRef = resultSet.getBigDecimal("expense_details_icon_ref");
-              if (iconRef != null) {
+              UUID expenseCategoryId =
+                  resultSet.getObject("expense_details_expense_category_id", UUID.class);
+              if (expenseCategoryId != null) {
                 accountActivity.setExpenseDetails(
                     new ExpenseDetails(
-                        iconRef.intValue(), resultSet.getString("expense_details_category_name")));
+                        0,
+                        new TypedId<>(expenseCategoryId),
+                        resultSet.getString("expense_details_category_name")));
               }
 
               Array receiptReceiptIds = resultSet.getArray("receipt_receipt_ids");

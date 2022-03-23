@@ -1,10 +1,11 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.error.RecordNotFoundException;
-import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,7 @@ public class ExpenseCategoryService {
     return categoryRepository.findAll();
   }
 
-  public ExpenseCategory retrieveExpenseCategory(Integer iconRef) {
-    return categoryRepository
-        .findByIconRef(iconRef)
-        .orElseThrow(() -> new RecordNotFoundException(Table.EXPENSE_CATEGORY, iconRef));
+  public Optional<ExpenseCategory> getExpenseCategoryById(TypedId<ExpenseCategoryId> id) {
+    return categoryRepository.findById(id);
   }
 }
