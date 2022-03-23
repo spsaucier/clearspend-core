@@ -31,7 +31,12 @@ import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.ServiceHelper;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -43,11 +48,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpMethod;
 
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
+  private final Gson gson =
+      new GsonBuilder()
+          .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+          .create();
 
   private final TestHelper testHelper;
   private final MockMvcHelper mvcHelper;
@@ -65,6 +75,9 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
   @Value("${clearspend.ach.return-fee:0}")
   private long achReturnFee;
+
+  @Value("classpath:stripeEvents/cardReceivedCreditEvent.json")
+  Resource cardReceivedCreditEvent;
 
   @SneakyThrows
   @BeforeEach
@@ -239,5 +252,16 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     assertThat(account.getAvailableBalance().getAmount())
         .isEqualByComparingTo(new BigDecimal(30 * tonsOfMoney));
+  }
+
+  @Test
+  @SneakyThrows
+  public void cap746_cardCreditsReceivedShouldBeParsed() {
+    String json =
+        Files.readString(cardReceivedCreditEvent.getFile().toPath(), StandardCharsets.UTF_8);
+    gson.fromJson(json, ReceivedCredit.class);
+    // we don't need to call the handler since we are not processing card credit received for now.
+    // The issue was in a failing json parsing due to incorrect field definition in the
+    // ReceivedCredit class
   }
 }

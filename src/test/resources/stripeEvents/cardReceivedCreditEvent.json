@@ -1,0 +1,63 @@
+{
+  "id": "rc_1Kg9HY4fOsQi6HOOyzfx6EWS",
+  "object": "received_credit",
+  "amount": 100,
+  "created": 1647961560,
+  "currency": "usd",
+  "description": "CLEARSPEND",
+  "failure_code": null,
+  "financial_account": "fa_XXXXXXXXXXXXXXXXXXXXXXXX",
+  "hosted_regulatory_receipt_url": "https://payments.stripe.com/regulatory-receipt/ipi_live_XXXXXXXXXXXXXXXXXXXXXXXX",
+  "linked_flows": {
+    "credit_reversal": null,
+    "received_hold": null,
+    "source_flow": null,
+    "source_flow_type": null
+  },
+  "livemode": true,
+  "network": "card",
+  "reversal_details": {
+    "deadline": null,
+    "restricted_reason": null
+  },
+  "status": "succeeded",
+  "transaction": "trxn_XXXXXXXXXXXXXXXXXXXXXXXX",
+  "failure_message": null,
+  "legacy_flows": {
+    "issuing_transaction": "ipi_XXXXXXXXXXXXXXXXXXXXXXXX",
+    "issuing_dispute": null
+  },
+  "network_details": {
+    "card": {
+      "amount_details": {
+        "fees": {
+          "atm": null
+        }
+      },
+      "issuing_card": "ic_XXXXXXXXXXXXXXXXXXXXXXXX",
+      "merchant_amount": 100,
+      "merchant_currency": "usd",
+      "merchant_details": {
+        "address": {
+          "city": "7047960283",
+          "country": "US",
+          "line1": null,
+          "line2": null,
+          "postal_code": "28078",
+          "state": "NC"
+        },
+        "category_code": "5045"
+      },
+      "purchase_details": {
+        "flight": null,
+        "fuel": null,
+        "lodging": null,
+        "receipt": null,
+        "reference": "00000000"
+      },
+      "wallet": null
+    },
+    "type": "card"
+  },
+  "received_payment_method_details": null
+}

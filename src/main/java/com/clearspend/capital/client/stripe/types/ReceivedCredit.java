@@ -53,7 +53,7 @@ public class ReceivedCredit {
   public String network;
 
   @SerializedName("network_details")
-  public String networkDetails;
+  public Object networkDetails;
 
   @SerializedName("received_payment_method_details")
   @Valid
