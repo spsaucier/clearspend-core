@@ -15,6 +15,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
@@ -125,7 +126,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
           SearchCardData.of(
               new FilteredCardRecord(
                   rootCardB, rootAllocation.allocation(), rootAllocation.account(), userB.user()));
-      rootCardASearchResult.setBalance(
+      rootCardBSearchResult.setBalance(
           new com.clearspend.capital.controller.type.Amount(
               Currency.USD, new BigDecimal("1000.00")));
 
@@ -254,14 +255,25 @@ public class CardControllerSearchTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void search_cardTypeFiltersAreHonored() {
+  void search_cardTypeFiltersAreHonoredIfSupplied() {
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
-    request.setIncludePhysicalCards(Boolean.FALSE);
+    request.setTypes(List.of(CardType.VIRTUAL));
 
     PagedData<SearchCardData> result = callSearchCards(request, authCookie, 2);
 
     assertThat(result.getContent())
         .containsExactlyInAnyOrder(rootCardBSearchResult, rootCardASearchResult);
+  }
+
+  @SneakyThrows
+  @Test
+  void search_cardStatusFiltersAreHonoredIfSupplied() {
+    SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
+    request.setStatuses(List.of(CardStatus.INACTIVE));
+
+    PagedData<SearchCardData> result = callSearchCards(request, authCookie, 1);
+
+    assertThat(result.getContent()).containsExactlyInAnyOrder(childCardASearchResult);
   }
 
   @SneakyThrows

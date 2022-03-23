@@ -5,6 +5,8 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.activity.FilterAmount;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
@@ -30,20 +32,11 @@ public class SearchCardRequest {
   @JsonProperty("balance")
   private FilterAmount balanceRange;
 
-  @JsonProperty("activeCards")
-  private Boolean includeActiveCards = true;
+  @JsonProperty("statuses")
+  private List<CardStatus> statuses;
 
-  @JsonProperty("frozenCards")
-  private Boolean includeFrozenCards = true;
-
-  @JsonProperty("cancelledCards")
-  private Boolean includeCancelledCards = false;
-
-  @JsonProperty("physical")
-  private Boolean includePhysicalCards = true;
-
-  @JsonProperty("virtual")
-  private Boolean includeVirtualCards = true;
+  @JsonProperty("types")
+  private List<CardType> types;
 
   @NonNull
   @NotNull(message = "Page request is mandatory")

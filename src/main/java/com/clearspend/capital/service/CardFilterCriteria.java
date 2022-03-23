@@ -12,7 +12,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.xml.bind.DatatypeConverter;
@@ -32,11 +32,8 @@ public class CardFilterCriteria {
   private String searchText;
   private BigDecimal minimumBalance;
   private BigDecimal maximumBalance;
-  private Boolean includeActiveCards;
-  private Boolean includeFrozenCards;
-  private Boolean includeCancelledCards;
-  private Boolean includePhysicalCards;
-  private Boolean includeVirtualCards;
+  private List<CardStatus> statuses;
+  private List<CardType> types;
 
   private PageToken pageToken;
 
@@ -53,36 +50,30 @@ public class CardFilterCriteria {
   }
 
   public String getStatusString() {
-    List<CardStatus> statusCollection = new ArrayList<>();
-    if (includeActiveCards) {
-      statusCollection.add(CardStatus.ACTIVE);
+    // If no Statuses are supplied, we should search for all Statuses
+    if (statuses != null) {
+      return statuses.stream()
+          .map(status -> String.format("'%s'", status.toString()))
+          .collect(Collectors.joining(","));
     }
-    if (includeFrozenCards) {
-      statusCollection.add(CardStatus.INACTIVE);
-    }
-    if (includeCancelledCards) {
-      statusCollection.add(CardStatus.CANCELLED);
-    }
-    return statusCollection.stream()
+    return Arrays.stream(CardStatus.values())
         .map(status -> String.format("'%s'", status.toString()))
         .collect(Collectors.joining(","));
   }
 
   public String getTypeString() {
-    List<CardType> types = new ArrayList<>();
-    if (includePhysicalCards) {
-      types.add(CardType.PHYSICAL);
+    if (types != null) {
+      return types.stream()
+          .map(type -> String.format("'%s'", type.toString()))
+          .collect(Collectors.joining(","));
     }
-    if (includeVirtualCards) {
-      types.add(CardType.VIRTUAL);
-    }
-    return types.stream()
+    return Arrays.stream(CardType.values())
         .map(type -> String.format("'%s'", type.toString()))
         .collect(Collectors.joining(","));
   }
 
   public String getSearchStringHash() {
-    if (StringUtils.hasLength(searchText)) {
+    if (StringUtils.hasText(searchText)) {
       return DatatypeConverter.printHexBinary(HashUtil.calculateHash(searchText));
     }
     return null;
@@ -95,14 +86,13 @@ public class CardFilterCriteria {
         "",
         request.getUsers(),
         request.getAllocations(),
-        request.getSearchText(),
+        StringUtils.hasText(request.getSearchText())
+            ? request.getSearchText()
+            : null, // scrub empty strings
         request.getBalanceRange() == null ? null : request.getBalanceRange().getMin(),
         request.getBalanceRange() == null ? null : request.getBalanceRange().getMax(),
-        request.getIncludeActiveCards(),
-        request.getIncludeFrozenCards(),
-        request.getIncludeCancelledCards(),
-        request.getIncludePhysicalCards(),
-        request.getIncludeVirtualCards(),
+        request.getStatuses(),
+        request.getTypes(),
         PageRequest.toPageToken(request.getPageRequest()));
   }
 }
