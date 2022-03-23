@@ -493,10 +493,7 @@ class CardServiceTest extends BaseCapitalTest {
     // The Manager should be able to block the card
     testHelper.setCurrentUser(manager);
 
-    assertThat(
-            cardService.updateCardStatus(
-                card, CardStatus.INACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false))
-        .isNotNull();
+    assertThat(cardService.blockCard(card, CardStatusReason.CARDHOLDER_REQUESTED)).isNotNull();
 
     assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
         .extracting(c -> c.getStatus())
@@ -506,16 +503,11 @@ class CardServiceTest extends BaseCapitalTest {
     testHelper.setCurrentUser(snooper);
     assertThrows(
         AccessDeniedException.class,
-        () ->
-            cardService.updateCardStatus(
-                card, CardStatus.INACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false));
+        () -> cardService.blockCard(card, CardStatusReason.CARDHOLDER_REQUESTED));
 
     // The Card Owner should be able to Update their Card Status (reactivation)
     testHelper.setCurrentUser(employee);
-    assertThat(
-            cardService.updateCardStatus(
-                card, CardStatus.ACTIVE, CardStatusReason.CARDHOLDER_REQUESTED, false))
-        .isNotNull();
+    assertThat(cardService.unblockCard(card, CardStatusReason.CARDHOLDER_REQUESTED)).isNotNull();
 
     assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
         .extracting(c -> c.getStatus())

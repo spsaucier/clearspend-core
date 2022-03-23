@@ -301,7 +301,7 @@ public class CardService {
   @Transactional
   @PreAuthorize("isSelfOwned(#card)")
   public Card activateMyCard(Card card, CardStatusReason statusReason) {
-    return activateCard(card, statusReason);
+    return activateCard(cardRepository.findById(card.getId()).orElseThrow(), statusReason);
   }
 
   @Transactional
@@ -313,14 +313,19 @@ public class CardService {
           Table.CARD, CurrentUser.getBusinessId(), CurrentUser.getUserId());
     }
 
-    Card activatedCard = activateMyCard(cards.get(0), statusReason);
+    Card activatedCard =
+        activateMyCard(cardRepository.findById(cards.get(0).getId()).orElseThrow(), statusReason);
 
     if (cards.size() > 1) {
       log.warn(
           "Found a card collision during card activation for businessId={}. Total activated cards: {}",
           CurrentUser.getBusinessId(),
           cards.size());
-      cards.subList(1, cards.size()).forEach(card -> activateMyCard(card, statusReason));
+      cards
+          .subList(1, cards.size())
+          .forEach(
+              card ->
+                  activateCard(cardRepository.findById(card.getId()).orElseThrow(), statusReason));
     }
 
     return activatedCard;
@@ -342,29 +347,32 @@ public class CardService {
     return updateCardStatus(card, CardStatus.ACTIVE, statusReason, true);
   }
 
-  /*
-   * Note that the @PreAuthorize here is only applied to invocations from outside the Proxy that
-   * Spring will wrap this class with. The only calls that will have Permissions evaluated
-   * will be those from OUTSIDE this class (see: UserController)
-   */
   @Transactional
   @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
-  public Card updateCardStatus(
+  public Card blockCard(Card card, CardStatusReason reason) {
+    return updateCardStatus(
+        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.INACTIVE, reason, false);
+  }
+
+  @Transactional
+  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  public Card unblockCard(Card card, CardStatusReason reason) {
+    return updateCardStatus(
+        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.ACTIVE, reason, false);
+  }
+
+  @Transactional
+  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  public Card retireCard(Card card, CardStatusReason reason) {
+    return updateCardStatus(
+        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.CANCELLED, reason, false);
+  }
+
+  private Card updateCardStatus(
       Card card,
       CardStatus cardStatus,
       CardStatusReason statusReason,
       boolean isInitialActivation) {
-
-    // This seems unnecessary however the Card method parameter is detached from the Hibernate
-    // persistence manager because the entity was fetched outside of the Transaction. Passing
-    // an CardId in would break the Permissions annotations, and we're reluctant to push the
-    // Transactional annotation out to the Controller method(s). A possible alternative
-    // solution is to see if there is a way to reattach the entity to Hibernate so that the
-    // entity is properly managed. I've wrapped the 'findById' in the conditional to protect
-    // the changes made by the activateCard method (which is already Transactional).
-    if (!entityManager.contains(card)) {
-      card = cardRepository.findById(card.getId()).get();
-    }
 
     if (!card.isActivated()) {
       throw new InvalidRequestException("Cannot update status for non activated cards");
@@ -436,11 +444,13 @@ public class CardService {
             .findById(card.getBusinessId())
             .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, card.getBusinessId()));
 
-    // update the card with the new allocation and accounts
-    card.setAllocationId(allocation.getId());
-    card.setAccountId(account.getId());
+    Card refetch = cardRepository.findById(card.getId()).orElseThrow();
 
-    return cardRepository.save(card);
+    // update the card with the new allocation and accounts
+    refetch.setAllocationId(allocation.getId());
+    refetch.setAccountId(account.getId());
+
+    return cardRepository.save(refetch);
   }
 
   @Transactional

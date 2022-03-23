@@ -30,7 +30,6 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
@@ -222,11 +221,9 @@ public class UserController {
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
-        cardService.updateCardStatus(
+        cardService.blockCard(
             cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
-            CardStatus.INACTIVE,
-            request.getStatusReason(),
-            false));
+            request.getStatusReason()));
   }
 
   @PatchMapping("/cards/{cardId}/activate")
@@ -265,15 +262,9 @@ public class UserController {
       @Validated @RequestBody UpdateCardStatusRequest request) {
 
     return new Card(
-        cardService.updateCardStatus(
+        cardService.unblockCard(
             cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
-            CardStatus.ACTIVE,
-            request.getStatusReason(),
-            false));
-    // update card currently cannot distinguish between activation which happened
-    // due to unfreeze event vs initial physical card activation
-    // last variable is needed to pick the right notification template
-
+            request.getStatusReason()));
   }
 
   @PatchMapping("/cards/{cardId}/retire")
@@ -287,11 +278,9 @@ public class UserController {
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
-        cardService.updateCardStatus(
+        cardService.retireCard(
             cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
-            CardStatus.CANCELLED,
-            request.getStatusReason(),
-            false));
+            request.getStatusReason()));
   }
 
   @GetMapping("/cards/{cardId}/accounts")
