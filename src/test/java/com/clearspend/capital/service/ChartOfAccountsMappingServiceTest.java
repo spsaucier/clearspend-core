@@ -8,8 +8,10 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.controller.type.chartOfAccounts.ChartOfAccountsMappingResponse;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
   @Autowired private ChartOfAccountsMappingRepository mappingRepository;
   @Autowired private ChartOfAccountsMappingService mappingService;
+  @Autowired private ExpenseCategoryRepository expenseCategoryRepository;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -79,10 +82,13 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
   @Test
   public void testAddMappingstoBusiness() {
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(business.getId());
+
     List<AddChartOfAccountsMappingRequest> request =
         List.of(
-            new AddChartOfAccountsMappingRequest("account_1", 1),
-            new AddChartOfAccountsMappingRequest("account_2", 2));
+            new AddChartOfAccountsMappingRequest("account_1", expenseCategories.get(4).getId()),
+            new AddChartOfAccountsMappingRequest("account_2", expenseCategories.get(5).getId()));
 
     mappingService.addChartOfAccountsMappings(business.getId(), request);
 

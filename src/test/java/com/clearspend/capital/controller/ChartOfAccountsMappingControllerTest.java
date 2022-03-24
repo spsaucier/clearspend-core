@@ -8,8 +8,10 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.controller.type.chartOfAccounts.GetChartOfAccountsMappingResponse;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
   private final ChartOfAccountsMappingRepository mappingRepository;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -71,10 +74,13 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
   void testPostMappings() {
     testHelper.createCodatExpenseCategoryMappings(business);
 
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(business.getId());
+
     List<AddChartOfAccountsMappingRequest> request =
         List.of(
-            new AddChartOfAccountsMappingRequest("account_1", 1),
-            new AddChartOfAccountsMappingRequest("account_2", 2));
+            new AddChartOfAccountsMappingRequest("account_1", expenseCategories.get(2).getId()),
+            new AddChartOfAccountsMappingRequest("account_2", expenseCategories.get(3).getId()));
 
     GetChartOfAccountsMappingResponse response =
         mockMvcHelper.queryObject(

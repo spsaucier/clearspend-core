@@ -40,6 +40,7 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -63,6 +64,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
@@ -191,6 +193,7 @@ public class TestHelper {
   private final ChartOfAccountsMappingRepository mappingRepository;
   private final ServiceHelper serviceHelper;
   private final BusinessBankAccountBalanceRepository businessBankAccountBalanceRepo;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
@@ -1199,9 +1202,13 @@ public class TestHelper {
   }
 
   public void createCodatExpenseCategoryMappings(Business business) {
-    ChartOfAccountsMapping mappingOne = new ChartOfAccountsMapping(business.getId(), 1, "auto");
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(business.getId());
+    ChartOfAccountsMapping mappingOne =
+        new ChartOfAccountsMapping(business.getId(), expenseCategories.get(0).getId(), 1, "auto");
 
-    ChartOfAccountsMapping mappingTwo = new ChartOfAccountsMapping(business.getId(), 2, "fuel");
+    ChartOfAccountsMapping mappingTwo =
+        new ChartOfAccountsMapping(business.getId(), expenseCategories.get(1).getId(), 2, "fuel");
 
     mappingRepository.save(mappingOne);
     mappingRepository.save(mappingTwo);

@@ -2,6 +2,7 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.ChartOfAccountsMappingId;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import javax.persistence.Column;
@@ -30,6 +31,12 @@ public class ChartOfAccountsMapping extends TypedMutable<ChartOfAccountsMappingI
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
+
+  @NonNull
+  @JoinColumn(referencedColumnName = "id", table = "expense_categories")
+  @Column(updatable = false)
+  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
+  private TypedId<ExpenseCategoryId> expenseCategoryId;
 
   @NonNull
   @Column(updatable = true, name = "expense_category_ref")

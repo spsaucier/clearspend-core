@@ -65,7 +65,8 @@ public class ChartOfAccountsMappingService {
                 mappingRequest ->
                     (new ChartOfAccountsMapping(
                         businessId,
-                        mappingRequest.getCategoryIconRef(),
+                        mappingRequest.getExpenseCategoryId(),
+                        0,
                         mappingRequest.getAccountRef())))
             .collect(Collectors.toList());
 
