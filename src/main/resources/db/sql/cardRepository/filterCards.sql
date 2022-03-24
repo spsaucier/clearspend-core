@@ -62,8 +62,8 @@ GROUP BY Card.Id,
     Account.Ledger_Balance_Amount,
     Account.Ledger_Balance_Currency
 HAVING 1 = 1
-    {{#minimumBalance}} AND (ledger_balance_amount + hold_total) > {{minimumBalance}} {{/minimumBalance}}
-    {{#maximumBalance}} AND (ledger_balance_amount + hold_total) < {{maximumBalance}} {{/maximumBalance}}
+    {{#minimumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) > {{minimumBalance}} {{/minimumBalance}}
+    {{#maximumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) < {{maximumBalance}} {{/maximumBalance}}
 ORDER BY  card_activation_date
 {{#pageToken.pageSize}}
 LIMIT {{.}}
