@@ -469,4 +469,11 @@ public class CodatService {
         .map(accountActivityId -> syncTransactionAsDirectCost(accountActivityId, businessId))
         .collect(Collectors.toUnmodifiableList());
   }
+
+  public List<SyncTransactionResponse> syncAllReadyTransactions(TypedId<BusinessId> businessId) {
+    List<AccountActivity> transactionsReadyToSync = accountActivityService.findAllSyncable();
+    return syncMultipleTransactions(
+        transactionsReadyToSync.stream().map(transaction -> transaction.getId()).collect(toList()),
+        businessId);
+  }
 }

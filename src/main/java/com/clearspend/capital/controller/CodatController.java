@@ -73,6 +73,11 @@ public class CodatController {
     return codatService.syncMultipleTransactions(accountActivityIds, CurrentUser.getBusinessId());
   }
 
+  @PostMapping("/sync-all")
+  List<SyncTransactionResponse> syncAllTransactionsToCodat() {
+    return codatService.syncAllReadyTransactions(CurrentUser.getBusinessId());
+  }
+
   @GetMapping("/bank-accounts")
   CodatBankAccountsResponse getBankAccountsForBusiness() {
     return codatService.getBankAccountsForBusiness(CurrentUser.getBusinessId());

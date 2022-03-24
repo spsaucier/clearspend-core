@@ -388,6 +388,11 @@ public class AccountActivityService {
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
+  public List<AccountActivity> findAllSyncable() {
+    return accountActivityRepository.findByIntegrationSyncStatus(
+        AccountActivityIntegrationSyncStatus.READY);
+  }
+
   public record CardAccountActivity(Card card, Page<AccountActivity> activityPage) {}
 
   @PostAuthorize("hasAllocationPermission(returnObject.card().allocationId, 'MANAGE_FUNDS')")

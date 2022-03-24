@@ -451,4 +451,84 @@ public class CodatServiceTest extends BaseCapitalTest {
 
     assertThat(syncLog.getTotalElements() > 1).isTrue();
   }
+
+  @Test
+  void canSyncAllReadyTransactions() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity firstAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    firstAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(firstAccountActivity);
+
+    AccountActivity secondAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    secondAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business 2",
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    accountActivityRepository.save(secondAccountActivity);
+
+    codatService.syncAllReadyTransactions(business.getId());
+    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
+
+    assertThat(
+            loggedTransactions.stream()
+                .filter(
+                    transactionSyncLog ->
+                        transactionSyncLog
+                                .getAccountActivityId()
+                                .equals(firstAccountActivity.getId())
+                            || transactionSyncLog
+                                .getAccountActivityId()
+                                .equals(secondAccountActivity.getId()))
+                .collect(Collectors.toUnmodifiableList())
+                .size())
+        .isEqualTo(2);
+
+    PagedData<SyncLogResponse> syncLog =
+        mockMvcHelper.queryObject(
+            "/codat/sync-log",
+            HttpMethod.POST,
+            userCookie,
+            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
+            PagedData.class);
+
+    assertThat(syncLog.getTotalElements() > 1).isTrue();
+  }
 }

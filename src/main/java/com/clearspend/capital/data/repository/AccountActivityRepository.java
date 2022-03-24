@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,4 +46,6 @@ public interface AccountActivityRepository
   List<AccountActivity> findByAdjustmentId(TypedId<AdjustmentId> adjustmentId);
 
   List<AccountActivity> findByHoldId(TypedId<HoldId> holdId);
+
+  List<AccountActivity> findByIntegrationSyncStatus(AccountActivityIntegrationSyncStatus ready);
 }
