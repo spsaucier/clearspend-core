@@ -8,6 +8,7 @@ import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,8 +19,9 @@ import org.springframework.stereotype.Service;
 public class ExpenseCategoryService {
   private final ExpenseCategoryRepository categoryRepository;
 
-  public List<ExpenseCategory> retrieveExpenseCategories() {
-    return categoryRepository.findAll();
+  public List<ExpenseCategory> retrieveExpenseCategoriesForBusiness(
+      TypedId<BusinessId> businessId) {
+    return categoryRepository.findByBusinessId(businessId);
   }
 
   public Optional<ExpenseCategory> getExpenseCategoryById(TypedId<ExpenseCategoryId> id) {
@@ -52,11 +54,16 @@ public class ExpenseCategoryService {
             "Training",
             "Transportation",
             "Other / Misc.");
-    defaultExpenseCategoryNames.stream()
+
+    IntStream.range(0, defaultExpenseCategoryNames.size())
         .forEach(
-            categoryName -> {
+            index -> {
               categoryRepository.save(
-                  new ExpenseCategory(businessId, 0, categoryName, ExpenseCategoryStatus.ACTIVE));
+                  new ExpenseCategory(
+                      businessId,
+                      index + 1,
+                      defaultExpenseCategoryNames.get(index),
+                      ExpenseCategoryStatus.ACTIVE));
             });
   }
 }

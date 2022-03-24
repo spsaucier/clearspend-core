@@ -26,8 +26,10 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
     Business business = testHelper.createBusiness().business();
 
     log.info("AllCategories: {}", expenseCategoryRepository.findByBusinessId(business.getId()));
-    List<ExpenseCategory> foundCategories = expenseCategoryService.retrieveExpenseCategories();
+    List<ExpenseCategory> foundCategories =
+        expenseCategoryService.retrieveExpenseCategoriesForBusiness(business.getId());
     assertThat(foundCategories).isNotNull();
     assertThat(foundCategories.size()).isEqualTo(23);
+    assertThat(foundCategories.get(0).getIconRef()).isEqualTo(1);
   }
 }

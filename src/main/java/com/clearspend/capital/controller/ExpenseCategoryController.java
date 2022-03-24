@@ -2,6 +2,7 @@ package com.clearspend.capital.controller;
 
 import com.clearspend.capital.controller.type.expense.ExpenseCategory;
 import com.clearspend.capital.service.ExpenseCategoryService;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,7 +20,9 @@ public class ExpenseCategoryController {
 
   @GetMapping("/list")
   List<ExpenseCategory> getCategories() {
-    return expenseCategoryService.retrieveExpenseCategories().stream()
+    return expenseCategoryService
+        .retrieveExpenseCategoriesForBusiness(CurrentUser.getBusinessId())
+        .stream()
         .map(ExpenseCategory::of)
         .sorted(Comparator.comparing(ExpenseCategory::getCategoryName))
         .collect(Collectors.toList());
