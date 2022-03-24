@@ -23,7 +23,6 @@ import org.hibernate.annotations.Type;
 @MappedSuperclass
 public class UserDetails {
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "user")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
