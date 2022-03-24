@@ -471,7 +471,8 @@ public class CodatService {
   }
 
   public List<SyncTransactionResponse> syncAllReadyTransactions(TypedId<BusinessId> businessId) {
-    List<AccountActivity> transactionsReadyToSync = accountActivityService.findAllSyncable();
+    List<AccountActivity> transactionsReadyToSync =
+        accountActivityService.findAllSyncableForBusiness(businessId);
     return syncMultipleTransactions(
         transactionsReadyToSync.stream().map(transaction -> transaction.getId()).collect(toList()),
         businessId);

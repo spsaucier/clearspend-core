@@ -47,5 +47,6 @@ public interface AccountActivityRepository
 
   List<AccountActivity> findByHoldId(TypedId<HoldId> holdId);
 
-  List<AccountActivity> findByIntegrationSyncStatus(AccountActivityIntegrationSyncStatus ready);
+  List<AccountActivity> findByIntegrationSyncStatusAndBusinessId(
+      AccountActivityIntegrationSyncStatus ready, TypedId<BusinessId> businessId);
 }

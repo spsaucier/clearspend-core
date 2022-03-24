@@ -388,9 +388,9 @@ public class AccountActivityService {
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
-  public List<AccountActivity> findAllSyncable() {
-    return accountActivityRepository.findByIntegrationSyncStatus(
-        AccountActivityIntegrationSyncStatus.READY);
+  public List<AccountActivity> findAllSyncableForBusiness(TypedId<BusinessId> businessId) {
+    return accountActivityRepository.findByIntegrationSyncStatusAndBusinessId(
+        AccountActivityIntegrationSyncStatus.READY, businessId);
   }
 
   public record CardAccountActivity(Card card, Page<AccountActivity> activityPage) {}
