@@ -84,6 +84,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
             BankAccountTransactType.DEPOSIT,
             Amount.of(Currency.USD, new BigDecimal("1000")),
             true);
@@ -98,6 +99,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("700.51")),
         false);
@@ -105,6 +107,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         bankAccountService.transactBankAccount(
             createBusinessRecord.business().getId(),
             businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
             BankAccountTransactType.WITHDRAW,
             Amount.of(Currency.USD, new BigDecimal("241.85")),
             true);
@@ -118,6 +121,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     bankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("710.51")),
         true);
@@ -129,6 +133,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 bankAccountService.transactBankAccount(
                     createBusinessRecord.business().getId(),
                     businessBankAccount.getId(),
+                    createBusinessRecord.user().getId(),
                     BankAccountTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
                     true));
@@ -148,6 +153,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 bankAccountService.transactBankAccount(
                     createBusinessRecord.business().getId(),
                     businessBankAccount.getId(),
+                    createBusinessRecord.user().getId(),
                     BankAccountTransactType.DEPOSIT,
                     Amount.of(Currency.USD, new BigDecimal("15000.00")),
                     true));
@@ -166,6 +172,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             bankAccountService.transactBankAccount(
                 createBusinessRecord.business().getId(),
                 businessBankAccount.getId(),
+                createBusinessRecord.user().getId(),
                 BankAccountTransactType.DEPOSIT,
                 amount,
                 true);
@@ -344,13 +351,20 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void processBankAccountWithdrawFailure_UserPermissions() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    BusinessBankAccount businessBankAccount =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+
     final Amount amount = new Amount();
     amount.setCurrency(Currency.USD);
     amount.setAmount(new BigDecimal(10));
     final ThrowingRunnable action =
         () ->
             bankAccountService.processBankAccountWithdrawFailure(
-                createBusinessRecord.business().getId(), amount, Collections.emptyList());
+                createBusinessRecord.business().getId(),
+                businessBankAccount.getId(),
+                amount,
+                Collections.emptyList());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)

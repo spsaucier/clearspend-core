@@ -4,7 +4,6 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import java.util.List;
@@ -20,12 +19,6 @@ public interface AccountActivityRepository
         AccountActivityRepositoryCustom {
 
   int countByBusinessId(TypedId<BusinessId> businessId);
-
-  Optional<AccountActivity> findByBusinessIdAndUserIdAndId(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AccountActivityId> id);
-
-  Optional<AccountActivity> findByBusinessIdAndUserIdAndAdjustmentId(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<AdjustmentId> adjustmentId);
 
   Optional<AccountActivity> findByBusinessIdAndAdjustmentId(
       TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId);

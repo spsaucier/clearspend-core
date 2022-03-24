@@ -65,6 +65,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("5000")),
         false);
@@ -147,6 +148,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
@@ -213,6 +215,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);
@@ -279,6 +282,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("9000")),
         false);

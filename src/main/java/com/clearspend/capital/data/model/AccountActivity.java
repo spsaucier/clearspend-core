@@ -6,16 +6,19 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
+import com.clearspend.capital.data.model.embedded.BankAccountDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.embedded.HoldDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
+import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -53,19 +56,6 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   private TypedId<BusinessId> businessId;
 
   @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "allocation")
-  @Column(updatable = false)
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<AllocationId> allocationId;
-
-  @NonNull private String allocationName;
-
-  @JoinColumn(referencedColumnName = "id", table = "user")
-  @Column(updatable = false)
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<UserId> userId;
-
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
@@ -75,11 +65,6 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AdjustmentId> adjustmentId;
-
-  @JoinColumn(referencedColumnName = "id", table = "hold")
-  @Column(updatable = false)
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<HoldId> holdId;
 
   @NonNull
   @Enumerated(EnumType.STRING)
@@ -96,6 +81,14 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   // the time after which this record should be visible to the user. Leave null if this record
   // should always be visible.
   private OffsetDateTime visibleAfter;
+
+  @NonNull @Embedded private AllocationDetails allocation;
+
+  @Embedded private HoldDetails hold;
+
+  @Embedded private UserDetails user;
+
+  @Embedded private BankAccountDetails bankAccount;
 
   @Embedded private MerchantDetails merchant;
 
@@ -121,4 +114,14 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountActivityIntegrationSyncStatus integrationSyncStatus;
+
+  @Override
+  public TypedId<UserId> getUserId() {
+    return user == null ? null : user.getId();
+  }
+
+  @Override
+  public TypedId<AllocationId> getAllocationId() {
+    return allocation.getId();
+  }
 }

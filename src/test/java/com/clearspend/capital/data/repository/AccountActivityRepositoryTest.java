@@ -6,6 +6,7 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
@@ -33,11 +34,10 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().allocation().getId(),
-            businessRecord.allocationRecord().allocation().getName(),
             businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),

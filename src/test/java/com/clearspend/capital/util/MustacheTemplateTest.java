@@ -151,11 +151,9 @@ class MustacheTemplateTest {
             new PageToken(10, 5, List.of(OrderBy.builder().item("id").build())));
 
     StringWriter out = new StringWriter();
-    template.execute(
-        accountActivityFilterCriteria, new JDBCUtils.CountObjectForSqlQuery(true), out);
+    template.execute(accountActivityFilterCriteria, JDBCUtils.JMUSTACHE_COUNT_CONTEXT, out);
     log.info(out.toString());
-    template.execute(
-        accountActivityFilterCriteria, new JDBCUtils.CountObjectForSqlQuery(false), out);
+    template.execute(accountActivityFilterCriteria, JDBCUtils.JMUSTACHE_ENTITY_CONTEXT, out);
     log.info(out.toString());
   }
 }

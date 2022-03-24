@@ -223,7 +223,7 @@ public class AssertionHelper {
         common.getAccount(),
         common.getApprovedAmount(),
         common.getRequestedAmount());
-    assertThat(accountActivity.getHoldId()).isNull();
+    assertThat(accountActivity.getHold()).isNull();
 
     assertThat(accountActivity.getHideAfter()).isNull();
     assertAdjustmentAccountActivity(accountActivity, common.getAdjustmentRecord().adjustment());
@@ -305,7 +305,7 @@ public class AssertionHelper {
 
     assertThat(accountActivity.getBusinessId()).isEqualTo(account.getBusinessId());
     assertThat(accountActivity.getAllocationId()).isEqualTo(account.getAllocationId());
-    assertThat(accountActivity.getAllocationName()).isEqualTo(allocation.getName());
+    assertThat(accountActivity.getAllocation().getName()).isEqualTo(allocation.getName());
     if (type == AccountActivityType.NETWORK_AUTHORIZATION
         || type == AccountActivityType.NETWORK_CAPTURE) {
       assertThat(accountActivity.getUserId()).isEqualTo(user.getId());
@@ -351,13 +351,13 @@ public class AssertionHelper {
     if (decline != null) {
       assertThat(accountActivity.getActivityTime()).isEqualTo(decline.getCreated());
       assertThat(accountActivity.getAdjustmentId()).isNull();
-      assertThat(accountActivity.getHoldId()).isNull();
+      assertThat(accountActivity.getHold()).isNull();
       assertThat(accountActivity.getAccountId()).isEqualTo(decline.getAccountId());
       assertThat(accountActivity.getAmount()).isEqualTo(decline.getAmount());
       assertThat(accountActivity.getHideAfter()).isNull();
       assertThat(decline).isEqualTo(declineRepository.findById(decline.getId()).orElseThrow());
     } else {
-      assertThat(accountActivity.getHoldId()).isNull();
+      assertThat(accountActivity.getHold()).isNull();
       assertThat(accountActivity.getHideAfter()).isNotNull();
     }
   }
@@ -372,7 +372,7 @@ public class AssertionHelper {
       assertThat(hold).isEqualTo(holdRepository.findById(hold.getId()).orElseThrow());
       assertThat(hold.getStatus()).isEqualTo(HoldStatus.PLACED);
     } else {
-      assertThat(accountActivity.getHoldId()).isNull();
+      assertThat(accountActivity.getHold()).isNull();
       assertThat(accountActivity.getHideAfter()).isNotNull();
     }
   }

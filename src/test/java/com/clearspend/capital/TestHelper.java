@@ -708,6 +708,7 @@ public class TestHelper {
   public AdjustmentAndHoldRecord transactBankAccount(
       BusinessBankAccount businessBankAccount,
       BankAccountTransactType bankAccountTransactType,
+      User user,
       BigDecimal amount,
       boolean standardHold) {
     Account businessAccount =
@@ -715,6 +716,7 @@ public class TestHelper {
     return businessBankAccountService.transactBankAccount(
         businessBankAccount.getBusinessId(),
         businessBankAccount.getId(),
+        user.getId(),
         bankAccountTransactType,
         new Amount(businessAccount.getLedgerBalance().getCurrency(), amount),
         standardHold);

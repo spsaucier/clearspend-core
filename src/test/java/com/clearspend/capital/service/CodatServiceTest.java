@@ -25,6 +25,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -108,11 +109,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.allocationRecord().allocation().getName(),
             createBusinessRecord.allocationRecord().allocation().getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
@@ -146,11 +146,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getId(),
-            allocation.getName(),
             allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
@@ -193,11 +192,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getId(),
-            allocation.getName(),
             allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
@@ -380,11 +378,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity firstAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getId(),
-            allocation.getName(),
             allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
@@ -405,11 +402,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity secondAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getId(),
-            allocation.getName(),
             allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),

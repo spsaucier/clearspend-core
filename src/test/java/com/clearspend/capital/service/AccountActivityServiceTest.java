@@ -22,7 +22,9 @@ import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -85,6 +87,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         true);
@@ -119,6 +122,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -143,6 +147,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.TEN),
         true);
@@ -176,6 +181,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -239,6 +245,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
@@ -260,6 +267,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         parentAllocationRecord.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -318,11 +326,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity approvedAccountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().allocation().getId(),
-            businessRecord.allocationRecord().allocation().getName(),
             businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
@@ -397,7 +404,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     final AccountActivityConfig config =
         AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
-            .ownerId(activityOwner.getId())
+            .owner(activityOwner)
             .build();
     final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 
@@ -426,7 +433,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     final AccountActivityConfig config =
         AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
-            .ownerId(activityOwner.getId())
+            .owner(activityOwner)
             .build();
     final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 
@@ -451,11 +458,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().allocation().getId(),
-            businessRecord.allocationRecord().allocation().getName(),
             businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
@@ -487,17 +493,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().allocation().getId(),
-            businessRecord.allocationRecord().allocation().getName(),
             businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
-    accountActivity.setUserId(businessRecord.user().getId());
+    accountActivity.setUser(UserDetails.of(businessRecord.user()));
     accountActivity = accountActivityRepository.save(accountActivity);
     testHelper.setCurrentUser(businessRecord.user());
 
@@ -527,7 +532,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     final AccountActivityConfig config =
         AccountActivityConfig.fromCreateBusinessRecord(primaryBusinessRecord)
-            .ownerId(activityOwner.getId())
+            .owner(activityOwner)
             .build();
     final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 

@@ -85,7 +85,11 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
   void outboundTransfer_failed() {
     OutboundTransfer outboundTransfer = new OutboundTransfer();
     outboundTransfer.setMetadata(
-        Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
     outboundTransfer.setCurrency("usd");
     outboundTransfer.setStatus("failed");
 
@@ -96,7 +100,11 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
   void outboundTransfer_cancelled() {
     OutboundTransfer outboundTransfer = new OutboundTransfer();
     outboundTransfer.setMetadata(
-        Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
     outboundTransfer.setCurrency("usd");
     outboundTransfer.setStatus("canceled");
 
@@ -107,7 +115,11 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
   void outboundTransfer_returned() {
     OutboundTransfer outboundTransfer = new OutboundTransfer();
     outboundTransfer.setMetadata(
-        Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
     outboundTransfer.setCurrency("usd");
     outboundTransfer.setStatus("returned");
     outboundTransfer.setReturnedDetails(new ReturnedDetails("account_closed", null));
@@ -180,7 +192,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     accountActivities.forEach(
         accountActivity -> {
           if (accountActivity.getType() == AccountActivityType.BANK_WITHDRAWAL_RETURN) {
-            if (accountActivity.getHoldId() != null) {
+            if (accountActivity.getHold() != null) {
               assertThat(accountActivity.getHideAfter())
                   .isBefore(OffsetDateTime.now(Clock.systemUTC()));
               assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.PENDING);

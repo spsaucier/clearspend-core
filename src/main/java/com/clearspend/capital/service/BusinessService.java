@@ -7,11 +7,13 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.StripeData;
 import com.clearspend.capital.data.model.business.TosAcceptance;
@@ -328,6 +330,7 @@ public class BusinessService {
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateBusinessFunds(
       TypedId<BusinessId> businessId,
+      TypedId<UserId> userId,
       @NonNull TypedId<AllocationId> allocationIdFrom,
       @NonNull TypedId<AllocationId> allocationIdTo,
       Amount amount) {
@@ -343,12 +346,16 @@ public class BusinessService {
         accountService.reallocateFunds(
             allocationFromRecord.account().getId(), allocationToRecord.account().getId(), amount);
 
+    User user = retrievalService.retrieveUser(businessId, userId);
+
     accountActivityService.recordReallocationAccountActivity(
         allocationFromRecord.allocation(),
-        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
+        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(),
+        user);
     accountActivityService.recordReallocationAccountActivity(
         allocationToRecord.allocation(),
-        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment(),
+        user);
 
     return reallocateFundsRecord;
   }

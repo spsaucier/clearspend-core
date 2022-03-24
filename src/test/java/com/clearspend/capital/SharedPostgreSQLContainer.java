@@ -1,5 +1,6 @@
 package com.clearspend.capital;
 
+import java.util.Map;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -11,7 +12,7 @@ public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgre
     super(DockerImageName.parse("postgres:13.4-alpine").asCompatibleSubstituteFor("postgres"));
     withDatabaseName("capital");
     withUsername("postgres");
-    withPassword("docker");
+    withPassword("docker").withEnv(Map.of("TZ", "UTC", "PGTZ", "UTC"));
   }
 
   public static SharedPostgreSQLContainer getInstance() {

@@ -159,6 +159,8 @@ logging:
   level:
     root: INFO
     com.clearspend.capital: DEBUG
+    com.clearspend.capital.common.data.util.HttpReqRespUtils: WARN
+    com.clearspend.capital.configuration.filter.RequestFilter: WARN
   execution-time:
     enabled: ${CAPITAL_LOGGING_EXECUTION_TIME_ENABLED:true}
     level: ${CAPITAL_LOGGING_EXECUTION_TIME_LEVEL:WARN}       # logging level

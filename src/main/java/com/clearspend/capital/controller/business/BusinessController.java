@@ -59,6 +59,7 @@ public class BusinessController {
     AccountReallocateFundsRecord reallocateFundsRecord =
         businessService.reallocateBusinessFunds(
             CurrentUser.getBusinessId(),
+            CurrentUser.getUserId(),
             request.getAllocationIdFrom(),
             request.getAllocationIdTo(),
             request.getAmount().toAmount());

@@ -17,8 +17,11 @@ import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.TransactionLimit;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -133,11 +136,10 @@ public class TestDataHelper {
     final AccountActivity accountActivity =
         new AccountActivity(
             config.getBusiness().getId(),
-            config.getAllocation().getId(),
-            config.getAllocation().getName(),
             config.getAccountId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(config.getAllocation()),
             OffsetDateTime.now(),
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
@@ -151,7 +153,7 @@ public class TestDataHelper {
     merchantDetails.setMerchantCategoryGroup(MccGroup.CHILD_CARE);
     accountActivity.setMerchant(merchantDetails);
 
-    config.getOwnerId().ifPresent(accountActivity::setUserId);
+    config.getOwner().ifPresent(owner -> accountActivity.setUser(UserDetails.of(owner)));
     config.getAdjustmentId().ifPresent(accountActivity::setAdjustmentId);
     return accountActivityRepo.save(accountActivity);
   }
@@ -222,7 +224,7 @@ public class TestDataHelper {
     @NonNull private final Business business;
     @NonNull private final Allocation allocation;
     @NonNull private final TypedId<AccountId> accountId;
-    @Nullable private final TypedId<UserId> ownerId;
+    @Nullable private final User owner;
     @Nullable private final TypedId<AdjustmentId> adjustmentId;
 
     public static AccountActivityConfigBuilder fromCreateBusinessRecord(
@@ -233,8 +235,8 @@ public class TestDataHelper {
           .accountId(createBusinessRecord.allocationRecord().account().getId());
     }
 
-    public Optional<TypedId<UserId>> getOwnerId() {
-      return Optional.ofNullable(ownerId);
+    public Optional<User> getOwner() {
+      return Optional.ofNullable(owner);
     }
 
     public Optional<TypedId<AdjustmentId>> getAdjustmentId() {

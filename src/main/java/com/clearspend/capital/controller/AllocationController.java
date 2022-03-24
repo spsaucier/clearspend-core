@@ -141,6 +141,7 @@ public class AllocationController {
     AccountReallocateFundsRecord reallocateFundsRecord =
         allocationService.reallocateAllocationFunds(
             businessService.getBusiness(CurrentUser.get().businessId(), true),
+            CurrentUser.getUserId(),
             allocationId,
             request.getAllocationAccountId(),
             request.getCardId(),

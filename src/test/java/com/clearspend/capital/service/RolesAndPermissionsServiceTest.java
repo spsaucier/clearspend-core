@@ -81,6 +81,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccountId,
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);

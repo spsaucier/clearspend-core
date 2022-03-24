@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 public enum StripeMetadataEntry {
   BUSINESS_ID("business_id"),
   BUSINESS_OWNER_ID("business_owner_id"),
+  BUSINESS_BANK_ACCOUNT_ID("business_bank_account_id"),
   USER_ID("user_id"),
   ADJUSTMENT_ID("adjustment_id"),
   ALLOCATION_ID("allocation_id"),

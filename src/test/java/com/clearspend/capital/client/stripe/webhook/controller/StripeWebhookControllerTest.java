@@ -110,7 +110,11 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       testHelper.setCurrentUser(createBusinessRecord.user());
       businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
       testHelper.transactBankAccount(
-          businessBankAccount, BankAccountTransactType.DEPOSIT, BigDecimal.valueOf(100L), false);
+          businessBankAccount,
+          BankAccountTransactType.DEPOSIT,
+          createBusinessRecord.user(),
+          BigDecimal.valueOf(100L),
+          false);
       // nasty hack to update the accounts balance
       Account account = createBusinessRecord.allocationRecord().account();
       account.setLedgerBalance(
@@ -141,6 +145,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             false);
     allocationService.reallocateAllocationFunds(
         business,
+        user.getId(),
         rootAllocation.getId(),
         rootAllocation.getAccountId(),
         card.getId(),

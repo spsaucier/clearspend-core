@@ -160,7 +160,11 @@ class AllocationControllerTest extends BaseCapitalTest {
             business.getCurrency(), BigDecimal.valueOf(100));
     AdjustmentAndHoldRecord deposit =
         testHelper.transactBankAccount(
-            businessBankAccount, BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
+            businessBankAccount,
+            BankAccountTransactType.DEPOSIT,
+            createBusinessRecord.user(),
+            amount.getAmount(),
+            false);
     final Allocation rootAllocation =
         allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
     AllocationRecord allocationRecord =
@@ -214,7 +218,11 @@ class AllocationControllerTest extends BaseCapitalTest {
         new com.clearspend.capital.common.data.model.Amount(
             business.getCurrency(), BigDecimal.valueOf(100));
     testHelper.transactBankAccount(
-        businessBankAccount, BankAccountTransactType.DEPOSIT, amount.getAmount(), false);
+        businessBankAccount,
+        BankAccountTransactType.DEPOSIT,
+        createBusinessRecord.user(),
+        amount.getAmount(),
+        false);
     final Allocation rootAllocation =
         allocationService.getRootAllocation(business.getId()).allocation();
     CreateAllocationRequest request =

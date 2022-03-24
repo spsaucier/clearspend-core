@@ -110,12 +110,13 @@ public class BusinessBankAccountController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
 
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
             businessId,
             businessBankAccountId,
+            CurrentUser.getUserId(),
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
             standardHold);

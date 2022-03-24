@@ -71,6 +71,7 @@ public class AllocationService {
   private final CardRepository cardRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
+  private final RetrievalService retrievalService;
 
   private final EntityManager entityManager;
 
@@ -340,6 +341,7 @@ public class AllocationService {
   @PreAuthorize("hasPermission(#allocationId, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateAllocationFunds(
       Business business,
+      @NonNull TypedId<UserId> userId,
       @NonNull TypedId<AllocationId> allocationId,
       @NonNull TypedId<AccountId> accountId,
       @NonNull TypedId<CardId> cardId,
@@ -384,12 +386,16 @@ public class AllocationService {
           "invalid fundsTransactType " + allocationReallocationType);
     }
 
+    User user = retrievalService.retrieveUser(business.getId(), userId);
+
     accountActivityService.recordReallocationAccountActivity(
         allocationDetailsRecord.allocation,
-        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment());
+        reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(),
+        user);
     accountActivityService.recordReallocationAccountActivity(
         allocationDetailsRecord.allocation,
-        reallocateFundsRecord.reallocateFundsRecord().toAdjustment());
+        reallocateFundsRecord.reallocateFundsRecord().toAdjustment(),
+        user);
 
     return reallocateFundsRecord;
   }

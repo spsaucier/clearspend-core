@@ -85,6 +85,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         amount,
         false);
@@ -110,6 +111,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -162,6 +164,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
@@ -187,6 +190,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -261,6 +265,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("100")),
         true);
@@ -314,6 +319,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("100")),
         true);
@@ -381,6 +387,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
@@ -406,6 +413,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -484,6 +492,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
@@ -509,6 +518,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));
@@ -587,6 +597,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("1000")),
         false);
@@ -612,6 +623,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(300)));
     businessService.reallocateBusinessFunds(
         business.getId(),
+        createBusinessRecord.user().getId(),
         createBusinessRecord.allocationRecord().allocation().getId(),
         allocation.allocation().getId(),
         new Amount(Currency.USD, BigDecimal.valueOf(21)));

@@ -22,10 +22,15 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
+import com.clearspend.capital.data.model.embedded.BankAccountDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.embedded.HoldDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
+import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -79,20 +84,58 @@ public class AccountActivityService {
 
   @Transactional(TxType.REQUIRED)
   void recordBankAccountAccountActivity(
-      Allocation allocation, AccountActivityType type, Adjustment adjustment, Hold hold) {
+      Allocation allocation,
+      AccountActivityType type,
+      Adjustment adjustment,
+      Hold hold,
+      BusinessBankAccount businessBankAccount,
+      User user) {
+    recordBankAccountAccountActivity(
+        allocation, type, adjustment, hold, BankAccountDetails.of(businessBankAccount), user);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  void recordExternalBankAccountAccountActivity(
+      Allocation allocation,
+      AccountActivityType type,
+      Adjustment adjustment,
+      Hold hold,
+      String bankName,
+      String accountNumberLastFour) {
+    recordBankAccountAccountActivity(
+        allocation,
+        type,
+        adjustment,
+        hold,
+        new BankAccountDetails(bankName, accountNumberLastFour),
+        null);
+  }
+
+  private void recordBankAccountAccountActivity(
+      Allocation allocation,
+      AccountActivityType type,
+      Adjustment adjustment,
+      Hold hold,
+      BankAccountDetails bankAccountDetails,
+      User user) {
     AccountActivity adjustmentAccountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            allocation.getId(),
-            allocation.getName(),
             adjustment.getAccountId(),
             type,
             AccountActivityStatus.PROCESSED,
+            AllocationDetails.of(allocation),
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     adjustmentAccountActivity.setAdjustmentId(adjustment.getId());
+
+    adjustmentAccountActivity.setBankAccount(bankAccountDetails);
+
+    if (user != null) {
+      adjustmentAccountActivity.setUser(UserDetails.of(user));
+    }
 
     if (hold != null) {
       adjustmentAccountActivity.setVisibleAfter(hold.getExpirationDate());
@@ -100,17 +143,16 @@ public class AccountActivityService {
       AccountActivity holdAccountActivity =
           new AccountActivity(
               adjustment.getBusinessId(),
-              allocation.getId(),
-              allocation.getName(),
               adjustment.getAccountId(),
               type,
               AccountActivityStatus.PENDING,
+              AllocationDetails.of(allocation),
               hold.getCreated(),
               adjustment.getAmount(),
               adjustment.getAmount(),
               AccountActivityIntegrationSyncStatus.NOT_READY);
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
-      holdAccountActivity.setHoldId(hold.getId());
+      holdAccountActivity.setHold(HoldDetails.of(hold));
 
       accountActivityRepository.save(holdAccountActivity);
     }
@@ -119,21 +161,24 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  AccountActivity recordReallocationAccountActivity(Allocation allocation, Adjustment adjustment) {
+  AccountActivity recordReallocationAccountActivity(
+      Allocation allocation, Adjustment adjustment, User user) {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            allocation.getId(),
-            allocation.getName(),
             adjustment.getAccountId(),
             AccountActivityType.REALLOCATE,
             AccountActivityStatus.PROCESSED,
+            AllocationDetails.of(allocation),
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
 
+    if (user != null) {
+      accountActivity.setUser(UserDetails.of(user));
+    }
     return accountActivityRepository.save(accountActivity);
   }
 
@@ -143,11 +188,10 @@ public class AccountActivityService {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            allocation.getId(),
-            allocation.getName(),
             adjustment.getAccountId(),
             AccountActivityType.FEE,
             AccountActivityStatus.PROCESSED,
+            AllocationDetails.of(allocation),
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
             adjustment.getAmount(),
@@ -180,11 +224,10 @@ public class AccountActivityService {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            allocation.getId(),
-            allocation.getName(),
             adjustment.getAccountId(),
             AccountActivityType.MANUAL,
             AccountActivityStatus.PROCESSED,
+            AllocationDetails.of(allocation),
             adjustment.getEffectiveDate(),
             adjustment.getAmount(),
             adjustment.getAmount(),
@@ -214,19 +257,21 @@ public class AccountActivityService {
       NetworkCommon common, Amount amount, Hold hold, Adjustment adjustment) {
 
     Allocation allocation = common.getAllocation();
+    User cardOwner = userRepository.findById(common.getCard().getUserId()).orElseThrow();
+
     AccountActivity accountActivity =
         new AccountActivity(
             common.getBusinessId(),
-            allocation.getId(),
-            allocation.getName(),
             common.getAccount().getId(),
             common.getNetworkMessageType().getAccountActivityType(),
             common.getAccountActivityDetails().getAccountActivityStatus(),
+            AllocationDetails.of(allocation),
             common.getAccountActivityDetails().getActivityTime(),
             amount,
             common.getRequestedAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
-    accountActivity.setUserId(common.getCard().getUserId());
+
+    accountActivity.setUser(UserDetails.of(cardOwner));
 
     accountActivity.setMerchant(
         new MerchantDetails(
@@ -239,7 +284,6 @@ public class AccountActivityService {
             common.getAccountActivityDetails().getMerchantLatitude(),
             common.getAccountActivityDetails().getMerchantLongitude()));
 
-    User cardOwner = userRepository.findById(common.getCard().getUserId()).orElseThrow();
     accountActivity.setCard(
         new CardDetails(
             common.getCard().getId(),
@@ -252,7 +296,7 @@ public class AccountActivityService {
       accountActivity.setAdjustmentId(adjustment.getId());
     }
     if (hold != null) {
-      accountActivity.setHoldId(hold.getId());
+      accountActivity.setHold(HoldDetails.of(hold));
       accountActivity.setHideAfter(hold.getExpirationDate());
     }
     if (common.getPriorAccountActivity() != null) {

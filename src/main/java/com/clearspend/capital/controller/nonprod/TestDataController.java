@@ -230,12 +230,14 @@ public class TestDataController {
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        businessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(10000)),
         false);
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
+        businessRecord.user().getId(),
         BankAccountTransactType.WITHDRAW,
         Amount.of(business.getCurrency(), BigDecimal.valueOf(267.34)),
         false);
@@ -255,6 +257,7 @@ public class TestDataController {
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
+        businessRecord.user.getId(),
         parentAllocation.getId(),
         childAllocation.allocation().getId(),
         Amount.of(business.getCurrency(), BigDecimal.valueOf(1326.86)));
@@ -272,6 +275,7 @@ public class TestDataController {
             Collections.emptySet());
     businessService.reallocateBusinessFunds(
         business.getId(),
+        businessRecord.user.getId(),
         parentAllocation.getId(),
         grandchildAllocation.allocation().getId(),
         Amount.of(business.getCurrency(), BigDecimal.valueOf(1926.27)));
@@ -299,6 +303,7 @@ public class TestDataController {
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
+        businessRecord.user.getId(),
         parentAllocation.getId(),
         parentAllocation.getAccountId(),
         cardRecord.card().getId(),
@@ -329,6 +334,7 @@ public class TestDataController {
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
+        businessRecord.user.getId(),
         parentAllocation.getId(),
         parentAllocation.getAccountId(),
         cardRecord.card().getId(),

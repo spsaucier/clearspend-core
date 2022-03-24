@@ -34,6 +34,7 @@ class AccountServiceTest extends BaseCapitalTest {
     businessBankAccountService.transactBankAccount(
         createBusinessRecord.business().getId(),
         businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);

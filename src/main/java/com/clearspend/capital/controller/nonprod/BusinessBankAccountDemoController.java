@@ -45,8 +45,9 @@ public class BusinessBankAccountDemoController {
     // TODO: Get business UUID from JWT
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
-            CurrentUser.get().businessId(),
+            CurrentUser.getBusinessId(),
             businessBankAccountId,
+            CurrentUser.getUserId(),
             request.getBankAccountTransactType(),
             request.getAmount().toAmount(),
             false);

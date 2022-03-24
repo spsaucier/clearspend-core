@@ -8,13 +8,13 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
+import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -253,7 +253,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
             contentType);
 
     // Create an Account Activity object to 'link'
-    AccountActivity accountActivity = createAccountActivity(employee.getId());
+    AccountActivity accountActivity = createAccountActivity(employee);
 
     // Ensure that the Manager can link a receipt
     testHelper.setCurrentUser(manager);
@@ -291,7 +291,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
             contentType);
 
     // Create an Account Activity object to 'link'
-    AccountActivity accountActivity = createAccountActivity(employee.getId());
+    AccountActivity accountActivity = createAccountActivity(employee);
 
     // Ensure that the Manager can link a receipt
     testHelper.setCurrentUser(employee);
@@ -357,7 +357,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
             contentType);
 
     // Create an Account Activity object to 'link'
-    AccountActivity accountActivity = createAccountActivity(employee.getId());
+    AccountActivity accountActivity = createAccountActivity(employee);
 
     // Ensure that the Manager can NOT delete a receipt
     testHelper.setCurrentUser(manager);
@@ -373,21 +373,20 @@ class ReceiptServiceTest extends BaseCapitalTest {
         AccessDeniedException.class, () -> receiptService.linkReceipt(receipt, accountActivity));
   }
 
-  private AccountActivity createAccountActivity(TypedId<UserId> userId) {
+  private AccountActivity createAccountActivity(User user) {
     AccountActivity accountActivity =
         new AccountActivity(
             createBusinessRecord.business().getId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.allocationRecord().allocation().getName(),
             createBusinessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT,
             AccountActivityStatus.APPROVED,
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
             Amount.of(createBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(createBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
-    accountActivity.setUserId(userId);
+    accountActivity.setUser(UserDetails.of(user));
     accountActivity.setAdjustmentId(
         adjustmentService
             .recordManualAdjustment(

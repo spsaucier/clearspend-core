@@ -12,6 +12,8 @@ import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.InboundTransfer.InboundTransferFailureDetails;
 import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.ReceivedPaymentMethodDetails;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.UsBankAccount;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
@@ -119,7 +121,11 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     InboundTransfer inboundTransfer = new InboundTransfer();
     inboundTransfer.setMetadata(
-        Map.of(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString()));
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
     inboundTransfer.setCurrency("usd");
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
 
@@ -154,10 +160,14 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     InboundTransfer inboundTransfer = new InboundTransfer();
     inboundTransfer.setMetadata(
         Map.of(
-            StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
             StripeMetadataEntry.ADJUSTMENT_ID.getKey(),
-                createAdjustmentResponse.getAdjustmentId().toString(),
-            StripeMetadataEntry.HOLD_ID.getKey(), hold.getId().toString()));
+            createAdjustmentResponse.getAdjustmentId().toString(),
+            StripeMetadataEntry.HOLD_ID.getKey(),
+            hold.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
     inboundTransfer.setCurrency("usd");
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
@@ -179,7 +189,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
         assertThat(accountActivity.getAmount().getAmount())
             .isEqualByComparingTo(new BigDecimal(achReturnFee).negate());
         // account activity for the hold
-      } else if (accountActivity.getHoldId() != null) {
+      } else if (accountActivity.getHold() != null) {
         assertThat(accountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
         // account activity for the initial topup adjustment
       } else if (accountActivity
@@ -198,22 +208,30 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
   @Test
   public void externalAch_creditsReceived() {
+    // given
     ReceivedCredit receivedCredit = new ReceivedCredit();
     receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
     receivedCredit.setAmount(100L);
     receivedCredit.setCurrency("usd");
 
+    ReceivedPaymentMethodDetails paymentMethodDetails = new ReceivedPaymentMethodDetails();
+    paymentMethodDetails.setUsBankAccount(new UsBankAccount("Test Bank", "1234", "1234567890"));
+
+    receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
+
+    // when
     stripeConnectHandler.onAchCreditsReceived(receivedCredit);
 
+    // then
     assertThat(stripeMockClient.countCreatedObjectsByType(OutboundPayment.class)).isOne();
 
     List<AccountActivity> accountActivities = accountActivityRepository.findAll();
     assertThat(accountActivities).hasSize(2); // 2 activities for the adjustment and the hold
 
     AccountActivity holdAccountActivity =
-        accountActivities.stream().filter(a -> a.getHoldId() != null).findFirst().get();
+        accountActivities.stream().filter(a -> a.getHold() != null).findFirst().get();
     AccountActivity adjustmentAccountActivity =
-        accountActivities.stream().filter(a -> a.getHoldId() == null).findFirst().get();
+        accountActivities.stream().filter(a -> a.getHold() == null).findFirst().get();
 
     assertThat(holdAccountActivity.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
     assertThat(holdAccountActivity.getAmount())
@@ -231,20 +249,34 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     assertThat(holdAccountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
     assertThat(adjustmentAccountActivity.getVisibleAfter())
         .isBefore(OffsetDateTime.now(Clock.systemUTC()));
+
+    assertThat(adjustmentAccountActivity.getBankAccount().getId()).isNull();
+    assertThat(adjustmentAccountActivity.getBankAccount().getName())
+        .isEqualTo(paymentMethodDetails.getUsBankAccount().getBankName());
+    assertThat(adjustmentAccountActivity.getBankAccount().getLastFour())
+        .isEqualTo(paymentMethodDetails.getUsBankAccount().getLastFour());
   }
 
   @Test
   public void externalAch_businessLimitsShouldNotBeApplied() {
+    // given
     long tonsOfMoney = 1_000_000_000;
     ReceivedCredit receivedCredit = new ReceivedCredit();
     receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
     receivedCredit.setAmount(tonsOfMoney * 100);
     receivedCredit.setCurrency("usd");
 
+    ReceivedPaymentMethodDetails paymentMethodDetails = new ReceivedPaymentMethodDetails();
+    paymentMethodDetails.setUsBankAccount(new UsBankAccount("Test Bank", "1234", "1234567890"));
+
+    receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
+
+    // when
     for (int i = 0; i < 30; i++) {
       stripeConnectHandler.onAchCreditsReceived(receivedCredit);
     }
 
+    // then
     Account account =
         serviceHelper
             .accountService()

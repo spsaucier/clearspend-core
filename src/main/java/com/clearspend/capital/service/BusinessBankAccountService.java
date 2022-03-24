@@ -14,6 +14,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
@@ -282,7 +283,11 @@ public class BusinessBankAccountService {
       link =
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public AdjustmentAndHoldRecord processExternalAchTransfer(
-      TypedId<BusinessId> businessId, Amount amount, boolean standardHold) {
+      TypedId<BusinessId> businessId,
+      Amount amount,
+      String bankName,
+      String accountNumberLastFour,
+      boolean standardHold) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
     if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       throw new InvalidStateException(
@@ -295,11 +300,13 @@ public class BusinessBankAccountService {
         accountService.depositFunds(
             businessId, allocationRecord.account(), amount, standardHold, false);
 
-    accountActivityService.recordBankAccountAccountActivity(
+    accountActivityService.recordExternalBankAccountAccountActivity(
         allocationRecord.allocation(),
         AccountActivityType.BANK_DEPOSIT,
         adjustmentAndHoldRecord.adjustment(),
-        adjustmentAndHoldRecord.hold());
+        adjustmentAndHoldRecord.hold(),
+        bankName,
+        accountNumberLastFour);
 
     businessBankAccountRepository.flush();
 
@@ -320,6 +327,7 @@ public class BusinessBankAccountService {
   public AdjustmentAndHoldRecord transactBankAccount(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
+      TypedId<UserId> userId,
       @NonNull BankAccountTransactType bankAccountTransactType,
       Amount amount,
       boolean standardHold) {
@@ -356,7 +364,9 @@ public class BusinessBankAccountService {
         allocationRecord.allocation(),
         type,
         adjustmentAndHoldRecord.adjustment(),
-        adjustmentAndHoldRecord.hold());
+        adjustmentAndHoldRecord.hold(),
+        businessBankAccount,
+        retrievalService.retrieveUser(businessId, userId));
 
     businessBankAccountRepository.flush();
 
@@ -365,6 +375,7 @@ public class BusinessBankAccountService {
         if (business.getStripeData().getFinancialAccountState() == FinancialAccountState.READY) {
           stripeClient.executeInboundTransfer(
               businessId,
+              businessBankAccountId,
               adjustmentAndHoldRecord.adjustment().getId(),
               adjustmentAndHoldRecord.hold() != null
                   ? adjustmentAndHoldRecord.hold().getId()
@@ -411,7 +422,10 @@ public class BusinessBankAccountService {
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void processBankAccountWithdrawFailure(
-      TypedId<BusinessId> businessId, Amount amount, List<DeclineReason> declineReasons) {
+      TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
+      Amount amount,
+      List<DeclineReason> declineReasons) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
 
     AllocationRecord rootAllocation = allocationService.getRootAllocation(businessId);
@@ -444,7 +458,9 @@ public class BusinessBankAccountService {
         rootAllocation.allocation(),
         AccountActivityType.BANK_WITHDRAWAL_RETURN,
         adjustmentAndHoldRecord.adjustment(),
-        adjustmentAndHoldRecord.hold());
+        adjustmentAndHoldRecord.hold(),
+        retrievalService.retrieveBusinessBankAccount(businessBankAccountId),
+        null);
 
     stripeClient.pushFundsToClearspendFinancialAccount(
         businessId,
@@ -464,6 +480,7 @@ public class BusinessBankAccountService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void processBankAccountDepositOutcome(
       TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       TypedId<AdjustmentId> adjustmentId,
       TypedId<HoldId> holdId,
       Amount amount,
@@ -494,7 +511,9 @@ public class BusinessBankAccountService {
           rootAllocationRecord.allocation(),
           AccountActivityType.BANK_DEPOSIT_RETURN,
           adjustmentAndHoldRecord.adjustment(),
-          adjustmentAndHoldRecord.hold());
+          adjustmentAndHoldRecord.hold(),
+          retrieveBusinessBankAccount(businessBankAccountId),
+          null);
 
       // mark adjustment account activity as DECLINED
       accountActivity.setStatus(AccountActivityStatus.DECLINED);

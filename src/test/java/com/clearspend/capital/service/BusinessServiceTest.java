@@ -112,6 +112,7 @@ class BusinessServiceTest extends BaseCapitalTest {
         () ->
             businessService.reallocateBusinessFunds(
                 createBusinessRecord.business().getId(),
+                createBusinessRecord.user().getId(),
                 allocation1.getId(),
                 allocation2.getParentAllocationId(),
                 amount);

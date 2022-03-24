@@ -9,11 +9,13 @@ import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.UsBankAccount;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InvalidKycStepException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -126,6 +128,19 @@ public class StripeConnectHandler {
   void processInboundTransferResult(InboundTransfer inboundTransfer) {
     Map<String, String> metadata = inboundTransfer.getMetadata();
 
+    TypedId<BusinessId> businessId =
+        StripeMetadataEntry.extractId(StripeMetadataEntry.BUSINESS_ID, metadata);
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        StripeMetadataEntry.extractId(StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID, metadata);
+
+    // business bank account id header is created in stripe client on transfer creation but it
+    // potentially may be missing for some transfers created before this update. So this check could
+    // be safely removed after 7 days after deployment to prod
+    if (businessBankAccountId == null) {
+      businessBankAccountId =
+          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
+    }
+
     Amount amount =
         Amount.fromStripeAmount(
             Currency.of(inboundTransfer.getCurrency()), inboundTransfer.getAmount());
@@ -139,7 +154,8 @@ public class StripeConnectHandler {
     }
 
     businessBankAccountService.processBankAccountDepositOutcome(
-        StripeMetadataEntry.extractId(StripeMetadataEntry.BUSINESS_ID, metadata),
+        businessId,
+        businessBankAccountId,
         StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
         StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
         amount,
@@ -166,6 +182,17 @@ public class StripeConnectHandler {
     TypedId<BusinessId> businessId =
         StripeMetadataEntry.extractId(
             StripeMetadataEntry.BUSINESS_ID, outboundTransfer.getMetadata());
+    TypedId<BusinessBankAccountId> businessBankAccountId =
+        StripeMetadataEntry.extractId(
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID, outboundTransfer.getMetadata());
+
+    // business bank account id header is created in stripe client on transfer creation but it
+    // potentially may be missing for some transfers created before this update. So this check could
+    // be safely removed after 7 days after deployment to prod
+    if (businessBankAccountId == null) {
+      businessBankAccountId =
+          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
+    }
 
     Amount amount =
         Amount.fromStripeAmount(
@@ -174,11 +201,12 @@ public class StripeConnectHandler {
     switch (outboundTransfer.getStatus()) {
       case "posted", "processing" -> {} // do nothing since we assume the happy path by default
       case "canceled" -> businessBankAccountService.processBankAccountWithdrawFailure(
-          businessId, amount, List.of(DeclineReason.ST_CANCELLED));
+          businessId, businessBankAccountId, amount, List.of(DeclineReason.ST_CANCELLED));
       case "failed" -> businessBankAccountService.processBankAccountWithdrawFailure(
-          businessId, amount, List.of(DeclineReason.ST_FAILED));
+          businessId, businessBankAccountId, amount, List.of(DeclineReason.ST_FAILED));
       case "returned" -> businessBankAccountService.processBankAccountWithdrawFailure(
           businessId,
+          businessBankAccountId,
           amount,
           List.of(
               DeclineReason.fromStripeTransferFailure(
@@ -214,6 +242,7 @@ public class StripeConnectHandler {
 
       stripeClient.executeOutboundTransfer(
           business.getId(),
+          businessBankAccount.getId(),
           business.getStripeData().getAccountRef(),
           receivedCredit.getFinancialAccount(),
           businessBankAccount.getStripeBankAccountRef(),
@@ -239,6 +268,8 @@ public class StripeConnectHandler {
       explanation = "This is a Stripe operation that needs to work with bank accounts")
   void onAchCreditsReceived(ReceivedCredit receivedCredit) {
     try {
+      UsBankAccount usBankAccount =
+          receivedCredit.getReceivedPaymentMethodDetails().getUsBankAccount();
       Business business =
           businessService.retrieveBusinessByStripeFinancialAccount(
               receivedCredit.getFinancialAccount());
@@ -247,6 +278,8 @@ public class StripeConnectHandler {
           business.getId(),
           Amount.fromStripeAmount(
               Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
+          usBankAccount.getBankName(),
+          usBankAccount.getLastFour(),
           false);
     } catch (RecordNotFoundException e) {
       log.info(

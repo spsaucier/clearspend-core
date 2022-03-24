@@ -1,7 +1,7 @@
 select {{#count}}count(*){{/count}}{{^count}}*{{/count}} from account_activity
 where
-    ( account_activity.hide_after >= now() or account_activity.hide_after is null )
-    and ( account_activity.visible_after <= now() or account_activity.visible_after is null)
+    ( account_activity.hide_after >= clock_timestamp() or account_activity.hide_after is null )
+    and ( account_activity.visible_after <= clock_timestamp() or account_activity.visible_after is null)
     and account_activity.business_id = '{{businessId}}'
     {{#userId}} and account_activity.user_id = '{{userId}}' {{/userId}}
     {{#cardId}} and account_activity.card_card_id = '{{cardId}}' {{/cardId}}

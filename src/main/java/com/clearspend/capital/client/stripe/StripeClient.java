@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.StripePersonDocumentUpdateException;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
@@ -979,6 +980,7 @@ public class StripeClient {
 
   public InboundTransfer executeInboundTransfer(
       TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       TypedId<AdjustmentId> adjustmentId,
       TypedId<HoldId> holdId,
       String stripeAccountRef,
@@ -1008,6 +1010,7 @@ public class StripeClient {
             .add("statement_descriptor", statementDescriptor)
             .add("currency", amount.getCurrency().toStripeCurrency())
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId)
+            .addMetadata(StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID, businessBankAccountId)
             .addMetadata(StripeMetadataEntry.ADJUSTMENT_ID, adjustmentId)
             .addMetadata(StripeMetadataEntry.HOLD_ID, holdId)
             .build();
@@ -1022,6 +1025,7 @@ public class StripeClient {
 
   public OutboundTransfer executeOutboundTransfer(
       TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       String stripeAccountRef,
       String stripeFinancialAccountRef,
       String stripeBankAccountRef,
@@ -1050,6 +1054,7 @@ public class StripeClient {
             .add("statement_descriptor", statementDescriptor)
             .add("currency", amount.getCurrency().toStripeCurrency())
             .addMetadata(StripeMetadataEntry.BUSINESS_ID, businessId)
+            .addMetadata(StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID, businessBankAccountId)
             .build();
 
     return callStripeBetaApi(

@@ -1,6 +1,8 @@
 package com.clearspend.capital.data.repository.impl;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.samskivert.mustache.Template;
+import java.io.StringWriter;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -30,6 +33,9 @@ public class JDBCUtils {
       this(count, OffsetDateTime.now());
     }
   }
+
+  public static final Map<String, Boolean> JMUSTACHE_COUNT_CONTEXT = Map.of("count", true);
+  public static final Map<String, Boolean> JMUSTACHE_ENTITY_CONTEXT = Map.of("count", false);
 
   /**
    * Run a query in the current context.
@@ -126,5 +132,24 @@ public class JDBCUtils {
    */
   public static UUID safeUUID(TypedId<?> id) {
     return id == null ? NULL_UUID : id.toUuid();
+  }
+
+  /**
+   * Generates a sql query from a JMustache template
+   *
+   * @param sqlTemplate JMustache query
+   * @param criteria a context object could be a pojo or a map
+   * @param forCount flag to indicate if count mode should be enabled for the template. Template
+   *     should have this implemented otherwise it will have no effect
+   * @return generated sql query
+   */
+  public static String generateQuery(Template sqlTemplate, Object criteria, boolean forCount) {
+    StringWriter writer = new StringWriter();
+    sqlTemplate.execute(
+        criteria,
+        forCount ? JDBCUtils.JMUSTACHE_COUNT_CONTEXT : JDBCUtils.JMUSTACHE_ENTITY_CONTEXT,
+        writer);
+
+    return writer.toString();
   }
 }

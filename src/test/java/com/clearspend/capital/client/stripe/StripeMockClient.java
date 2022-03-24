@@ -12,6 +12,7 @@ import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -572,6 +573,7 @@ public class StripeMockClient extends StripeClient {
   @Override
   public InboundTransfer executeInboundTransfer(
       TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       TypedId<AdjustmentId> adjustmentId,
       TypedId<HoldId> holdId,
       String stripeAccountRef,
@@ -586,6 +588,7 @@ public class StripeMockClient extends StripeClient {
   @Override
   public OutboundTransfer executeOutboundTransfer(
       TypedId<BusinessId> businessId,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
       String stripeAccountRef,
       String stripeFinancialAccountRef,
       String stripeBankAccountRef,

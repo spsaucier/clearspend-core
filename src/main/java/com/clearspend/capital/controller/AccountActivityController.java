@@ -11,7 +11,11 @@ import com.clearspend.capital.controller.type.activity.DashboardGraphData;
 import com.clearspend.capital.controller.type.activity.GraphData;
 import com.clearspend.capital.controller.type.activity.GraphDataRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.controller.type.ledger.LedgerActivityRequest;
+import com.clearspend.capital.controller.type.ledger.LedgerActivityResponse;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
@@ -21,6 +25,7 @@ import com.clearspend.capital.service.type.GraphFilterCriteria;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +33,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -156,5 +162,35 @@ public class AccountActivityController {
     headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
     headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
     return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
+  }
+
+  @PostMapping("/ledger")
+  PagedData<LedgerActivityResponse> retrieveLedgerActivityPage(
+      @Validated @RequestBody LedgerActivityRequest request) {
+    Page<AccountActivity> accountActivities =
+        accountActivityService.find(
+            CurrentUser.get().businessId(),
+            new AccountActivityFilterCriteria(
+                CurrentUser.get().businessId(),
+                request.getAllocationId(),
+                null,
+                null,
+                CollectionUtils.isEmpty(request.getTypes())
+                    ? Arrays.stream(AccountActivityType.values()).toList()
+                    : request.getTypes(),
+                request.getSearchText(),
+                request.getFrom(),
+                request.getTo(),
+                CollectionUtils.isEmpty(request.getStatuses())
+                    ? Arrays.stream(AccountActivityStatus.values()).toList()
+                    : request.getStatuses(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
+                null,
+                null,
+                null,
+                PageRequest.toPageToken(request.getPageRequest())));
+
+    return PagedData.of(accountActivities, LedgerActivityResponse::of);
   }
 }

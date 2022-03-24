@@ -70,6 +70,7 @@ public class PendingStripeTransferService {
     switch (pendingStripeTransfer.getTransactType()) {
       case DEPOSIT -> stripeClient.executeInboundTransfer(
           pendingStripeTransfer.getBusinessId(),
+          businessBankAccount.getId(),
           pendingStripeTransfer.getAdjustmentId(),
           pendingStripeTransfer.getHoldId(),
           business.getStripeData().getAccountRef(),

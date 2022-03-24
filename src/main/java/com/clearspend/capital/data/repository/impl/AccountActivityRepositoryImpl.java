@@ -6,7 +6,6 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
-import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -14,15 +13,9 @@ import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.User;
-import com.clearspend.capital.data.model.embedded.CardDetails;
-import com.clearspend.capital.data.model.embedded.ExpenseDetails;
-import com.clearspend.capital.data.model.embedded.MerchantDetails;
-import com.clearspend.capital.data.model.embedded.ReceiptDetails;
-import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.AccountActivityRepositoryCustom;
@@ -44,10 +37,9 @@ import com.clearspend.capital.service.type.PageToken;
 import com.clearspend.capital.service.type.UserChartData;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
-import java.io.StringWriter;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -57,10 +49,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
@@ -109,116 +98,29 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Page<AccountActivity> find(
       @NonNull TypedId<BusinessId> businessId, AccountActivityFilterCriteria criteria) {
 
     criteria.setBusinessId(businessId);
-    StringWriter out = new StringWriter();
-    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(false), out);
-    String query = out.toString();
 
     List<AccountActivity> result =
-        JDBCUtils.query(
-            entityManager,
-            query,
-            new MapSqlParameterSource(),
-            (resultSet, rowNum) -> {
-              AccountActivity accountActivity =
-                  new AccountActivity(
-                      new TypedId<>(resultSet.getObject("business_id", UUID.class)),
-                      new TypedId<>(resultSet.getObject("allocation_id", UUID.class)),
-                      resultSet.getString("allocation_name"),
-                      new TypedId<>(resultSet.getObject("account_id", UUID.class)),
-                      AccountActivityType.valueOf(resultSet.getString("type")),
-                      AccountActivityStatus.valueOf(resultSet.getString("status")),
-                      resultSet.getObject("activity_time", OffsetDateTime.class),
-                      Amount.of(
-                          Currency.valueOf(resultSet.getString("amount_currency")),
-                          resultSet.getObject("amount_amount", BigDecimal.class)),
-                      Amount.of(
-                          Currency.valueOf(resultSet.getString("requested_amount_currency")),
-                          resultSet.getObject("requested_amount_amount", BigDecimal.class)),
-                      AccountActivityIntegrationSyncStatus.valueOf(
-                          resultSet.getString("integration_sync_status")));
-              accountActivity.setId(new TypedId<>(resultSet.getObject("id", UUID.class)));
-              UUID userId = resultSet.getObject("user_id", UUID.class);
-              BeanUtils.setNotNull(userId, id -> accountActivity.setUserId(new TypedId<>(id)));
-              UUID adjustmentId = resultSet.getObject("adjustment_id", UUID.class);
-              BeanUtils.setNotNull(
-                  adjustmentId, id -> accountActivity.setAdjustmentId(new TypedId<>(id)));
-              accountActivity.setNotes(resultSet.getString("notes"));
-              BigDecimal iconRef = resultSet.getBigDecimal("expense_details_icon_ref");
-              UUID expenseCategoryId =
-                  resultSet.getObject("expense_details_expense_category_id", UUID.class);
-              if (expenseCategoryId != null) {
-                accountActivity.setExpenseDetails(
-                    new ExpenseDetails(
-                        0,
-                        new TypedId<>(expenseCategoryId),
-                        resultSet.getString("expense_details_category_name")));
-              }
-
-              Array receiptReceiptIds = resultSet.getArray("receipt_receipt_ids");
-              if (receiptReceiptIds != null) {
-                ResultSet rs = receiptReceiptIds.getResultSet();
-                Set<TypedId<ReceiptId>> receiptIds = new HashSet<>();
-                while (rs.next()) {
-                  receiptIds.add(new TypedId<>(rs.getObject(2, UUID.class)));
-                }
-
-                accountActivity.setReceipt(new ReceiptDetails(receiptIds));
-              }
-
-              UUID cardId = resultSet.getObject("card_card_id", UUID.class);
-              if (cardId != null) {
-                accountActivity.setCard(
-                    new CardDetails(
-                        new TypedId<>(cardId),
-                        resultSet.getString("card_last_four"),
-                        new RequiredEncryptedStringWithHash(
-                            new String(
-                                crypto.decrypt(
-                                    resultSet.getBytes("card_owner_first_name_encrypted")))),
-                        new RequiredEncryptedStringWithHash(
-                            new String(
-                                crypto.decrypt(
-                                    resultSet.getBytes("card_owner_last_name_encrypted")))),
-                        (resultSet.getString("card_external_ref"))));
-              }
-
-              BigDecimal categoryCode = resultSet.getBigDecimal("merchant_merchant_category_code");
-              String merchantName = resultSet.getString("merchant_name");
-              if (merchantName != null && categoryCode != null) {
-                accountActivity.setMerchant(
-                    new MerchantDetails(
-                        merchantName,
-                        MerchantType.valueOf(resultSet.getString("merchant_type")),
-                        resultSet.getString("merchant_merchant_number"),
-                        categoryCode.intValue(),
-                        MccGroup.valueOf(resultSet.getString("merchant_merchant_category_group")),
-                        resultSet.getString("merchant_logo_url"),
-                        resultSet.getBigDecimal("merchant_latitude"),
-                        resultSet.getBigDecimal("merchant_longitude")));
-              }
-
-              accountActivity.setVersion(resultSet.getLong("version"));
-              accountActivity.setCreated(resultSet.getObject("created", OffsetDateTime.class));
-              accountActivity.setUpdated(resultSet.getObject("updated", OffsetDateTime.class));
-
-              return accountActivity;
-            });
+        (List<AccountActivity>)
+            entityManager
+                .createNativeQuery(
+                    JDBCUtils.generateQuery(template, criteria, false), AccountActivity.class)
+                .getResultList();
 
     PageToken pageToken = criteria.getPageToken();
 
-    StringWriter outCounter = new StringWriter();
-    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(true), outCounter);
     long totalElements =
-        JDBCUtils.query(
-                entityManager,
-                outCounter.toString(),
-                new MapSqlParameterSource(),
-                (resultSet, row) -> resultSet.getLong(1))
-            .get(0);
+        pageToken.getPageNumber() == 0 && result.size() < pageToken.getPageSize()
+            ? result.size()
+            : ((BigInteger)
+                    entityManager
+                        .createNativeQuery(JDBCUtils.generateQuery(template, criteria, true))
+                        .getSingleResult())
+                .longValue();
 
     return new PageImpl<>(
         result, PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()), totalElements);
@@ -369,26 +271,26 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
             .lt(criteria.getTo());
 
     BeanUtils.setNotNull(
-        criteria.getUserId(), userId -> query.where("accountActivity.userId").eqLiteral(userId));
+        criteria.getUserId(), userId -> query.where("accountActivity.user.id").eqLiteral(userId));
     BeanUtils.setNotNull(
         criteria.getAllocationId(),
         allocationId -> query.where("accountActivity.allocationId").eqLiteral(allocationId));
 
     switch (criteria.getChartFilterType()) {
       case ALLOCATION -> query
-          .select("accountActivity.allocationId")
-          .select("accountActivity.allocationName")
-          .groupBy("accountActivity.allocationId");
+          .select("accountActivity.allocation.id")
+          .select("accountActivity.allocation.name")
+          .groupBy("accountActivity.allocation.id");
       case EMPLOYEE -> query
           .leftJoinOn(User.class, "user")
-          .on("accountActivity.userId")
+          .on("accountActivity.user.id")
           .eqExpression("user.id")
           .end()
-          .select("accountActivity.userId")
+          .select("accountActivity.user.id")
           .select("user.type")
           .select("user.firstName")
           .select("user.lastName")
-          .groupBy("accountActivity.userId");
+          .groupBy("accountActivity.user.id");
       case MERCHANT -> query
           .select("accountActivity.merchant.name")
           .select("accountActivity.merchant.type")
