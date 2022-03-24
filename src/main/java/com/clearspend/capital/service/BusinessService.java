@@ -68,6 +68,7 @@ public class BusinessService {
   private final AllocationService allocationService;
   private final BusinessLimitService businessLimitService;
   private final RetrievalService retrievalService;
+  private final ExpenseCategoryService expenseCategoryService;
 
   private final StripeClient stripeClient;
 
@@ -124,6 +125,8 @@ public class BusinessService {
             stripeClient.createFinancialAccount(business.getId(), account.getId()).getId());
 
     businessLimitService.initializeBusinessLimit(business.getId());
+
+    expenseCategoryService.createDefaultCategoriesForBusiness(business.getId());
 
     return new BusinessAndStripeAccount(business, account);
   }

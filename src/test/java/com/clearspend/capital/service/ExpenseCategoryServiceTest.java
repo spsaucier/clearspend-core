@@ -3,7 +3,9 @@ package com.clearspend.capital.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.data.model.ExpenseCategory;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -17,11 +19,15 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Autowired private ExpenseCategoryService expenseCategoryService;
 
+  @Autowired private TestHelper testHelper;
+
   @Test
   void retrieveExpenseCategories() {
-    log.info("AllCategories: {}", expenseCategoryRepository.findAll());
+    Business business = testHelper.createBusiness().business();
+
+    log.info("AllCategories: {}", expenseCategoryRepository.findByBusinessId(business.getId()));
     List<ExpenseCategory> foundCategories = expenseCategoryService.retrieveExpenseCategories();
     assertThat(foundCategories).isNotNull();
-    assertThat(foundCategories.size()).isEqualTo(0);
+    assertThat(foundCategories.size()).isEqualTo(23);
   }
 }
