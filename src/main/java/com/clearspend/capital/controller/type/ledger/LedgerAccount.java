@@ -4,15 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(
-    oneOf = {
-      LedgerAllocationAccount.class,
-      LedgerBankAccount.class,
-      LedgerCardAccount.class,
-      LedgerMerchantAccount.class
-    })
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
   @Type(value = LedgerAllocationAccount.class, name = "ALLOCATION"),
