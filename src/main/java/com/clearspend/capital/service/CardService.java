@@ -209,6 +209,8 @@ public class CardService {
           case PHYSICAL -> stripeClient.createPhysicalCard(
               card,
               shippingAddress,
+              "%s %s"
+                  .formatted(user.getFirstName().getEncrypted(), user.getLastName().getEncrypted()),
               business.getStripeData().getAccountRef(),
               user.getExternalRef());
           case VIRTUAL -> {

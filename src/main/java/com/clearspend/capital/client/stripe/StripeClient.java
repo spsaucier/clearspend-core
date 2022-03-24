@@ -687,6 +687,7 @@ public class StripeClient {
   public Card createPhysicalCard(
       com.clearspend.capital.data.model.Card card,
       com.clearspend.capital.common.data.model.Address shippingAddress,
+      String shippingLabel,
       String stripeAccountRef,
       String stripeUserRef) {
     Shipping.Address.Builder addressBuilder =
@@ -708,7 +709,7 @@ public class StripeClient {
             .setStatus(Status.INACTIVE)
             .setShipping(
                 Shipping.builder()
-                    .setName("Business Address")
+                    .setName(shippingLabel)
                     .setService(Service.STANDARD)
                     .setAddress(addressBuilder.build())
                     .build())

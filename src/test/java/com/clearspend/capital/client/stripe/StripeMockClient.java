@@ -471,6 +471,7 @@ public class StripeMockClient extends StripeClient {
   public Card createPhysicalCard(
       com.clearspend.capital.data.model.Card card,
       Address shippingAddress,
+      String shippingLabel,
       String stripeAccountRef,
       String stripeUserRef) {
     Card result = generateEntityWithId(Card.class);
