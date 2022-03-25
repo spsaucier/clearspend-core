@@ -35,8 +35,8 @@ public class AccountActivityRowMappers {
           new UserChartData(
               new TypedId<>(resultSet.getObject(1, UUID.class)),
               UserType.valueOf(resultSet.getString(2)),
-              resultSet.getString(3),
-              resultSet.getString(4),
+              resultSet.getBytes(3),
+              resultSet.getBytes(4),
               new Amount(Currency.valueOf(resultSet.getString(6)), resultSet.getBigDecimal(5)));
   public static final RowMapper<AllocationChartData> ALLOCATION_CHART_MAPPER =
       (resultSet, rowNum) ->

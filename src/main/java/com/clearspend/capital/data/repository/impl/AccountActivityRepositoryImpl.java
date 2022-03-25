@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
+import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -79,6 +80,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
 
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
+  private final Crypto crypto;
 
   private final Template findAccountActivityTemplate;
   private final Template findAccountActivityForLineGraphTemplate;
@@ -88,6 +90,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   public AccountActivityRepositoryImpl(
       EntityManager entityManager,
       CriteriaBuilderFactory criteriaBuilderFactory,
+      Crypto crypto,
       @Value("classpath:db/sql/accountActivityRepository/findAccountActivity.sql")
           Resource findAccountActivityQuery,
       @Value("classpath:db/sql/accountActivityRepository/findAccountActivityForLineGraph.sql")
@@ -96,6 +99,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           Resource findAccountActivityForChartQuery) {
     this.entityManager = entityManager;
     this.criteriaBuilderFactory = criteriaBuilderFactory;
+    this.crypto = crypto;
     this.findAccountActivityTemplate = MustacheSqlResourceLoader.load(findAccountActivityQuery);
     this.findAccountActivityForLineGraphTemplate =
         MustacheSqlResourceLoader.load(findAccountActivityForLineGraphQuery);
@@ -290,7 +294,17 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
       case MERCHANT -> chartData.withMerchantChartData((List<MerchantChartData>) chartRecords);
       case ALLOCATION -> chartData.withAllocationChartData(
           (List<AllocationChartData>) chartRecords);
-      case EMPLOYEE -> chartData.withUserChartData((List<UserChartData>) chartRecords);
+      case EMPLOYEE -> {
+        List<UserChartData> chartRecords1 = (List<UserChartData>) chartRecords;
+        chartRecords1.forEach(
+            userChartData -> {
+              userChartData.setFirstName(
+                  new String(crypto.decrypt(userChartData.getFirstNameEncrypted())));
+              userChartData.setLastName(
+                  new String(crypto.decrypt(userChartData.getLastNameEncrypted())));
+            });
+        yield chartData.withUserChartData(chartRecords1);
+      }
     };
   }
 

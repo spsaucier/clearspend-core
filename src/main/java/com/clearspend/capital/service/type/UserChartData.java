@@ -13,12 +13,27 @@ public class UserChartData {
 
   TypedId<UserId> userId;
   UserType type;
+  byte[] firstNameEncrypted;
   String firstName;
+  byte[] lastNameEncrypted;
   String lastName;
   Amount amount;
 
   public UserChartData(String name, Amount amount) {
     this.firstName = name;
+    this.amount = amount;
+  }
+
+  public UserChartData(
+      TypedId<UserId> userId,
+      UserType type,
+      byte[] firstNameEncrypted,
+      byte[] lastNameEncrypted,
+      Amount amount) {
+    this.userId = userId;
+    this.type = type;
+    this.firstNameEncrypted = firstNameEncrypted;
+    this.lastNameEncrypted = lastNameEncrypted;
     this.amount = amount;
   }
 }
