@@ -56,6 +56,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 import javax.persistence.EntityManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1336,6 +1337,55 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
   record FindPermissionUsers(User employeeOwner, User otherEmployee, User admin, User manager) {}
 
+  private MerchantDetails createMerchant(final int index) {
+    final MerchantDetails merchantDetails = new MerchantDetails();
+    merchantDetails.setType(MerchantType.ADVERTISING_SERVICES);
+    merchantDetails.setName("MerchantName-%d".formatted(index));
+    return merchantDetails;
+  }
+
+  @Test
+  void find_Pagination() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    final List<AccountActivity> allActivities =
+        IntStream.range(0, 20)
+            .mapToObj(
+                index ->
+                    testDataHelper.createAccountActivity(
+                        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                            .activityTime(OffsetDateTime.now().plusMinutes(index))
+                            .merchant(createMerchant(index))
+                            .build()))
+            .sorted((a1, a2) -> a1.getActivityTime().compareTo(a2.getActivityTime()) * -1)
+            .toList();
+
+    final AccountActivityFilterCriteria criteria = new AccountActivityFilterCriteria();
+    criteria.setFrom(OffsetDateTime.now().minusYears(1));
+    criteria.setTo(OffsetDateTime.now().plusYears(1));
+    criteria.setTypes(List.of(AccountActivityType.BANK_DEPOSIT));
+    final PageRequest pageRequest = new PageRequest(0, 10);
+    criteria.setPageToken(PageRequest.toPageToken(pageRequest));
+
+    final Page<AccountActivity> page1 =
+        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
+    assertEquals(10, page1.getContent().size());
+    assertEquals(20, page1.getTotalElements());
+    assertThat(page1.getContent())
+        .containsExactly(allActivities.subList(0, 10).toArray(new AccountActivity[10]));
+
+    final PageRequest page2Request = new PageRequest(1, 10);
+    criteria.setPageToken(PageRequest.toPageToken(page2Request));
+
+    final Page<AccountActivity> page2 =
+        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
+    assertEquals(10, page2.getContent().size());
+    assertEquals(20, page2.getTotalElements());
+    assertThat(page2.getContent())
+        .containsExactly(allActivities.subList(10, 20).toArray(new AccountActivity[10]));
+  }
+
   @Test
   void find_UserFilterPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
@@ -1370,18 +1420,17 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
               return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
             });
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            //            .ownerId(users.otherEmployee().getId())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            //            .ownerId(users.otherEmployee().getId())
-            .build());
+    final AccountActivity activity1 =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(users.employeeOwner())
+                .build());
+    final AccountActivity activity2 =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    final AccountActivity activity3 =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
 
     entityManager.flush();
 
@@ -1397,6 +1446,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityService.find(createBusinessRecord.business().getId(), criteria);
     assertEquals(3, adminPage.getTotalElements());
     assertEquals(3, adminPage.getContent().size());
+    assertThat(adminPage.getContent()).containsExactlyInAnyOrder(activity1, activity2, activity3);
 
     // Manager user should see all
     testHelper.setCurrentUser(users.manager());
@@ -1404,6 +1454,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityService.find(createBusinessRecord.business().getId(), criteria);
     assertEquals(3, managerPage.getTotalElements());
     assertEquals(3, managerPage.getContent().size());
+    assertThat(managerPage.getContent()).containsExactlyInAnyOrder(activity1, activity2, activity3);
 
     // Other Employee user should see none
     testHelper.setCurrentUser(users.otherEmployee());
@@ -1418,5 +1469,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         accountActivityService.find(createBusinessRecord.business().getId(), criteria);
     assertEquals(1, selfOwnedPage.getTotalElements());
     assertEquals(1, selfOwnedPage.getContent().size());
+    assertThat(selfOwnedPage.getContent()).contains(activity1);
   }
 }

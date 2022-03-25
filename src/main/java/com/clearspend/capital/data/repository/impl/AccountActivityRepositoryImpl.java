@@ -180,14 +180,17 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     setParams.accept(nativeQuery, false);
     final List<AccountActivity> result = nativeQuery.getResultList();
 
-    long totalElements = 0;
     if (pageToken.getPageNumber() == 0 && result.size() < pageToken.getPageSize()) {
-      final String countQuery =
-          JDBCUtils.generateQuery(findAccountActivityTemplate, criteria, true);
-      final Query nativeCountQuery = entityManager.createNativeQuery(countQuery);
-      setParams.accept(nativeCountQuery, true);
-      totalElements = ((BigInteger) nativeCountQuery.getSingleResult()).longValue();
+      return new PageImpl<>(
+          result,
+          PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()),
+          result.size());
     }
+
+    final String countQuery = JDBCUtils.generateQuery(findAccountActivityTemplate, criteria, true);
+    final Query nativeCountQuery = entityManager.createNativeQuery(countQuery);
+    setParams.accept(nativeCountQuery, true);
+    final long totalElements = ((BigInteger) nativeCountQuery.getSingleResult()).longValue();
 
     return new PageImpl<>(
         result, PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()), totalElements);
