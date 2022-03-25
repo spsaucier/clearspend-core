@@ -327,7 +327,10 @@ public class AccountActivityService {
       accountActivity.setExpenseDetails(
           expenseCategoryService
               .getExpenseCategoryById(expenseCategoryId)
-              .map(category -> new ExpenseDetails(0, category.getId(), category.getCategoryName()))
+              .map(
+                  category ->
+                      new ExpenseDetails(
+                          category.getIconRef(), category.getId(), category.getCategoryName()))
               .orElse(null));
       if (accountActivity
           .getIntegrationSyncStatus()
