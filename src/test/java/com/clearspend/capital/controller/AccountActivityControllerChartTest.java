@@ -105,6 +105,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
 
     ChartDataRequest chartDataRequest = new ChartDataRequest();
     chartDataRequest.setChartFilter(ChartFilterType.EMPLOYEE);
+    chartDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
     chartDataRequest.setFrom(OffsetDateTime.now().minusDays(1));
     chartDataRequest.setTo(OffsetDateTime.now().plusDays(1));
     if (sortedDesc) {

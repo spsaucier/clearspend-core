@@ -273,6 +273,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
         new MapSqlParameterSource()
             .addValue("limit", LIMIT_SIZE_FOR_CHART)
             .addValue("businessId", businessId.toUuid())
+            .addValue("allocationId", nullableTypedIdToUuid(criteria.getAllocationId()))
+            .addValue("userId", nullableTypedIdToUuid(criteria.getUserId()))
             .addValue("type", AccountActivityType.NETWORK_CAPTURE.name())
             .addValue("from", nullableDateTimeToTimestamp(criteria.getFrom()))
             .addValue("to", nullableDateTimeToTimestamp(criteria.getTo()))
