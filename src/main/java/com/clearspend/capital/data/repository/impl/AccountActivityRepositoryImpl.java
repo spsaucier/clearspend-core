@@ -3,21 +3,17 @@ package com.clearspend.capital.data.repository.impl;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.util.MustacheSqlResourceLoader;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.Crypto;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.controller.type.activity.ChartFilterType;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.MerchantType;
-import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.AccountActivityRepositoryCustom;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.BeanUtils;
@@ -28,6 +24,7 @@ import com.clearspend.capital.service.type.CardStatementData;
 import com.clearspend.capital.service.type.CardStatementFilterCriteria;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
@@ -35,36 +32,40 @@ import com.clearspend.capital.service.type.MerchantCategoryChartData;
 import com.clearspend.capital.service.type.MerchantChartData;
 import com.clearspend.capital.service.type.PageToken;
 import com.clearspend.capital.service.type.UserChartData;
-import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.persistence.Tuple;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.internal.SessionImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 
@@ -78,23 +79,35 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
 
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
-  private final Crypto crypto;
 
-  private final String findAccountActivityQuery;
-  private final Template template;
+  private final Template findAccountActivityTemplate;
+  private final Template findAccountActivityForLineGraphTemplate;
+  private final Template findAccountActivityForChartTemplate;
 
   @SneakyThrows
   public AccountActivityRepositoryImpl(
-      Crypto crypto,
       EntityManager entityManager,
       CriteriaBuilderFactory criteriaBuilderFactory,
       @Value("classpath:db/sql/accountActivityRepository/findAccountActivity.sql")
-          Resource findAccountActivityQuery) {
+          Resource findAccountActivityQuery,
+      @Value("classpath:db/sql/accountActivityRepository/findAccountActivityForLineGraph.sql")
+          Resource findAccountActivityForLineGraphQuery,
+      @Value("classpath:db/sql/accountActivityRepository/findAccountActivityForChart.sql")
+          Resource findAccountActivityForChartQuery) {
     this.entityManager = entityManager;
     this.criteriaBuilderFactory = criteriaBuilderFactory;
-    this.findAccountActivityQuery = SqlResourceLoader.load(findAccountActivityQuery);
-    this.crypto = crypto;
-    this.template = Mustache.compiler().compile(this.findAccountActivityQuery);
+    this.findAccountActivityTemplate = MustacheSqlResourceLoader.load(findAccountActivityQuery);
+    this.findAccountActivityForLineGraphTemplate =
+        MustacheSqlResourceLoader.load(findAccountActivityForLineGraphQuery);
+    this.findAccountActivityForChartTemplate =
+        MustacheSqlResourceLoader.load(findAccountActivityForChartQuery);
+  }
+
+  private Timestamp nullableDateTimeToTimestamp(final OffsetDateTime offsetDateTime) {
+    return Optional.ofNullable(offsetDateTime)
+        .map(OffsetDateTime::toInstant)
+        .map(Timestamp::from)
+        .orElse(null);
   }
 
   @Override
@@ -102,28 +115,82 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   public Page<AccountActivity> find(
       @NonNull TypedId<BusinessId> businessId, AccountActivityFilterCriteria criteria) {
 
-    criteria.setBusinessId(businessId);
+    final PageToken pageToken = criteria.getPageToken();
 
-    List<AccountActivity> result =
-        (List<AccountActivity>)
-            entityManager
-                .createNativeQuery(
-                    JDBCUtils.generateQuery(template, criteria, false), AccountActivity.class)
-                .getResultList();
+    final String query = JDBCUtils.generateQuery(findAccountActivityTemplate, criteria, false);
+    final BiConsumer<Query, Boolean> setParams =
+        (jpaQuery, isCount) -> {
+          jpaQuery
+              .setParameter("businessId", businessId.toUuid())
+              .setParameter("invokingUser", CurrentUser.getUserId().toUuid());
+          if (!isCount) {
+            jpaQuery
+                .setParameter("limit", pageToken.getPageSize())
+                .setParameter("offset", pageToken.getFirstResult());
+          }
 
-    PageToken pageToken = criteria.getPageToken();
+          BeanUtils.setNotEmpty(
+              criteria.getTypes(),
+              types -> {
+                final List<String> typesNames =
+                    types.stream().map(AccountActivityType::name).toList();
+                jpaQuery.setParameter("types", typesNames);
+              });
 
-    long totalElements =
-        pageToken.getPageNumber() == 0 && result.size() < pageToken.getPageSize()
-            ? result.size()
-            : ((BigInteger)
-                    entityManager
-                        .createNativeQuery(JDBCUtils.generateQuery(template, criteria, true))
-                        .getSingleResult())
-                .longValue();
+          BeanUtils.setNotEmpty(
+              criteria.getStatuses(),
+              statuses -> {
+                final List<String> statusesNames =
+                    statuses.stream().map(AccountActivityStatus::name).toList();
+                jpaQuery.setParameter("statuses", statusesNames);
+              });
+
+          BeanUtils.setNotNull(
+              criteria.getCategories(),
+              categories -> jpaQuery.setParameter("categories", categories));
+
+          BeanUtils.setNotNull(criteria.getMin(), min -> jpaQuery.setParameter("min", min));
+          BeanUtils.setNotNull(criteria.getMax(), max -> jpaQuery.setParameter("max", max));
+
+          BeanUtils.setNotEmpty(
+              criteria.getSearchText(),
+              searchText -> jpaQuery.setParameter("searchText", "%%%s%%".formatted(searchText)));
+          BeanUtils.setNotNull(
+              criteria.getUserId(),
+              userId -> jpaQuery.setParameter("userId", nullableTypedIdToUuid(userId)));
+          BeanUtils.setNotNull(
+              criteria.getCardId(),
+              cardId -> jpaQuery.setParameter("cardId", nullableTypedIdToUuid(cardId)));
+          BeanUtils.setNotNull(
+              criteria.getAllocationId(),
+              allocationId ->
+                  jpaQuery.setParameter("allocationId", nullableTypedIdToUuid(allocationId)));
+          BeanUtils.setNotNull(
+              criteria.getFrom(),
+              from -> jpaQuery.setParameter("from", nullableDateTimeToTimestamp(from)));
+          BeanUtils.setNotNull(
+              criteria.getTo(), to -> jpaQuery.setParameter("to", nullableDateTimeToTimestamp(to)));
+        };
+
+    final Query nativeQuery = entityManager.createNativeQuery(query, AccountActivity.class);
+    setParams.accept(nativeQuery, false);
+    final List<AccountActivity> result = nativeQuery.getResultList();
+
+    long totalElements = 0;
+    if (pageToken.getPageNumber() == 0 && result.size() < pageToken.getPageSize()) {
+      final String countQuery =
+          JDBCUtils.generateQuery(findAccountActivityTemplate, criteria, true);
+      final Query nativeCountQuery = entityManager.createNativeQuery(countQuery);
+      setParams.accept(nativeCountQuery, true);
+      totalElements = ((BigInteger) nativeCountQuery.getSingleResult()).longValue();
+    }
 
     return new PageImpl<>(
         result, PageRequest.of(pageToken.getPageNumber(), pageToken.getPageSize()), totalElements);
+  }
+
+  private UUID nullableTypedIdToUuid(@Nullable final TypedId<?> typedId) {
+    return Optional.ofNullable(typedId).map(TypedId::toUuid).orElse(null);
   }
 
   @Override
@@ -131,114 +198,42 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   public DashboardData findDataForLineGraph(
       @NonNull TypedId<BusinessId> businessId, GraphFilterCriteria criteria) {
 
-    entityManager.flush();
-    List<GraphData> graphDataList =
-        entityManager
-            .unwrap(SessionImpl.class)
-            .doReturningWork(
-                connection -> {
-                  StringBuilder stringBuilder =
-                      new StringBuilder(
-                          "select custom_time_series.startdate, "
-                              + " custom_time_series.enddate,  "
-                              + " (select coalesce(sum(account_activity.amount_amount), 0) "
-                              + "  from account_activity "
-                              + "  where account_activity.business_id = ? "
-                              + "    and account_activity.type = ? "
-                              + "    and account_activity.activity_time >= custom_time_series.startdate "
-                              + "    and account_activity.activity_time < custom_time_series.enddate ");
-                  BeanUtils.setNotNull(
-                      criteria.getUserId(),
-                      userId -> stringBuilder.append(" and account_activity.user_id = ? "));
-                  BeanUtils.setNotNull(
-                      criteria.getAllocationId(),
-                      allocationId ->
-                          stringBuilder.append(" and account_activity.allocation_id = ? "));
-                  stringBuilder.append(
-                      " and account_activity.card_card_id is not null ),"
-                          + " (select coalesce(count(*), 0) "
-                          + "  from account_activity "
-                          + "  where account_activity.business_id = ? "
-                          + "    and account_activity.type = ? "
-                          + "    and account_activity.activity_time >= custom_time_series.startdate "
-                          + "    and account_activity.activity_time < custom_time_series.enddate  ");
-                  BeanUtils.setNotNull(
-                      criteria.getUserId(),
-                      userId -> stringBuilder.append(" and account_activity.user_id = ? "));
-                  BeanUtils.setNotNull(
-                      criteria.getAllocationId(),
-                      allocationId ->
-                          stringBuilder.append(" and account_activity.allocation_id = ? "));
-                  stringBuilder.append(
-                      " and account_activity.card_card_id is not null )"
-                          + " from (select day as startdate, day + ((( ?::timestamp - ?::timestamp) / ?)) as enddate "
-                          + " from generate_series ( ?::timestamp, "
-                          + "                        ?::timestamp, "
-                          + "                       (( ?::timestamp - ?::timestamp) / ?)) day limit ?) as custom_time_series ");
+    final String query = findAccountActivityForLineGraphTemplate.execute(criteria);
+    final String zoneOffset = OffsetDateTime.now().getOffset().getId();
 
-                  PreparedStatement preparedStatement =
-                      connection.prepareStatement(stringBuilder.toString());
+    final int slices =
+        ChronoUnit.DAYS.between(criteria.getFrom().toInstant(), criteria.getTo().toInstant())
+                > DEFAULT_SLICES_FOR_WEEK
+            ? DEFAULT_SLICES
+            : DEFAULT_SLICES_FOR_WEEK;
 
-                  int parameterIndex = 0;
-                  for (int i = 0; i < 2; i++) {
-                    preparedStatement.setObject(++parameterIndex, businessId.toUuid());
-                    preparedStatement.setObject(
-                        ++parameterIndex, AccountActivityType.NETWORK_CAPTURE.name());
-                    if (criteria.getUserId() != null) {
-                      preparedStatement.setObject(++parameterIndex, criteria.getUserId().toUuid());
-                    }
-                    if (criteria.getAllocationId() != null) {
-                      preparedStatement.setObject(
-                          ++parameterIndex, criteria.getAllocationId().toUuid());
-                    }
-                  }
+    final UUID userId = nullableTypedIdToUuid(criteria.getUserId());
+    final UUID allocationId = nullableTypedIdToUuid(criteria.getAllocationId());
 
-                  int slices =
-                      ChronoUnit.DAYS.between(
-                                  criteria.getFrom().toInstant(), criteria.getTo().toInstant())
-                              > DEFAULT_SLICES_FOR_WEEK
-                          ? DEFAULT_SLICES
-                          : DEFAULT_SLICES_FOR_WEEK;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("to", Timestamp.from(criteria.getTo().toInstant()))
+            .addValue("from", Timestamp.from(criteria.getFrom().toInstant()))
+            .addValue("slices", slices)
+            .addValue("businessId", businessId.toUuid())
+            .addValue("type", AccountActivityType.NETWORK_CAPTURE.name())
+            .addValue("userId", userId)
+            .addValue("allocationId", allocationId)
+            .addValue("owningUserId", CurrentUser.getUserId().toUuid());
 
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getTo().toInstant()).toString());
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getFrom().toInstant()).toString());
-                  preparedStatement.setInt(++parameterIndex, slices);
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getFrom().toInstant()).toString());
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getTo().toInstant()).toString());
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getTo().toInstant()).toString());
-                  preparedStatement.setString(
-                      ++parameterIndex, Timestamp.from(criteria.getFrom().toInstant()).toString());
-                  preparedStatement.setInt(++parameterIndex, slices);
-                  preparedStatement.setInt(++parameterIndex, slices);
+    final List<GraphData> graphDataList =
+        JDBCUtils.query(
+            entityManager,
+            query,
+            params,
+            (resultSet, rowNum) ->
+                new GraphData(
+                    resultSet.getTimestamp(1).toInstant().atOffset(ZoneOffset.of(zoneOffset)),
+                    resultSet.getTimestamp(2).toInstant().atOffset(ZoneOffset.of(zoneOffset)),
+                    resultSet.getBigDecimal(3),
+                    resultSet.getBigDecimal(4)));
 
-                  preparedStatement.execute();
-                  ResultSet resultSet = preparedStatement.getResultSet();
-
-                  String zoneOffset = OffsetDateTime.now().getOffset().getId();
-                  List<GraphData> dataList = new ArrayList<>();
-                  while (resultSet.next()) {
-                    dataList.add(
-                        new GraphData(
-                            resultSet
-                                .getTimestamp(1)
-                                .toInstant()
-                                .atOffset(ZoneOffset.of(zoneOffset)),
-                            resultSet
-                                .getTimestamp(2)
-                                .toInstant()
-                                .atOffset(ZoneOffset.of(zoneOffset)),
-                            resultSet.getBigDecimal(3),
-                            resultSet.getBigDecimal(4)));
-                  }
-                  return dataList;
-                });
-
-    BigDecimal totalAmount =
+    final BigDecimal totalAmount =
         graphDataList.stream().map(GraphData::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     BigDecimal totalNumberOfElements =
         graphDataList.stream().map(GraphData::getCount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -256,128 +251,46 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   @Override
   public ChartData findDataForChart(
       @NonNull TypedId<BusinessId> businessId, ChartFilterCriteria criteria) {
-    // query
-    CriteriaBuilder<Tuple> query =
-        criteriaBuilderFactory
-            .create(entityManager, Tuple.class)
-            .from(AccountActivity.class, "accountActivity")
-            .where("accountActivity.businessId")
-            .eqLiteral(businessId)
-            .where("accountActivity.type") // only include posted card transactions
-            .eqLiteral(AccountActivityType.NETWORK_CAPTURE)
-            .where("accountActivity.activityTime")
-            .ge(criteria.getFrom())
-            .where("accountActivity.activityTime")
-            .lt(criteria.getTo());
+    final String direction =
+        Optional.ofNullable(criteria.getDirection())
+            .map(Sort.Direction::name)
+            .orElse(Direction.ASC.name());
+    final ChartFilterContext context =
+        ChartFilterContext.fromChartFilterType(criteria.getChartFilterType())
+            .direction(direction)
+            .userId(nullableTypedIdToUuid(criteria.getUserId()))
+            .allocationId(nullableTypedIdToUuid(criteria.getAllocationId()))
+            .build();
 
-    BeanUtils.setNotNull(
-        criteria.getUserId(), userId -> query.where("accountActivity.user.id").eqLiteral(userId));
-    BeanUtils.setNotNull(
-        criteria.getAllocationId(),
-        allocationId -> query.where("accountActivity.allocationId").eqLiteral(allocationId));
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("limit", LIMIT_SIZE_FOR_CHART)
+            .addValue("businessId", businessId.toUuid())
+            .addValue("type", AccountActivityType.NETWORK_CAPTURE.name())
+            .addValue("from", nullableDateTimeToTimestamp(criteria.getFrom()))
+            .addValue("to", nullableDateTimeToTimestamp(criteria.getTo()))
+            .addValue("owningUserId", CurrentUser.getUserId().toUuid());
 
-    switch (criteria.getChartFilterType()) {
-      case ALLOCATION -> query
-          .select("accountActivity.allocation.id")
-          .select("accountActivity.allocation.name")
-          .groupBy("accountActivity.allocation.id");
-      case EMPLOYEE -> query
-          .leftJoinOn(User.class, "user")
-          .on("accountActivity.user.id")
-          .eqExpression("user.id")
-          .end()
-          .select("accountActivity.user.id")
-          .select("user.type")
-          .select("user.firstName")
-          .select("user.lastName")
-          .groupBy("accountActivity.user.id");
-      case MERCHANT -> query
-          .select("accountActivity.merchant.name")
-          .select("accountActivity.merchant.type")
-          .select("accountActivity.merchant.merchantNumber")
-          .select("accountActivity.merchant.merchantCategoryCode")
-          .select("accountActivity.merchant.logoUrl")
-          .groupBy("accountActivity.merchant.name");
-      case MERCHANT_CATEGORY -> query
-          .select("accountActivity.merchant.merchantCategoryCode")
-          .select("accountActivity.merchant.type")
-          .groupBy("accountActivity.merchant.type");
-    }
+    final String query = findAccountActivityForChartTemplate.execute(context);
+    final ChartData chartData = new ChartData(null, null, null, null);
 
-    query.select("coalesce(sum(accountActivity.amount.amount), 0)", "sumAmount");
-    query.select("accountActivity.amount.currency");
-    if (criteria.getDirection() == Direction.DESC) {
-      query.orderByDesc("sumAmount");
-    } else {
-      query.orderByAsc("sumAmount");
-    }
+    final RowMapper<?> rowMapper =
+        switch (criteria.getChartFilterType()) {
+          case MERCHANT_CATEGORY -> AccountActivityRowMappers.MERCHANT_CATEGORY_CHART_MAPPER;
+          case MERCHANT -> AccountActivityRowMappers.MERCHANT_CHART_MAPPER;
+          case ALLOCATION -> AccountActivityRowMappers.ALLOCATION_CHART_MAPPER;
+          case EMPLOYEE -> AccountActivityRowMappers.USER_CHART_MAPPER;
+        };
 
-    query.setMaxResults(LIMIT_SIZE_FOR_CHART);
-
-    List<Tuple> resultList = query.getResultList();
+    final List<?> chartRecords = JDBCUtils.query(entityManager, query, params, rowMapper);
 
     return switch (criteria.getChartFilterType()) {
-      case MERCHANT_CATEGORY -> new ChartData(
-          resultList.stream()
-              .map(
-                  tuple ->
-                      new MerchantCategoryChartData(
-                          MerchantType.valueOf(tuple.get(1).toString()),
-                          new Amount(
-                              Currency.valueOf(tuple.get(3).toString()),
-                              (BigDecimal) tuple.get(2))))
-              .toList(),
-          null,
-          null,
-          null);
-      case ALLOCATION -> new ChartData(
-          null,
-          resultList.stream()
-              .map(
-                  tuple ->
-                      new AllocationChartData(
-                          (TypedId<AllocationId>) tuple.get(0),
-                          tuple.get(1).toString(),
-                          new Amount(
-                              Currency.valueOf(tuple.get(3).toString()),
-                              (BigDecimal) tuple.get(2))))
-              .toList(),
-          null,
-          null);
-
-      case MERCHANT -> new ChartData(
-          null,
-          null,
-          null,
-          resultList.stream()
-              .map(
-                  tuple ->
-                      new MerchantChartData(
-                          new Amount(
-                              Currency.valueOf(tuple.get(6).toString()), (BigDecimal) tuple.get(5)),
-                          (Integer) tuple.get(3),
-                          MerchantType.valueOf(tuple.get(1).toString()),
-                          tuple.get(0) != null ? tuple.get(0).toString() : "",
-                          tuple.get(2) != null ? tuple.get(2).toString() : "",
-                          tuple.get(4) != null ? tuple.get(4).toString() : ""))
-              .toList());
-
-      case EMPLOYEE -> new ChartData(
-          null,
-          null,
-          resultList.stream()
-              .map(
-                  tuple ->
-                      new UserChartData(
-                          (TypedId<UserId>) tuple.get(0),
-                          UserType.valueOf(tuple.get(1).toString()),
-                          ((RequiredEncryptedStringWithHash) tuple.get(2)).getEncrypted(),
-                          ((RequiredEncryptedStringWithHash) tuple.get(3)).getEncrypted(),
-                          new Amount(
-                              Currency.valueOf(tuple.get(5).toString()),
-                              (BigDecimal) tuple.get(4))))
-              .toList(),
-          null);
+      case MERCHANT_CATEGORY -> chartData.withMerchantCategoryChartData(
+          (List<MerchantCategoryChartData>) chartRecords);
+      case MERCHANT -> chartData.withMerchantChartData((List<MerchantChartData>) chartRecords);
+      case ALLOCATION -> chartData.withAllocationChartData(
+          (List<AllocationChartData>) chartRecords);
+      case EMPLOYEE -> chartData.withUserChartData((List<UserChartData>) chartRecords);
     };
   }
 
@@ -461,5 +374,25 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
 
           return spendingTotal;
         });
+  }
+
+  @Getter
+  @Builder
+  private static class ChartFilterContext {
+    private final boolean isAllocation;
+    private final boolean isEmployee;
+    private final boolean isMerchant;
+    private final boolean isMerchantCategory;
+    private final String direction;
+    private final UUID userId;
+    private final UUID allocationId;
+
+    public static ChartFilterContextBuilder fromChartFilterType(final ChartFilterType type) {
+      return ChartFilterContext.builder()
+          .isAllocation(ChartFilterType.ALLOCATION == type)
+          .isEmployee(ChartFilterType.EMPLOYEE == type)
+          .isMerchant(ChartFilterType.MERCHANT == type)
+          .isMerchantCategory(ChartFilterType.MERCHANT_CATEGORY == type);
+    }
   }
 }

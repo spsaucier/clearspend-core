@@ -6,12 +6,14 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.ledger.JournalEntryId;
 import com.clearspend.capital.common.typedid.data.ledger.LedgerAccountId;
 import com.clearspend.capital.common.typedid.data.ledger.PostingId;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
@@ -20,7 +22,9 @@ import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
+import com.clearspend.capital.data.model.embedded.CardDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -132,29 +136,55 @@ public class TestDataHelper {
     return new AdjustmentRecord(adjustment, ledgerAccount, posting, journalEntry);
   }
 
+  public MerchantDetails createMerchant() {
+    final MerchantDetails merchant = new MerchantDetails();
+    merchant.setName("Merchant");
+    merchant.setType(MerchantType.AC_REFRIGERATION_REPAIR);
+    merchant.setMerchantNumber("12345");
+    merchant.setMerchantCategoryCode(10);
+    merchant.setMerchantCategoryGroup(MccGroup.CHILD_CARE);
+    return merchant;
+  }
+
+  public ReceiptDetails createReceipt() {
+    final ReceiptDetails receiptDetails = new ReceiptDetails();
+    receiptDetails.setReceiptIds(null);
+    return receiptDetails;
+  }
+
   public AccountActivity createAccountActivity(final AccountActivityConfig config) {
+    final AccountActivityType type = config.getType().orElse(AccountActivityType.BANK_DEPOSIT);
+    final OffsetDateTime activityTime = config.getActivityTime().orElse(OffsetDateTime.now());
     final AccountActivity accountActivity =
         new AccountActivity(
             config.getBusiness().getId(),
             config.getAccountId(),
-            AccountActivityType.BANK_DEPOSIT,
+            type,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(config.getAllocation()),
-            OffsetDateTime.now(),
+            activityTime,
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
 
-    final MerchantDetails merchantDetails = new MerchantDetails();
-    merchantDetails.setName("");
-    merchantDetails.setType(MerchantType.AC_REFRIGERATION_REPAIR);
-    merchantDetails.setMerchantCategoryCode(1);
-    merchantDetails.setMerchantCategoryGroup(MccGroup.CHILD_CARE);
-    accountActivity.setMerchant(merchantDetails);
+    final ReceiptDetails receiptDetails = config.getReceipt().orElse(createReceipt());
+    accountActivity.setReceipt(receiptDetails);
 
     config.getOwner().ifPresent(owner -> accountActivity.setUser(UserDetails.of(owner)));
     config.getAdjustmentId().ifPresent(accountActivity::setAdjustmentId);
+    final MerchantDetails merchant = config.getMerchant().orElse(createMerchant());
+    accountActivity.setMerchant(merchant);
+    config
+        .getCardId()
+        .ifPresent(
+            cardId -> {
+              final CardDetails cardDetails = new CardDetails();
+              cardDetails.setOwnerFirstName(new RequiredEncryptedStringWithHash("John"));
+              cardDetails.setOwnerLastName(new RequiredEncryptedStringWithHash("Doe"));
+              cardDetails.setCardId(cardId);
+              accountActivity.setCard(cardDetails);
+            });
     return accountActivityRepo.save(accountActivity);
   }
 
@@ -226,6 +256,11 @@ public class TestDataHelper {
     @NonNull private final TypedId<AccountId> accountId;
     @Nullable private final User owner;
     @Nullable private final TypedId<AdjustmentId> adjustmentId;
+    @Nullable private final TypedId<CardId> cardId;
+    @Nullable private final AccountActivityType type;
+    @Nullable private final OffsetDateTime activityTime;
+    @Nullable private final MerchantDetails merchant;
+    @Nullable private final ReceiptDetails receipt;
 
     public static AccountActivityConfigBuilder fromCreateBusinessRecord(
         final TestHelper.CreateBusinessRecord createBusinessRecord) {
@@ -235,12 +270,32 @@ public class TestDataHelper {
           .accountId(createBusinessRecord.allocationRecord().account().getId());
     }
 
+    public Optional<ReceiptDetails> getReceipt() {
+      return Optional.ofNullable(receipt);
+    }
+
     public Optional<User> getOwner() {
       return Optional.ofNullable(owner);
     }
 
+    public Optional<MerchantDetails> getMerchant() {
+      return Optional.ofNullable(merchant);
+    }
+
+    public Optional<TypedId<CardId>> getCardId() {
+      return Optional.ofNullable(cardId);
+    }
+
     public Optional<TypedId<AdjustmentId>> getAdjustmentId() {
       return Optional.ofNullable(adjustmentId);
+    }
+
+    public Optional<AccountActivityType> getType() {
+      return Optional.ofNullable(type);
+    }
+
+    public Optional<OffsetDateTime> getActivityTime() {
+      return Optional.ofNullable(activityTime);
     }
   }
 

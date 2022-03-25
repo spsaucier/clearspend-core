@@ -145,6 +145,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -440,6 +441,14 @@ public class TestHelper {
     setCurrentUser(user);
     action.run();
     clearCurrentUser();
+  }
+
+  @SneakyThrows
+  public <T> T createWithCurrentUser(@NonNull final User user, final ThrowingSupplier<T> action) {
+    setCurrentUser(user);
+    final T result = action.get();
+    clearCurrentUser();
+    return result;
   }
 
   @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "For testing")

@@ -40,9 +40,12 @@ import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.ReceiptService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.data.TestDataHelper;
+import com.clearspend.capital.testutils.data.TestDataHelper.AccountActivityConfig;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
@@ -61,6 +64,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
+  private final TestDataHelper testDataHelper;
   private final BusinessBankAccountService businessBankAccountService;
   private final BusinessService businessService;
   private final AccountService accountService;
@@ -481,76 +485,17 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getFilteredAccountActivityPageDataWithOutReceipt() {
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    BusinessBankAccount businessBankAccount =
-        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
-    Business business = createBusinessRecord.business();
-
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    businessBankAccountService.transactBankAccount(
-        business.getId(),
-        businessBankAccount.getId(),
-        createBusinessRecord.user().getId(),
-        BankAccountTransactType.DEPOSIT,
-        Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
-    Account account =
-        serviceHelper
-            .accountService()
-            .retrieveRootAllocationAccount(
-                business.getId(),
-                business.getCurrency(),
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                false);
-    AllocationRecord allocation =
-        testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
-    serviceHelper
-        .accountService()
-        .reallocateFunds(
-            account.getId(),
-            allocation.account().getId(),
-            new Amount(Currency.USD, BigDecimal.valueOf(300)));
-    businessService.reallocateBusinessFunds(
-        business.getId(),
-        createBusinessRecord.user().getId(),
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        allocation.allocation().getId(),
-        new Amount(Currency.USD, BigDecimal.valueOf(21)));
-
-    Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            createBusinessRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            true);
-
-    Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(100));
-
-    NetworkCommonAuthorization networkCommonAuthorization =
-        TestDataController.generateAuthorizationNetworkCommon(
-            createBusinessRecord.user(),
-            card,
-            createBusinessRecord.allocationRecord().account(),
-            amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
-    assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
-    assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
-
-    List<AccountActivity> all = accountActivityRepository.findAll();
-    AccountActivity accountActivity = all.get(all.size() - 1);
-    accountActivity.setReceipt(
-        new ReceiptDetails(Stream.of(new TypedId<ReceiptId>()).collect(Collectors.toSet())));
-    accountActivityRepository.saveAndFlush(accountActivity);
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .receipt(new ReceiptDetails(Set.of()))
+            .build());
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
@@ -559,6 +504,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     accountActivityRequest.setFrom(OffsetDateTime.now().minusDays(1));
     accountActivityRequest.setTo(OffsetDateTime.now().plusDays(1));
     accountActivityRequest.setWithoutReceipt(true);
+
+    entityManager.flush();
 
     String body = objectMapper.writeValueAsString(accountActivityRequest);
 

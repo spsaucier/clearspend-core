@@ -27,6 +27,7 @@ import com.clearspend.capital.service.type.PageToken.OrderBy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.util.List;
+import javax.persistence.EntityManager;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -46,6 +47,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final HoldRepository holdRepository;
   private final AccountService accountService;
+  private final EntityManager entityManager;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -225,6 +227,8 @@ public class CardControllerSearchTest extends BaseCapitalTest {
     String name = rootAllocation.allocation().getName();
     SearchCardRequest request = new SearchCardRequest(new PageRequest(0, 10));
     request.setSearchText(name);
+
+    entityManager.flush();
 
     PagedData<SearchCardData> result = callSearchCards(request, authCookie, 2);
 

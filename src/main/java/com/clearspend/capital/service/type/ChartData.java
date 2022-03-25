@@ -2,14 +2,16 @@ package com.clearspend.capital.service.type;
 
 import java.util.List;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.With;
 
-@Data
+@Getter
+@With
 @AllArgsConstructor
 public class ChartData {
 
-  private List<MerchantCategoryChartData> merchantCategoryChartData;
-  private List<AllocationChartData> allocationChartData;
-  private List<UserChartData> userChartData;
-  private List<MerchantChartData> merchantChartData;
+  private final List<MerchantCategoryChartData> merchantCategoryChartData;
+  private final List<AllocationChartData> allocationChartData;
+  private final List<UserChartData> userChartData;
+  private final List<MerchantChartData> merchantChartData;
 }

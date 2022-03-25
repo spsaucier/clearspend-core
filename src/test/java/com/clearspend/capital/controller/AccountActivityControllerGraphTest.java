@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.List;
+import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final NetworkMessageService networkMessageService;
+  private final EntityManager entityManager;
 
   @SneakyThrows
   @Test
@@ -86,6 +88,8 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
       assertThat(common.isPostHold()).isFalse();
       assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
     }
+
+    entityManager.flush();
 
     GraphDataRequest graphDataRequest = new GraphDataRequest();
     graphDataRequest.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
