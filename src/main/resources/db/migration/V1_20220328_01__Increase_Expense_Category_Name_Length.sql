@@ -1,0 +1,1 @@
+alter table account_activity alter column expense_details_category_name type varchar(100);
