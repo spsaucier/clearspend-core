@@ -233,7 +233,8 @@ public class CodatClient {
       String companyRef, String connectionId, String accountName) throws CodatApiCallException {
     try {
       return callCodatApi(
-          "/companies/%s/connections/%s/push/bankAccounts".formatted(companyRef, connectionId),
+          "/companies/%s/connections/%s/push/bankAccounts?allowSyncOnPushComplete=true"
+              .formatted(companyRef, connectionId),
           objectMapper.writeValueAsString(
               new CodatCreateBankAccountRequest(
                   accountName,
