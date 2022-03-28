@@ -34,10 +34,12 @@ import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -252,61 +254,47 @@ public class CodatService {
 
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
   // their end.
-  private List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
-    List<CodatAccountNested> base = new ArrayList<CodatAccountNested>();
-    accounts.stream()
-        .forEach(
-            account -> {
-              CodatAccountNested currentAccount = null;
+  @VisibleForTesting
+  public List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
+    Tree<String, CodatAccount> tree = new Tree<String, CodatAccount>("root");
+    Tree<String, CodatAccount> current = tree;
 
-              // Get rid of fluff
-              String[] baseElements = account.getQualifiedName().split("\\.");
-              String[] elements = Arrays.copyOfRange(baseElements, 3, baseElements.length);
-              for (String element : elements) {
-                if (currentAccount == null) {
-                  currentAccount = findAccountInList(base, element);
-                  if (currentAccount == null) {
-                    currentAccount = createNestedAccountFromAccount(account, element);
-                    base.add(currentAccount);
-                  }
-                } else {
-                  CodatAccountNested newAccount =
-                      findAccountInList(currentAccount.getChildren(), element);
-                  if (newAccount == null) {
-                    newAccount = createNestedAccountFromAccount(account, element);
-                    currentAccount.getChildren().add(newAccount);
-                  }
-                  currentAccount = newAccount;
-                }
-              }
-              if (currentAccount != null) {
-                // reorient leaf node
-                currentAccount.setId(account.getId());
-                currentAccount.setName(account.getName());
-                currentAccount.setStatus(account.getStatus().getName());
-                currentAccount.setCategory(account.getCategory());
-                currentAccount.setQualifiedName(account.getQualifiedName());
-                currentAccount.setType(account.getType().getName());
-              }
-            });
+    for (CodatAccount account : accounts) {
+      Tree<String, CodatAccount> walker = current;
+      for (String segment : account.getQualifiedName().split("\\.")) {
+        current = current.child(segment);
+      }
+      current.setPayload(account);
+      current = walker;
+    }
 
-    return base;
+    return buildNestedListFromTree(tree, null);
   }
 
-  private CodatAccountNested createNestedAccountFromAccount(CodatAccount account, String id) {
-    CodatAccountNested newAccount = new CodatAccountNested(id, id);
+  private List<CodatAccountNested> buildNestedListFromTree(
+      Tree<String, CodatAccount> tree, CodatAccountNested parent) {
+    if (tree.getPayload() != null) {
+      CodatAccountNested me = createNestedAccountFromAccount(tree.getPayload());
+      for (Tree<String, CodatAccount> child : tree.getChildren()) {
+        me.getChildren().addAll(buildNestedListFromTree(child, me));
+      }
+      return List.of(me);
+    } else {
+      List<CodatAccountNested> descendents = new ArrayList<>();
+      for (Tree<String, CodatAccount> child : tree.getChildren()) {
+        descendents.addAll(buildNestedListFromTree(child, null));
+      }
+      return descendents;
+    }
+  }
+
+  private CodatAccountNested createNestedAccountFromAccount(CodatAccount account) {
+    CodatAccountNested newAccount = new CodatAccountNested(account.getId(), account.getName());
     newAccount.setStatus(account.getStatus().getName());
     newAccount.setCategory(account.getCategory());
-    newAccount.setQualifiedName(id);
+    newAccount.setQualifiedName(account.getQualifiedName());
     newAccount.setType(account.getType().getName());
     return newAccount;
-  }
-
-  private CodatAccountNested findAccountInList(List<CodatAccountNested> accounts, String search) {
-    return accounts.stream()
-        .filter(account -> account.getId().equals(search))
-        .findFirst()
-        .orElse(null);
   }
 
   public void syncTransactionsAwaitingSupplierForCompany(String companyRef) {
@@ -476,5 +464,41 @@ public class CodatService {
     return syncMultipleTransactions(
         transactionsReadyToSync.stream().map(transaction -> transaction.getId()).collect(toList()),
         businessId);
+  }
+
+  private static final class Tree<T, R> {
+    private final Set<Tree> children = new LinkedHashSet<>();
+    private final T pathSegment;
+    private R payload;
+
+    public Tree(T data) {
+      this.pathSegment = data;
+    }
+
+    Tree child(T data) {
+      for (Tree child : children) {
+        if (child.pathSegment.equals(data)) {
+          return child;
+        }
+      }
+      return child(new Tree<>(data));
+    }
+
+    Tree child(Tree<T, R> child) {
+      children.add(child);
+      return child;
+    }
+
+    void setPayload(R payload) {
+      this.payload = payload;
+    }
+
+    R getPayload() {
+      return payload;
+    }
+
+    Set<Tree> getChildren() {
+      return children;
+    }
   }
 }
