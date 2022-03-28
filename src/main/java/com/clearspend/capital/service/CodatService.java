@@ -9,7 +9,6 @@ import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
-import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
@@ -17,6 +16,7 @@ import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
+import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
@@ -115,13 +115,13 @@ public class CodatService {
       // account.
       GetAccountsResponse accountsResponse =
           codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
-      Optional<CodatAccount> checkingAccount =
+      Optional<CodatAccount> expenseAccount =
           accountsResponse.getResults().stream()
-              .filter(account -> account.getName().equalsIgnoreCase("checking"))
+              .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
               .findFirst();
 
-      if (checkingAccount.isEmpty()) {
-        return new SyncTransactionResponse("FAILED (No checking account)");
+      if (expenseAccount.isEmpty()) {
+        return new SyncTransactionResponse("FAILED (No expense account)");
       }
       CodatSyncDirectCostResponse syncResponse =
           codatClient.syncTransactionAsDirectCost(
@@ -130,7 +130,7 @@ public class CodatService {
               accountActivity,
               business.getCurrency().name(),
               supplier,
-              checkingAccount.get());
+              expenseAccount.get());
 
       User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
@@ -223,14 +223,14 @@ public class CodatService {
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
-      TypedId<BusinessId> businessId, CodatCreateBankAccountRequest createBankAccountRequest)
+      TypedId<BusinessId> businessId, CreateCreditCardRequest createBankAccountRequest)
       throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     return codatClient.createBankAccountForBusiness(
         currentBusiness.getCodatCompanyRef(),
         currentBusiness.getCodatConnectionId(),
-        createBankAccountRequest);
+        createBankAccountRequest.getAccountName());
   }
 
   @PreAuthorize(

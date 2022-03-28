@@ -8,13 +8,7 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 @AllArgsConstructor
-public class CodatCreateBankAccountResponse {
-  @JsonProperty("validation")
-  private CodatValidation validation;
-
-  @JsonProperty("pushOperationKey")
-  private String pushOperationKey;
-
-  @JsonProperty("status")
-  private String status;
+public class CreateCreditCardRequest {
+  @JsonProperty("accountName")
+  private String accountName;
 }

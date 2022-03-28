@@ -11,6 +11,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountStatus;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
+import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
@@ -875,5 +876,11 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Other Expense.Depreciation.Depreciation",
         "Expense.Other Expense.OtherMiscellaneousExpense.Miscellaneous",
         "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements");
+  }
+
+  @Test
+  public void canCreateBankAccount() {
+    codatService.createBankAccountForBusiness(
+        business.getId(), new CreateCreditCardRequest("My Card"));
   }
 }

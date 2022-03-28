@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -229,14 +230,17 @@ public class CodatClient {
   }
 
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
-      String companyRef,
-      String connectionId,
-      CodatCreateBankAccountRequest createBankAccountRequest)
-      throws CodatApiCallException {
+      String companyRef, String connectionId, String accountName) throws CodatApiCallException {
     try {
       return callCodatApi(
           "/companies/%s/connections/%s/push/bankAccounts".formatted(companyRef, connectionId),
-          objectMapper.writeValueAsString(createBankAccountRequest),
+          objectMapper.writeValueAsString(
+              new CodatCreateBankAccountRequest(
+                  accountName,
+                  RandomStringUtils.randomAlphanumeric(20),
+                  "Credit",
+                  "USD",
+                  "Clearspend")),
           CodatCreateBankAccountResponse.class);
     } catch (JsonProcessingException e) {
       throw new CodatApiCallException(

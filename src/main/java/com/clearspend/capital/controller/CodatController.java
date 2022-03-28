@@ -3,8 +3,8 @@ package com.clearspend.capital.controller;
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
-import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
+import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
@@ -85,7 +85,7 @@ public class CodatController {
 
   @PostMapping("/bank-accounts")
   CodatCreateBankAccountResponse createBankAccountForBusiness(
-      @Validated @RequestBody CodatCreateBankAccountRequest request) {
+      @Validated @RequestBody CreateCreditCardRequest request) {
     return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
   }
 

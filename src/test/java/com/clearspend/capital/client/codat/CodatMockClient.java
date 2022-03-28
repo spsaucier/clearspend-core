@@ -5,16 +5,19 @@ import com.clearspend.capital.client.codat.types.CodatAccountStatus;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
+import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.common.error.CodatApiCallException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,5 +118,11 @@ public class CodatMockClient extends CodatClient {
       String pushOperationKey, String companyRef) {
     return new CodatBankAccountStatusResponse(
         "Success", new CodatBankAccount("1234", "Clearspend Card"));
+  }
+
+  public CodatCreateBankAccountResponse createBankAccountForBusiness(
+      String companyRef, String connectionId, String accountName) throws CodatApiCallException {
+    return new CodatCreateBankAccountResponse(
+        new CodatValidation(new ArrayList()), "push-key", "Success");
   }
 }
