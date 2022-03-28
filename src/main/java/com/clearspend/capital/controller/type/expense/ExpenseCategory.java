@@ -21,11 +21,16 @@ public class ExpenseCategory {
   @NonNull
   private String expenseCategoryId;
 
+  @JsonProperty("status")
+  @NonNull
+  private String status;
+
   public static ExpenseCategory of(
       com.clearspend.capital.data.model.ExpenseCategory expenseCategory) {
     return new ExpenseCategory(
         expenseCategory.getIconRef(),
         expenseCategory.getCategoryName(),
-        expenseCategory.getId().toString());
+        expenseCategory.getId().toString(),
+        expenseCategory.getStatus().toString());
   }
 }
