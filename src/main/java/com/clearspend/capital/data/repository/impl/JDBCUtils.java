@@ -1,6 +1,8 @@
 package com.clearspend.capital.data.repository.impl;
 
+import com.clearspend.capital.common.data.util.MustacheSqlBeanPropertyContext;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig.QueryType;
 import com.samskivert.mustache.Template;
 import java.io.StringWriter;
 import java.sql.Array;
@@ -11,15 +13,22 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.hibernate.Session;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
@@ -151,5 +160,112 @@ public class JDBCUtils {
         writer);
 
     return writer.toString();
+  }
+
+  record QueryAndResult<T>(String query, List<T> result) {}
+
+  public static <T> QueryAndResult<T> executeMustacheQuery(
+      @NonNull final EntityManager entityManager,
+      @NonNull final Template sqlTemplate,
+      @NonNull final MustacheQueryConfig<T> config) {
+    final Map<String, Object> context = getMustacheContext(config.getParameterSource());
+    final Map<String, Boolean> parentContext =
+        config.forCount ? JMUSTACHE_COUNT_CONTEXT : JMUSTACHE_ENTITY_CONTEXT;
+
+    final StringWriter writer = new StringWriter();
+    sqlTemplate.execute(context, parentContext, writer);
+    final String query = writer.toString();
+    final List<T> result =
+        switch (config.getQueryType()) {
+          case NATIVE_QUERY -> executeNativeQuery(
+              entityManager, query, config.getEntityClass(), config.getParameterSource());
+          case JDBC_TEMPLATE -> executeJdbcTemplate(
+              entityManager, query, config.getRowMapper(), config.getParameterSource());
+          case UNKNOWN -> throw new IllegalStateException(
+              "Mustache query config incomplete, cannot determine type of query to execute");
+        };
+    return new QueryAndResult<>(query, result);
+  }
+
+  private static <T> List<T> executeJdbcTemplate(
+      @NonNull final EntityManager entityManager,
+      @NonNull final String query,
+      @NonNull final RowMapper<T> rowMapping,
+      @Nullable final SqlParameterSource parameterSource) {
+    final SqlParameterSource source =
+        Optional.ofNullable(parameterSource).orElse(new MapSqlParameterSource());
+    return entityManager
+        .unwrap(Session.class)
+        .doReturningWork(
+            connection ->
+                new NamedParameterJdbcTemplate(new SingleConnectionDataSource(connection, true))
+                    .query(query, source, rowMapping));
+  }
+
+  private static <T> List<T> executeNativeQuery(
+      @NonNull final EntityManager entityManager,
+      @NonNull final String query,
+      @NonNull final Class<T> entity,
+      @Nullable final SqlParameterSource parameterSource) {
+    final Query nativeQuery = entityManager.createNativeQuery(query, entity);
+    final SqlParameterSource source =
+        Optional.ofNullable(parameterSource).orElse(new MapSqlParameterSource());
+    final String[] paramNames =
+        Optional.ofNullable(source.getParameterNames()).orElse(new String[0]);
+    Arrays.stream(paramNames)
+        .forEach(name -> safelySetParameter(nativeQuery, name, source.getValue(name)));
+    return nativeQuery.getResultList();
+  }
+
+  private static void safelySetParameter(final Query query, final String name, final Object value) {
+    try {
+      query.setParameter(name, value);
+    } catch (IllegalArgumentException ex) {
+      if (!ex.getMessage().contains("Could not locate named parameter")) {
+        throw ex;
+      }
+      // Otherwise suppress because NativeQueries don't like it when a parameter does not exist in
+      // the SQL
+    }
+  }
+
+  private static Map<String, Object> getMustacheContext(
+      @Nullable final SqlParameterSource parameterSource) {
+    if (parameterSource == null) {
+      return Map.of();
+    } else if (parameterSource instanceof MapSqlParameterSource mParam) {
+      return mParam.getValues();
+    } else if (parameterSource instanceof BeanPropertySqlParameterSource bParam) {
+      return new MustacheSqlBeanPropertyContext(bParam);
+    }
+    throw new IllegalArgumentException(
+        "Invalid parameter source type: %s".formatted(parameterSource.getClass().getName()));
+  }
+
+  @Getter
+  @Builder
+  public static class MustacheQueryConfig<T> {
+    private final SqlParameterSource parameterSource;
+    @Builder.Default private final boolean forCount = false;
+    /** Using an Entity class allows for automatic mapping if a full entity is being retrieved. */
+    private final Class<T> entityClass;
+    /** Using a RowMapper allows for manual mapping of custom results. */
+    private final RowMapper<T> rowMapper;
+
+    public QueryType getQueryType() {
+      if (entityClass != null) {
+        return QueryType.NATIVE_QUERY;
+      } else if (rowMapper != null) {
+        return QueryType.JDBC_TEMPLATE;
+      } else {
+        return QueryType.UNKNOWN;
+      }
+    }
+
+    public enum QueryType {
+      NATIVE_QUERY,
+      JDBC_TEMPLATE,
+      UNKNOWN
+    }
   }
 }
