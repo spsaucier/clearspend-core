@@ -11,6 +11,7 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -124,5 +125,9 @@ public class CodatMockClient extends CodatClient {
       String companyRef, String connectionId, String accountName) throws CodatApiCallException {
     return new CodatCreateBankAccountResponse(
         new CodatValidation(new ArrayList()), "push-key", "Success");
+  }
+
+  public CodatSyncResponse syncDataTypeForCompany(String companyRef, String dataType) {
+    return new CodatSyncResponse("company-id", companyRef, dataType);
   }
 }

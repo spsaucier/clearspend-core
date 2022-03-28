@@ -1,5 +1,7 @@
 package com.clearspend.capital.controller.type.chartOfAccounts;
 
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,4 +19,8 @@ public class ChartOfAccountsMappingResponse {
   @JsonProperty("categoryIconRef")
   @NonNull
   private Integer categoryIconRef;
+
+  @JsonProperty("expenseCategoryId")
+  @NonNull
+  private TypedId<ExpenseCategoryId> expenseCategoryId;
 }

@@ -49,7 +49,9 @@ public class ChartOfAccountsMappingService {
                 return null;
               }
               return new ChartOfAccountsMappingResponse(
-                  codatAccount.getId(), mapping.getExpenseCategoryIconRef());
+                  codatAccount.getId(),
+                  mapping.getExpenseCategoryIconRef(),
+                  mapping.getExpenseCategoryId());
             })
         .filter(mapping -> mapping != null)
         .collect(Collectors.toList());
@@ -91,7 +93,9 @@ public class ChartOfAccountsMappingService {
         .map(
             mapping ->
                 new ChartOfAccountsMappingResponse(
-                    mapping.getAccountRefId(), mapping.getExpenseCategoryIconRef()))
+                    mapping.getAccountRefId(),
+                    mapping.getExpenseCategoryIconRef(),
+                    mapping.getExpenseCategoryId()))
         .collect(Collectors.toList());
   }
 

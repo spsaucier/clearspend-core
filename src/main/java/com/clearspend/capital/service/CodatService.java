@@ -448,6 +448,7 @@ public class CodatService {
               business ->
                   businessService.updateCodatCreditCardForBusiness(
                       business.getId(), accountStatus.getData().getId()));
+      codatClient.syncDataTypeForCompany(codatCompanyRef, "chartOfAccounts");
     }
   }
 

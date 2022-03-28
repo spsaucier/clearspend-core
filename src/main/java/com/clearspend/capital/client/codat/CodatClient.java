@@ -16,6 +16,7 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
@@ -273,5 +274,10 @@ public class CodatClient {
     return getFromCodatApi(
         "/companies/%s/push/%s".formatted(companyRef, pushOperationKey),
         CodatBankAccountStatusResponse.class);
+  }
+
+  public CodatSyncResponse syncDataTypeForCompany(String companyRef, String dataType) {
+    return callCodatApi(
+        "/companies/%s/data/queue/%s".formatted(companyRef, dataType), "", CodatSyncResponse.class);
   }
 }
