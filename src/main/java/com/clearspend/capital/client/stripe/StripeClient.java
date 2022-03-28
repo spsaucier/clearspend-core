@@ -160,6 +160,8 @@ public class StripeClient {
         .setPhone(business.getBusinessPhone().getEncrypted())
         .setAddress(addressBuilder.build());
 
+    accountBuilder.setEmail(business.getBusinessEmail().getEncrypted());
+
     accountBuilder.setCountry(business.getClearAddress().getCountry().getTwoCharacterCode());
 
     accountBuilder.setCompany(companyBuilder.build());
@@ -269,6 +271,8 @@ public class StripeClient {
         .setAddress(addressBuilder.build());
 
     accountBuilder.setCompany(companyBuilder.build());
+
+    accountBuilder.setEmail(business.getBusinessEmail().getEncrypted());
 
     AccountUpdateParams accountUpdateParams =
         accountBuilder

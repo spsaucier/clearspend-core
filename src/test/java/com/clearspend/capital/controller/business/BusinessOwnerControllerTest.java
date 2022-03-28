@@ -28,6 +28,7 @@ import com.clearspend.capital.service.ServiceHelper;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
+import com.stripe.model.Account;
 import com.stripe.model.Event;
 import java.io.FileReader;
 import java.math.BigDecimal;
@@ -238,7 +239,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                             "\"disabled_reason\":\"rejected.fraud\""))
                 .getAsJsonObject());
 
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
     Business businessResponse =
@@ -297,7 +299,8 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                         .replace(event.getAccount(), business.getStripeData().getAccountRef()))
                 .getAsJsonObject());
 
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business businessResponse =
         serviceHelper.businessService().getBusiness(business.getId()).business();

@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.BusinessStatusReason;
 import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
@@ -31,6 +32,11 @@ import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.google.errorprone.annotations.RestrictedApi;
+import com.stripe.model.Account.BusinessProfile;
+import com.stripe.model.Account.Company;
+import com.stripe.model.Address;
+import java.util.Locale;
+import java.util.function.Consumer;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -379,5 +385,109 @@ public class BusinessService {
         allocation, adjustmentAndHoldRecord.adjustment(), notes);
 
     return adjustmentAndHoldRecord;
+  }
+
+  @Transactional
+  public void syncWithStripeAccountData(Business business, com.stripe.model.Account account) {
+    StringBuilder stringBuilder = new StringBuilder();
+    Company company = account.getCompany();
+    setOnNotEqual(
+        business.getLegalName(),
+        company.getName(),
+        o -> business.setLegalName(company.getName()),
+        stringBuilder);
+    // TODO gb: check if we can get EIN from stripe
+    //    setOnNotEqual(business.getEmployerIdentificationNumber(),
+    // company.getTaxIdRegistrar(), o -> business.setLegalName((String)o), checker);
+    setOnNotEqual(
+        business.getType().getStripeValue().getValue(),
+        company.getStructure(),
+        o ->
+            business.setType(BusinessType.valueOf(company.getStructure().toUpperCase(Locale.ROOT))),
+        stringBuilder);
+    setOnNotEqual(
+        business.getBusinessPhone().getEncrypted(),
+        company.getPhone(),
+        o -> business.setBusinessPhone(new RequiredEncryptedString(company.getPhone())),
+        stringBuilder);
+    setOnNotEqual(
+        business.getBusinessEmail().getEncrypted(),
+        account.getEmail(),
+        o -> business.setBusinessEmail(new RequiredEncryptedString(account.getEmail())),
+        stringBuilder);
+
+    // business profile
+    BusinessProfile businessProfile = account.getBusinessProfile();
+    setOnNotEqual(
+        business.getBusinessName(),
+        businessProfile.getName(),
+        o -> business.setBusinessName(businessProfile.getName()),
+        stringBuilder);
+    setOnNotEqual(
+        business.getDescription(),
+        businessProfile.getProductDescription(),
+        o -> business.setDescription(businessProfile.getProductDescription()),
+        stringBuilder);
+    setOnNotEqual(
+        business.getUrl(),
+        businessProfile.getUrl(),
+        o -> business.setUrl(businessProfile.getUrl()),
+        stringBuilder);
+    setOnNotEqual(
+        business.getMcc(),
+        businessProfile.getMcc(),
+        o -> business.setMcc(businessProfile.getMcc()),
+        stringBuilder);
+
+    // Company Address
+    Address address = company.getAddress();
+    ClearAddress clearAddress = business.getClearAddress();
+    setOnNotEqual(
+        clearAddress.getStreetLine1(),
+        address.getLine1(),
+        o -> business.getClearAddress().setStreetLine1(address.getLine1()),
+        stringBuilder);
+    setOnNotEqual(
+        clearAddress.getStreetLine2(),
+        address.getLine2(),
+        o -> business.getClearAddress().setStreetLine2(address.getLine2()),
+        stringBuilder);
+    setOnNotEqual(
+        clearAddress.getPostalCode(),
+        address.getPostalCode(),
+        o -> business.getClearAddress().setPostalCode(address.getPostalCode()),
+        stringBuilder);
+    setOnNotEqual(
+        clearAddress.getLocality(),
+        address.getCity(),
+        o -> business.getClearAddress().setLocality(address.getCity()),
+        stringBuilder);
+    setOnNotEqual(
+        clearAddress.getRegion(),
+        address.getState(),
+        o -> business.getClearAddress().setRegion(address.getState()),
+        stringBuilder);
+    setOnNotEqual(
+        clearAddress.getCountry().getTwoCharacterCode(),
+        address.getCountry(),
+        o -> business.getClearAddress().setCountry(Country.of(address.getCountry())),
+        stringBuilder);
+
+    if (stringBuilder.length() > 0) {
+      businessRepository.save(business);
+      log.info(
+          "Business {} updated with changes from Stripe Account. {}",
+          business.getBusinessId(),
+          stringBuilder);
+    }
+  }
+
+  private void setOnNotEqual(
+      String value, String value2, Consumer<Object> consumer, StringBuilder stringBuilder) {
+    if (!StringUtils.equals(value, value2)) {
+      consumer.accept(value2);
+      stringBuilder.append(
+          String.format("Stripe Account information changed from %s to %s.", value, value2));
+    }
   }
 }

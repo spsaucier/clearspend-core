@@ -180,7 +180,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, stripeEventType),
+                new StripeWebhookLog(), authorization, authorization, stripeEventType),
             true);
     if (approved) {
       testHelper.assertPost(networkCommon, false, false, true);
@@ -235,7 +235,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, stripeEventType),
+                new StripeWebhookLog(), authorization, authorization, stripeEventType),
             true);
     testHelper.assertPost(networkCommon, false, true, false);
     assertionHelper.assertBalance(
@@ -311,7 +311,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorizationCreated, stripeEventType),
+                new StripeWebhookLog(),
+                authorizationCreated,
+                authorizationCreated,
+                stripeEventType),
             true);
     testHelper.assertPost(networkCommon, false, false, false);
     assertionHelper.assertBalance(
@@ -354,7 +357,11 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     NetworkCommon networkCommon =
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
-            new ParseRecord(new StripeWebhookLog(), authorizationUpdated, stripeEventType),
+            new ParseRecord(
+                new StripeWebhookLog(),
+                authorizationUpdated,
+                authorizationUpdated,
+                stripeEventType),
             true);
     log.debug("networkCommon: {}", networkCommon);
     testHelper.assertPost(networkCommon, false, false, amountUpdated);
@@ -631,7 +638,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new ParseRecord(
-                new StripeWebhookLog(), transaction, StripeEventType.ISSUING_TRANSACTION_CREATED),
+                new StripeWebhookLog(),
+                transaction,
+                transaction,
+                StripeEventType.ISSUING_TRANSACTION_CREATED),
             true);
 
     log.debug("capture networkCommon\n{}", networkCommon);
@@ -695,7 +705,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), incrementalAuthorization, stripeEventType),
+                new StripeWebhookLog(),
+                incrementalAuthorization,
+                incrementalAuthorization,
+                stripeEventType),
             true);
 
     log.debug("incrementalAuthorization\n{}", networkCommon);

@@ -14,6 +14,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
+import com.stripe.model.Account;
 import com.stripe.model.Event;
 import java.io.FileReader;
 import lombok.NonNull;
@@ -119,7 +120,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             onboardBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -149,7 +151,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             onboardBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -177,7 +180,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -210,7 +214,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -238,7 +243,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -268,7 +274,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -299,7 +306,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -330,7 +338,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -360,7 +369,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -388,7 +398,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -417,7 +428,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -445,7 +457,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper
@@ -478,7 +491,8 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
-    stripeConnectHandler.accountUpdated(event);
+    stripeConnectHandler.accountUpdated(
+        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
     Business business =
         serviceHelper

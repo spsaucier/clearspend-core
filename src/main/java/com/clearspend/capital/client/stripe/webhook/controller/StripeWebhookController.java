@@ -13,6 +13,7 @@ import com.stripe.Stripe;
 import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Account;
 import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.net.ApiResource;
@@ -105,7 +106,8 @@ public class StripeWebhookController {
       case OUTBOUND_PAYMENT_RETURNED -> stripeConnectHandler.outboundPaymentReturned(stripeObject);
 
         // connected accounts
-      case ACCOUNT_UPDATED -> stripeConnectHandler.accountUpdated(stripeObject);
+      case ACCOUNT_UPDATED -> stripeConnectHandler.accountUpdated(
+          parseRecord.stripeEventObject, (Account) stripeObject);
       case ACCOUNT_EXTERNAL_ACCOUNT_CREATED -> stripeConnectHandler.externalAccountCreated(
           stripeObject);
       case FINANCIAL_ACCOUNT_FEATURES_STATUS_UPDATED -> stripeConnectHandler
@@ -189,6 +191,7 @@ public class StripeWebhookController {
   record ParseRecord(
       StripeWebhookLog stripeWebhookLog,
       StripeObject stripeObject,
+      StripeObject stripeEventObject,
       StripeEventType stripeEventType) {}
 
   private ParseRecord parseRequest(String requestType, HttpServletRequest request, String secret) {
@@ -243,9 +246,6 @@ public class StripeWebhookController {
 
     StripeEventType stripeEventType = StripeEventType.fromString(stripeWebhookLog.getEventType());
 
-    return new ParseRecord(
-        stripeWebhookLog,
-        stripeEventType == StripeEventType.ACCOUNT_UPDATED ? event : stripeObject,
-        stripeEventType);
+    return new ParseRecord(stripeWebhookLog, stripeObject, event, stripeEventType);
   }
 }

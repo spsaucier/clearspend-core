@@ -91,13 +91,14 @@ public class StripeConnectHandler {
   @StripeBusinessOp(
       reviewer = "Craig Miller",
       explanation = "This is a method where Stripe messages flow to the BusinessService")
-  public void accountUpdated(StripeObject stripeObject) {
+  public void accountUpdated(StripeObject stripeObject, com.stripe.model.Account stripeAccount) {
     try {
       Account account =
           gson.fromJson(
               ((Event) stripeObject).getDataObjectDeserializer().getRawJson(), Account.class);
       Business business = businessService.retrieveBusinessByStripeAccountReference(account.getId());
       stepHandler.execute(business, account);
+      businessService.syncWithStripeAccountData(business, stripeAccount);
     } catch (RecordNotFoundException recordNotFoundException) {
       log.info("Ignored case for record not found exception on Stripe connect webhook event.");
     } catch (JsonSyntaxException | InvalidKycStepException jsonSyntaxException) {
