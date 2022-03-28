@@ -79,8 +79,10 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
 
     List<AddChartOfAccountsMappingRequest> request =
         List.of(
-            new AddChartOfAccountsMappingRequest("account_1", expenseCategories.get(2).getId()),
-            new AddChartOfAccountsMappingRequest("account_2", expenseCategories.get(3).getId()));
+            new AddChartOfAccountsMappingRequest("account_1")
+                .withExpenseCategoryId(expenseCategories.get(2).getId()),
+            new AddChartOfAccountsMappingRequest("account_2")
+                .withExpenseCategoryId(expenseCategories.get(3).getId()));
 
     GetChartOfAccountsMappingResponse response =
         mockMvcHelper.queryObject(

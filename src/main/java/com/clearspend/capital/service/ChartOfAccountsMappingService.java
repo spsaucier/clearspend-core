@@ -11,6 +11,7 @@ import com.clearspend.capital.controller.type.chartOfAccounts.ChartOfAccountsMap
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.google.cloud.Tuple;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
@@ -20,8 +21,9 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ChartOfAccountsMappingService {
-  private final ChartOfAccountsMappingRepository mappingRepository;
   private final BusinessService businessService;
+  private final ChartOfAccountsMappingRepository mappingRepository;
+  private final ExpenseCategoryService expenseCategoryService;
   private final CodatClient codatClient;
 
   public List<ChartOfAccountsMappingResponse> getAllMappingsForBusiness(
@@ -59,20 +61,33 @@ public class ChartOfAccountsMappingService {
     // delete existing chart of accounts mappings for business
     deleteChartOfAccountsMappingsForBusiness(businessId);
 
-    List<ChartOfAccountsMapping> mappings =
+    List<ChartOfAccountsMapping> allMappings =
         request.stream()
             .map(
-                mappingRequest ->
-                    (new ChartOfAccountsMapping(
+                mapping ->
+                    Tuple.of(
+                        mapping,
+                        mapping.getExpenseCategoryId() != null
+                            ? expenseCategoryService
+                                .getExpenseCategoryById(mapping.getExpenseCategoryId())
+                                .orElseThrow(
+                                    () ->
+                                        new RecordNotFoundException(
+                                            Table.EXPENSE_CATEGORY, mapping.getExpenseCategoryId()))
+                            : expenseCategoryService.addExpenseCategory(
+                                businessId, mapping.getExpenseCategoryName())))
+            .map(
+                pair ->
+                    new ChartOfAccountsMapping(
                         businessId,
-                        mappingRequest.getExpenseCategoryId(),
-                        0,
-                        mappingRequest.getAccountRef())))
+                        pair.y().getId(),
+                        pair.y().getIconRef(),
+                        pair.x().getAccountRef()))
             .collect(Collectors.toList());
 
-    mappings.stream().forEach(mapping -> mappingRepository.save(mapping));
+    allMappings.stream().forEach(mapping -> mappingRepository.save(mapping));
 
-    return mappings.stream()
+    return allMappings.stream()
         .map(
             mapping ->
                 new ChartOfAccountsMappingResponse(

@@ -7,6 +7,8 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.Table;
 import lombok.*;
@@ -40,5 +42,6 @@ public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> {
 
   @NonNull
   @Column(name = "status")
+  @Enumerated(EnumType.ORDINAL)
   private ExpenseCategoryStatus status;
 }

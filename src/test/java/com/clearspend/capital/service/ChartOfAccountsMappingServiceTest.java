@@ -81,14 +81,16 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  public void testAddMappingstoBusiness() {
+  public void testAddMappingsToBusiness() {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
     List<AddChartOfAccountsMappingRequest> request =
         List.of(
-            new AddChartOfAccountsMappingRequest("account_1", expenseCategories.get(4).getId()),
-            new AddChartOfAccountsMappingRequest("account_2", expenseCategories.get(5).getId()));
+            new AddChartOfAccountsMappingRequest("account_1")
+                .withExpenseCategoryId(expenseCategories.get(4).getId()),
+            new AddChartOfAccountsMappingRequest("account_2")
+                .withExpenseCategoryId(expenseCategories.get(5).getId()));
 
     mappingService.addChartOfAccountsMappings(business.getId(), request);
 
@@ -103,5 +105,43 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
                 .findByBusinessIdAndAccountRefId(business.getId(), "account_2")
                 .orElse(null))
         .isNotNull();
+  }
+
+  @SneakyThrows
+  @Test
+  void addChartOfAccountsMapping_whenProvidedExpenseCategoryNamesWillBuildNewCategories() {
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(business.getId());
+
+    List<AddChartOfAccountsMappingRequest> request =
+        List.of(
+            new AddChartOfAccountsMappingRequest("test_account")
+                .withExpenseCategoryName("NEW_CATEGORY_NAME"));
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    List<ChartOfAccountsMappingResponse> response =
+        mappingService.addChartOfAccountsMappings(business.getId(), request);
+
+    assertThat(expenseCategoryRepository.findFirstCategoryByName("NEW_CATEGORY_NAME")).isPresent();
+  }
+
+  @SneakyThrows
+  @Test
+  void addChartOfAccountsMapping_whenExpenseCategoriesAlreadyExistThenUseThose() {
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(business.getId());
+
+    List<AddChartOfAccountsMappingRequest> request =
+        List.of(
+            new AddChartOfAccountsMappingRequest("test_account")
+                .withExpenseCategoryName(expenseCategories.get(0).getCategoryName()));
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    List<ChartOfAccountsMappingResponse> response =
+        mappingService.addChartOfAccountsMappings(business.getId(), request);
+
+    assertThat(expenseCategoryRepository.findByBusinessId(business.getId()))
+        .size()
+        .isEqualTo(expenseCategories.size());
   }
 }

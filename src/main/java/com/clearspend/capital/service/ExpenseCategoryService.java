@@ -9,6 +9,7 @@ import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class ExpenseCategoryService {
 
   public Optional<ExpenseCategory> getExpenseCategoryById(TypedId<ExpenseCategoryId> id) {
     return categoryRepository.findById(id);
+  }
+
+  public Optional<ExpenseCategory> getExpenseCategoryByName(String name) {
+    return categoryRepository.findFirstCategoryByName(name);
   }
 
   public void createDefaultCategoriesForBusiness(TypedId<BusinessId> businessId) {
@@ -65,5 +70,20 @@ public class ExpenseCategoryService {
                       defaultExpenseCategoryNames.get(index),
                       ExpenseCategoryStatus.ACTIVE));
             });
+  }
+
+  @Transactional
+  public ExpenseCategory addExpenseCategory(TypedId<BusinessId> businessId, String categoryName) {
+    // Check that we don't already have an Expense Category with the same name
+    return categoryRepository
+        .findFirstCategoryByName(categoryName)
+        .orElseGet(
+            () ->
+                categoryRepository.save(
+                    new ExpenseCategory(
+                        businessId,
+                        0, // IconRef should be zero?
+                        categoryName,
+                        ExpenseCategoryStatus.ACTIVE)));
   }
 }
