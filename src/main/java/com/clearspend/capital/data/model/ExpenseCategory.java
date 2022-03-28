@@ -42,6 +42,6 @@ public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> {
 
   @NonNull
   @Column(name = "status")
-  @Enumerated(EnumType.ORDINAL)
+  @Enumerated(EnumType.STRING)
   private ExpenseCategoryStatus status;
 }

@@ -8,6 +8,7 @@ import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,19 +19,19 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class ExpenseCategoryService {
-  private final ExpenseCategoryRepository categoryRepository;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   public List<ExpenseCategory> retrieveExpenseCategoriesForBusiness(
       TypedId<BusinessId> businessId) {
-    return categoryRepository.findByBusinessId(businessId);
+    return expenseCategoryRepository.findByBusinessId(businessId);
   }
 
   public Optional<ExpenseCategory> getExpenseCategoryById(TypedId<ExpenseCategoryId> id) {
-    return categoryRepository.findById(id);
+    return expenseCategoryRepository.findById(id);
   }
 
   public Optional<ExpenseCategory> getExpenseCategoryByName(String name) {
-    return categoryRepository.findFirstCategoryByName(name);
+    return expenseCategoryRepository.findFirstCategoryByName(name);
   }
 
   public void createDefaultCategoriesForBusiness(TypedId<BusinessId> businessId) {
@@ -63,7 +64,7 @@ public class ExpenseCategoryService {
     IntStream.range(0, defaultExpenseCategoryNames.size())
         .forEach(
             index -> {
-              categoryRepository.save(
+              expenseCategoryRepository.save(
                   new ExpenseCategory(
                       businessId,
                       index + 1,
@@ -75,15 +76,41 @@ public class ExpenseCategoryService {
   @Transactional
   public ExpenseCategory addExpenseCategory(TypedId<BusinessId> businessId, String categoryName) {
     // Check that we don't already have an Expense Category with the same name
-    return categoryRepository
+    return expenseCategoryRepository
         .findFirstCategoryByName(categoryName)
         .orElseGet(
             () ->
-                categoryRepository.save(
+                expenseCategoryRepository.save(
                     new ExpenseCategory(
                         businessId,
                         0, // IconRef should be zero?
                         categoryName,
                         ExpenseCategoryStatus.ACTIVE)));
+  }
+
+  public List<ExpenseCategory> disableExpenseCategories(
+      List<TypedId<ExpenseCategoryId>> expenseCategories) {
+    return expenseCategories.stream()
+        .map(
+            categoryId -> {
+              ExpenseCategory currentCategory = expenseCategoryRepository.getById(categoryId);
+              currentCategory.setStatus(ExpenseCategoryStatus.DISABLED);
+              return expenseCategoryRepository.save(currentCategory);
+            })
+        .collect(Collectors.toList());
+  }
+
+  public List<ExpenseCategory> enableAllExpenseCategories(TypedId<BusinessId> businessId) {
+    List<ExpenseCategory> disabledCategories =
+        expenseCategoryRepository.findByBusinessIdAndStatus(
+            businessId, ExpenseCategoryStatus.DISABLED);
+    return disabledCategories.stream()
+        .map(
+            category -> {
+              ExpenseCategory currentCategory = expenseCategoryRepository.getById(category.getId());
+              currentCategory.setStatus(ExpenseCategoryStatus.ACTIVE);
+              return expenseCategoryRepository.save(currentCategory);
+            })
+        .collect(Collectors.toList());
   }
 }
