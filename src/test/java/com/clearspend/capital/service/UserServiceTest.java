@@ -283,7 +283,12 @@ class UserServiceTest extends BaseCapitalTest {
   void updateUser_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    final User existing = testHelper.createUser(createBusinessRecord.business()).user();
+    final User existing =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
     final ThrowingRunnable action =
         () ->
             userService.updateUser(
@@ -302,6 +307,7 @@ class UserServiceTest extends BaseCapitalTest {
                 DefaultRoles.ALLOCATION_EMPLOYEE,
                 DefaultRoles.ALLOCATION_MANAGER,
                 DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(existing))
         .build()
         .validateServiceMethod(action);
   }

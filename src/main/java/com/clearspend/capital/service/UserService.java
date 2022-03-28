@@ -205,7 +205,7 @@ public class UserService {
       reviewer = "jscarbor",
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
+  @PreAuthorize("isSelf(#userId) or hasRootPermission(#businessId, 'MANAGE_USERS')")
   public CreateUpdateUserRecord updateUser(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
