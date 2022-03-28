@@ -153,6 +153,13 @@ public class RolesAndPermissionsService {
       prepareUserAllocationRoleChange(User grantee, Allocation allocation, String newRole) {
     entityManager.flush();
 
+    log.info(
+        "Grantor {} , Grantee {}, allocation {}, role {} ",
+        CurrentUser.get(),
+        grantee,
+        allocation,
+        newRole);
+
     if (grantee.getBusinessId().equals(allocation.getBusinessId())
         && grantee.getType().equals(UserType.BUSINESS_OWNER)) {
       // The return value confirms the standard
@@ -163,6 +170,7 @@ public class RolesAndPermissionsService {
         Optional.ofNullable(grantee.getSubjectRef())
             .map(s -> fusionAuthService.getUserRoles(UUID.fromString(s)))
             .orElse(Collections.emptySet());
+    log.info("User's Subject Reference {}", grantee.getSubjectRef());
     if (!grantee.getBusinessId().equals(allocation.getBusinessId())
         && !granteeGlobalRoles.contains(GLOBAL_BOOKKEEPER)) {
       throw new InvalidRequestException("Only bookkeepers can cross business boundaries");
@@ -173,7 +181,11 @@ public class RolesAndPermissionsService {
             userAllocationRoleRepository.getUserPermissionAtAllocation(
                 grantee.getBusinessId(), allocation.getId(), grantee.getId(), granteeGlobalRoles),
             allocation.getId());
-
+    log.info(
+        "Grantor{}, Grantee {}, at allocation {}",
+        CurrentUser.get(),
+        grantee.getId(),
+        allocation.getId());
     EnumSet<AllocationPermission> newPerms =
         newRole == null
             ? EnumSet.noneOf(AllocationPermission.class)
@@ -208,15 +220,16 @@ public class RolesAndPermissionsService {
             .map(ancestorAllocations::get)
             .filter(a -> a.getOwnerId().equals(grantee.getId()))
             .findFirst();
-
     boolean isAllocationOwner = ownedAllocationOptional.isPresent();
     EnumSet<AllocationPermission> requiredPermissions = EnumSet.noneOf(AllocationPermission.class);
     if (isAllocationOwner) {
       requiredPermissions.addAll(
           userAllocationRoleRepository.getRolePermissions(
               allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER));
+      log.info("Allocation owner permissions: {}", allocation.getBusinessId());
     }
     if (allocation.getParentAllocationId() != null) {
+      log.info("Parent level allocation: {}", allocation.getParentAllocationId());
       requiredPermissions.addAll(
           ensureNonNullPermissions(
                   userAllocationRoleRepository.getUserPermissionAtAllocation(

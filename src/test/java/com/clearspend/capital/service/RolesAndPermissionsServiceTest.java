@@ -8,7 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.TestAppender;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
@@ -28,6 +31,7 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
@@ -47,6 +51,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -56,6 +61,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   private static final BigDecimal TWO = new BigDecimal(2);
 
   @Autowired private TestHelper testHelper;
+  @Autowired private TestAppender testAppender;
   @Autowired AllocationService allocationService;
   @Autowired UserAllocationRoleRepository userAllocationRoleRepository;
   @Autowired RolesAndPermissionsService rolesAndPermissionsService;
@@ -85,6 +91,12 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         BankAccountTransactType.DEPOSIT,
         Amount.of(Currency.USD, new BigDecimal("720.51")),
         false);
+
+    // Capturing the log
+    Logger rolesAndPermissionsLogger =
+        (Logger) LoggerFactory.getLogger(RolesAndPermissionsService.class);
+    rolesAndPermissionsLogger.addAppender(testAppender);
+    testAppender.start();
   }
 
   /* All these commented-out tests will come out as their assertions are refactored
@@ -209,8 +221,18 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     // The allocation owner gives someone else manage permission
     User otherUser = newUser.user();
     setCurrentUser(rootAllocationOwner);
-    rolesAndPermissionsService.createUserAllocationRole(
-        otherUser, rootAllocation, ALLOCATION_MANAGER);
+    UserAllocationRole userAllocationRole =
+        rolesAndPermissionsService.createUserAllocationRole(
+            otherUser, rootAllocation, ALLOCATION_MANAGER);
+
+    assertThat(
+            testAppender.countEventsForLogger(
+                "com.clearspend.capital.service.RolesAndPermissionsService"))
+        .isEqualTo(3);
+    assertThat(testAppender.contains("User's Subject Reference", Level.INFO)).isTrue();
+    assertEquals(testAppender.getLoggedEvents().get(2).getLevel(), Level.INFO);
+    assertThat(userAllocationRole).isNotNull();
+    assertThat(userAllocationRole).isNotNull().extracting("role").isEqualTo("Manager");
 
     // Then someone else may not take manage away from allocation owner by deleting
     tryToDemoteExpectingExceptions(otherUser, rootAllocationOwner, rootAllocation);
