@@ -77,7 +77,7 @@ public class NetworkMessageService {
 
     common.setBusinessId(cardRecord.card().getBusinessId());
     common.setCard(cardRecord.card());
-    common.setUser(userService.retrieveUser(cardRecord.card().getUserId()));
+    common.setUser(userService.retrieveUserForService(cardRecord.card().getUserId()));
 
     // get any prior network messages as we'll need to pull the allocationId and accountId from them
     // as the one of the card record may have been updated

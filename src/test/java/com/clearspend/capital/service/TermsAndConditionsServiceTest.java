@@ -46,6 +46,7 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void getCorrectDocumentTimestamp() {
     TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     File termsFile = termsResource.getFile();
     File privacyPolicyFile = privacyPolicyResource.getFile();
     String termsContent = readFileContent(termsFile);

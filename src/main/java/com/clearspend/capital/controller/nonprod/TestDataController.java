@@ -58,6 +58,7 @@ import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.service.UserService.TestDataUserOp;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -735,6 +736,9 @@ public class TestDataController {
         Collections.emptySet());
   }
 
+  @TestDataUserOp(
+      reviewer = "Craig Miller",
+      explanation = "The method being called is to create users for the test data")
   public CreateUpdateUserRecord createUser(Business business) {
     return userService.createUserAndFusionAuthRecord(
         business.getId(),

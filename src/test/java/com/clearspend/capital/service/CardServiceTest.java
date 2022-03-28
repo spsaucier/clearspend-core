@@ -59,6 +59,7 @@ class CardServiceTest extends BaseCapitalTest {
   public void setup() {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
+      testHelper.setCurrentUser(createBusinessRecord.user());
       business = createBusinessRecord.business();
       allocation = createBusinessRecord.allocationRecord().allocation();
       userRecord = testHelper.createUser(createBusinessRecord.business());

@@ -38,7 +38,7 @@ import org.hibernate.annotations.TypeDefs;
 @Table(name = "users")
 @TypeDefs({@TypeDef(name = "enum-array", typeClass = EnumArrayType.class)})
 @Slf4j
-public class User extends TypedMutable<UserId> {
+public class User extends TypedMutable<UserId> implements BusinessRelated, UserRelated {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -69,4 +69,9 @@ public class User extends TypedMutable<UserId> {
 
   // Timestamp for terms & conditions
   private LocalDateTime termsAndConditionsAcceptanceTimestamp;
+
+  @Override
+  public TypedId<UserId> getUserId() {
+    return getId();
+  }
 }

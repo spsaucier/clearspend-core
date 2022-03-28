@@ -211,7 +211,7 @@ public class CardStatementService {
     Font fontBold8 = new Font(defaultBaseFont, 8, Font.BOLD);
     fontBold8.setColor(Color.black);
 
-    User user = userService.retrieveUser(card.card().getUserId());
+    User user = userService.retrieveUserForService(card.card().getUserId());
     Paragraph paragraph = new Paragraph();
     paragraph.add(new Chunk("Cardholder: ", fontBold8));
     paragraph.add(new Chunk(user.getFirstName() + " " + user.getLastName() + "\n\n", fontNormal8));

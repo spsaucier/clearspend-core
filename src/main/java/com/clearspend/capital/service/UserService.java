@@ -20,6 +20,7 @@ import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.FusionAuthService.CapitalChangePasswordReason;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -36,12 +37,26 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
+
+  public @interface LoginUserOp {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface TestDataUserOp {
+    String reviewer();
+
+    String explanation();
+  }
 
   private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
@@ -90,7 +105,7 @@ public class UserService {
 
   /** Creates a user for an existing fusion auth user, happens during initial onboarding */
   @Transactional
-  public User createUserForFusionAuthUser(
+  User createUserForFusionAuthUser(
       @NonNull TypedId<UserId> userId,
       TypedId<BusinessId> businessId,
       UserType type,
@@ -121,6 +136,7 @@ public class UserService {
 
   /** Creates a new user without a corresponding fusion auth user, for regular employee */
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public CreateUpdateUserRecord createUser(
       TypedId<BusinessId> businessId,
       UserType type,
@@ -156,6 +172,12 @@ public class UserService {
       reviewer = "jscarbor",
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation =
+          "This method is exclusively used by the TestDataController in order to generate test users",
+      allowlistAnnotations = {TestDataUserOp.class})
   public CreateUpdateUserRecord createUserAndFusionAuthRecord(
       TypedId<BusinessId> businessId,
       UserType type,
@@ -183,6 +205,7 @@ public class UserService {
       reviewer = "jscarbor",
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public CreateUpdateUserRecord updateUser(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,
@@ -249,40 +272,44 @@ public class UserService {
     return StringUtils.isNotEmpty(newValue) && !oldValue.getEncrypted().equals(newValue);
   }
 
+  @PostAuthorize("isSelf(returnObject.id) or hasRootPermission(returnObject, 'MANAGE_USERS')")
   public User retrieveUser(TypedId<UserId> userId) {
+    return retrieveUserForService(userId);
+  }
+
+  User retrieveUserForService(final TypedId<UserId> userId) {
     return userRepository
         .findById(userId)
         .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
   }
 
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation =
+          "This method is used to retrieve user data during the login flow, and no SecurityContext will be available.",
+      allowlistAnnotations = {LoginUserOp.class})
   public Optional<User> retrieveUserBySubjectRef(String subjectRef) {
     return userRepository.findBySubjectRef(subjectRef);
   }
 
+  @PreAuthorize(
+      "hasRootPermission(#businessId, 'MANAGE_USERS') or hasGlobalPermission('CUSTOMER_SERVICE')")
   public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {
     return userRepository.findByBusinessId(businessId);
   }
 
-  public Optional<User> retrieveUserByEmail(String email) {
+  Optional<User> retrieveUserByEmail(String email) {
     return userRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
-  public List<User> retrieveUsersByUsernameForBusiness(
-      TypedId<BusinessId> businessId, RequiredEncryptedStringWithHash userName) {
-    return userRepository.findByBusinessIdAndFirstNameLikeOrLastNameLike(
-        businessId, userName, userName);
-  }
-
-  public List<User> retrieveUsersByIds(
-      TypedId<BusinessId> businessId, List<TypedId<UserId>> userIds) {
-    return userRepository.findByBusinessIdAndIdIn(businessId, userIds);
-  }
-
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public Page<FilteredUserWithCardListRecord> retrieveUserPage(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
     return userRepository.find(businessId, userFilterCriteria);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public boolean archiveUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     User user =
         userRepository
@@ -292,6 +319,7 @@ public class UserService {
     return userRepository.save(user).isArchived();
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public byte[] createCSVFile(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
 

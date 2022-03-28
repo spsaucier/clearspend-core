@@ -9,15 +9,20 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.permission.CustomUser;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Person;
+import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +37,7 @@ class UserServiceTest extends BaseCapitalTest {
   @Autowired private UserRepository userRepository;
 
   @Autowired private UserService userService;
+  @Autowired private PermissionValidationHelper permissionValidationHelper;
 
   @Autowired private StripeMockClient stripeMockClient;
 
@@ -47,6 +53,7 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     CreateUpdateUserRecord userRecord = testHelper.createUser(createBusinessRecord.business());
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
@@ -55,6 +62,7 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser_withoutAddress() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     CreateUpdateUserRecord userRecord =
         userService.createUser(
             createBusinessRecord.business().getId(),
@@ -71,6 +79,7 @@ class UserServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void createUser_withoutPhone() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     CreateUpdateUserRecord userRecord =
         userService.createUser(
             createBusinessRecord.business().getId(),
@@ -124,6 +133,8 @@ class UserServiceTest extends BaseCapitalTest {
     testHelper.setCurrentUser(createBusinessRecord.user());
     CreateBusinessRecord newBusiness = testHelper.createBusiness();
     String emailAddress = faker.internet().emailAddress();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     // Create the first Employee on the createBusinessRecord.business
     userService.createUser(
@@ -242,5 +253,155 @@ class UserServiceTest extends BaseCapitalTest {
                 .getEmail()
                 .toString())
         .isEqualTo(emailPriorToUpdate);
+  }
+
+  @Test
+  void createUser_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final ThrowingRunnable action =
+        () ->
+            userService.createUser(
+                createBusinessRecord.business().getId(),
+                UserType.EMPLOYEE,
+                "Bob",
+                "Saget",
+                null,
+                "bs@clearspend.com",
+                "123456789");
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void updateUser_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User existing = testHelper.createUser(createBusinessRecord.business()).user();
+    final ThrowingRunnable action =
+        () ->
+            userService.updateUser(
+                createBusinessRecord.business().getId(),
+                existing.getId(),
+                "Bob",
+                "Saget",
+                null,
+                "bs@clearspend.com",
+                "123456789",
+                false);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void retrieveUsersForBusiness_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final ThrowingRunnable action =
+        () -> userService.retrieveUsersForBusiness(createBusinessRecord.business().getId());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void retrieveUserPage_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final PageRequest pageRequest = new PageRequest();
+    pageRequest.setPageSize(1);
+    pageRequest.setPageNumber(1);
+    final UserFilterCriteria criteria = new UserFilterCriteria();
+    criteria.setPageToken(PageRequest.toPageToken(pageRequest));
+    final ThrowingRunnable action =
+        () -> userService.retrieveUserPage(createBusinessRecord.business().getId(), criteria);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void archiveUser_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User archive = testHelper.createUser(createBusinessRecord.business()).user();
+    final ThrowingRunnable action =
+        () -> userService.archiveUser(createBusinessRecord.business().getId(), archive.getId());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void createCSVFile_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final PageRequest pageRequest = new PageRequest();
+    pageRequest.setPageSize(1);
+    pageRequest.setPageNumber(1);
+    final UserFilterCriteria criteria = new UserFilterCriteria();
+    criteria.setPageToken(PageRequest.toPageToken(pageRequest));
+    final ThrowingRunnable action =
+        () -> userService.createCSVFile(createBusinessRecord.business().getId(), criteria);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void retrieveUser_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User owner =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final ThrowingRunnable action = () -> userService.retrieveUser(owner.getId());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationCustomUser(CustomUser.pass(owner))
+        .build()
+        .validateServiceMethod(action);
   }
 }

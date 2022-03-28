@@ -175,6 +175,8 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
     // instead of just creating a user with an expired password.  The latter is the main use
     // case we want to see working at the time of this test writing.
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     // Create a user without registering with FusionAuth
     CreateUpdateUserRecord newUser =
         userService.createUser(

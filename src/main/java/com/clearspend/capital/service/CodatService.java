@@ -132,7 +132,7 @@ public class CodatService {
               supplier,
               expenseAccount.get());
 
-      User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
+      User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
           new TransactionSyncLog(
               business.getId(),
@@ -160,7 +160,7 @@ public class CodatService {
                   "ACTIVE",
                   business.getCurrency().name()));
 
-      User currentUserDetails = userService.retrieveUser(CurrentUser.getUserId());
+      User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
 
       transactionSyncLogRepository.save(
           new TransactionSyncLog(

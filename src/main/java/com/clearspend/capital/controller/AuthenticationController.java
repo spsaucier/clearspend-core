@@ -17,6 +17,7 @@ import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.service.UserService;
+import com.clearspend.capital.service.UserService.LoginUserOp;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.inversoft.error.Errors;
@@ -125,6 +126,10 @@ public class AuthenticationController {
               be made to move this functionality to the user service or remove it entirely.
               Removal after March 2022 is probably appropriate.
               """)
+  @LoginUserOp(
+      reviewer = "Craig Miller",
+      explanation =
+          "User information must be looked up here, but there is no SecurityContext available to secure the method yet.")
   public ResponseEntity<UserLoginResponse> finalizeLogin(
       ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {
     LoginResponse response = loginResponse.successResponse;

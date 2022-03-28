@@ -58,8 +58,8 @@ public class AllocationServiceTest extends BaseCapitalTest {
   @Test
   void createAllocationCheckPermissions() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    CreateUpdateUserRecord peon = testHelper.createUser(createBusinessRecord.business());
     testHelper.setCurrentUser(createBusinessRecord.user());
+    CreateUpdateUserRecord peon = testHelper.createUser(createBusinessRecord.business());
     assertDoesNotThrow(
         () ->
             allocationService.createAllocation(

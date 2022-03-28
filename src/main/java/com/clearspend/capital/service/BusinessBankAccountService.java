@@ -652,7 +652,7 @@ public class BusinessBankAccountService {
     businessBankAccountRepository.save(businessBankAccount);
 
     String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
-    User currentUser = userService.retrieveUser(CurrentUser.get().userId());
+    User currentUser = userService.retrieveUserForService(CurrentUser.get().userId());
     twilioService.sendBankDetailsAddedEmail(
         currentUser.getEmail().getEncrypted(),
         currentUser.getFirstName().getEncrypted(),

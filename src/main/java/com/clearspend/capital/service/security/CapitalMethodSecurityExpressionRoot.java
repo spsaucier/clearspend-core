@@ -2,6 +2,7 @@ package com.clearspend.capital.service.security;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.BusinessRelated;
 import com.clearspend.capital.data.model.Ownable;
@@ -26,14 +27,22 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
     this.permissionEnrichmentService = permissionEnrichmentService;
   }
 
+  public boolean isSelf(final TypedId<UserId> userId) {
+    if (userId == null) {
+      return false;
+    }
+
+    return ((JwtAuthenticationToken) getAuthentication())
+        .getToken()
+        .getClaim("capitalUserId")
+        .equals(String.valueOf(userId));
+  }
+
   public boolean isSelfOwned(Ownable entity) {
     if (entity == null) {
       return false;
     }
-    return ((JwtAuthenticationToken) getAuthentication())
-            .getToken()
-            .getClaim("capitalUserId")
-            .equals(String.valueOf(entity.getUserId()))
+    return isSelf(entity.getUserId())
         && permissionEnrichmentService.evaluatePermission(
             getAuthentication(),
             entity.getBusinessId(),

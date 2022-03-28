@@ -78,7 +78,7 @@ public class TermsAndConditionsService {
    */
   public TermsAndConditionsRecord compareDocumentTimestampWithUserAcceptanceTimestamp(
       LocalDateTime maxDocumentTimestamp) {
-    User user = userService.retrieveUser(CurrentUser.getUserId());
+    User user = userService.retrieveUserForService(CurrentUser.getUserId());
     user.getTermsAndConditionsAcceptanceTimestamp();
     log.debug("termsAndConditions : {}", user.getTermsAndConditionsAcceptanceTimestamp());
     boolean isAcceptedTermsAndConditions = false;
@@ -111,7 +111,7 @@ public class TermsAndConditionsService {
   }
 
   public void acceptTermsAndConditionsTimestamp() {
-    User user = userService.retrieveUser(CurrentUser.getUserId());
+    User user = userService.retrieveUserForService(CurrentUser.getUserId());
     user.setTermsAndConditionsAcceptanceTimestamp(LocalDateTime.now());
     userRepository.save(user);
     userRepository.flush();

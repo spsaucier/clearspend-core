@@ -152,6 +152,8 @@ class UserControllerTest extends BaseCapitalTest {
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
@@ -178,6 +180,8 @@ class UserControllerTest extends BaseCapitalTest {
     final TypedId<UserId> createdUserId =
         objectMapper.readValue(response.getContentAsString(), CreateUserResponse.class).getUserId();
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     userService.retrieveUsersForBusiness(business.getId()).stream()
         .filter(u -> u.getType() == UserType.EMPLOYEE)
         .filter(u -> u.getId().equals(createdUserId))
@@ -193,6 +197,8 @@ class UserControllerTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
 
     Cookie authCookie = createBusinessRecord.authCookie();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     testHelper.createAllocation(
         business.getId(),
@@ -222,6 +228,8 @@ class UserControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     com.clearspend.capital.data.model.User user =
         userService.retrieveUser(createdUser.user().getId());
@@ -985,8 +993,6 @@ class UserControllerTest extends BaseCapitalTest {
         createBusinessRecord.allocationRecord().allocation().getId(),
         createBusinessRecord.user());
 
-    Cookie authCookie = testHelper.getDefaultAuthCookie();
-
     CreateUpdateUserRecord userRecord =
         userService.createUser(
             business.getId(),
@@ -1012,7 +1018,7 @@ class UserControllerTest extends BaseCapitalTest {
                         Common.USER_NAME,
                         userRecord.user().getFirstName().toString().substring(0, 3))
                     .contentType("application/json")
-                    .cookie(authCookie))
+                    .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -1315,6 +1321,8 @@ class UserControllerTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     userService.createUser(
         business.getId(),
         UserType.EMPLOYEE,
@@ -1367,6 +1375,8 @@ class UserControllerTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     CreateUpdateUserRecord user =
         userService.createUser(
             business.getId(),
@@ -1418,6 +1428,8 @@ class UserControllerTest extends BaseCapitalTest {
   void searchForUsersIncludeArchivedUsers() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
 
     CreateUpdateUserRecord user =
         userService.createUser(

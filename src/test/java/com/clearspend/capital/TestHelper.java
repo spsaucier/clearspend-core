@@ -1044,6 +1044,7 @@ public class TestHelper {
       Business business,
       Account sourceAccount,
       int transactions) {
+    setCurrentUser(createBusinessRecord.user());
     Allocation allocation = createBusinessRecord.allocationRecord.allocation();
     Account account = createBusinessRecord.allocationRecord.account();
     CreateUpdateUserRecord user = createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE);

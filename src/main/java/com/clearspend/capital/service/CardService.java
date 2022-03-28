@@ -118,7 +118,7 @@ public class CardService {
       }
     }
 
-    User user = userService.retrieveUser(userId);
+    User user = userService.retrieveUserForService(userId);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
@@ -387,7 +387,7 @@ public class CardService {
 
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
-    User cardOwner = userService.retrieveUser(card.getUserId());
+    User cardOwner = userService.retrieveUserForService(card.getUserId());
     if (cardStatus == CardStatus.ACTIVE) {
       // We need to use separate email templates for initial physical card activation,
       // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
@@ -548,7 +548,7 @@ public class CardService {
                 Instant.ofEpochSecond(stripeCard.getShipping().getEta()), ZoneOffset.UTC));
         card.setCarrier(stripeCard.getShipping().getCarrier());
         cardRepository.save(card);
-        User user = userService.retrieveUser(card.getUserId());
+        User user = userService.retrieveUserForService(card.getUserId());
         twilioService.sendCardShippedNotifyUserEmail(
             user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
       }
