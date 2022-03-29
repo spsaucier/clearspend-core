@@ -11,14 +11,21 @@ import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.BinType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.permission.CustomUser;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Person;
+import com.stripe.model.issuing.Cardholder;
+import java.util.Collections;
 import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +47,8 @@ class UserServiceTest extends BaseCapitalTest {
   @Autowired private PermissionValidationHelper permissionValidationHelper;
 
   @Autowired private StripeMockClient stripeMockClient;
+
+  @Autowired private CardService cardService;
 
   private CreateBusinessRecord createBusinessRecord;
 
@@ -164,14 +173,48 @@ class UserServiceTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void testUpdatingUserNameAndAddress() {
+  void testUpdatingOwnerNameAndAddress() {
     User user = createBusinessRecord.user();
     testHelper.setCurrentUser(user);
 
+    changeNameAndAddress(user, Person.class);
+  }
+
+  @SneakyThrows
+  @Test
+  void testUpdatingEmployeeNameAndAddress() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    CardRecord cardRec =
+        cardService.issueCard(
+            BinType.DEBIT,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            employee.getBusinessId(),
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            employee.getId(),
+            Currency.USD,
+            false,
+            createBusinessRecord.business().getLegalName(),
+            Collections.emptyMap(),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            employee.getAddress());
+
+    changeNameAndAddress(employee, Cardholder.class);
+  }
+
+  private void changeNameAndAddress(User user, Class<?> clazz) {
     String newFirstName = testHelper.generateFirstName();
     String newLastName = testHelper.generateLastName();
     Address newAddress = testHelper.generateEntityAddress();
-    long stripePersonWrites = stripeMockClient.countCreatedObjectsByType(Person.class);
+    long stripePersonWrites = stripeMockClient.countCreatedObjectsByType(clazz);
     userService.updateUser(
         user.getBusinessId(),
         user.getId(),
@@ -191,8 +234,7 @@ class UserServiceTest extends BaseCapitalTest {
     // Names and addresses aren't in FusionAuth, so skipping that
 
     // Check the change went to Stripe
-    assertThat(stripeMockClient.countCreatedObjectsByType(Person.class))
-        .isEqualTo(stripePersonWrites + 1);
+    assertThat(stripeMockClient.countCreatedObjectsByType(clazz)).isEqualTo(stripePersonWrites + 1);
   }
 
   @SneakyThrows

@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.StringJoiner;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
+import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +66,7 @@ public class UserService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
   private final BusinessOwnerService businessOwnerService;
+  private final StripeClient stripeClient;
 
   /**
    * If the user has not already been assigned a subjectRef, generate a random password and send
@@ -201,22 +204,36 @@ public class UserService {
     return new CreateUpdateUserRecord(user, password);
   }
 
+  /**
+   * @param businessId must match the user being modified
+   * @param userId the user to modify
+   * @param firstName the new first name
+   * @param lastName the new last name
+   * @param address the new address
+   * @param email the new email address
+   * @param phone the new phone number
+   * @param generatePassword true to generate a new password (and send an email)
+   * @return the new User and password
+   */
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
   @PreAuthorize("isSelf(#userId) or hasRootPermission(#businessId, 'MANAGE_USERS')")
   public CreateUpdateUserRecord updateUser(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      String firstName,
-      String lastName,
+      @NotNull TypedId<BusinessId> businessId,
+      @NotNull TypedId<UserId> userId,
+      @Nullable String firstName,
+      @Nullable String lastName,
       @Nullable Address address,
-      @NonNull String email,
-      String phone,
+      @Nullable String email,
+      @Nullable String phone,
       boolean generatePassword) {
 
     User user = retrieveUser(userId);
+    if (!businessId.equals(user.getBusinessId())) {
+      throw new IllegalArgumentException("businessId");
+    }
     if (isChanged(firstName, user.getFirstName())) {
       user.setFirstName(new RequiredEncryptedStringWithHash(firstName));
     }
@@ -255,6 +272,8 @@ public class UserService {
 
     if (user.getType().equals(UserType.BUSINESS_OWNER)) {
       businessOwnerService.updateBusinessOwnerAndStripePerson(user);
+    } else if (user.getExternalRef() != null) {
+      stripeClient.updateCardholder(user);
     }
 
     CreateUpdateUserRecord response =

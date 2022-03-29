@@ -223,6 +223,11 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
+  public Cardholder updateCardholder(User user) {
+    return generateEntityWithId(Cardholder.class);
+  }
+
+  @Override
   public Person updatePerson(BusinessOwner businessOwner, String stripeAccountId) {
     Person person = generateEntityWithId(Person.class);
     if (businessOwner.getTitle() != null) {

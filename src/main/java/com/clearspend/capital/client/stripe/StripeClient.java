@@ -74,6 +74,8 @@ import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
+import com.stripe.param.issuing.CardholderUpdateParams;
+import com.stripe.param.issuing.CardholderUpdateParams.Individual;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
@@ -408,6 +410,37 @@ public class StripeClient {
         () ->
             Cardholder.create(
                 params,
+                getRequestOptions(
+                    user.getId(),
+                    user.getVersion(),
+                    stripeProperties.getClearspendConnectedAccountId())));
+  }
+
+  @SneakyThrows
+  public Cardholder updateCardholder(User user) {
+    Cardholder cardholder = Cardholder.retrieve(user.getExternalRef());
+
+    CardholderUpdateParams updateParams =
+        CardholderUpdateParams.builder()
+            .setPhoneNumber(user.getPhone().getEncrypted())
+            .setStatus(
+                user.isArchived()
+                    ? CardholderUpdateParams.Status.INACTIVE
+                    : CardholderUpdateParams.Status.ACTIVE)
+            .setIndividual(
+                Individual.builder()
+                    .setFirstName(user.getFirstName().getEncrypted())
+                    .setLastName(user.getLastName().getEncrypted())
+                    .build())
+            .setEmail(user.getEmail().getEncrypted())
+            .build();
+
+    return callStripe(
+        "updateCardholder",
+        updateParams,
+        () ->
+            cardholder.update(
+                updateParams,
                 getRequestOptions(
                     user.getId(),
                     user.getVersion(),
@@ -782,6 +815,13 @@ public class StripeClient {
         FinancialAccount.class);
   }
 
+  /**
+   * @param methodName for logging what was going on
+   * @param params Parameters to Stripe
+   * @param function the Stripe function
+   * @param <T> The type coming back from the Stripe function
+   * @return the result of the Stripe function
+   */
   private <T extends ApiResource> T callStripe(
       String methodName, ApiRequestParams params, StripeProducer<T> function) {
     T result = null;

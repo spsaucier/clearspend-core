@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -109,18 +110,21 @@ public class UserController {
           TypedId<UserId> userId,
       @RequestBody UpdateUserRequest request) {
 
-    final CreateUpdateUserRecord updateUserRecord =
-        userService.updateUser(
-            CurrentUser.get().businessId(),
-            userId,
-            request.getFirstName(),
-            request.getLastName(),
-            request.getAddress() != null ? request.getAddress().toAddress() : null,
-            request.getEmail(),
-            request.getPhone(),
-            request.isGeneratePassword());
-
-    return new UpdateUserResponse(updateUserRecord.user().getId(), null);
+    try {
+      final CreateUpdateUserRecord updateUserRecord =
+          userService.updateUser(
+              CurrentUser.get().businessId(),
+              userId,
+              request.getFirstName(),
+              request.getLastName(),
+              request.getAddress() != null ? request.getAddress().toAddress() : null,
+              request.getEmail(),
+              request.getPhone(),
+              request.isGeneratePassword());
+      return new UpdateUserResponse(updateUserRecord.user().getId(), null);
+    } catch (IllegalArgumentException e) {
+      throw new DataIntegrityViolationException(e.getMessage(), e);
+    }
   }
 
   @PostMapping("/bulk")

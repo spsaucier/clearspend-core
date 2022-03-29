@@ -68,6 +68,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
+import com.github.javafaker.Name;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Person;
 import com.stripe.model.issuing.Authorization;
@@ -384,6 +385,18 @@ public class TestDataController {
                 Collections.emptySet(),
                 business.getClearAddress().toAddress())
             .card());
+
+    // If this doesn't bomb, then something is right with the Stripe integration
+    Name user2NewName = faker.name();
+    userService.updateUser(
+        user2.user().getBusinessId(),
+        user2.user().getId(),
+        user2NewName.firstName(),
+        user2NewName.lastName(),
+        null,
+        null,
+        null,
+        false);
 
     CreateUpdateUserRecord user3 = createUser(business);
     users.add(user3);
