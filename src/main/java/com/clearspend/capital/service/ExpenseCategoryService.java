@@ -88,6 +88,7 @@ public class ExpenseCategoryService {
                         ExpenseCategoryStatus.ACTIVE)));
   }
 
+  @Transactional
   public List<ExpenseCategory> disableExpenseCategories(
       List<TypedId<ExpenseCategoryId>> expenseCategories) {
     return expenseCategories.stream()
