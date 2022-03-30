@@ -450,6 +450,9 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     accountActivity.setReceipt(
         new ReceiptDetails(Stream.of(new TypedId<ReceiptId>()).collect(Collectors.toSet())));
     accountActivityRepository.saveAndFlush(accountActivity);
+    AccountActivity accountActivityEmptyReceiptObject = all.get(all.size() - 2);
+    accountActivityEmptyReceiptObject.setReceipt(new ReceiptDetails(Set.of()));
+    accountActivityRepository.saveAndFlush(accountActivityEmptyReceiptObject);
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
@@ -491,7 +494,9 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
     testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .receipt(new ReceiptDetails())
+            .build());
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
             .receipt(new ReceiptDetails(Set.of()))
@@ -525,8 +530,8 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
             objectMapper
                 .getTypeFactory()
                 .constructParametricType(PagedData.class, AccountActivityResponse.class));
-    assertEquals(2, pagedData.getContent().size());
-    assertEquals(pagedData.getTotalElements(), 2);
+    assertEquals(3, pagedData.getContent().size());
+    assertEquals(3, pagedData.getTotalElements());
     log.info(response.getContentAsString());
   }
 

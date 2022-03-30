@@ -12,8 +12,12 @@ where
     {{#allocationId}} and account_activity.allocation_id = :allocationId {{/allocationId}}
     {{#types.0}} and account_activity.type in :types {{/types.0}}
     {{#statuses.0}} and account_activity.status in :statuses {{/statuses.0}}
-    {{#withReceipt}} and account_activity.receipt_receipt_ids IS NOT NULL {{/withReceipt}}
-    {{#withoutReceipt}} and account_activity.receipt_receipt_ids IS NULL {{/withoutReceipt}}
+    {{#withReceipt}} and (account_activity.receipt_receipt_ids IS NOT NULL
+                     and cardinality(account_activity.receipt_receipt_ids) > 0)
+    {{/withReceipt}}
+    {{#withoutReceipt}} and (account_activity.receipt_receipt_ids IS NULL
+                        or cardinality(account_activity.receipt_receipt_ids) = 0)
+    {{/withoutReceipt}}
     {{#min}} and abs(account_activity.amount_amount) >= :min {{/min}}
     {{#max}} and abs(account_activity.amount_amount) <= :max {{/max}}
     {{#categories}} and account_activity.expense_details_category_name in :categories {{/categories}}
