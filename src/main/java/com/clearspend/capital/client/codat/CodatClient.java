@@ -35,6 +35,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -48,11 +49,15 @@ import reactor.core.publisher.Mono;
 public class CodatClient {
   private final WebClient codatWebClient;
   private final ObjectMapper objectMapper;
+  private final String quickbooksOnlineType;
 
   public CodatClient(
-      @Qualifier("codatWebClient") WebClient codatWebClient, ObjectMapper objectMapper) {
+      @Qualifier("codatWebClient") WebClient codatWebClient,
+      ObjectMapper objectMapper,
+      @Value("${client.codat.quickbooksonline-code}") String quickbooksOnlineType) {
     this.codatWebClient = codatWebClient;
     this.objectMapper = objectMapper;
+    this.quickbooksOnlineType = quickbooksOnlineType;
   }
 
   private <T> T callCodatApi(String uri, String parameters, Class<T> clazz) {
@@ -152,7 +157,7 @@ public class CodatClient {
   public CreateIntegrationResponse createQboConnectionForBusiness(String companyRef) {
     return callCodatApi(
         String.format("/companies/%s/connections", companyRef),
-        "\"quickbooksonlinesandbox\"",
+        "\"%s\"".formatted(quickbooksOnlineType),
         CreateIntegrationResponse.class);
   }
 

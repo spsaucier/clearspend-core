@@ -151,9 +151,10 @@ client:
   clearbit:
     api-key: ${CLEARBIT_API_KEY:sk_2f09108fb81c88e6874543afaefac99c}
   codat:
-    auth-token: ${CODAT_AUTH_TOKEN:NkJKUHVRZnBIYzdhY3VkUGhRVDFNM3FZWjdhTkE3UWFyeEJ2OE5YbA==}
-    base-url: ${CODAT_BASE_URL:https://api.codat.io}
+    auth-token: ${CODAT_AUTH_TOKEN:ZVZvb2RHdXl4ejZhZHJQMGpaQ0JkU2pzajNmY1RXUkRGUnBqTlZYbQ==}
+    base-url: ${CODAT_BASE_URL:https://api-uat.codat.io}
     auth-secret: ${CODAT_AUTH_SECRET:eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ}
+    quickbooksonline-code: ${CODAT_QBO_CODE:quickbooksonlinesandbox}
 
 logging:
   level:

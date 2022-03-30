@@ -34,7 +34,7 @@ public class CodatMockClient extends CodatClient {
   private List<CodatSupplier> supplierList;
 
   public CodatMockClient(WebClient codatWebClient, ObjectMapper objectMapper) {
-    super(codatWebClient, objectMapper);
+    super(codatWebClient, objectMapper, "quickbooksonlinesandbox");
     supplierList = new ArrayList<>();
     supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
   }
