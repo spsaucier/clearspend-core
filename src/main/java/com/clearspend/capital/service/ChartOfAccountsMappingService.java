@@ -12,7 +12,9 @@ import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.google.cloud.Tuple;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +55,7 @@ public class ChartOfAccountsMappingService {
                   mapping.getExpenseCategoryIconRef(),
                   mapping.getExpenseCategoryId());
             })
-        .filter(mapping -> mapping != null)
+        .filter(Objects::nonNull)
         .collect(Collectors.toList());
   }
 
@@ -77,7 +79,15 @@ public class ChartOfAccountsMappingService {
                                         new RecordNotFoundException(
                                             Table.EXPENSE_CATEGORY, mapping.getExpenseCategoryId()))
                             : expenseCategoryService.addExpenseCategory(
-                                businessId, mapping.getExpenseCategoryName())))
+                                businessId,
+                                mapping.getExpenseCategoryName(),
+                                mapping.getFullyQualifiedCategory() != null
+                                    ? List.of(
+                                        mapping
+                                            .getFullyQualifiedCategory()
+                                            .replaceFirst("^([^.]+.){3}", "")
+                                            .split("\\."))
+                                    : Collections.emptyList())))
             .map(
                 pair ->
                     new ChartOfAccountsMapping(
@@ -85,9 +95,9 @@ public class ChartOfAccountsMappingService {
                         pair.y().getId(),
                         pair.y().getIconRef(),
                         pair.x().getAccountRef()))
-            .collect(Collectors.toList());
+            .toList();
 
-    allMappings.stream().forEach(mapping -> mappingRepository.save(mapping));
+    mappingRepository.saveAll(allMappings);
 
     return allMappings.stream()
         .map(

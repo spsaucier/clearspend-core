@@ -74,18 +74,22 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
-  public ExpenseCategory addExpenseCategory(TypedId<BusinessId> businessId, String categoryName) {
+  public ExpenseCategory addExpenseCategory(
+      TypedId<BusinessId> businessId, String categoryName, List<String> parentPath) {
     // Check that we don't already have an Expense Category with the same name
     return expenseCategoryRepository
         .findFirstCategoryByName(categoryName)
         .orElseGet(
-            () ->
-                expenseCategoryRepository.save(
-                    new ExpenseCategory(
-                        businessId,
-                        0, // IconRef should be zero?
-                        categoryName,
-                        ExpenseCategoryStatus.ACTIVE)));
+            () -> {
+              ExpenseCategory newCategory =
+                  new ExpenseCategory(
+                      businessId,
+                      0, // IconRef should be zero?
+                      categoryName,
+                      ExpenseCategoryStatus.ACTIVE);
+              newCategory.setPathSegments(parentPath.toArray(new String[parentPath.size()]));
+              return expenseCategoryRepository.save(newCategory);
+            });
   }
 
   @Transactional

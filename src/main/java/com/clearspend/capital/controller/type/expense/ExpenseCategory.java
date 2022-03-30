@@ -1,12 +1,12 @@
 package com.clearspend.capital.controller.type.expense;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class ExpenseCategory {
 
   @JsonProperty("iconRef")
@@ -25,12 +25,16 @@ public class ExpenseCategory {
   @NonNull
   private String status;
 
+  @JsonProperty("pathSegments")
+  private String[] pathSegments;
+
   public static ExpenseCategory of(
       com.clearspend.capital.data.model.ExpenseCategory expenseCategory) {
     return new ExpenseCategory(
         expenseCategory.getIconRef(),
         expenseCategory.getCategoryName(),
         expenseCategory.getId().toString(),
-        expenseCategory.getStatus().toString());
+        expenseCategory.getStatus().toString(),
+        expenseCategory.getPathSegments());
   }
 }

@@ -77,12 +77,11 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
-    List<AddChartOfAccountsMappingRequest> request =
-        List.of(
-            new AddChartOfAccountsMappingRequest("account_1")
-                .withExpenseCategoryId(expenseCategories.get(2).getId()),
-            new AddChartOfAccountsMappingRequest("account_2")
-                .withExpenseCategoryId(expenseCategories.get(3).getId()));
+    AddChartOfAccountsMappingRequest account_1 = new AddChartOfAccountsMappingRequest("account_1");
+    account_1.setExpenseCategoryId(expenseCategories.get(2).getId());
+    AddChartOfAccountsMappingRequest account_2 = new AddChartOfAccountsMappingRequest("account_2");
+    account_2.setExpenseCategoryId(expenseCategories.get(3).getId());
+    List<AddChartOfAccountsMappingRequest> request = List.of(account_1, account_2);
 
     GetChartOfAccountsMappingResponse response =
         mockMvcHelper.queryObject(

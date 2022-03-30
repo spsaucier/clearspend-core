@@ -85,12 +85,11 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
-    List<AddChartOfAccountsMappingRequest> request =
-        List.of(
-            new AddChartOfAccountsMappingRequest("account_1")
-                .withExpenseCategoryId(expenseCategories.get(4).getId()),
-            new AddChartOfAccountsMappingRequest("account_2")
-                .withExpenseCategoryId(expenseCategories.get(5).getId()));
+    AddChartOfAccountsMappingRequest account_1 = new AddChartOfAccountsMappingRequest("account_1");
+    account_1.setExpenseCategoryId(expenseCategories.get(4).getId());
+    AddChartOfAccountsMappingRequest account_2 = new AddChartOfAccountsMappingRequest("account_2");
+    account_2.setExpenseCategoryId(expenseCategories.get(5).getId());
+    List<AddChartOfAccountsMappingRequest> request = List.of(account_1, account_2);
 
     mappingService.addChartOfAccountsMappings(business.getId(), request);
 
@@ -113,10 +112,10 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
-    List<AddChartOfAccountsMappingRequest> request =
-        List.of(
-            new AddChartOfAccountsMappingRequest("test_account")
-                .withExpenseCategoryName("NEW_CATEGORY_NAME"));
+    AddChartOfAccountsMappingRequest test_account =
+        new AddChartOfAccountsMappingRequest("test_account");
+    test_account.setExpenseCategoryName("NEW_CATEGORY_NAME");
+    List<AddChartOfAccountsMappingRequest> request = List.of(test_account);
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     List<ChartOfAccountsMappingResponse> response =
@@ -131,11 +130,10 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
-    List<AddChartOfAccountsMappingRequest> request =
-        List.of(
-            new AddChartOfAccountsMappingRequest("test_account")
-                .withExpenseCategoryName(expenseCategories.get(0).getCategoryName()));
-
+    AddChartOfAccountsMappingRequest test_account =
+        new AddChartOfAccountsMappingRequest("test_account");
+    test_account.setExpenseCategoryName(expenseCategories.get(0).getCategoryName());
+    List<AddChartOfAccountsMappingRequest> request = List.of(test_account);
     testHelper.setCurrentUser(createBusinessRecord.user());
     List<ChartOfAccountsMappingResponse> response =
         mappingService.addChartOfAccountsMappings(business.getId(), request);
@@ -143,5 +141,28 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     assertThat(expenseCategoryRepository.findByBusinessId(business.getId()))
         .size()
         .isEqualTo(expenseCategories.size());
+  }
+
+  @SneakyThrows
+  @Test
+  void addChartOfAccountsMapping_whenFullyQualifiedCategoryIsNotNullThenItIsParsedAsPath() {
+    AddChartOfAccountsMappingRequest test_account =
+        new AddChartOfAccountsMappingRequest("test_account");
+    test_account.setExpenseCategoryName("NEW_CATEGORY_NAME");
+    test_account.setFullyQualifiedCategory("pre1.pre2.pre3.real1.real2.real3");
+
+    List<AddChartOfAccountsMappingRequest> request = List.of(test_account);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    List<ChartOfAccountsMappingResponse> response =
+        mappingService.addChartOfAccountsMappings(business.getId(), request);
+
+    assertThat(expenseCategoryRepository.findById(response.get(0).getExpenseCategoryId()))
+        .isPresent()
+        .get()
+        .extracting(category -> category.getPathSegments())
+        .extracting(array -> List.of(array))
+        .asList()
+        .containsExactly("real1", "real2", "real3");
   }
 }

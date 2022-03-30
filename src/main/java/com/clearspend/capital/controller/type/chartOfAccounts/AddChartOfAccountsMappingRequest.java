@@ -4,13 +4,12 @@ import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.With;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AddChartOfAccountsMappingRequest {
   @JsonProperty("accountRef")
   @NonNull
@@ -18,13 +17,13 @@ public class AddChartOfAccountsMappingRequest {
 
   @JsonProperty("expenseCategoryId")
   @Nullable
-  private @With TypedId<ExpenseCategoryId> expenseCategoryId;
+  private TypedId<ExpenseCategoryId> expenseCategoryId;
 
   @JsonProperty("expenseCategoryName")
   @Nullable
-  private @With String expenseCategoryName;
+  private String expenseCategoryName;
 
-  public AddChartOfAccountsMappingRequest(@NonNull String accountRef) {
-    this.accountRef = accountRef;
-  }
+  @JsonProperty("fullyQualifiedCategory")
+  @Nullable
+  private String fullyQualifiedCategory;
 }
