@@ -460,6 +460,7 @@ public class AccountActivityService {
             "Cardholder Name",
             "Merchant Name",
             "Merchant Category",
+            "Currency",
             "Amount",
             "Status");
 
@@ -504,9 +505,8 @@ public class AccountActivityService {
                           cardholderName,
                           merchantName,
                           merchantCategory,
-                          record.getAmount().getCurrency()
-                              + " "
-                              + String.format("%.2f", record.getAmount().getAmount()),
+                          record.getAmount().getCurrency(),
+                          String.format("%.2f", record.getAmount().getAmount()),
                           record.getStatus()));
                 } catch (IOException e) {
                   throw new RuntimeException(e.getMessage());
