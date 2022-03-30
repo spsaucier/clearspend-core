@@ -99,6 +99,11 @@ public class BusinessProspectService {
                   return businessProspectRepository.save(entity);
                 });
 
+    if (StringUtils.isEmpty(businessProspect.getTosAcceptance().getIp())
+        || StringUtils.isEmpty(businessProspect.getTosAcceptance().getUserAgent())) {
+      throw new InvalidRequestException("Tos acceptance should have ip and userAgent values");
+    }
+
     // Update first/last names in case a prospect has been resumed with different values
     if (!Objects.equals(businessProspect.getFirstName().getEncrypted(), firstName)) {
       businessProspect.setFirstName(new RequiredEncryptedString(firstName));

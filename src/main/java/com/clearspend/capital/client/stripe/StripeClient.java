@@ -77,6 +77,7 @@ import com.stripe.param.issuing.CardholderCreateParams.Billing;
 import com.stripe.param.issuing.CardholderUpdateParams;
 import com.stripe.param.issuing.CardholderUpdateParams.Individual;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -471,7 +472,8 @@ public class StripeClient {
       relationship.setTitle(businessOwner.getTitle());
     }
 
-    if (businessOwner.getPercentageOwnership() != null) {
+    if (businessOwner.getPercentageOwnership() != null
+        && businessOwner.getPercentageOwnership().compareTo(BigDecimal.ZERO) > 0) {
       relationship.setPercentOwnership(businessOwner.getPercentageOwnership());
     }
 
@@ -594,7 +596,8 @@ public class StripeClient {
       builderRelationShip.setTitle(businessOwner.getTitle());
     }
 
-    if (businessOwner.getPercentageOwnership() != null) {
+    if (businessOwner.getPercentageOwnership() != null
+        && businessOwner.getPercentageOwnership().compareTo(BigDecimal.ZERO) > 0) {
       builderRelationShip.setPercentOwnership(businessOwner.getPercentageOwnership());
     }
 

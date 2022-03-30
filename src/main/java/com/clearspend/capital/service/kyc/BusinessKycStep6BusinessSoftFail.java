@@ -17,35 +17,45 @@ import org.springframework.util.CollectionUtils;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Order(5)
-public class BusinessKycStepBusinessOwner extends BusinessKycStep {
+@Order(6)
+public class BusinessKycStep6BusinessSoftFail extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
-
     if (applicationRequireAdditionalCheck(account, requirements)) {
       // when additional checks are required,
       // we will move business onboarding status depending on the stripe required information
       return (!CollectionUtils.isEmpty(requirements.getCurrentlyDue())
-              && requirements.getCurrentlyDue().stream().anyMatch(this::personRequirementsMatch))
+              && requirements.getCurrentlyDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.endsWith(DOCUMENT)
+                              || s.endsWith(COMPANY_TAX_ID)
+                              || s.endsWith(SSN_LAST_4)))
           || (!CollectionUtils.isEmpty(requirements.getPastDue())
-              && requirements.getPastDue().stream().anyMatch(this::personRequirementsMatch))
+              && requirements.getPastDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.endsWith(DOCUMENT)
+                              || s.endsWith(COMPANY_TAX_ID)
+                              || s.endsWith(SSN_LAST_4)))
           || (!CollectionUtils.isEmpty(requirements.getEventuallyDue())
-              && requirements.getEventuallyDue().stream().anyMatch(this::personRequirementsMatch));
+              && requirements.getEventuallyDue().stream()
+                  .anyMatch(
+                      s ->
+                          s.endsWith(DOCUMENT)
+                              || s.endsWith(COMPANY_TAX_ID)
+                              || s.endsWith(SSN_LAST_4)));
     }
-
     return false;
   }
 
   @Override
-  public List<String> execute(Requirements requirements, Business business, Account account) {
-    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS_OWNERS)) {
+  public List<String> execute(
+      Requirements requirements, Business business, Account account, boolean sendEmail) {
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.SOFT_FAIL)) {
       updateBusiness(
-          business.getId(),
-          null,
-          BusinessOnboardingStep.BUSINESS_OWNERS,
-          KnowYourBusinessStatus.PENDING);
-      // TODO:gb: send email for additional information required about business owners
+          business.getId(), null, BusinessOnboardingStep.SOFT_FAIL, KnowYourBusinessStatus.REVIEW);
       BusinessOwner businessOwner =
           businessOwnerRepository
               .findByBusinessIdAndEmailHash(
@@ -57,10 +67,12 @@ public class BusinessKycStepBusinessOwner extends BusinessKycStep {
                       .orElseThrow());
 
       List<String> reasons = extractErrorMessages(requirements);
-      twilioService.sendKybKycRequireAdditionalInfoEmail(
-          business.getBusinessEmail().getEncrypted(),
-          businessOwner.getFirstName().getEncrypted(),
-          reasons);
+      if (sendEmail) {
+        twilioService.sendKybKycRequireDocumentsEmail(
+            business.getBusinessEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted(),
+            reasons);
+      }
       return reasons;
     }
     return extractErrorMessages(requirements);

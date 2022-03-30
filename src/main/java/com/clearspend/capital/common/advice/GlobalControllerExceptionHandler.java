@@ -1,5 +1,6 @@
 package com.clearspend.capital.common.advice;
 
+import com.clearspend.capital.client.stripe.StripeClientException;
 import com.clearspend.capital.common.error.AmountException;
 import com.clearspend.capital.common.error.CurrencyMismatchException;
 import com.clearspend.capital.common.error.DataAccessViolationException;
@@ -11,9 +12,14 @@ import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
+import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.inversoft.error.Errors;
+import com.stripe.exception.StripeException;
+import com.stripe.model.StripeError;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +33,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @Slf4j
 public class GlobalControllerExceptionHandler {
 
-  record ControllerError(String message) {}
+  record ControllerError(String message, String param) {
+    public ControllerError(String message) {
+      this(message, "");
+    }
+  }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ExceptionHandler({
@@ -56,6 +66,34 @@ public class GlobalControllerExceptionHandler {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     Throwable root = getRootCause(exception);
     return new ControllerError(root.getMessage());
+  }
+
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ExceptionHandler({StripeClientException.class})
+  public @ResponseBody ControllerError handleStripeClientException(Exception exception) {
+    Throwable root = getRootCause(exception);
+    log.warn(String.format("%s. Reson: %s", exception.getClass(), root.getMessage()), exception);
+
+    StripeError stripeError = ((StripeException) root).getStripeError();
+    String param = stripeError.getParam();
+
+    if (StringUtils.isEmpty(param)) {
+
+      return new ControllerError(root.getMessage());
+    }
+
+    if (param.contains("company") || param.contains("business_profile")) {
+      param =
+          StripeAccountFieldsToClearspendBusinessFields.fromStripeField(
+              param.substring(param.indexOf("[") + 1, param.indexOf("]")));
+    }
+    if (param.contains("person")) {
+      param =
+          StripePersonFieldsToClearspendOwnerFields.fromStripeField(
+              param.substring(param.indexOf("[") + 1, param.indexOf("]")));
+    }
+
+    return new ControllerError(root.getMessage(), param);
   }
 
   private static Throwable getRootCause(Throwable exception) {

@@ -20,7 +20,6 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.stripe.model.Person;
@@ -49,32 +48,6 @@ public class BusinessOwnerService {
   public record BusinessOwnerAndStripePersonRecord(BusinessOwner businessOwner, Person person) {}
 
   public record BusinessAndAccountErrorMessages(Business business, List<String> errorMessages) {}
-
-  @Transactional
-  public List<BusinessOwner> createOrUpdateBusinessOwners(
-      TypedId<BusinessId> businessId, List<BusinessOwnerData> businessOwnersData) {
-
-    Assert.notEmpty(businessOwnersData);
-    // TODO:gb: In case this will be updated not on the onboarding
-    // what will be the flow to validate email and phone before this method
-    List<BusinessOwner> businessOwners =
-        businessOwnersData.stream()
-            .map(
-                businessOwner ->
-                    businessOwner.getBusinessOwnerId() != null
-                        ? updateBusinessOwner(businessOwner)
-                        : createBusinessOwner(businessOwner))
-            .toList();
-
-    Business business = businessService.retrieveBusinessForService(businessId, true);
-    String stripeAccountReference = business.getStripeData().getAccountRef();
-
-    businessOwners.forEach(
-        businessOwner ->
-            createOrUpdateStripePersonReference(businessOwner, stripeAccountReference));
-
-    return businessOwners;
-  }
 
   public BusinessAndAccountErrorMessages allOwnersProvided(
       TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
@@ -108,7 +81,9 @@ public class BusinessOwnerService {
         businessOwnerRepository.findByBusinessId(businessOwnerData.getBusinessId());
 
     if (business.getType() != BusinessType.INDIVIDUAL) {
-      if (ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipRepresentative)
+      if (ownersForBusinessId.stream()
+              .filter(businessOwner -> businessOwner.getRelationshipRepresentative() != null)
+              .anyMatch(BusinessOwner::getRelationshipRepresentative)
           && isTrue(businessOwnerData.getRelationshipRepresentative())) {
         throw new InvalidKycDataException(
             businessOwnerData.getFirstName() + businessOwnerData.getLastName(),
@@ -139,31 +114,35 @@ public class BusinessOwnerService {
 
     List<BusinessOwner> ownersForBusinessId = businessOwnerRepository.findByBusinessId(businessId);
 
-    assert List.of(BusinessType.SOLE_PROPRIETORSHIP, BusinessType.INDIVIDUAL)
-                .contains(business.getType())
-            || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipRepresentative)
-        : String.format(
-            "Please provide at least one representative for %s.", business.getLegalName());
-
-    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoExecutiveToProvide())) {
-      assert !List.of(
-                      BusinessType.MULTI_MEMBER_LLC,
-                      BusinessType.PRIVATE_PARTNERSHIP,
-                      BusinessType.PRIVATE_CORPORATION,
-                      BusinessType.INCORPORATED_NON_PROFIT)
-                  .contains(business.getType())
-              || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipExecutive)
-          : String.format("Please provide the executive for business %s.", business.getLegalName());
+    if (!List.of(BusinessType.SOLE_PROPRIETORSHIP, BusinessType.INDIVIDUAL)
+            .contains(business.getType())
+        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipRepresentative)) {
+      throw new AssertionError(
+          String.format(
+              "Please provide at least one representative for %s.", business.getLegalName()));
     }
 
-    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoOtherOwnersToProvide())) {
-      assert !List.of(
-                      BusinessType.MULTI_MEMBER_LLC,
-                      BusinessType.PRIVATE_PARTNERSHIP,
-                      BusinessType.PRIVATE_CORPORATION)
-                  .contains(business.getType())
-              || ownersForBusinessId.stream().anyMatch(BusinessOwner::getRelationshipOwner)
-          : String.format("Please provide owner details for business %s.", business.getLegalName());
+    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoOtherOwnersToProvide())
+        && List.of(
+                BusinessType.MULTI_MEMBER_LLC,
+                BusinessType.PRIVATE_PARTNERSHIP,
+                BusinessType.PRIVATE_CORPORATION)
+            .contains(business.getType())
+        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipOwner)) {
+      throw new AssertionError(
+          String.format("Please provide owner details for business %s.", business.getLegalName()));
+    }
+
+    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoExecutiveToProvide())
+        && List.of(
+                BusinessType.MULTI_MEMBER_LLC,
+                BusinessType.PRIVATE_PARTNERSHIP,
+                BusinessType.PRIVATE_CORPORATION,
+                BusinessType.INCORPORATED_NON_PROFIT)
+            .contains(business.getType())
+        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipExecutive)) {
+      throw new AssertionError(
+          String.format("Please provide the executive for business %s.", business.getLegalName()));
     }
   }
 
@@ -245,21 +224,6 @@ public class BusinessOwnerService {
     return businessOwner;
   }
 
-  private Person createOrUpdateStripePersonReference(
-      BusinessOwner businessOwner, String stripeAccountReference) {
-
-    Person stripePerson;
-
-    if (businessOwner.getStripePersonReference() == null) {
-      stripePerson = stripeClient.createPerson(businessOwner, stripeAccountReference);
-      businessOwner.setStripePersonReference(stripePerson.getId());
-    } else {
-      stripePerson = stripeClient.updatePerson(businessOwner, stripeAccountReference);
-    }
-
-    return stripePerson;
-  }
-
   public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
     return businessOwnerRepository
         .findById(businessOwnerId)
@@ -273,40 +237,6 @@ public class BusinessOwnerService {
   public Optional<BusinessOwner> retrieveBusinessOwnerNotThrowingException(
       TypedId<BusinessOwnerId> businessOwnerId) {
     return businessOwnerRepository.findById(businessOwnerId);
-  }
-
-  @Transactional
-  public BusinessOwner updateBusinessOwnerStatus(
-      TypedId<BusinessOwnerId> businessOwnerId, KnowYourCustomerStatus knowYourCustomerStatus) {
-
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findById(businessOwnerId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
-
-    if (knowYourCustomerStatus != null) {
-      businessOwner.setKnowYourCustomerStatus(knowYourCustomerStatus);
-    }
-
-    return businessOwnerRepository.save(businessOwner);
-  }
-
-  @Transactional
-  public void updateBusinessOwnerStatusByStripePersonReference(
-      String stripePersonReference, KnowYourCustomerStatus knowYourCustomerStatus) {
-    if (knowYourCustomerStatus == null) {
-      return;
-    }
-
-    BusinessOwner businessOwner =
-        businessOwnerRepository
-            .findByStripePersonReference(stripePersonReference)
-            .orElseThrow(
-                () -> new RecordNotFoundException(Table.BUSINESS_OWNER, stripePersonReference));
-
-    businessOwner.setKnowYourCustomerStatus(knowYourCustomerStatus);
-
-    businessOwnerRepository.save(businessOwner);
   }
 
   @Transactional

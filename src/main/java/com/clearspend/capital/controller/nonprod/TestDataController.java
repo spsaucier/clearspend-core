@@ -478,9 +478,8 @@ public class TestDataController {
     Business business = convertBusinessProspectRecord.business();
 
     List<BusinessOwner> businessOwners =
-        businessOwnerService.createOrUpdateBusinessOwners(
-            business.getId(),
-            List.of(
+        List.of(
+            businessOwnerService.updateBusinessOwner(
                 new BusinessOwnerData(
                     convertBusinessProspectRecord.businessOwner().getId(),
                     business.getId(),
@@ -504,7 +503,8 @@ public class TestDataController {
                     convertBusinessProspectRecord.businessOwner().getEmail().getEncrypted(),
                     convertBusinessProspectRecord.businessOwner().getPhone().getEncrypted(),
                     null,
-                    true),
+                    true)),
+            businessOwnerService.createBusinessOwner(
                 new BusinessOwnerData(
                     null,
                     business.getId(),

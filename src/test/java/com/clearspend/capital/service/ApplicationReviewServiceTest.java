@@ -7,10 +7,12 @@ import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @Autowired private StripeClient stripeClient;
   @Autowired private BusinessKycStepHandler stepHandler;
   @Autowired private ServiceHelper serviceHelper;
+  @Autowired private StripeRequirementsRepository stripeRequirementsRepository;
 
   @Test
   @SneakyThrows
@@ -40,6 +43,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("createAccount");
     businessRepository.save(business1);
     businessRepository.flush();
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -68,6 +77,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("createAccount_secondEventFromStripe");
     businessRepository.save(business1);
     businessRepository.flush();
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -96,6 +111,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("accountAddRepresentative");
     businessRepository.save(business1);
     businessRepository.flush();
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -152,6 +173,13 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     businessRepository.save(business1);
     businessRepository.flush();
 
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
+
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
             createBusinessRecord.business().getId());
@@ -177,6 +205,13 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("addressNotCorrectForPersonAndDocumentRequired");
     businessRepository.save(business1);
     businessRepository.flush();
+
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -305,6 +340,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
     business1.setLegalName("individualDetailsRequired");
     businessRepository.save(business1);
     businessRepository.flush();
+    stripeRequirementsRepository.save(
+        new StripeRequirements(
+            business1.getId(),
+            stripeClient
+                .retrieveAccount(business1.getStripeData().getAccountRef())
+                .getRequirements()));
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(business1.getId());

@@ -5,6 +5,8 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import java.util.Enumeration;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 public class HttpReqRespUtils {
@@ -31,18 +33,26 @@ public class HttpReqRespUtils {
 
     for (String header : IP_HEADER_CANDIDATES) {
       Enumeration<String> headers = request.getHeaders(header);
-      log.info("headers: {}", headers);
       if (!headers.hasMoreElements()) {
         continue;
       }
       String ip = headers.nextElement();
       if (isNotEmpty(ip) && !"unknown".equalsIgnoreCase(ip)) {
-        log.info("header {} and returned ip {}", header, ip);
         return safeCheckIp(ip);
       }
     }
 
     return safeCheckIp(request.getRemoteAddr());
+  }
+
+  public static String getUserAgent(HttpServletRequest request) {
+
+    String userAgent = request.getHeader(HttpHeaders.USER_AGENT);
+    if (StringUtils.hasLength(userAgent)) {
+      return userAgent;
+    }
+
+    return request.getHeader(HttpHeaders.USER_AGENT.toLowerCase());
   }
 
   private static String safeCheckIp(String ip) {

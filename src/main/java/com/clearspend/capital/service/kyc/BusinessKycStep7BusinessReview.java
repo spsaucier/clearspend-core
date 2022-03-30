@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 @Order(7)
-public class BusinessKycStepBusinessReview extends BusinessKycStep {
+public class BusinessKycStep7BusinessReview extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
@@ -26,11 +26,12 @@ public class BusinessKycStepBusinessReview extends BusinessKycStep {
   }
 
   @Override
-  public List<String> execute(Requirements requirements, Business business, Account account) {
+  public List<String> execute(
+      Requirements requirements, Business business, Account account, boolean sendEmail) {
     if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW)) {
       updateBusiness(
           business.getId(), null, BusinessOnboardingStep.REVIEW, KnowYourBusinessStatus.REVIEW);
-      // TODO:gb: send email for REVIEW state
+
       BusinessOwner businessOwner =
           businessOwnerRepository
               .findByBusinessIdAndEmailHash(
@@ -42,10 +43,15 @@ public class BusinessKycStepBusinessReview extends BusinessKycStep {
                       .orElseThrow());
 
       List<String> reasons = extractErrorMessages(requirements);
-      twilioService.sendKybKycReviewStateEmail(
-          business.getBusinessEmail().getEncrypted(), businessOwner.getFirstName().getEncrypted());
+      if (sendEmail) {
+        twilioService.sendKybKycReviewStateEmail(
+            business.getBusinessEmail().getEncrypted(),
+            businessOwner.getFirstName().getEncrypted());
+      }
+
       return reasons;
     }
+
     return extractErrorMessages(requirements);
   }
 }

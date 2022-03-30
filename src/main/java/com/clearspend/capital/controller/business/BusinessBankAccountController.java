@@ -19,7 +19,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import java.io.IOException;
 import java.util.List;
 import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -134,18 +133,10 @@ public class BusinessBankAccountController {
               name = "businessBankAccountId",
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<BusinessBankAccountId> businessBankAccountId,
-      HttpServletRequest httpServletRequest) {
+          TypedId<BusinessBankAccountId> businessBankAccountId) {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
 
-    String ipAddress = httpServletRequest.getHeader("X-Forwared-For");
-    if (ipAddress == null) {
-      log.debug("X-Forwared-For header was null");
-      ipAddress = httpServletRequest.getRemoteAddr();
-    }
-    log.debug("IP Address for sending ToS Acceptance to Stripe " + ipAddress);
-    businessBankAccountService.registerExternalBank(
-        businessId, businessBankAccountId, ipAddress, httpServletRequest.getHeader("User-Agent"));
+    businessBankAccountService.registerExternalBank(businessId, businessBankAccountId);
 
     return ResponseEntity.ok().build();
   }

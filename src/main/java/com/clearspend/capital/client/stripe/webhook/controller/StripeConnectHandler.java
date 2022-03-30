@@ -45,6 +45,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -103,6 +104,11 @@ public class StripeConnectHandler {
       log.info("Ignored case for record not found exception on Stripe connect webhook event.");
     } catch (JsonSyntaxException | InvalidKycStepException jsonSyntaxException) {
       log.error(jsonSyntaxException.getMessage());
+    } catch (ConcurrencyFailureException concurrencyFailureException) {
+      log.warn(
+          "{}. This event is no longer needed as a newer one is already saved. {}",
+          concurrencyFailureException.getMessage(),
+          stripeObject);
     }
   }
 

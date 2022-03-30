@@ -9,7 +9,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,11 +20,8 @@ public class RequestFilter implements Filter {
       throws IOException, ServletException {
     HttpServletRequest req = (HttpServletRequest) request;
     String ip = HttpReqRespUtils.getClientIpAddressIfServletRequestExist(req);
-    log.info(
-        "Request ip: {} and userAgent: {} / {}",
-        ip,
-        req.getHeader(HttpHeaders.USER_AGENT),
-        req.getHeader(HttpHeaders.USER_AGENT.toLowerCase()));
+    String userAgent = HttpReqRespUtils.getUserAgent(req);
+    log.info("Request ip: {} and userAgent: {}", ip, userAgent);
     chain.doFilter(request, response);
   }
 }

@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 @Order(1)
-public class BusinessKycStepOutOfOnboarding extends BusinessKycStep {
+public class BusinessKycStep1OutOfOnboarding extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
@@ -31,7 +31,8 @@ public class BusinessKycStepOutOfOnboarding extends BusinessKycStep {
   }
 
   @Override
-  public List<String> execute(Requirements requirements, Business business, Account account) {
+  public List<String> execute(
+      Requirements requirements, Business business, Account account, boolean sendEmail) {
 
     if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       // to be finalized after KYB/KYC part will be ready

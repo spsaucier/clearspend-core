@@ -9,7 +9,6 @@ import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwner
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedResponse;
-import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessAndAccountErrorMessages;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndStripePersonRecord;
@@ -39,27 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class BusinessOwnerController {
 
   private final BusinessOwnerService businessOwnerService;
-
-  @Deprecated(forRemoval = true)
-  @PostMapping(
-      value = "",
-      produces = MediaType.APPLICATION_JSON_VALUE,
-      consumes = MediaType.APPLICATION_JSON_VALUE)
-  List<CreateBusinessOwnerResponse> createOrUpdateBusinessOwners(
-      @Validated @RequestBody List<CreateOrUpdateBusinessOwnerRequest> request) {
-
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    List<BusinessOwner> businessOwners =
-        businessOwnerService.createOrUpdateBusinessOwners(
-            businessId,
-            request.stream()
-                .map(businessOwnerRequest -> businessOwnerRequest.toBusinessOwnerData(businessId))
-                .toList());
-
-    return businessOwners.stream()
-        .map(businessOwner -> new CreateBusinessOwnerResponse(businessOwner.getId(), null))
-        .toList();
-  }
 
   @PostMapping(
       value = "/create",

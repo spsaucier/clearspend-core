@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
@@ -11,12 +12,13 @@ import com.clearspend.capital.controller.type.review.KycErrorCode;
 import com.clearspend.capital.controller.type.review.StripeRequirementsErrorCode;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
 import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.google.common.base.Splitter;
-import com.stripe.model.Account;
 import com.stripe.model.Account.Requirements;
 import com.stripe.model.File;
 import com.stripe.model.Person;
@@ -63,6 +65,7 @@ public class ApplicationReviewService {
   private final RetrievalService retrievalService;
   private final BusinessOwnerService businessOwnerService;
   private final FileStoreService fileStoreService;
+  private final StripeRequirementsRepository stripeRequirementsRepository;
 
   private final StripeClient stripeClient;
 
@@ -163,42 +166,51 @@ public class ApplicationReviewService {
         });
   }
 
+  @Transactional
   public ApplicationReviewRequirements getStripeApplicationRequirements(
       TypedId<BusinessId> businessId) {
 
     Business business = retrievalService.retrieveBusiness(businessId, true);
-    String stripeAccountReference = business.getStripeData().getAccountRef();
-    Account account = stripeClient.retrieveAccount(stripeAccountReference);
+    Requirements requirements =
+        stripeRequirementsRepository
+            .findByBusinessId(businessId)
+            .orElse(new StripeRequirements())
+            .getRequirements();
     List<BusinessOwner> businessOwners =
-        businessOwnerService.findBusinessOwnerByBusinessId(businessId);
+        businessOwnerService.findBusinessOwnerByBusinessId(business.getId());
 
+    return getReviewRequirements(business, businessOwners, requirements);
+  }
+
+  public ApplicationReviewRequirements getReviewRequirements(
+      Business business, List<BusinessOwner> businessOwners, Requirements requirements) {
     List<KycOwnerDocuments> kycDocuments =
-        extractStripeRequiredDocumentsForPerson(account, businessOwners);
+        extractStripeRequiredDocumentsForPerson(businessOwners, requirements);
     List<KybErrorCode> kybErrorCodeList =
-        extractStripeRequiredDocumentsForAccount(account).stream().toList();
+        extractStripeRequiredDocumentsForAccount(requirements).stream().toList();
 
     KybEntityTokenAndErrorCode kybEntityTokenAndErrorCode =
-        new KybEntityTokenAndErrorCode(account.getId(), kybErrorCodeList);
+        new KybEntityTokenAndErrorCode(business.getStripeData().getAccountRef(), kybErrorCodeList);
 
     Map<TypedId<BusinessOwnerId>, List<String>> kycRequirements =
-        extractStripeRequirementsForPersons(account);
-    List<String> kybRequirements = extractStripeRequirementsForAccount(account);
+        extractStripeRequirementsForPersons(requirements, businessOwners);
+    List<String> kybRequirements = extractStripeRequirementsForAccount(requirements);
 
     return ApplicationReviewRequirements.from(
         kybRequirements,
         kycRequirements,
         new RequiredDocumentsForStripe(kybEntityTokenAndErrorCode, kycDocuments),
         business.getType() == BusinessType.INDIVIDUAL
-            ? requiredRelationShipToBusiness(account, INDIVIDUAL)
-            : requiredRelationShipToBusiness(account, OWNERS),
-        requiredRelationShipToBusiness(account, REPRESENTATIVE),
-        retrievePendingVerification(account),
-        retrieveErrorCodes(account));
+            ? requiredRelationShipToBusiness(requirements, INDIVIDUAL)
+            : requiredRelationShipToBusiness(requirements, OWNERS),
+        requiredRelationShipToBusiness(requirements, REPRESENTATIVE),
+        retrievePendingVerification(requirements),
+        retrieveErrorCodes(requirements));
   }
 
-  private Set<KybErrorCode> extractStripeRequiredDocumentsForAccount(Account account) {
+  private Set<KybErrorCode> extractStripeRequiredDocumentsForAccount(Requirements requirements) {
 
-    Set<String> accountRequiredFields = getAccountRequiredFields(account);
+    Set<String> accountRequiredFields = getAccountRequiredFields(requirements);
 
     return accountRequiredFields.stream()
         .filter(
@@ -213,9 +225,9 @@ public class ApplicationReviewService {
   }
 
   private List<KycOwnerDocuments> extractStripeRequiredDocumentsForPerson(
-      Account account, List<BusinessOwner> businessOwners) {
+      List<BusinessOwner> businessOwners, Requirements requirements) {
 
-    Set<String> accountRequiredFields = getAccountRequiredFields(account);
+    Set<String> accountRequiredFields = getAccountRequiredFields(requirements);
 
     return accountRequiredFields.stream()
         .filter(
@@ -243,8 +255,8 @@ public class ApplicationReviewService {
         .toList();
   }
 
-  private List<String> extractStripeRequirementsForAccount(Account account) {
-    return getAccountRequiredFields(account).stream()
+  private List<String> extractStripeRequirementsForAccount(Requirements requirements) {
+    return getAccountRequiredFields(requirements).stream()
         .filter(
             accountFieldRequired ->
                 (!accountFieldRequired.endsWith(DOCUMENT)
@@ -263,8 +275,7 @@ public class ApplicationReviewService {
         .toList();
   }
 
-  private Set<String> getAccountRequiredFields(Account account) {
-    Requirements accountRequirements = account.getRequirements();
+  private Set<String> getAccountRequiredFields(Requirements accountRequirements) {
     if (accountRequirements == null) {
       return Collections.emptySet();
     }
@@ -276,17 +287,17 @@ public class ApplicationReviewService {
         .collect(Collectors.toSet());
   }
 
-  private Boolean requiredRelationShipToBusiness(Account account, final String mark) {
-    Set<String> accountRequiredFields = getAccountRequiredFields(account);
+  private Boolean requiredRelationShipToBusiness(Requirements requirements, final String mark) {
+    Set<String> accountRequiredFields = getAccountRequiredFields(requirements);
 
     return accountRequiredFields.stream()
         .anyMatch(accountFieldRequired -> accountFieldRequired.startsWith(mark));
   }
 
   private Map<TypedId<BusinessOwnerId>, List<String>> extractStripeRequirementsForPersons(
-      Account account) {
+      Requirements requirements, List<BusinessOwner> businessOwners) {
     Map<String, TypedId<BusinessOwnerId>> businessOwnerIdByStripeReference = new HashMap<>();
-    return getAccountRequiredFields(account).stream()
+    return getAccountRequiredFields(requirements).stream()
         .filter(
             accountRequiredField ->
                 accountRequiredField.startsWith(PERSON) && !accountRequiredField.endsWith(DOCUMENT))
@@ -296,9 +307,14 @@ public class ApplicationReviewService {
                     businessOwnerIdByStripeReference.computeIfAbsent(
                         Splitter.on(".").splitToList(s).get(0),
                         stripeReferenceId ->
-                            businessOwnerService
-                                .findBusinessOwnerByStripePersonReference(stripeReferenceId)
-                                .getId()),
+                            businessOwners.stream()
+                                .filter(
+                                    businessOwner ->
+                                        stripeReferenceId.equals(
+                                            businessOwner.getStripePersonReference()))
+                                .findFirst()
+                                .map(TypedMutable::getId)
+                                .orElseThrow()),
                 Collectors.mapping(
                     s ->
                         StripePersonFieldsToClearspendOwnerFields.fromStripeField(
@@ -306,16 +322,14 @@ public class ApplicationReviewService {
                     Collectors.toList())));
   }
 
-  private List<String> retrievePendingVerification(Account account) {
-    Requirements accountRequirements = account.getRequirements();
+  private List<String> retrievePendingVerification(Requirements accountRequirements) {
     if (accountRequirements == null) {
       return Collections.emptyList();
     }
     return accountRequirements.getPendingVerification();
   }
 
-  private List<StripeRequirementsErrorCode> retrieveErrorCodes(Account account) {
-    Requirements accountRequirements = account.getRequirements();
+  private List<StripeRequirementsErrorCode> retrieveErrorCodes(Requirements accountRequirements) {
     if (accountRequirements == null) {
       return Collections.emptyList();
     }

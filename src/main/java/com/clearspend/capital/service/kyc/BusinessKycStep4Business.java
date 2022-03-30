@@ -1,9 +1,7 @@
 package com.clearspend.capital.service.kyc;
 
 import com.clearspend.capital.client.stripe.types.Account;
-import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.stripe.model.Account.Requirements;
@@ -18,7 +16,7 @@ import org.springframework.util.CollectionUtils;
 @RequiredArgsConstructor
 @Slf4j
 @Order(4)
-public class BusinessKycStepBusiness extends BusinessKycStep {
+public class BusinessKycStep4Business extends BusinessKycStep {
 
   @Override
   public boolean support(Requirements requirements, Business business, Account account) {
@@ -41,27 +39,11 @@ public class BusinessKycStepBusiness extends BusinessKycStep {
   }
 
   @Override
-  public List<String> execute(Requirements requirements, Business business, Account account) {
+  public List<String> execute(
+      Requirements requirements, Business business, Account account, boolean sendEmail) {
     if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.BUSINESS)) {
       updateBusiness(
           business.getId(), null, BusinessOnboardingStep.BUSINESS, KnowYourBusinessStatus.PENDING);
-      // TODO:gb: send email for additional information required about business
-      BusinessOwner businessOwner =
-          businessOwnerRepository
-              .findByBusinessIdAndEmailHash(
-                  business.getId(),
-                  HashUtil.calculateHash(business.getBusinessEmail().getEncrypted()))
-              .orElse(
-                  businessOwnerRepository.findByBusinessId(business.getId()).stream()
-                      .findAny()
-                      .orElseThrow());
-
-      List<String> reasons = extractErrorMessages(requirements);
-      twilioService.sendKybKycRequireAdditionalInfoEmail(
-          business.getBusinessEmail().getEncrypted(),
-          businessOwner.getFirstName().getEncrypted(),
-          reasons);
-      return reasons;
     }
     return extractErrorMessages(requirements);
   }

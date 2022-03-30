@@ -382,10 +382,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action =
         () ->
             bankAccountService.registerExternalBank(
-                createBusinessRecord.business().getId(),
-                bankAccount.getId(),
-                "IP Address",
-                "User Agent");
+                createBusinessRecord.business().getId(), bankAccount.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)

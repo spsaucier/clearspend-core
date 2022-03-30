@@ -18,8 +18,10 @@ import com.stripe.model.Account.Requirements;
 import com.stripe.model.Account.Requirements.Errors;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+@Transactional
 public abstract class BusinessKycStep {
 
   @Autowired TwilioService twilioService;
@@ -44,7 +46,8 @@ public abstract class BusinessKycStep {
 
   abstract boolean support(Requirements requirements, Business business, Account account);
 
-  abstract List<String> execute(Requirements requirements, Business business, Account account);
+  abstract List<String> execute(
+      Requirements requirements, Business business, Account account, boolean sendEmail);
 
   @OnboardingBusinessOp(
       reviewer = "Craig Miller",
@@ -74,7 +77,7 @@ public abstract class BusinessKycStep {
 
   public List<String> extractErrorMessages(Requirements requirements) {
     return requirements.getErrors() != null
-        ? requirements.getErrors().stream().map(Errors::getReason).toList()
+        ? requirements.getErrors().stream().map(Errors::getReason).distinct().toList()
         : null;
   }
 

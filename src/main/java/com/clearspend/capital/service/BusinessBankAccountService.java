@@ -583,10 +583,7 @@ public class BusinessBankAccountService {
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void registerExternalBank(
-      TypedId<BusinessId> businessId,
-      TypedId<BusinessBankAccountId> businessBankAccountId,
-      String customerAcceptanceIpAddress,
-      String customerAcceptanceUserAgent) {
+      TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId) {
 
     // check that only one bank account is registered in Stripe
     BusinessBankAccount registeredBankAccount =
@@ -627,13 +624,11 @@ public class BusinessBankAccountService {
     String stripeBankAccountRef = extAccountsData.get(0).getId();
 
     // Create setup intent, which will activate bank account as a successful payment method
+    String ip = business.getStripeData().getTosAcceptance().getIp();
+    String userAgent = business.getStripeData().getTosAcceptance().getUserAgent();
     String setupIntentId =
         stripeClient
-            .createSetupIntent(
-                stripeAccountId,
-                stripeBankAccountRef,
-                customerAcceptanceIpAddress,
-                customerAcceptanceUserAgent)
+            .createSetupIntent(stripeAccountId, stripeBankAccountRef, ip, userAgent)
             .getId();
 
     businessBankAccount.setStripeBankAccountRef(stripeBankAccountRef);
