@@ -361,11 +361,7 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.retrieveUsersForBusiness(createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
         .build()
         .validateServiceMethod(action);
   }
@@ -382,11 +378,7 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.retrieveUserPage(createBusinessRecord.business().getId(), criteria);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
         .build()
         .validateServiceMethod(action);
   }
@@ -421,11 +413,7 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.createCSVFile(createBusinessRecord.business().getId(), criteria);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
         .build()
         .validateServiceMethod(action);
   }
@@ -443,11 +431,7 @@ class UserServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action = () -> userService.retrieveUser(owner.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
         .addRootAllocationCustomUser(CustomUser.pass(owner))
         .build()
         .validateServiceMethod(action);

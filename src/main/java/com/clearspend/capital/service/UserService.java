@@ -291,7 +291,7 @@ public class UserService {
     return StringUtils.isNotEmpty(newValue) && !oldValue.getEncrypted().equals(newValue);
   }
 
-  @PostAuthorize("isSelf(returnObject.id) or hasRootPermission(returnObject, 'MANAGE_USERS')")
+  @PostAuthorize("isSelf(returnObject.id) or hasRootPermission(returnObject, 'VIEW_OWN')")
   public User retrieveUser(TypedId<UserId> userId) {
     return retrieveUserForService(userId);
   }
@@ -313,7 +313,7 @@ public class UserService {
   }
 
   @PreAuthorize(
-      "hasRootPermission(#businessId, 'MANAGE_USERS') or hasGlobalPermission('CUSTOMER_SERVICE')")
+      "hasRootPermission(#businessId, 'VIEW_OWN') or hasGlobalPermission('CUSTOMER_SERVICE')")
   public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {
     return userRepository.findByBusinessId(businessId);
   }
@@ -322,7 +322,7 @@ public class UserService {
     return userRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
   public Page<FilteredUserWithCardListRecord> retrieveUserPage(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
     return userRepository.find(businessId, userFilterCriteria);
@@ -338,7 +338,7 @@ public class UserService {
     return userRepository.save(user).isArchived();
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
   public byte[] createCSVFile(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
 
