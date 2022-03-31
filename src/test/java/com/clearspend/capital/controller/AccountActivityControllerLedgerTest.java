@@ -13,16 +13,23 @@ import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.InboundTransfer.InboundTransferFailureDetails;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer.ReturnedDetails;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.NetworkDetails;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.ReceivedPaymentMethodDetails;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.UsBankAccount;
+import com.clearspend.capital.client.stripe.types.StripeNetwork;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeConnectHandlerAccessor;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.controller.type.ledger.BankInfo;
 import com.clearspend.capital.controller.type.ledger.LedgerActivityRequest;
 import com.clearspend.capital.controller.type.ledger.LedgerActivityResponse;
 import com.clearspend.capital.controller.type.ledger.LedgerAllocationAccount;
 import com.clearspend.capital.controller.type.ledger.LedgerBankAccount;
 import com.clearspend.capital.controller.type.ledger.LedgerHoldInfo;
 import com.clearspend.capital.controller.type.ledger.LedgerUser;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.embedded.UserDetails;
@@ -30,6 +37,8 @@ import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -47,6 +56,8 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
@@ -91,7 +102,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         false);
 
     // when
-    PagedData<LedgerActivityResponse> result = callLedgerApi(AccountActivityType.BANK_DEPOSIT);
+    PagedData<LedgerActivityResponse> result =
+        callLedgerApi(AccountActivityType.BANK_DEPOSIT_STRIPE);
 
     // then
     assertThat(result.getContent()).hasSize(1);
@@ -122,7 +134,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
             true);
 
     // when
-    PagedData<LedgerActivityResponse> result = callLedgerApi(AccountActivityType.BANK_DEPOSIT);
+    PagedData<LedgerActivityResponse> result =
+        callLedgerApi(AccountActivityType.BANK_DEPOSIT_STRIPE);
 
     // then
     assertThat(result.getContent()).hasSize(1);
@@ -213,7 +226,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
 
     assertThat(from.getSourceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(from.getTargetAccount()).isNull();
+    assertThat(from.getTargetAccount())
+        .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(from.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
 
     // checking to
@@ -223,7 +237,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(to.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(to.getHold()).isNull();
 
-    assertThat(to.getSourceAccount()).isNull();
+    assertThat(to.getSourceAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(to.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(to.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));
@@ -320,6 +335,88 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getSourceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getTargetAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
+    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"ach", "us_domestic_wire"})
+  void getBankExternalDeposits(String stripeNetwork) {
+    // given
+    ReceivedCredit receivedCredit = new ReceivedCredit();
+    receivedCredit.setAmount(1000L);
+    receivedCredit.setCurrency("usd");
+    receivedCredit.setNetwork(stripeNetwork);
+    receivedCredit.setFinancialAccount(
+        businessRecord.business().getStripeData().getFinancialAccountRef());
+
+    ReceivedPaymentMethodDetails receivedPaymentMethodDetails = new ReceivedPaymentMethodDetails();
+    UsBankAccount usBankAccount = new UsBankAccount("Test Bank", "7777", "2345672537");
+    receivedPaymentMethodDetails.setUsBankAccount(usBankAccount);
+    receivedCredit.setReceivedPaymentMethodDetails(receivedPaymentMethodDetails);
+
+    stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.from(stripeNetwork));
+
+    // when
+    AccountActivityType accountActivityType =
+        stripeNetwork.equals("ach")
+            ? AccountActivityType.BANK_DEPOSIT_ACH
+            : AccountActivityType.BANK_DEPOSIT_WIRE;
+    PagedData<LedgerActivityResponse> result = callLedgerApi(accountActivityType);
+
+    // then
+    assertThat(result.getContent()).hasSize(1);
+
+    LedgerActivityResponse response = result.getContent().get(0);
+    assertThat(response.getAccountActivityId()).isNotNull();
+    assertThat(response.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
+    assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
+    assertThat(response.getHold()).isNull();
+    assertThat(response.getSourceAccount())
+        .isEqualTo(
+            new LedgerBankAccount(
+                new BankInfo(usBankAccount.getBankName(), usBankAccount.getLastFour())));
+    assertThat(response.getTargetAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
+    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+  }
+
+  @Test
+  void getCardFundReturn() {
+    // given
+    Card card =
+        testHelper.issueCard(
+            businessRecord.business(),
+            businessRecord.allocationRecord().allocation(),
+            businessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    ReceivedCredit receivedCredit = new ReceivedCredit();
+    receivedCredit.setAmount(1000L);
+    receivedCredit.setCurrency("usd");
+    receivedCredit.setNetwork("card");
+    receivedCredit.setNetworkDetails(new NetworkDetails(card.getExternalRef()));
+
+    stripeConnectHandler.onCardCreditsReceived(receivedCredit);
+
+    // when
+    PagedData<LedgerActivityResponse> result = callLedgerApi(AccountActivityType.CARD_FUND_RETURN);
+
+    // then
+    assertThat(result.getContent()).hasSize(1);
+
+    LedgerActivityResponse response = result.getContent().get(0);
+    assertThat(response.getAccountActivityId()).isNotNull();
+    assertThat(response.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
+    assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
+    assertThat(response.getHold()).isNull();
+    assertThat(response.getSourceAccount()).isNull();
+    assertThat(response.getTargetAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
   }
 

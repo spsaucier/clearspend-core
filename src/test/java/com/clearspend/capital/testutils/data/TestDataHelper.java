@@ -153,7 +153,8 @@ public class TestDataHelper {
   }
 
   public AccountActivity createAccountActivity(final AccountActivityConfig config) {
-    final AccountActivityType type = config.getType().orElse(AccountActivityType.BANK_DEPOSIT);
+    final AccountActivityType type =
+        config.getType().orElse(AccountActivityType.BANK_DEPOSIT_STRIPE);
     final OffsetDateTime activityTime = config.getActivityTime().orElse(OffsetDateTime.now());
     final AccountActivity accountActivity =
         new AccountActivity(

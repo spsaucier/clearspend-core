@@ -42,7 +42,7 @@ public class ReceivedCredit {
   private String hostedRegulatoryReceiptUrl;
 
   @SerializedName("legacy_flows")
-  private Object legacyFlows;
+  private LegacyFlows legacyFlows;
 
   @SerializedName("linked_flows")
   @Valid
@@ -55,7 +55,7 @@ public class ReceivedCredit {
   private String network;
 
   @SerializedName("network_details")
-  private Object networkDetails;
+  private NetworkDetails networkDetails;
 
   @SerializedName("received_payment_method_details")
   @Valid
@@ -130,5 +130,23 @@ public class ReceivedCredit {
 
     @SerializedName("routing_number")
     private String routingNumber;
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class LegacyFlows {
+
+    @SerializedName("issuing_transaction")
+    private String issuingTransaction;
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class NetworkDetails {
+
+    @SerializedName("issuing_card")
+    private String issuingCard;
   }
 }

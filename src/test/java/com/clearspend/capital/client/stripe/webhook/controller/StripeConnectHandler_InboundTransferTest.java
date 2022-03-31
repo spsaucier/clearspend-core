@@ -12,13 +12,16 @@ import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.InboundTransfer.InboundTransferFailureDetails;
 import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
+import com.clearspend.capital.client.stripe.types.ReceivedCredit.NetworkDetails;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit.ReceivedPaymentMethodDetails;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit.UsBankAccount;
+import com.clearspend.capital.client.stripe.types.StripeNetwork;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -27,7 +30,9 @@ import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
+import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AccountService;
@@ -74,6 +79,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
   private BusinessBankAccount businessBankAccount;
+  private Card card;
 
   @Value("${clearspend.ach.return-fee:0}")
   private long achReturnFee;
@@ -101,6 +107,16 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
           assertThat(business.getStripeData().getFinancialAccountState())
               .isEqualTo(FinancialAccountState.READY);
+
+          card =
+              testHelper.issueCard(
+                  business,
+                  createBusinessRecord.allocationRecord().allocation(),
+                  createBusinessRecord.user(),
+                  Currency.USD,
+                  FundingType.POOLED,
+                  CardType.VIRTUAL,
+                  false);
 
           stripeMockClient.reset();
         });
@@ -220,35 +236,20 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
 
     // when
-    stripeConnectHandler.onAchCreditsReceived(receivedCredit);
+    stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.ACH);
 
     // then
     assertThat(stripeMockClient.countCreatedObjectsByType(OutboundPayment.class)).isOne();
 
     List<AccountActivity> accountActivities = accountActivityRepository.findAll();
-    assertThat(accountActivities).hasSize(2); // 2 activities for the adjustment and the hold
+    assertThat(accountActivities).hasSize(1); // 1 activities for the adjustment
 
-    AccountActivity holdAccountActivity =
-        accountActivities.stream().filter(a -> a.getHold() != null).findFirst().get();
-    AccountActivity adjustmentAccountActivity =
-        accountActivities.stream().filter(a -> a.getHold() == null).findFirst().get();
-
-    assertThat(holdAccountActivity.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
-    assertThat(holdAccountActivity.getAmount())
-        .isEqualTo(
-            com.clearspend.capital.common.data.model.Amount.fromStripeAmount(Currency.USD, 100L));
+    AccountActivity adjustmentAccountActivity = accountActivities.get(0);
 
     assertThat(adjustmentAccountActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(adjustmentAccountActivity.getAmount())
         .isEqualTo(
             com.clearspend.capital.common.data.model.Amount.fromStripeAmount(Currency.USD, 100L));
-
-    assertThat(holdAccountActivity.getHideAfter())
-        .isEqualTo(adjustmentAccountActivity.getVisibleAfter());
-
-    assertThat(holdAccountActivity.getHideAfter()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
-    assertThat(adjustmentAccountActivity.getVisibleAfter())
-        .isBefore(OffsetDateTime.now(Clock.systemUTC()));
 
     assertThat(adjustmentAccountActivity.getBankAccount().getId()).isNull();
     assertThat(adjustmentAccountActivity.getBankAccount().getName())
@@ -273,7 +274,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     // when
     for (int i = 0; i < 30; i++) {
-      stripeConnectHandler.onAchCreditsReceived(receivedCredit);
+      stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.ACH);
     }
 
     // then
@@ -295,5 +296,33 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     // we don't need to call the handler since we are not processing card credit received for now.
     // The issue was in a failing json parsing due to incorrect field definition in the
     // ReceivedCredit class
+  }
+
+  @Test
+  public void cardReturnFunds() {
+    // given
+    ReceivedCredit receivedCredit = new ReceivedCredit();
+    receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
+    receivedCredit.setAmount(100L);
+    receivedCredit.setCurrency("usd");
+    receivedCredit.setNetwork("card");
+    receivedCredit.setNetworkDetails(new NetworkDetails(card.getExternalRef()));
+
+    // when
+    stripeConnectHandler.onCardCreditsReceived(receivedCredit);
+
+    // then
+    List<AccountActivity> accountActivities = accountActivityRepository.findAll();
+    assertThat(accountActivities).hasSize(1); // 1 activities for the adjustment
+
+    AccountActivity adjustmentAccountActivity = accountActivities.get(0);
+
+    assertThat(adjustmentAccountActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
+    assertThat(adjustmentAccountActivity.getAmount())
+        .isEqualTo(
+            com.clearspend.capital.common.data.model.Amount.fromStripeAmount(Currency.USD, 100L));
+
+    assertThat(adjustmentAccountActivity.getType()).isEqualTo(AccountActivityType.CARD_FUND_RETURN);
+    assertThat(adjustmentAccountActivity.getBankAccount()).isNull();
   }
 }

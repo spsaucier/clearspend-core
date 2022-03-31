@@ -105,7 +105,7 @@ public class TermsAndConditionsService {
       }
       bufferedReader.close();
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error(e.getMessage(), e);
     }
     return content.toString();
   }

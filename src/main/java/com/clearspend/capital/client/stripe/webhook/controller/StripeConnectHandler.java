@@ -10,6 +10,7 @@ import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit;
 import com.clearspend.capital.client.stripe.types.ReceivedCredit.UsBankAccount;
+import com.clearspend.capital.client.stripe.types.StripeNetwork;
 import com.clearspend.capital.client.stripe.types.StripeWebhookEventWrapper;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InvalidKycStepException;
@@ -27,6 +28,9 @@ import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessBankAccountService.StripeBankAccountOp;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.BusinessService.StripeBusinessOp;
+import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.CardService.CardRecord;
+import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TwilioService;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
@@ -42,14 +46,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class StripeConnectHandler {
 
   private static final Gson gson =
@@ -59,35 +64,12 @@ public class StripeConnectHandler {
 
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
+  private final CardService cardService;
   private final PendingStripeTransferService pendingStripeTransferService;
   private final TwilioService twilioService;
   private final StripeClient stripeClient;
-  private final long achReturnFee;
-  private final boolean standardHold;
   private final StripeProperties stripeProperties;
   private final BusinessKycStepHandler stepHandler;
-
-  public StripeConnectHandler(
-      BusinessService businessService,
-      BusinessBankAccountService businessBankAccountService,
-      PendingStripeTransferService pendingStripeTransferService,
-      TwilioService twilioService,
-      StripeClient stripeClient,
-      StripeProperties stripeProperties,
-      @Value("${clearspend.ach.hold.standard:true}") boolean standardHold,
-      @Value("${clearspend.ach.return.fee:0}") long achReturnFee,
-      BusinessKycStepHandler stepHandler) {
-
-    this.businessService = businessService;
-    this.businessBankAccountService = businessBankAccountService;
-    this.pendingStripeTransferService = pendingStripeTransferService;
-    this.twilioService = twilioService;
-    this.stripeClient = stripeClient;
-    this.stripeProperties = stripeProperties;
-    this.achReturnFee = achReturnFee;
-    this.standardHold = standardHold;
-    this.stepHandler = stepHandler;
-  }
 
   @StripeBusinessOp(
       reviewer = "Craig Miller",
@@ -174,9 +156,11 @@ public class StripeConnectHandler {
         .ifPresent(
             event -> {
               ReceivedCredit receivedCredit = event.getEvent();
-              switch (receivedCredit.getNetwork()) {
-                case "stripe" -> onStripeCreditsReceived(receivedCredit);
-                case "ach", "us_domestic_wire" -> onAchCreditsReceived(receivedCredit);
+              StripeNetwork stripeNetwork = StripeNetwork.from(receivedCredit.getNetwork());
+              switch (stripeNetwork) {
+                case STRIPE -> onStripeCreditsReceived(receivedCredit);
+                case ACH, US_DOMESTIC_WIRE -> onAchCreditsReceived(receivedCredit, stripeNetwork);
+                case CARD -> onCardCreditsReceived(receivedCredit);
                 default -> log.error(
                     "Unexpected network value {} for credit received event",
                     receivedCredit.getNetwork());
@@ -254,7 +238,7 @@ public class StripeConnectHandler {
           receivedCredit.getFinancialAccount(),
           businessBankAccount.getStripeBankAccountRef(),
           Amount.fromStripeAmount(
-              Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
+              Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount()),
           "ACH push",
           "ACH push");
     } catch (RecordNotFoundException e) {
@@ -273,7 +257,7 @@ public class StripeConnectHandler {
   @StripeBankAccountOp(
       reviewer = "Craig Miller",
       explanation = "This is a Stripe operation that needs to work with bank accounts")
-  void onAchCreditsReceived(ReceivedCredit receivedCredit) {
+  void onAchCreditsReceived(ReceivedCredit receivedCredit, StripeNetwork stripeNetwork) {
     try {
       UsBankAccount usBankAccount =
           receivedCredit.getReceivedPaymentMethodDetails().getUsBankAccount();
@@ -281,19 +265,64 @@ public class StripeConnectHandler {
           businessService.retrieveBusinessByStripeFinancialAccount(
               receivedCredit.getFinancialAccount());
 
-      businessBankAccountService.processExternalAchTransfer(
-          business.getId(),
-          Amount.fromStripeAmount(
-              Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount().longValue()),
-          usBankAccount.getBankName(),
-          usBankAccount.getLastFour(),
-          false);
+      switch (stripeNetwork) {
+        case ACH -> businessBankAccountService.processExternalAchTransfer(
+            business.getId(),
+            Amount.fromStripeAmount(
+                Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount()),
+            usBankAccount.getBankName(),
+            usBankAccount.getLastFour());
+        case US_DOMESTIC_WIRE -> businessBankAccountService.processExternalWireTransfer(
+            business.getId(),
+            Amount.fromStripeAmount(
+                Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount()),
+            usBankAccount.getBankName(),
+            usBankAccount.getLastFour());
+        default -> log.error(
+            "Cannot process external ach transfer due to unsupported stripe network value: "
+                + stripeNetwork);
+      }
     } catch (RecordNotFoundException e) {
       log.info(
           "Skipping received credit event for an ach transfer for business since it is not found in the db by stripe financial account {}",
           receivedCredit.getFinancialAccount());
     } catch (Exception e) {
       log.error("Failed to process credit event for an ach transfer", e);
+    }
+  }
+
+  @VisibleForTesting
+  @StripeBankAccountOp(
+      reviewer = "Slava Akimov",
+      explanation = "This is a method where Stripe messages flow to the bank account service")
+  @StripeCardOp(
+      reviewer = "Slava Akimov",
+      explanation = "This is a Stripe operation that needs to work with card")
+  void onCardCreditsReceived(ReceivedCredit receivedCredit) {
+    if (receivedCredit.getNetworkDetails() != null) {
+      String issuingCard = receivedCredit.getNetworkDetails().getIssuingCard();
+
+      try {
+        if (issuingCard != null) {
+          CardRecord cardRecord = cardService.getCardByExternalRef(issuingCard);
+
+          Amount amount =
+              Amount.fromStripeAmount(
+                  Currency.of(receivedCredit.getCurrency()), receivedCredit.getAmount());
+
+          businessBankAccountService.processExternalCardReturn(
+              cardRecord.card().getBusinessId(),
+              cardRecord.account().getAllocationId(),
+              cardRecord.account().getId(),
+              amount);
+        }
+      } catch (RecordNotFoundException e) {
+        log.info(
+            "Skipping received card credit event since card {} is not found in the db",
+            issuingCard);
+      } catch (Exception e) {
+        log.error("Failed to process card credits event", e);
+      }
     }
   }
 

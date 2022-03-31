@@ -99,13 +99,10 @@ public class AccountService {
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
       Amount amount,
-      boolean standardHold,
-      boolean withinLimits) {
+      boolean standardHold) {
     amount.ensureNonNegative();
 
-    if (withinLimits) {
-      businessLimitService.ensureWithinDepositLimit(businessId, amount);
-    }
+    businessLimitService.ensureWithinDepositLimit(businessId, amount);
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
@@ -122,10 +119,38 @@ public class AccountService {
                     : adjustment.getCreated()));
     log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
 
-    // flush everything to the db before trying to call i2c
-    holdRepository.flush();
-
     return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, hold);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AdjustmentAndHoldRecord depositExternalAchFunds(
+      Account rootAllocationAccount, Amount amount) {
+    amount.ensureNonNegative();
+
+    Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
+    rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
+
+    return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, null);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AdjustmentAndHoldRecord returnFunds(Account rootAllocationAccount, Amount amount) {
+    amount.ensureNonNegative();
+
+    Adjustment adjustment = adjustmentService.recordReturnFunds(rootAllocationAccount, amount);
+    rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
+
+    return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, null);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AdjustmentAndHoldRecord returnCardFunds(Account cardAccount, Amount amount) {
+    amount.ensureNonNegative();
+
+    Adjustment adjustment = adjustmentService.recordCardReturnFunds(cardAccount, amount);
+    cardAccount.setLedgerBalance(cardAccount.getLedgerBalance().add(amount));
+
+    return new AdjustmentAndHoldRecord(cardAccount, adjustment, null);
   }
 
   @Transactional(TxType.REQUIRED)

@@ -138,7 +138,7 @@ class MustacheTemplateTest {
             new TypedId<>(),
             new TypedId<>(),
             new TypedId<>(),
-            List.of(AccountActivityType.BANK_DEPOSIT, AccountActivityType.FEE),
+            List.of(AccountActivityType.BANK_DEPOSIT_STRIPE, AccountActivityType.FEE),
             "text",
             OffsetDateTime.now(),
             OffsetDateTime.now(),

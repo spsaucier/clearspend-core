@@ -858,8 +858,7 @@ public class TestHelper {
           business.getId(),
           rootAllocation.account(),
           Amount.of(Currency.USD, new BigDecimal(openingBalance)),
-          false,
-          true);
+          false);
     }
 
     business

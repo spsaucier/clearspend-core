@@ -114,8 +114,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
-        false,
-        true);
+        false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
@@ -174,8 +173,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         business.getId(),
         createBusinessRecord.allocationRecord().account(),
         Amount.of(Currency.USD, new BigDecimal("1000")),
-        false,
-        true);
+        false);
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
@@ -282,7 +280,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     final AccountActivityFilterCriteria criteria2 = new AccountActivityFilterCriteria();
     criteria2.setBusinessId(business.getId());
-    criteria2.setTypes(List.of(AccountActivityType.BANK_DEPOSIT));
+    criteria2.setTypes(List.of(AccountActivityType.BANK_DEPOSIT_STRIPE));
     criteria2.setPageToken(new PageToken(0, 10, null));
 
     Page<AccountActivity> depositFilteredAccountActivity =
@@ -300,7 +298,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new AccountActivity(
             businessRecord.business().getId(),
             businessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
@@ -408,7 +406,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new AccountActivity(
             businessRecord.business().getId(),
             businessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
@@ -443,7 +441,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         new AccountActivity(
             businessRecord.business().getId(),
             businessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),
@@ -1364,7 +1362,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     final AccountActivityFilterCriteria criteria = new AccountActivityFilterCriteria();
     criteria.setFrom(OffsetDateTime.now().minusYears(1));
     criteria.setTo(OffsetDateTime.now().plusYears(1));
-    criteria.setTypes(List.of(AccountActivityType.BANK_DEPOSIT));
+    criteria.setTypes(List.of(AccountActivityType.BANK_DEPOSIT_STRIPE));
     final PageRequest pageRequest = new PageRequest(0, 10);
     criteria.setPageToken(PageRequest.toPageToken(pageRequest));
 

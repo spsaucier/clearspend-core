@@ -162,7 +162,7 @@ public class AccountActivityService {
 
   @Transactional(TxType.REQUIRED)
   AccountActivity recordReallocationAccountActivity(
-      Allocation allocation, Adjustment adjustment, User user) {
+      Allocation allocation, Allocation flipAllocation, Adjustment adjustment, User user) {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
@@ -176,9 +176,14 @@ public class AccountActivityService {
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
 
+    if (flipAllocation != null) {
+      accountActivity.setFlipAllocation(AllocationDetails.of(flipAllocation));
+    }
+
     if (user != null) {
       accountActivity.setUser(UserDetails.of(user));
     }
+
     return accountActivityRepository.save(accountActivity);
   }
 
@@ -198,6 +203,25 @@ public class AccountActivityService {
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
     accountActivity.setNotes(notes);
+
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  @Transactional(TxType.REQUIRED)
+  public AccountActivity recordCardReturnFundsActivity(
+      Allocation allocation, Adjustment adjustment) {
+    AccountActivity accountActivity =
+        new AccountActivity(
+            adjustment.getBusinessId(),
+            adjustment.getAccountId(),
+            AccountActivityType.CARD_FUND_RETURN,
+            AccountActivityStatus.PROCESSED,
+            AllocationDetails.of(allocation),
+            adjustment.getEffectiveDate(),
+            adjustment.getAmount(),
+            adjustment.getAmount(),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAdjustmentId(adjustment.getId());
 
     return accountActivityRepository.save(accountActivity);
   }
@@ -259,11 +283,13 @@ public class AccountActivityService {
     Allocation allocation = common.getAllocation();
     User cardOwner = userRepository.findById(common.getCard().getUserId()).orElseThrow();
 
+    AccountActivityType accountActivityType = common.getAccountActivityType();
+
     AccountActivity accountActivity =
         new AccountActivity(
             common.getBusinessId(),
             common.getAccount().getId(),
-            common.getNetworkMessageType().getAccountActivityType(),
+            accountActivityType,
             common.getAccountActivityDetails().getAccountActivityStatus(),
             AllocationDetails.of(allocation),
             common.getAccountActivityDetails().getActivityTime(),
@@ -271,7 +297,9 @@ public class AccountActivityService {
             common.getRequestedAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
 
-    accountActivity.setUser(UserDetails.of(cardOwner));
+    if (accountActivityType != AccountActivityType.NETWORK_REFUND) {
+      accountActivity.setUser(UserDetails.of(cardOwner));
+    }
 
     accountActivity.setMerchant(
         new MerchantDetails(

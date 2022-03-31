@@ -55,6 +55,42 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
+  Adjustment recordReturnFunds(Account account, Amount amount) {
+    BankJournalEntry bankJournalEntry =
+        ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
+
+    return adjustmentRepository.save(
+        new Adjustment(
+            account.getBusinessId(),
+            account.getAllocationId(),
+            account.getId(),
+            account.getLedgerAccountId(),
+            bankJournalEntry.journalEntry().getId(),
+            bankJournalEntry.accountPosting().getId(),
+            AdjustmentType.RETURN,
+            OffsetDateTime.now(),
+            amount));
+  }
+
+  @Transactional(TxType.REQUIRED)
+  Adjustment recordCardReturnFunds(Account account, Amount amount) {
+    NetworkJournalEntry networkJournalEntry =
+        ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
+
+    return adjustmentRepository.save(
+        new Adjustment(
+            account.getBusinessId(),
+            account.getAllocationId(),
+            account.getId(),
+            account.getLedgerAccountId(),
+            networkJournalEntry.journalEntry().getId(),
+            networkJournalEntry.accountPosting().getId(),
+            AdjustmentType.RETURN,
+            OffsetDateTime.now(),
+            amount));
+  }
+
+  @Transactional(TxType.REQUIRED)
   Adjustment recordWithdrawFunds(Account account, Amount amount) {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordWithdrawFunds(account.getLedgerAccountId(), amount);

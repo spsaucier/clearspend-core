@@ -120,7 +120,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
 
     AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
     accountActivityRequest.setPageRequest(new PageRequest(0, 10));
-    accountActivityRequest.setTypes(List.of(AccountActivityType.BANK_DEPOSIT));
+    accountActivityRequest.setTypes(List.of(AccountActivityType.BANK_DEPOSIT_STRIPE));
     accountActivityRequest.setAllocationId(
         createBusinessRecord.allocationRecord().allocation().getId());
     accountActivityRequest.setFrom(OffsetDateTime.now().minusDays(1));

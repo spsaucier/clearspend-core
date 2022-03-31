@@ -359,10 +359,12 @@ public class BusinessService {
 
     accountActivityService.recordReallocationAccountActivity(
         allocationFromRecord.allocation(),
+        allocationToRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(),
         user);
     accountActivityService.recordReallocationAccountActivity(
         allocationToRecord.allocation(),
+        allocationFromRecord.allocation(),
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment(),
         user);
 

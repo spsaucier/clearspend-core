@@ -167,7 +167,14 @@ public class AllocationService {
     allocation = allocationRepository.save(allocation);
 
     if (parentAccount != null) {
-      accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
+
+      AccountReallocateFundsRecord reallocateFundsRecord =
+          accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
+
+      accountActivityService.recordReallocationAccountActivity(
+          parent, allocation, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(), user);
+      accountActivityService.recordReallocationAccountActivity(
+          allocation, parent, reallocateFundsRecord.reallocateFundsRecord().toAdjustment(), user);
     }
 
     transactionLimitService.createAllocationSpendLimit(
@@ -390,10 +397,12 @@ public class AllocationService {
 
     accountActivityService.recordReallocationAccountActivity(
         allocationDetailsRecord.allocation,
+        null,
         reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(),
         user);
     accountActivityService.recordReallocationAccountActivity(
         allocationDetailsRecord.allocation,
+        null,
         reallocateFundsRecord.reallocateFundsRecord().toAdjustment(),
         user);
 

@@ -22,6 +22,10 @@ public class LedgerAllocationAccount implements LedgerAccount {
   }
 
   public static LedgerAllocationAccount of(AllocationDetails allocationDetails) {
+    if (allocationDetails == null) {
+      return null;
+    }
+
     return new LedgerAllocationAccount(
         new AllocationInfo(allocationDetails.getId(), allocationDetails.getName()));
   }

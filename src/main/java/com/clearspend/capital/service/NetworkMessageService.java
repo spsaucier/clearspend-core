@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -22,6 +23,7 @@ import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
+import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.RestrictedApi;
@@ -61,9 +63,9 @@ public class NetworkMessageService {
 
   private final ClearbitClient clearbitClient;
 
-  @CardService.CardNetworkAccess(
+  @StripeCardOp(
       reviewer = "patrick.morton",
-      explaination = "Card Network events have no Security Context")
+      explanation = "Card Network events have no Security Context")
   private void retrieveCardAndNetworkMessages(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord;
@@ -382,7 +384,14 @@ public class NetworkMessageService {
   private void processTransactionCreated(NetworkCommon common) {
     common.setApprovedAmount(common.getRequestedAmount());
 
-    common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.APPROVED);
+    AccountActivityType accountActivityType = common.getAccountActivityType();
+
+    common
+        .getAccountActivityDetails()
+        .setAccountActivityStatus(
+            accountActivityType == AccountActivityType.NETWORK_REFUND
+                ? AccountActivityStatus.PROCESSED
+                : AccountActivityStatus.APPROVED);
     common.setPostAdjustment(true);
 
     releasePriorHold(common);

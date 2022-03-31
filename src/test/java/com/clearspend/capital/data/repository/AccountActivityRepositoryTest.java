@@ -35,7 +35,7 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
         new AccountActivity(
             businessRecord.business().getId(),
             businessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),

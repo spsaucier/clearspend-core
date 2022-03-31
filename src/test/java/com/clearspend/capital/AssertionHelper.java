@@ -214,9 +214,13 @@ public class AssertionHelper {
     AccountActivity accountActivity =
         accountActivityRepository.findById(common.getAccountActivity().getId()).orElseThrow();
 
+    AccountActivityType accountActivityType = common.getAccountActivityType();
+
     assertAccountActivity(
-        AccountActivityType.NETWORK_CAPTURE,
-        AccountActivityStatus.APPROVED,
+        accountActivityType,
+        accountActivityType == AccountActivityType.NETWORK_REFUND
+            ? AccountActivityStatus.PROCESSED
+            : AccountActivityStatus.APPROVED,
         accountActivity,
         user,
         common.getAllocation(),

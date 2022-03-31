@@ -378,7 +378,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
         new AccountActivity(
             createBusinessRecord.business().getId(),
             createBusinessRecord.allocationRecord().account().getId(),
-            AccountActivityType.BANK_DEPOSIT,
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()),
             OffsetDateTime.now(),

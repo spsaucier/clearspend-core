@@ -4,6 +4,7 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -92,9 +93,9 @@ public class StripeDirectHandler {
     return common;
   }
 
-  @CardService.CardNetworkAccess(
+  @StripeCardOp(
       reviewer = "patrick.morton",
-      explaination = "Card Network events have no Security Context")
+      explanation = "Card Network events have no Security Context")
   void processCard(StripeEventType stripeEventType, ParseRecord parseRecord) {
     if (stripeEventType == StripeEventType.ISSUING_CARD_UPDATED) {
       Card card = (Card) parseRecord.stripeObject();

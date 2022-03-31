@@ -11,7 +11,9 @@ import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -19,6 +21,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -286,23 +289,84 @@ public class BusinessBankAccountService {
       TypedId<BusinessId> businessId,
       Amount amount,
       String bankName,
-      String accountNumberLastFour,
-      boolean standardHold) {
+      String accountNumberLastFour) {
+    AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+
+    return processExternalTransfer(
+        businessId,
+        allocationRecord.allocation(),
+        allocationRecord.account(),
+        AccountActivityType.BANK_DEPOSIT_ACH,
+        amount,
+        bankName,
+        accountNumberLastFour);
+  }
+
+  @Transactional
+  @RestrictedApi(
+      explanation = "This method is used by Stripe operations, where permissions are not available",
+      allowlistAnnotations = {StripeBankAccountOp.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public AdjustmentAndHoldRecord processExternalWireTransfer(
+      TypedId<BusinessId> businessId,
+      Amount amount,
+      String bankName,
+      String accountNumberLastFour) {
+    AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+
+    return processExternalTransfer(
+        businessId,
+        allocationRecord.allocation(),
+        allocationRecord.account(),
+        AccountActivityType.BANK_DEPOSIT_WIRE,
+        amount,
+        bankName,
+        accountNumberLastFour);
+  }
+
+  @Transactional
+  @RestrictedApi(
+      explanation = "This method is used by Stripe operations, where permissions are not available",
+      allowlistAnnotations = {StripeBankAccountOp.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public AdjustmentAndHoldRecord processExternalCardReturn(
+      TypedId<BusinessId> businessId,
+      TypedId<AllocationId> allocationId,
+      TypedId<AccountId> accountId,
+      Amount amount) {
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        accountService.returnCardFunds(accountService.retrieveAccountById(accountId, true), amount);
+
+    accountActivityService.recordCardReturnFundsActivity(
+        allocationService.retrieveAllocation(businessId, allocationId),
+        adjustmentAndHoldRecord.adjustment());
+
+    return adjustmentAndHoldRecord;
+  }
+
+  private AdjustmentAndHoldRecord processExternalTransfer(
+      TypedId<BusinessId> businessId,
+      Allocation allocation,
+      com.clearspend.capital.data.model.Account account,
+      AccountActivityType transferType,
+      Amount amount,
+      String bankName,
+      String accountNumberLastFour) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
     if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       throw new InvalidStateException(
           Table.BUSINESS, "Stripe Financial Account Ref missing on business " + businessId);
     }
 
-    AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
-
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
-        accountService.depositFunds(
-            businessId, allocationRecord.account(), amount, standardHold, false);
+        accountService.depositExternalAchFunds(account, amount);
 
     accountActivityService.recordExternalBankAccountAccountActivity(
-        allocationRecord.allocation(),
-        AccountActivityType.BANK_DEPOSIT,
+        allocation,
+        transferType,
         adjustmentAndHoldRecord.adjustment(),
         adjustmentAndHoldRecord.hold(),
         bankName,
@@ -350,7 +414,7 @@ public class BusinessBankAccountService {
           case DEPOSIT -> {
             checkBalance(amount, businessBankAccount);
             yield accountService.depositFunds(
-                businessId, allocationRecord.account(), amount, standardHold, true);
+                businessId, allocationRecord.account(), amount, standardHold);
           }
           case WITHDRAW -> accountService.withdrawFunds(
               businessId, allocationRecord.account(), amount);
@@ -358,7 +422,7 @@ public class BusinessBankAccountService {
 
     AccountActivityType type =
         bankAccountTransactType == BankAccountTransactType.DEPOSIT
-            ? AccountActivityType.BANK_DEPOSIT
+            ? AccountActivityType.BANK_DEPOSIT_STRIPE
             : AccountActivityType.BANK_WITHDRAWAL;
     accountActivityService.recordBankAccountAccountActivity(
         allocationRecord.allocation(),
@@ -452,7 +516,7 @@ public class BusinessBankAccountService {
     }
 
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
-        accountService.depositFunds(businessId, rootAllocation.account(), amount, false, false);
+        accountService.returnFunds(rootAllocation.account(), amount);
 
     accountActivityService.recordBankAccountAccountActivity(
         rootAllocation.allocation(),

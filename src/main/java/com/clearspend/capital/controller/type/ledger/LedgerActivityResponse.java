@@ -70,22 +70,17 @@ public class LedgerActivityResponse {
         sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
         targetAccount = null;
       }
-      case BANK_LINK, BANK_UNLINK -> {
-        ledgerUser = new LedgerUser(accountActivity.getUser());
-        sourceAccount = null;
-        targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
-      }
       case REALLOCATE -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
         if (accountActivity.getAmount().isLessThanZero()) {
           sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-          targetAccount = null;
+          targetAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
         } else {
-          sourceAccount = null;
+          sourceAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
           targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
         }
       }
-      case BANK_DEPOSIT -> {
+      case BANK_DEPOSIT_STRIPE -> {
         ledgerUser =
             holdInfo != null ? LedgerUser.SYSTEM_USER : new LedgerUser(accountActivity.getUser());
         sourceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
@@ -96,7 +91,7 @@ public class LedgerActivityResponse {
         sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
         targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
-      case BANK_DEPOSIT_RETURN -> {
+      case BANK_DEPOSIT_RETURN, BANK_DEPOSIT_ACH, BANK_DEPOSIT_WIRE -> {
         ledgerUser = LedgerUser.EXTERNAL_USER;
         sourceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
         targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
@@ -106,10 +101,15 @@ public class LedgerActivityResponse {
         sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
         targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
-      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE -> {
+      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE, NETWORK_REFUND -> {
         ledgerUser =
             holdInfo != null ? LedgerUser.SYSTEM_USER : new LedgerUser(accountActivity.getUser());
         sourceAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
+        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+      }
+      case CARD_FUND_RETURN -> {
+        ledgerUser = LedgerUser.EXTERNAL_USER;
+        sourceAccount = null;
         targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
       default -> {

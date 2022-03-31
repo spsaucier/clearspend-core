@@ -84,6 +84,10 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
 
   @NonNull @Embedded private AllocationDetails allocation;
 
+  // filled for reallocation activities only. Could be a source allocation for positive amounts,
+  // target allocation for negative ones
+  @Embedded private AllocationDetails flipAllocation;
+
   @Embedded private HoldDetails hold;
 
   @Embedded private UserDetails user;

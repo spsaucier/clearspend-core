@@ -1,6 +1,7 @@
 package com.clearspend.capital.service.type;
 
 import com.clearspend.capital.client.stripe.StripeMetadataEntry;
+import com.clearspend.capital.client.stripe.types.TransactionType;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeEventType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
@@ -13,6 +14,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -56,12 +58,19 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 public class NetworkCommon {
+  private static final Map<NetworkMessageType, AccountActivityType> accountActivityMappings =
+      Map.of(
+          NetworkMessageType.AUTH_REQUEST, AccountActivityType.NETWORK_AUTHORIZATION,
+          NetworkMessageType.AUTH_CREATED, AccountActivityType.NETWORK_AUTHORIZATION,
+          NetworkMessageType.AUTH_UPDATED, AccountActivityType.NETWORK_AUTHORIZATION,
+          NetworkMessageType.TRANSACTION_CREATED, AccountActivityType.NETWORK_CAPTURE);
 
   // the identifier for this card at Stripe
   @NonNull private String cardExternalRef;
 
   // the type of network message we're processing from Stripe
   @NonNull private NetworkMessageType networkMessageType;
+
   private String networkMessageSubType;
 
   // flag to indicate we can give a lower approval than asked for
@@ -300,5 +309,14 @@ public class NetworkCommon {
     }
 
     return metadata;
+  }
+
+  public AccountActivityType getAccountActivityType() {
+    if (networkMessageType == NetworkMessageType.TRANSACTION_CREATED
+        && TransactionType.from(networkMessageSubType) == TransactionType.REFUND) {
+      return AccountActivityType.NETWORK_REFUND;
+    }
+
+    return accountActivityMappings.get(networkMessageType);
   }
 }

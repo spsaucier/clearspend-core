@@ -28,8 +28,6 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.ServiceHelper;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -93,7 +91,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     outboundTransfer.setCurrency("usd");
     outboundTransfer.setStatus("failed");
 
-    testOutbountTransferFailure(outboundTransfer);
+    testOutboundTransferFailure(outboundTransfer);
   }
 
   @Test
@@ -108,7 +106,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     outboundTransfer.setCurrency("usd");
     outboundTransfer.setStatus("canceled");
 
-    testOutbountTransferFailure(outboundTransfer);
+    testOutboundTransferFailure(outboundTransfer);
   }
 
   @Test
@@ -124,11 +122,11 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     outboundTransfer.setStatus("returned");
     outboundTransfer.setReturnedDetails(new ReturnedDetails("account_closed", null));
 
-    testOutbountTransferFailure(outboundTransfer);
+    testOutboundTransferFailure(outboundTransfer);
   }
 
   @Test
-  private void testOutbountTransferFailure(OutboundTransfer outboundTransfer) {
+  private void testOutboundTransferFailure(OutboundTransfer outboundTransfer) {
     // given
     Amount amount = new Amount(Currency.USD, BigDecimal.TEN);
     CreateAdjustmentResponse createAdjustmentResponse =
@@ -181,28 +179,20 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
                         .contains(accountActivity.getType()))
             .toList();
 
-    // initial withdraw declined
-    assertThat(accountActivities)
-        .filteredOn("type", AccountActivityType.BANK_WITHDRAWAL)
-        .hasSize(1)
-        .extracting("status")
-        .containsOnly(AccountActivityStatus.DECLINED);
+    assertThat(accountActivities).hasSize(2);
 
-    // check correct account activity records for the withdrawal action
-    accountActivities.forEach(
-        accountActivity -> {
-          if (accountActivity.getType() == AccountActivityType.BANK_WITHDRAWAL_RETURN) {
-            if (accountActivity.getHold() != null) {
-              assertThat(accountActivity.getHideAfter())
-                  .isBefore(OffsetDateTime.now(Clock.systemUTC()));
-              assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
-            }
-            if (accountActivity.getAdjustmentId() != null) {
-              assertThat(accountActivity.getVisibleAfter())
-                  .isBefore(OffsetDateTime.now(Clock.systemUTC()));
-              assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
-            }
-          }
-        });
+    AccountActivity bankWithdrawalActivity =
+        accountActivities.stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_WITHDRAWAL)
+            .findAny()
+            .orElseThrow();
+    AccountActivity bankWithdrawalReturn =
+        accountActivities.stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_WITHDRAWAL_RETURN)
+            .findAny()
+            .orElseThrow();
+
+    assertThat(bankWithdrawalActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
+    assertThat(bankWithdrawalReturn.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
   }
 }

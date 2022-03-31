@@ -520,10 +520,10 @@ public class CardService {
       link =
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
       allowedOnPath = "/test/.*",
-      allowlistAnnotations = {CardNetworkAccess.class})
-  @CardNetworkAccess(
+      allowlistAnnotations = {StripeCardOp.class})
+  @StripeCardOp(
       reviewer = "patrick.morton",
-      explaination = "Card Network events have no Security Context")
+      explanation = "Card Network events have no Security Context")
   public void processCardShippingEvents(com.stripe.model.issuing.Card stripeCard) {
     cardRepository.flush();
     Card card;
@@ -569,7 +569,7 @@ public class CardService {
       link =
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
       allowedOnPath = "/test/.*",
-      allowlistAnnotations = {CardNetworkAccess.class})
+      allowlistAnnotations = {StripeCardOp.class})
   public CardRecord getCardByExternalRef(@NonNull String externalRef) {
     Card card =
         cardRepository
@@ -579,9 +579,9 @@ public class CardService {
     return new CardRecord(card, accountService.retrieveAccountById(card.getAccountId(), true));
   }
 
-  public @interface CardNetworkAccess {
+  public @interface StripeCardOp {
     public String reviewer();
 
-    public String explaination();
+    public String explanation();
   }
 }
