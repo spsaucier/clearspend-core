@@ -131,6 +131,7 @@ public class CardService {
     if (cardLine3.length() > 25) {
       StringBuilder name = new StringBuilder();
       for (String s : cardLine3.toString().split(" ")) {
+        // TODO CAP-837 long names get run together
         if (name.length() + s.length() < 26) {
           name.append(s);
         } else {
@@ -150,8 +151,8 @@ public class CardService {
             binType,
             fundingType,
             cardType,
-            OffsetDateTime.now(),
-            LocalDate.now().plusYears(3),
+            OffsetDateTime.now(ZoneOffset.UTC),
+            LocalDate.now(ZoneOffset.UTC).plusYears(3),
             cardLine3.toString(),
             StringUtils.EMPTY,
             cardType.equals(CardType.PHYSICAL) ? shippingAddress : new Address());
@@ -215,7 +216,7 @@ public class CardService {
               user.getExternalRef());
           case VIRTUAL -> {
             card.setActivated(true);
-            card.setActivationDate(OffsetDateTime.now());
+            card.setActivationDate(OffsetDateTime.now(ZoneOffset.UTC));
             yield stripeClient.createVirtualCard(
                 card, business.getStripeData().getAccountRef(), user.getExternalRef());
           }
@@ -344,7 +345,7 @@ public class CardService {
     }
 
     card.setActivated(true);
-    card.setActivationDate(OffsetDateTime.now());
+    card.setActivationDate(OffsetDateTime.now(ZoneOffset.UTC));
 
     return updateCardStatus(card, CardStatus.ACTIVE, statusReason, true);
   }
@@ -542,7 +543,7 @@ public class CardService {
     if ("shipped".equals(stripeCard.getShipping().getStatus())) {
       if (!card.isShipped()) {
         card.setShipped(true);
-        card.setShippedDate(OffsetDateTime.now());
+        card.setShippedDate(OffsetDateTime.now(ZoneOffset.UTC));
         card.setDeliveryEta(
             OffsetDateTime.ofInstant(
                 Instant.ofEpochSecond(stripeCard.getShipping().getEta()), ZoneOffset.UTC));
@@ -555,7 +556,7 @@ public class CardService {
     } else if ("delivered".equals(stripeCard.getShipping().getStatus())) {
       if (!card.isDelivered()) {
         card.setDelivered(true);
-        card.setDeliveredDate(OffsetDateTime.now());
+        card.setDeliveredDate(OffsetDateTime.now(ZoneOffset.UTC));
         cardRepository.save(card);
       }
     }
@@ -580,6 +581,7 @@ public class CardService {
   }
 
   public @interface StripeCardOp {
+
     public String reviewer();
 
     public String explanation();

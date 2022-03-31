@@ -97,10 +97,10 @@ tasks {
         violationRules {
             rule {
                 limit {
-                    minimum = BigDecimal(0.69)
+                    minimum = BigDecimal(0.70)
                     // This number should ideally be around .8 or .9, but not
                     // higher because of diminishing returns for the effort.
-                    // It is set lower now so that we canmore gracefully
+                    // It is set lower now so that we can more gracefully
                     // begin implementing more testing.
                     // Remember, too, that good coverage is not the same as good tests.
                 }

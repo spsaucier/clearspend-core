@@ -21,6 +21,7 @@ import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.service.type.CardAllocationSpendingDaily;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -61,18 +62,6 @@ public class TransactionLimitService {
         .findByBusinessIdAndTypeAndOwnerId(businessId, type, ownerId)
         .orElseThrow(
             () -> new RecordNotFoundException(Table.SPEND_LIMIT, businessId, type, ownerId));
-  }
-
-  private TransactionLimit duplicateSpendLimit(
-      TypedId<BusinessId> businessId, UUID ownerId, TransactionLimit existingTransactionLimit) {
-    return transactionLimitRepository.save(
-        new TransactionLimit(
-            businessId,
-            TransactionLimitType.CARD,
-            ownerId,
-            existingTransactionLimit.getLimits(),
-            existingTransactionLimit.getDisabledMccGroups(),
-            existingTransactionLimit.getDisabledPaymentTypes()));
   }
 
   @Transactional
@@ -230,7 +219,8 @@ public class TransactionLimitService {
               .getOrDefault(amount.getCurrency(), Map.of())
               .getOrDefault(LimitType.PURCHASE, Map.of());
       for (Entry<LimitPeriod, BigDecimal> limit : limits.entrySet()) {
-        LocalDate startDate = LocalDate.now().minusDays(limit.getKey().getDuration().toDays());
+        LocalDate startDate =
+            LocalDate.now(ZoneOffset.UTC).minusDays(limit.getKey().getDuration().toDays());
 
         BigDecimal usage =
             totalSpendings.entrySet().stream()

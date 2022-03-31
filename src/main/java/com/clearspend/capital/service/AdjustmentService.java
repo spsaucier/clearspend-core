@@ -13,6 +13,7 @@ import com.clearspend.capital.service.LedgerService.ManualAdjustmentJournalEntry
 import com.clearspend.capital.service.LedgerService.NetworkJournalEntry;
 import com.clearspend.capital.service.LedgerService.ReallocationJournalEntry;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
@@ -50,7 +51,7 @@ public class AdjustmentService {
             bankJournalEntry.journalEntry().getId(),
             bankJournalEntry.accountPosting().getId(),
             AdjustmentType.DEPOSIT,
-            OffsetDateTime.now(),
+            OffsetDateTime.now(ZoneOffset.UTC),
             amount));
   }
 
@@ -68,7 +69,7 @@ public class AdjustmentService {
             bankJournalEntry.journalEntry().getId(),
             bankJournalEntry.accountPosting().getId(),
             AdjustmentType.RETURN,
-            OffsetDateTime.now(),
+            OffsetDateTime.now(ZoneOffset.UTC),
             amount));
   }
 
@@ -86,7 +87,7 @@ public class AdjustmentService {
             networkJournalEntry.journalEntry().getId(),
             networkJournalEntry.accountPosting().getId(),
             AdjustmentType.RETURN,
-            OffsetDateTime.now(),
+            OffsetDateTime.now(ZoneOffset.UTC),
             amount));
   }
 
@@ -104,7 +105,7 @@ public class AdjustmentService {
             bankJournalEntry.journalEntry().getId(),
             bankJournalEntry.accountPosting().getId(),
             AdjustmentType.WITHDRAW,
-            OffsetDateTime.now(),
+            OffsetDateTime.now(ZoneOffset.UTC),
             amount.negate()));
   }
 
@@ -122,7 +123,7 @@ public class AdjustmentService {
             bankJournalEntry.journalEntry().getId(),
             bankJournalEntry.accountPosting().getId(),
             AdjustmentType.FEE,
-            OffsetDateTime.now(),
+            OffsetDateTime.now(ZoneOffset.UTC),
             amount.negate()));
   }
 
@@ -142,7 +143,7 @@ public class AdjustmentService {
                 bankJournalEntry.journalEntry().getId(),
                 bankJournalEntry.fromPosting().getId(),
                 AdjustmentType.REALLOCATE,
-                OffsetDateTime.now(),
+                OffsetDateTime.now(ZoneOffset.UTC),
                 amount.negate()));
 
     Adjustment toAdjustment =
@@ -155,7 +156,7 @@ public class AdjustmentService {
                 bankJournalEntry.journalEntry().getId(),
                 bankJournalEntry.toPosting().getId(),
                 AdjustmentType.REALLOCATE,
-                OffsetDateTime.now(),
+                OffsetDateTime.now(ZoneOffset.UTC),
                 amount));
 
     return new ReallocateFundsRecord(bankJournalEntry, fromAdjustment, toAdjustment);
@@ -176,7 +177,7 @@ public class AdjustmentService {
                 manualAdjustmentJournalEntry.journalEntry().getId(),
                 manualAdjustmentJournalEntry.accountPosting().getId(),
                 AdjustmentType.MANUAL,
-                OffsetDateTime.now(),
+                OffsetDateTime.now(ZoneOffset.UTC),
                 manualAdjustmentJournalEntry.accountPosting().getAmount()));
 
     account.setLedgerBalance(account.getLedgerBalance().add(amount));
@@ -200,7 +201,7 @@ public class AdjustmentService {
                 networkJournalEntry.journalEntry().getId(),
                 networkJournalEntry.accountPosting().getId(),
                 AdjustmentType.NETWORK,
-                OffsetDateTime.now(),
+                OffsetDateTime.now(ZoneOffset.UTC),
                 networkJournalEntry.accountPosting().getAmount()));
 
     return new AdjustmentRecord(networkJournalEntry.journalEntry(), adjustment);
@@ -208,7 +209,7 @@ public class AdjustmentService {
 
   List<Adjustment> retrieveBusinessAdjustments(
       TypedId<BusinessId> businessId, List<AdjustmentType> adjustmentTypes, int daysAgo) {
-    OffsetDateTime before = OffsetDateTime.now().minusDays(daysAgo);
+    OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC).minusDays(daysAgo);
     return adjustmentRepository.findByBusinessIdAndTypeInAndEffectiveDateAfter(
         businessId, adjustmentTypes, before);
   }

@@ -206,7 +206,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
       @NonNull TypedId<BusinessId> businessId, GraphFilterCriteria criteria) {
 
     final String query = findAccountActivityForLineGraphTemplate.execute(criteria);
-    final String zoneOffset = OffsetDateTime.now().getOffset().getId();
+    final String zoneOffset = OffsetDateTime.now(ZoneOffset.UTC).getOffset().getId();
 
     final int slices =
         ChronoUnit.DAYS.between(criteria.getFrom().toInstant(), criteria.getTo().toInstant())
@@ -245,7 +245,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     BigDecimal totalNumberOfElements =
         graphDataList.stream().map(GraphData::getCount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    if (totalNumberOfElements.equals(BigDecimal.ZERO)) {
+    if (totalNumberOfElements.signum() == 0) {
       totalNumberOfElements = BigDecimal.ONE;
     }
 
@@ -371,7 +371,7 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
                 "statuses",
                 List.of(
                     AccountActivityStatus.PENDING.name(), AccountActivityStatus.APPROVED.name()))
-            .addValue("timeFrom", LocalDate.now().minusDays(daysAgo)),
+            .addValue("timeFrom", LocalDate.now(ZoneOffset.UTC).minusDays(daysAgo)),
         (resultSet) -> {
           CardAllocationSpendingDaily spendingTotal =
               new CardAllocationSpendingDaily(new HashMap<>(), new HashMap<>());
@@ -396,8 +396,10 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
   }
 
   @Getter
+  @SuppressWarnings("MissingSummary")
   @Builder
   private static class ChartFilterContext {
+
     private final boolean isAllocation;
     private final boolean isEmployee;
     private final boolean isMerchant;

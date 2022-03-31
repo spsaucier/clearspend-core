@@ -25,6 +25,8 @@ import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -49,12 +51,14 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
   public @interface LoginUserOp {
+
     String reviewer();
 
     String explanation();
   }
 
   public @interface TestDataUserOp {
+
     String reviewer();
 
     String explanation();
@@ -205,6 +209,8 @@ public class UserService {
   }
 
   /**
+   * Make changes to the user
+   *
    * @param businessId must match the user being modified
    * @param userId the user to modify
    * @param firstName the new first name
@@ -245,7 +251,7 @@ public class UserService {
       // Ensure that this email address does NOT already exist within the database.
       RequiredEncryptedStringWithHash newHash = new RequiredEncryptedStringWithHash(email);
       Optional<User> duplicate = userRepository.findByEmailHash(HashUtil.calculateHash(email));
-      if (duplicate.isPresent() && duplicate.get().getId() != userId) {
+      if (duplicate.isPresent() && !duplicate.get().getId().equals(userId)) {
         throw new InvalidRequestException("A user with that email address already exists");
       }
       user.setEmail(newHash);
@@ -385,5 +391,12 @@ public class UserService {
       throw new RuntimeException(e.getMessage());
     }
     return csvFile.toByteArray();
+  }
+
+  void acceptTermsAndConditions(TypedId<UserId> userId) {
+    User user = retrieveUserForService(userId);
+    user.setTermsAndConditionsAcceptanceTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+    userRepository.save(user);
+    userRepository.flush();
   }
 }

@@ -30,6 +30,7 @@ import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
@@ -88,7 +89,7 @@ public class BusinessProspectService {
                           new RequiredEncryptedString(lastName),
                           new RequiredEncryptedStringWithHash(email),
                           new TosAcceptance(
-                              OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS),
+                              OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS),
                               tosAcceptanceIp,
                               userAgent));
                   entity.setBusinessType(businessType);

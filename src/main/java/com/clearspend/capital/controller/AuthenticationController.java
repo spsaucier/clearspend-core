@@ -130,6 +130,7 @@ public class AuthenticationController {
       reviewer = "Craig Miller",
       explanation =
           "User information must be looked up here, but there is no SecurityContext available to secure the method yet.")
+  @SuppressWarnings("JavaUtilDate")
   public ResponseEntity<UserLoginResponse> finalizeLogin(
       ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {
     LoginResponse response = loginResponse.successResponse;
@@ -253,7 +254,7 @@ public class AuthenticationController {
    * This is for things requiring a very fresh code, such as disabling 2FA and changing password.
    * This is not how a 2FA login begins - that begins the same as every other login.
    *
-   * @return
+   * @return codes required to proceed
    */
   @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Starting to change the user")
   @PostMapping("/two-factor/start")

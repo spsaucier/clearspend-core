@@ -26,6 +26,7 @@ import org.springframework.core.io.Resource;
 @Slf4j
 @Transactional
 public class TermsAndConditionsServiceTest extends BaseCapitalTest {
+
   private final Resource termsResource;
   private final Resource privacyPolicyResource;
   @Autowired private TermsAndConditionsService termsAndConditionsService;
@@ -63,7 +64,7 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
       privacyPolicyTimestamp = LocalDateTime.parse(privacyPolicyMatcher.group(), f);
     }
     LocalDateTime documentTimestamp =
-        termsAndConditionsService.calculateMaxTimestamp(termsTimestamp, privacyPolicyTimestamp);
+        termsAndConditionsService.max(termsTimestamp, privacyPolicyTimestamp);
     log.info("documentTimestamp: {}", documentTimestamp);
     User user = userService.retrieveUser(createBusinessRecord.user().getId());
     user.setTermsAndConditionsAcceptanceTimestamp(

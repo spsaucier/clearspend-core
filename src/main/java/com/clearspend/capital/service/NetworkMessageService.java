@@ -29,6 +29,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -46,6 +47,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class NetworkMessageService {
 
   public @interface NetworkMessageProvider {
+
     String reviewer();
 
     String explanation();
@@ -242,7 +244,7 @@ public class NetworkMessageService {
   void setPaddedAmountAndHoldPeriod(@NonNull NetworkCommon common) {
     switch (common.getMerchantType()) {
       case AUTOMATED_FUEL_DISPENSERS -> {
-        common.setHoldExpiration(OffsetDateTime.now().plusHours(2));
+        common.setHoldExpiration(OffsetDateTime.now(ZoneOffset.UTC).plusHours(2));
         common.setPaddedAmount(
             Amount.of(common.getRequestedAmount().getCurrency(), BigDecimal.valueOf(-100)));
         common.setAllowPartialApproval(false);
@@ -255,7 +257,7 @@ public class NetworkMessageService {
           DIRECT_MARKETING_OUTBOUND_TELEMARKETING,
           DIRECT_MARKETING_INBOUND_TELEMARKETING,
           DIRECT_MARKETING_SUBSCRIPTION -> {
-        common.setHoldExpiration(OffsetDateTime.now().plusWeeks(1));
+        common.setHoldExpiration(OffsetDateTime.now(ZoneOffset.UTC).plusWeeks(1));
         common.setPaddedAmount(common.getRequestedAmount().mul(BigDecimal.valueOf(1.15)));
       }
       case DRINKING_PLACES,
@@ -263,11 +265,11 @@ public class NetworkMessageService {
           EATING_PLACES_RESTAURANTS,
           FAST_FOOD_RESTAURANTS,
           TAXICABS_LIMOUSINES -> {
-        common.setHoldExpiration(OffsetDateTime.now().plusDays(3));
+        common.setHoldExpiration(OffsetDateTime.now(ZoneOffset.UTC).plusDays(3));
         common.setPaddedAmount(common.getRequestedAmount().mul(BigDecimal.valueOf(1.20)));
       }
       default -> {
-        common.setHoldExpiration(OffsetDateTime.now().plusDays(5));
+        common.setHoldExpiration(OffsetDateTime.now(ZoneOffset.UTC).plusDays(5));
         common.setPaddedAmount(common.getRequestedAmount());
       }
     }
@@ -286,7 +288,7 @@ public class NetworkMessageService {
         common.setHoldAmount(common.getApprovedAmount());
         common.setHoldExpiration(
             common.getMerchantType() == MerchantType.AUTOMATED_FUEL_DISPENSERS
-                ? OffsetDateTime.now().plusDays(3)
+                ? OffsetDateTime.now(ZoneOffset.UTC).plusDays(3)
                 : common.getPriorHold().getExpirationDate());
         common.setPostHold(common.getRequestedAmount().isLessThanZero());
         common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);

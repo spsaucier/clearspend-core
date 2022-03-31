@@ -25,7 +25,6 @@ import com.stripe.model.Person;
 import com.stripe.param.AccountUpdateParams.Company.Verification;
 import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonUpdateParams.Verification.Document;
-import com.stripe.param.PersonUpdateParams.Verification.Document.Builder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -150,7 +149,7 @@ public class ApplicationReviewService {
           person.setId(entityToken);
           person.setAccount(business.getStripeData().getAccountRef());
 
-          Builder documentBuilder = Document.builder();
+          Document.Builder documentBuilder = Document.builder();
           stripeSavedFiles.forEach(
               stripeSavedFile -> {
                 if (Boolean.TRUE.equals(stripeSavedFile.front)) {

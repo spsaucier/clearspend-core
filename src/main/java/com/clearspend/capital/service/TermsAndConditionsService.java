@@ -2,19 +2,21 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.controller.type.termsAndConditions.TermsAndConditionsResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -34,57 +36,34 @@ public class TermsAndConditionsService {
       boolean isAcceptedTermsAndConditions,
       LocalDateTime maxDocumentTimestamp) {}
 
+  private LocalDateTime getDocumentTimestamp(String url) {
+    DateTimeFormatter f = DateTimeFormatter.ofPattern("EEE MMM dd yyyy HH:mm:ss");
+    String document = getUrlContents(url, 1000);
+    Matcher matcher = timestampPattern.matcher(document.substring(0, 80));
+    LocalDateTime dateTime = null;
+    if (matcher.find()) {
+      String documentTimestampString = matcher.group();
+      dateTime = LocalDateTime.parse(documentTimestampString, f);
+    }
+    return dateTime;
+  }
+
   /***
    * Fetches document timestamp from two urls and getting the latest from two
-   * @return
+   * @return the most recent timestamp of the terms and privacy documents
    */
-  public TermsAndConditionsResponse getTermsAndConditionsTimestampDetails() {
-    String terms = getUrlContents("https://www.clearspend.com/terms");
-    String privacyPolicy = getUrlContents("https://www.clearspend.com/privacy");
-    Matcher termsMatcher = timestampPattern.matcher(terms.substring(0, 80));
-    Matcher privacyPolicyMatcher = timestampPattern.matcher(privacyPolicy.substring(0, 80));
-    DateTimeFormatter f = DateTimeFormatter.ofPattern("EEE MMM dd yyyy HH:mm:ss");
-    LocalDateTime termsTimestamp = null;
-    LocalDateTime privacyPolicyTimestamp = null;
-    if (termsMatcher.find()) {
-      String extractTermsTimestamp = termsMatcher.group();
-      termsTimestamp = LocalDateTime.parse(extractTermsTimestamp, f);
-    }
-    if (privacyPolicyMatcher.find()) {
-      String extractPolicyTimestamp = privacyPolicyMatcher.group();
-      privacyPolicyTimestamp = LocalDateTime.parse(extractPolicyTimestamp, f);
-    }
-    return TermsAndConditionsResponse.of(
-        compareDocumentTimestampWithUserAcceptanceTimestamp(
-            calculateMaxTimestamp(termsTimestamp, privacyPolicyTimestamp)));
-  }
+  public TermsAndConditionsRecord userAcceptedTermsAndConditions() {
+    LocalDateTime privacyPolicyTimestamp =
+        getDocumentTimestamp("https://www.clearspend.com/privacy");
+    LocalDateTime termsTimestamp = getDocumentTimestamp("https://www.clearspend.com/terms");
 
-  public LocalDateTime calculateMaxTimestamp(
-      LocalDateTime termsTimestamp, LocalDateTime privacyPolicyTimestamp) {
-    LocalDateTime maxDocumentTimestamp;
-    if (termsTimestamp.isAfter(privacyPolicyTimestamp)) {
-      maxDocumentTimestamp = termsTimestamp;
-    } else {
-      maxDocumentTimestamp = privacyPolicyTimestamp;
-    }
-    return maxDocumentTimestamp;
-  }
-
-  /**
-   * Checks the document timestamp with user's accepted timestamp
-   *
-   * @param maxDocumentTimestamp
-   * @return
-   */
-  public TermsAndConditionsRecord compareDocumentTimestampWithUserAcceptanceTimestamp(
-      LocalDateTime maxDocumentTimestamp) {
     User user = userService.retrieveUserForService(CurrentUser.getUserId());
-    user.getTermsAndConditionsAcceptanceTimestamp();
     log.debug("termsAndConditions : {}", user.getTermsAndConditionsAcceptanceTimestamp());
-    boolean isAcceptedTermsAndConditions = false;
-    if (user.getTermsAndConditionsAcceptanceTimestamp().isAfter(maxDocumentTimestamp)) {
-      isAcceptedTermsAndConditions = true;
-    }
+
+    LocalDateTime maxDocumentTimestamp = max(termsTimestamp, privacyPolicyTimestamp);
+    boolean isAcceptedTermsAndConditions =
+        user.getTermsAndConditionsAcceptanceTimestamp().isAfter(maxDocumentTimestamp);
+
     return new TermsAndConditionsRecord(
         user.getId(),
         user.getTermsAndConditionsAcceptanceTimestamp(),
@@ -92,29 +71,34 @@ public class TermsAndConditionsService {
         maxDocumentTimestamp);
   }
 
-  public String getUrlContents(String theUrl) {
-    StringBuilder content = new StringBuilder();
-    try {
-      URL url = new URL(theUrl);
-      URLConnection urlConnection = url.openConnection();
-      BufferedReader bufferedReader =
-          new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-      String line;
-      while ((line = bufferedReader.readLine()) != null) {
-        content.append(line + "\n");
-      }
-      bufferedReader.close();
-    } catch (Exception e) {
-      log.error(e.getMessage(), e);
+  @VisibleForTesting
+  LocalDateTime max(LocalDateTime timeA, LocalDateTime timeB) {
+    LocalDateTime max = Optional.ofNullable(timeB).orElse(timeA);
+    if (timeA.isAfter(max)) {
+      max = timeA;
     }
+    return max;
+  }
+
+  @SneakyThrows
+  private String getUrlContents(String theUrl, int maxChars) {
+    // TODO use a fancier connection pool for this
+    StringBuilder content = new StringBuilder();
+    URL url = new URL(theUrl);
+    URLConnection urlConnection = url.openConnection();
+    BufferedReader bufferedReader =
+        new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+    String line;
+    while (((line = bufferedReader.readLine()) != null) && (content.length() < maxChars)) {
+      content.append(line);
+      content.append('\n');
+    }
+    bufferedReader.close();
+    content.setLength(Math.min(maxChars, content.length()));
     return content.toString();
   }
 
-  public void acceptTermsAndConditionsTimestamp() {
-    User user = userService.retrieveUserForService(CurrentUser.getUserId());
-    user.setTermsAndConditionsAcceptanceTimestamp(LocalDateTime.now());
-    userRepository.save(user);
-    userRepository.flush();
-    log.debug("User: {}", user);
+  public void acceptTermsAndConditions() {
+    userService.acceptTermsAndConditions(CurrentUser.getUserId());
   }
 }

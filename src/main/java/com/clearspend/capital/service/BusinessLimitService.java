@@ -20,6 +20,7 @@ import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -36,17 +37,17 @@ public class BusinessLimitService {
           Currency.USD,
           Map.of(
               LimitType.ACH_DEPOSIT,
-                  Map.of(
-                      LimitPeriod.DAILY,
-                      BigDecimal.valueOf(10000),
-                      LimitPeriod.MONTHLY,
-                      BigDecimal.valueOf(30000)),
+              Map.of(
+                  LimitPeriod.DAILY,
+                  BigDecimal.valueOf(10000),
+                  LimitPeriod.MONTHLY,
+                  BigDecimal.valueOf(30000)),
               LimitType.ACH_WITHDRAW,
-                  Map.of(
-                      LimitPeriod.DAILY,
-                      BigDecimal.valueOf(10000),
-                      LimitPeriod.MONTHLY,
-                      BigDecimal.valueOf(30000))));
+              Map.of(
+                  LimitPeriod.DAILY,
+                  BigDecimal.valueOf(10000),
+                  LimitPeriod.MONTHLY,
+                  BigDecimal.valueOf(30000))));
 
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>>
       DEFAULT_OPERATION_LIMITS =
@@ -155,7 +156,8 @@ public class BusinessLimitService {
       Map<LimitPeriod, BigDecimal> limits) {
     if (limits != null) {
       for (Entry<LimitPeriod, BigDecimal> limit : limits.entrySet()) {
-        OffsetDateTime startDate = OffsetDateTime.now().minus(limit.getKey().getDuration());
+        OffsetDateTime startDate =
+            OffsetDateTime.now(ZoneOffset.UTC).minus(limit.getKey().getDuration());
 
         BigDecimal usage =
             adjustments.stream()
@@ -192,7 +194,9 @@ public class BusinessLimitService {
                     adjustment ->
                         adjustment
                             .getEffectiveDate()
-                            .isAfter(OffsetDateTime.now().minus(limit.getKey().getDuration())))
+                            .isAfter(
+                                OffsetDateTime.now(ZoneOffset.UTC)
+                                    .minus(limit.getKey().getDuration())))
                 .count();
         if (operationAmount >= limit.getValue()) {
           throw new InvalidRequestException(

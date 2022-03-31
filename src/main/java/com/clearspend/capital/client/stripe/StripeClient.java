@@ -47,13 +47,11 @@ import com.stripe.param.AccountCreateParams.Company;
 import com.stripe.param.AccountCreateParams.Company.Address;
 import com.stripe.param.AccountCreateParams.Settings;
 import com.stripe.param.AccountCreateParams.TosAcceptance;
-import com.stripe.param.AccountCreateParams.Type;
 import com.stripe.param.AccountUpdateParams;
 import com.stripe.param.AccountUpdateParams.Company.Structure;
 import com.stripe.param.FileCreateParams;
 import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonCollectionCreateParams;
-import com.stripe.param.PersonCollectionCreateParams.Builder;
 import com.stripe.param.PersonCollectionCreateParams.Dob;
 import com.stripe.param.PersonCollectionCreateParams.Relationship;
 import com.stripe.param.PersonUpdateParams;
@@ -138,7 +136,7 @@ public class StripeClient {
 
     AccountCreateParams.Builder accountBuilder =
         AccountCreateParams.builder()
-            .setType(Type.CUSTOM)
+            .setType(AccountCreateParams.Type.CUSTOM)
             .setBusinessType(business.getType().getStripeBusinessType())
             .setBusinessProfile(
                 BusinessProfile.builder()
@@ -477,7 +475,7 @@ public class StripeClient {
       relationship.setPercentOwnership(businessOwner.getPercentageOwnership());
     }
 
-    Builder builder =
+    PersonCollectionCreateParams.Builder builder =
         PersonCollectionCreateParams.builder()
             .setFirstName(businessOwner.getFirstName().getEncrypted())
             .setLastName(businessOwner.getLastName().getEncrypted())

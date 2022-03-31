@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
 
+@SuppressWarnings("MissingSummary")
 @Builder
 @AllArgsConstructor
 @Getter
