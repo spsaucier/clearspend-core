@@ -1,6 +1,7 @@
 package com.clearspend.capital.data.repository;
 
 import com.clearspend.capital.common.typedid.data.ChartOfAccountsMappingId;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
@@ -15,4 +16,7 @@ public interface ChartOfAccountsMappingRepository
       TypedId<BusinessId> businessId, String accountRefId);
 
   List<ChartOfAccountsMapping> findAllByBusinessId(TypedId<BusinessId> businessId);
+
+  Optional<ChartOfAccountsMapping> findByBusinessIdAndExpenseCategoryId(
+      TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId);
 }

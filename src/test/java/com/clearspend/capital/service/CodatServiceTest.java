@@ -27,10 +27,13 @@ import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -42,6 +45,8 @@ import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -89,6 +94,8 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired CodatMockClient mockClient;
   @Autowired BusinessService businessService;
   @Autowired ServiceHelper serviceHelper;
+  @Autowired ExpenseCategoryRepository expenseCategoryRepository;
+  @Autowired ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
 
   @BeforeEach
   public void setup() {
@@ -168,6 +175,19 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
+
+    newAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            newAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
 
     newAccountActivity.setMerchant(
         new MerchantDetails(
@@ -225,6 +245,20 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
+
+    newAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            newAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
     accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
@@ -411,6 +445,20 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
+
+    firstAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            firstAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
     accountActivityRepository.save(firstAccountActivity);
 
     AccountActivity secondAccountActivity =
@@ -435,6 +483,17 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
+    secondAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(1).getId(), expenseCategories.get(1).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            secondAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
     accountActivityRepository.save(secondAccountActivity);
 
     codatService.syncMultipleTransactions(
@@ -516,6 +575,32 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
+
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
+
+    firstAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            firstAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
+    secondAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(1).getId(), expenseCategories.get(1).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            secondAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
     accountActivityRepository.save(secondAccountActivity);
 
     codatService.syncAllReadyTransactions(business.getId());

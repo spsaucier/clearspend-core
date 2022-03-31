@@ -183,14 +183,17 @@ public class CodatClient {
       AccountActivity transaction,
       String currency,
       CodatSupplier supplier,
-      CodatAccount codatAccount)
+      CodatAccount expenseAccount,
+      String expenseCategoryRef)
       throws RuntimeException {
 
     List<CodatPaymentAllocation> paymentAllocations = new ArrayList<>();
     paymentAllocations.add(
         new CodatPaymentAllocation(
             new CodatPaymentAllocationPayment(
-                "", new CodatAccountRef(codatAccount.getId(), codatAccount.getName()), currency),
+                "",
+                new CodatAccountRef(expenseAccount.getId(), expenseAccount.getName()),
+                currency),
             new CodatAllocation(currency, transaction.getActivityTime())));
 
     List<CodatLineItem> lineItems = new ArrayList<>();
@@ -198,7 +201,7 @@ public class CodatClient {
         new CodatLineItem(
             -transaction.getAmount().getAmount().doubleValue(),
             1,
-            new CodatAccountRef(codatAccount.getId(), codatAccount.getName()),
+            new CodatAccountRef(expenseCategoryRef),
             new CodatTaxRateRef("NON")));
 
     CodatContactRef contactRef = new CodatContactRef(supplier.getId(), "suppliers");

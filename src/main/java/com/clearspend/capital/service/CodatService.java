@@ -25,12 +25,14 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
+import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -57,6 +59,7 @@ public class CodatService {
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
   private final BusinessRepository businessRepository;
+  private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -123,6 +126,15 @@ public class CodatService {
       if (expenseAccount.isEmpty()) {
         return new SyncTransactionResponse("FAILED (No expense account)");
       }
+
+      Optional<ChartOfAccountsMapping> expenseCategoryMapping =
+          chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
+              businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
+
+      if (expenseAccount.isEmpty()) {
+        return new SyncTransactionResponse("FAILED (Expense category for transaction is unmapped");
+      }
+
       CodatSyncDirectCostResponse syncResponse =
           codatClient.syncTransactionAsDirectCost(
               business.getCodatCompanyRef(),
@@ -130,7 +142,8 @@ public class CodatService {
               accountActivity,
               business.getCurrency().name(),
               supplier,
-              expenseAccount.get());
+              expenseAccount.get(),
+              expenseCategoryMapping.get().getAccountRefId());
 
       User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
@@ -330,6 +343,10 @@ public class CodatService {
               .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
               .findFirst();
 
+      Optional<ChartOfAccountsMapping> expenseCategoryMapping =
+          chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
+              businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
+
       if (expenseAccount.isPresent()) {
         CodatSyncDirectCostResponse syncResponse =
             codatClient.syncTransactionAsDirectCost(
@@ -338,7 +355,8 @@ public class CodatService {
                 accountActivity,
                 business.getCurrency().name(),
                 supplier,
-                expenseAccount.get());
+                expenseAccount.get(),
+                expenseCategoryMapping.get().getAccountRefId());
 
         Optional<TransactionSyncLog> transactionSyncLogOptional =
             transactionSyncLogRepository.findById(transaction.getId());

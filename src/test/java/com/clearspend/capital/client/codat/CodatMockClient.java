@@ -19,6 +19,7 @@ import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
+import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
@@ -99,6 +100,17 @@ public class CodatMockClient extends CodatClient {
 
   public CodatSyncDirectCostResponse syncDirectCostToCodat(
       String companyRef, String connectionId, DirectCostRequest request) {
+    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
+  }
+
+  public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
+      String companyRef,
+      String connectionId,
+      AccountActivity transaction,
+      String currency,
+      CodatSupplier supplier,
+      CodatAccount expenseAccount,
+      String expenseCategoryRef) {
     return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
   }
 
