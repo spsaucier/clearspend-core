@@ -486,7 +486,7 @@ public class CodatService {
   }
 
   private static final class Tree<T, R> {
-    private final Set<Tree> children = new LinkedHashSet<>();
+    private final Set<Tree<T, R>> children = new LinkedHashSet<>();
     private final T pathSegment;
     private R payload;
 
@@ -494,8 +494,8 @@ public class CodatService {
       this.pathSegment = data;
     }
 
-    Tree child(T data) {
-      for (Tree child : children) {
+    Tree<T, R> child(T data) {
+      for (Tree<T, R> child : children) {
         if (child.pathSegment.equals(data)) {
           return child;
         }
@@ -503,7 +503,7 @@ public class CodatService {
       return child(new Tree<>(data));
     }
 
-    Tree child(Tree<T, R> child) {
+    Tree<T, R> child(Tree<T, R> child) {
       children.add(child);
       return child;
     }
@@ -516,7 +516,7 @@ public class CodatService {
       return payload;
     }
 
-    Set<Tree> getChildren() {
+    Set<Tree<T, R>> getChildren() {
       return children;
     }
   }
