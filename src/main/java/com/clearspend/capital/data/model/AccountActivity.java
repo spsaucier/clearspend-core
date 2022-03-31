@@ -119,6 +119,8 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @Enumerated(EnumType.STRING)
   private AccountActivityIntegrationSyncStatus integrationSyncStatus;
 
+  private OffsetDateTime lastSyncTime;
+
   @Override
   public TypedId<UserId> getUserId() {
     return user == null ? null : user.getId();

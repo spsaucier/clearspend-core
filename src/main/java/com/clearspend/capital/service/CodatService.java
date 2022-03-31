@@ -32,11 +32,13 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
+import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.annotations.VisibleForTesting;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +62,7 @@ public class CodatService {
   private final UserService userService;
   private final BusinessRepository businessRepository;
   private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
+  private final AccountActivityRepository accountActivityRepository;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -423,6 +426,16 @@ public class CodatService {
     }
 
     transactionSyncLogRepository.save(transactionSyncLog);
+
+    Optional<AccountActivity> accountActivityForSyncOptional =
+        accountActivityRepository.findByBusinessIdAndId(
+            business.getId(), transactionSyncLog.getAccountActivityId());
+
+    accountActivityForSyncOptional.ifPresent(
+        accountActivity -> {
+          accountActivity.setLastSyncTime(OffsetDateTime.now());
+          accountActivityRepository.save(accountActivity);
+        });
   }
 
   public void syncTransactionAwaitingSupplier(String companyId, String pushOperationKey) {

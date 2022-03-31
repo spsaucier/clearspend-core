@@ -68,6 +68,9 @@ public class AccountActivityResponse {
   @NonNull
   private AccountActivityIntegrationSyncStatus syncStatus;
 
+  @JsonProperty("lastSyncTime")
+  private OffsetDateTime lastSynctime;
+
   public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
@@ -83,5 +86,6 @@ public class AccountActivityResponse {
     this.notes = accountActivity.getNotes();
     this.expenseDetails = ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails());
     this.syncStatus = accountActivity.getIntegrationSyncStatus();
+    this.lastSynctime = accountActivity.getLastSyncTime();
   }
 }

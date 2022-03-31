@@ -330,6 +330,12 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .getStatus()
                 .equals(TransactionSyncStatus.COMPLETED))
         .isTrue();
+    AccountActivity syncedAccountActivity =
+        accountActivityRepository.getById(newAccountActivity.getId());
+    assertThat(syncedAccountActivity.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
+    assertThat(syncedAccountActivity.getLastSyncTime().getHour())
+        .isEqualTo(OffsetDateTime.now().getHour());
   }
 
   @Test
