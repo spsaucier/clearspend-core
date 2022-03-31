@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -56,6 +57,12 @@ public class AccountActivityRequest {
 
   @JsonProperty("withoutReceipt")
   private Boolean withoutReceipt;
+
+  @JsonProperty("syncStatus")
+  private List<AccountActivityIntegrationSyncStatus> syncStatuses;
+
+  @JsonProperty("missingExpenseCategory")
+  private Boolean missingExpenseCategory;
 
   @NonNull
   @NotNull(message = "Page request is mandatory")

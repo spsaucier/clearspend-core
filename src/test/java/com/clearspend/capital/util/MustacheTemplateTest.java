@@ -148,6 +148,8 @@ class MustacheTemplateTest {
             List.of(),
             true,
             true,
+            null,
+            false,
             new PageToken(10, 5, List.of(OrderBy.builder().item("id").build())));
 
     StringWriter out = new StringWriter();

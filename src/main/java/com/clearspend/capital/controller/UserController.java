@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.activity.AccountActivityRequest;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
@@ -324,6 +325,46 @@ public class UserController {
                 CurrentUser.getBusinessId(), request.getAllocationId())));
   }
 
+  @PostMapping("/cards/{cardId}/account-activity")
+  PagedData<AccountActivityResponse> getCardAccountActivity(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId,
+      @Validated @RequestBody AccountActivityRequest request) {
+    // We get the Card ID from both the AccountActivityRequest as well as
+    // the Path Variable. We're currently taking the first, starting with
+    // the value found in the AccountActivityRequest object.
+
+    Page<AccountActivity> accountActivities =
+        accountActivityService.find(
+            CurrentUser.get().businessId(),
+            new AccountActivityFilterCriteria(
+                CurrentUser.get().businessId(),
+                request.getAllocationId(),
+                request.getUserId(),
+                request.getCardId() != null ? request.getCardId() : cardId,
+                request.getTypes(),
+                request.getSearchText(),
+                request.getFrom(),
+                request.getTo(),
+                request.getStatuses(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
+                request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
+                request.getCategories(),
+                request.getWithReceipt(),
+                request.getWithoutReceipt(),
+                request.getSyncStatuses(),
+                request.getMissingExpenseCategory(),
+                PageRequest.toPageToken(request.getPageRequest())));
+
+    return PagedData.of(accountActivities, AccountActivityResponse::new);
+  }
+
+  @Deprecated()
   @GetMapping("/cards/{cardId}/account-activity")
   PagedData<AccountActivityResponse> getCardAccountActivity(
       @PathVariable(value = "cardId")

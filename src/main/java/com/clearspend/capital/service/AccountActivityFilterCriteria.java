@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.service.type.PageToken;
@@ -36,6 +37,8 @@ public class AccountActivityFilterCriteria {
   private List<String> categories;
   private Boolean withReceipt;
   private Boolean withoutReceipt;
+  private List<AccountActivityIntegrationSyncStatus> syncStatuses;
+  private Boolean missingExpenseCategory;
   private PageToken pageToken;
 
   public AccountActivityFilterCriteria(

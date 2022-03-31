@@ -12,6 +12,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.activity.ChartFilterType;
 import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -152,6 +153,16 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
           BeanUtils.setNotNull(
               criteria.getCategories(),
               categories -> jpaQuery.setParameter("categories", categories));
+
+          BeanUtils.setNotNull(
+              criteria.getSyncStatuses(),
+              syncStatuses -> {
+                final List<String> syncStatusNames =
+                    syncStatuses.stream()
+                        .map(AccountActivityIntegrationSyncStatus::name)
+                        .collect(Collectors.toList());
+                jpaQuery.setParameter("syncStatuses", syncStatusNames);
+              });
 
           BeanUtils.setNotNull(criteria.getMin(), min -> jpaQuery.setParameter("min", min));
           BeanUtils.setNotNull(criteria.getMax(), max -> jpaQuery.setParameter("max", max));

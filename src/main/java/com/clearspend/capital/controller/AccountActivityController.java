@@ -70,6 +70,8 @@ public class AccountActivityController {
                 request.getCategories(),
                 request.getWithReceipt(),
                 request.getWithoutReceipt(),
+                request.getSyncStatuses(),
+                request.getMissingExpenseCategory(),
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, AccountActivityResponse::new);
@@ -156,6 +158,8 @@ public class AccountActivityController {
                 request.getCategories(),
                 request.getWithReceipt(),
                 request.getWithoutReceipt(),
+                request.getSyncStatuses(),
+                request.getMissingExpenseCategory(),
                 PageRequest.toPageToken(request.getPageRequest())));
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transactions.csv");
@@ -189,6 +193,8 @@ public class AccountActivityController {
                 null,
                 null,
                 null,
+                null,
+                false,
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, LedgerActivityResponse::of);

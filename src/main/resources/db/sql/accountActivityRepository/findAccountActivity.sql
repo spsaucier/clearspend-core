@@ -32,6 +32,8 @@ where
         OR cast(account_activity.activity_time as varchar) LIKE :searchText
     )
     {{/searchText}}
+    {{#syncStatuses.0}} AND account_activity.integration_sync_status in :syncStatuses {{/syncStatuses.0}}
+    {{#missingExpenseCategory}} AND account_activity.expense_details_expense_category_id IS NULL {{/missingExpenseCategory}}
     and (Self_Permission.Allocation_Id IS NOT NULL OR Manage_Funds_Permission.Allocation_Id IS NOT NULL)
 {{^count}}
     order by
