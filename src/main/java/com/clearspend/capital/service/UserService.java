@@ -14,6 +14,7 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.WithEncryptedString;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
@@ -121,7 +122,8 @@ public class UserService {
       @Nullable Address address,
       String email,
       String phone,
-      @NonNull String subjectRef) {
+      @NonNull String subjectRef,
+      TosAcceptance tosAcceptance) {
     User user =
         new User(
             businessId,
@@ -135,6 +137,7 @@ public class UserService {
     user.setId(userId);
     user.setAddress(address);
     user.setSubjectRef(subjectRef);
+    user.setTermsAndConditionsAcceptanceTimestamp(tosAcceptance.getDate().toLocalDateTime());
 
     user = userRepository.save(user);
     userRepository.flush();

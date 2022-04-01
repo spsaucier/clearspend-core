@@ -123,6 +123,7 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -666,7 +667,11 @@ public class TestHelper {
             email,
             generatePhone(),
             fusionAuthUserId.toString(),
-            null));
+            null),
+        new TosAcceptance(
+            OffsetDateTime.now(ZoneOffset.UTC),
+            faker.internet().ipV4Address(),
+            faker.internet().userAgentAny()));
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {

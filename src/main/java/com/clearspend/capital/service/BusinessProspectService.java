@@ -349,7 +349,8 @@ public class BusinessProspectService {
 
     // On convert step we will create owner without the person stripe corespondent
     BusinessOwnerAndUserRecord businessOwner =
-        createMainBusinessOwnerAndRepresentative(businessOwnerData);
+        createMainBusinessOwnerAndRepresentative(
+            businessOwnerData, businessProspect.getTosAcceptance());
 
     // delete the business prospect so that the owner of the email could register a new business
     businessProspectRepository.delete(businessProspect);
@@ -369,7 +370,7 @@ public class BusinessProspectService {
 
   @Transactional
   public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
-      BusinessOwnerData businessOwnerData) {
+      BusinessOwnerData businessOwnerData, TosAcceptance tosAcceptance) {
 
     BusinessOwner businessOwner = businessOwnerService.createBusinessOwner(businessOwnerData);
 
@@ -383,7 +384,8 @@ public class BusinessProspectService {
             businessOwnerData.getAddress(),
             businessOwnerData.getEmail(),
             businessOwnerData.getPhone(),
-            businessOwnerData.getSubjectRef());
+            businessOwnerData.getSubjectRef(),
+            tosAcceptance);
 
     return new BusinessOwnerAndUserRecord(businessOwner, user);
   }
