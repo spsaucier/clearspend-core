@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
+
   private static final double CURRENT = 100;
   private static final double AVAILABLE = 90;
   private static final double LIMIT = 50;
@@ -81,7 +82,7 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
     createBusinessRecord = testHelper.createBusiness(businessSandboxEntry.getKey());
 
     final AccountBase accountBase =
-        plaidClient.getBalances(ACCESS_TOKEN, createBusinessRecord.business().getId()).stream()
+        plaidClient.getBalances(createBusinessRecord.business().getId(), ACCESS_TOKEN).stream()
             .findFirst()
             .orElseThrow(
                 () -> new RuntimeException("Unable to get TestPlaidClient balance record"));

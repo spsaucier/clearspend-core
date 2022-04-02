@@ -9,6 +9,8 @@ import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountsGetResponse;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Products;
+import com.plaid.client.model.SandboxItemResetLoginRequest;
+import com.plaid.client.model.SandboxItemResetLoginResponse;
 import com.plaid.client.model.SandboxPublicTokenCreateRequest;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import com.plaid.client.request.PlaidApi;
@@ -177,7 +179,7 @@ public class TestPlaidClient extends PlaidClient {
   }
 
   @Override
-  public List<AccountBase> getBalances(String accessToken, @NonNull TypedId<BusinessId> businessId)
+  public List<AccountBase> getBalances(@NonNull TypedId<BusinessId> businessId, String accessToken)
       throws IOException {
     if (isMockAccessToken(accessToken)) {
       return objectMapper
@@ -185,7 +187,7 @@ public class TestPlaidClient extends PlaidClient {
           .getAccounts();
     }
 
-    return super.getBalances(accessToken, businessId);
+    return super.getBalances(businessId, accessToken);
   }
 
   @Override
@@ -215,5 +217,26 @@ public class TestPlaidClient extends PlaidClient {
       String plaidAccessToken, String plaidAccountId, TypedId<BusinessId> businessId) {
 
     return "dummy_btok";
+  }
+
+  /**
+   * For testing only
+   *
+   * @param businessId the business being reset (for logging)
+   * @param plaidAccessToken the accessToken to reset
+   * @return true upon success
+   */
+  public Boolean sandboxItemResetLogin(TypedId<BusinessId> businessId, String plaidAccessToken) {
+    SandboxItemResetLoginRequest request =
+        new SandboxItemResetLoginRequest().accessToken(plaidAccessToken);
+
+    try {
+      Response<SandboxItemResetLoginResponse> response =
+          plaidApi.sandboxItemResetLogin(request).execute();
+
+      return validBody(businessId, response).getResetLogin();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to reset login", e);
+    }
   }
 }

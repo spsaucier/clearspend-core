@@ -6,18 +6,23 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
+@SuppressWarnings("unused")
 @RequiredArgsConstructor
 @Getter
 public class PlaidClientException extends IOException {
 
   private final String responseStr;
   @NonNull private final PlaidError plaidError;
+  private final boolean canReInitialize;
 
   public PlaidClientException(
       @NonNull PlaidError plaidError, String errorBody, String responseStr) {
     super(errorBody);
     this.plaidError = plaidError;
     this.responseStr = responseStr;
+    this.canReInitialize = plaidError.getErrorCode().equals(PlaidErrorCode.ITEM_LOGIN_REQUIRED);
+    // should also deal with PENDING_EXPIRATION webhook https://plaid.com/docs/link/update-mode/
+    // when we take Plaid callbacks
   }
 
   // convenience methods follow to fetch info from the plaidError

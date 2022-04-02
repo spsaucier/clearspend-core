@@ -82,7 +82,7 @@ public class BusinessBankAccountBalanceService {
     final RequiredEncryptedStringWithHash accessToken = businessBankAccount.getAccessToken();
 
     final List<AccountBase> accountBases =
-        plaidClient.getBalances(accessToken.getEncrypted(), businessBankAccount.getBusinessId());
+        plaidClient.getBalances(businessBankAccount.getBusinessId(), accessToken.getEncrypted());
     final Map<String, BusinessBankAccount> dbBusinessBankAccounts =
         businessBankAccountRepository.findAllByAccessToken(accessToken).stream()
             .collect(Collectors.toMap(a -> a.getPlaidAccountRef().getEncrypted(), a -> a));

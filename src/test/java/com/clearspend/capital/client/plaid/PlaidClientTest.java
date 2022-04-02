@@ -29,6 +29,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -149,7 +150,7 @@ class PlaidClientTest extends BaseCapitalTest {
     String linkToken = underTest.createLinkToken(businessId());
     String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
     PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
-    List<AccountBase> balances = underTest.getBalances(accessToken, businessId());
+    List<AccountBase> balances = underTest.getBalances(businessId(), accessToken);
     assertNotNull(balances);
     assertNotNull(accounts);
 
@@ -158,6 +159,29 @@ class PlaidClientTest extends BaseCapitalTest {
         PlaidResponseType.ACCESS_TOKEN,
         PlaidResponseType.ACCOUNT,
         PlaidResponseType.BALANCE);
+  }
+
+  @Test
+  void testBalanceCheckAfterChangePassword_CAP_859() throws IOException {
+    assumeTrue(underTest.isConfigured());
+    String linkToken = underTest.createLinkToken(businessId());
+    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+    List<AccountBase> balances = underTest.getBalances(businessId(), accessToken);
+    assertNotNull(balances);
+    assertNotNull(accounts);
+
+    underTest.sandboxItemResetLogin(businessId(), accessToken);
+
+    // TODO Throws something - make sure it's meaningful, translate into HTTP for controller
+    Assertions.assertThatExceptionOfType(PlaidClientException.class)
+        .isThrownBy(() -> underTest.getBalances(businessId(), accessToken));
+
+    String newLinkToken = underTest.createLinkToken(businessId(), accessToken);
+    // Mock Link to use the link token to tie things together. (but they have to tell me how)
+    // List<AccountBase> newBalances = underTest.getBalances(businessId(), newAccessToken);
+    // assertNotNull(newBalances);
+
   }
 
   /**

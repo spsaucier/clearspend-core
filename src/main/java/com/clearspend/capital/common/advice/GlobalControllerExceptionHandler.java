@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.LimitViolationException;
+import com.clearspend.capital.common.error.ReLinkException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
 import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class GlobalControllerExceptionHandler {
 
   record ControllerError(String message, String param) {
+
     public ControllerError(String message) {
       this(message, "");
     }
@@ -133,4 +135,8 @@ public class GlobalControllerExceptionHandler {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError(exception.getMessage());
   }
+
+  @ResponseStatus(HttpStatus.PRECONDITION_REQUIRED)
+  @ExceptionHandler(ReLinkException.class)
+  public void handleReLink() {}
 }

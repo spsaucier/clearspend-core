@@ -57,6 +57,19 @@ public class BusinessBankAccountController {
         businessBankAccountService.getLinkToken(CurrentUser.get().businessId()));
   }
 
+  @GetMapping("/re-link/{businessBankAccountId}")
+  LinkTokenResponse reLink(
+      @PathVariable(value = "businessBankAccountId")
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessBankAccountId> businessBankAccountId)
+      throws IOException {
+    return new LinkTokenResponse(businessBankAccountService.reLink(businessBankAccountId));
+  }
+
   @GetMapping(
       value = "/link-token/{linkToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)

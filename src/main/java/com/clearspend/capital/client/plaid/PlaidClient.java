@@ -48,7 +48,7 @@ public class PlaidClient {
   public static final String LANGUAGE = "en";
 
   @NonNull private final PlaidProperties plaidProperties;
-  @NonNull private final PlaidApi plaidApi;
+  @NonNull protected final PlaidApi plaidApi;
   @NonNull private final ObjectMapper mapper;
   @NonNull private final PlaidLogEntryRepository plaidLogEntryRepository;
 
@@ -112,6 +112,22 @@ public class PlaidClient {
     }
   }
 
+  public String createLinkToken(TypedId<BusinessId> businessId, String accessToken)
+      throws IOException {
+    // TODO CAP-218 Use RUX https://plaid.com/docs/link/returning-user/
+    LinkTokenCreateRequest request =
+        new LinkTokenCreateRequest()
+            .clientName(PLAID_CLIENT_NAME)
+            .user(new LinkTokenCreateRequestUser().clientUserId(businessId.toString()))
+            .language(LANGUAGE)
+            .countryCodes(Collections.singletonList(CountryCode.US))
+            .accessToken(accessToken);
+    Response<LinkTokenCreateResponse> response = plaidApi.linkTokenCreate(request).execute();
+    log.debug("{}", response.code());
+
+    return validBody(businessId, response).getLinkToken();
+  }
+
   public String createLinkToken(TypedId<BusinessId> businessId, List<Products> products)
       throws IOException {
     // TODO CAP-218 Use RUX https://plaid.com/docs/link/returning-user/
@@ -138,7 +154,7 @@ public class PlaidClient {
     return new AccountsResponse(accessToken, body.getAccounts(), body.getNumbers().getAch());
   }
 
-  public List<AccountBase> getBalances(String accessToken, @NonNull TypedId<BusinessId> businessId)
+  public List<AccountBase> getBalances(@NonNull TypedId<BusinessId> businessId, String accessToken)
       throws IOException {
     AccountsBalanceGetRequest request = new AccountsBalanceGetRequest().accessToken(accessToken);
     Response<AccountsGetResponse> response = client().accountsBalanceGet(request).execute();
@@ -210,5 +226,10 @@ public class PlaidClient {
     } catch (IOException e) {
       throw new RuntimeException("Failed to get stripe account token from plaid", e);
     }
+  }
+
+  /** For testing only */
+  public Boolean sandboxItemResetLogin(TypedId<BusinessId> businessId, String plaidAccessToken) {
+    throw new UnsupportedOperationException();
   }
 }

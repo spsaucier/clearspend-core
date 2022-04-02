@@ -9,6 +9,7 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.ReLinkException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
@@ -80,6 +81,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessBankAccountService {
 
   public @interface StripeBankAccountOp {
+
     String reviewer();
 
     String explanation();
@@ -761,6 +763,25 @@ public class BusinessBankAccountService {
     } catch (IOException ex) {
       log.debug("Unable to obtain bank account owner names from plaid: {}", ex.toString());
       return "";
+    }
+  }
+
+  @PreAuthorize("hasRootPermission(#businessBankAccount, 'LINK_BANK_ACCOUNTS')")
+  public String reLink(@NonNull TypedId<BusinessBankAccountId> businessBankAccountId)
+      throws IOException, ReLinkException {
+    BusinessBankAccount businessBankAccount =
+        businessBankAccountRepository.findAllById(List.of(businessBankAccountId)).stream()
+            .findFirst()
+            .orElseThrow();
+    try {
+      return plaidClient.createLinkToken(
+          businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
+    } catch (PlaidClientException e) {
+      if (e.isCanReInitialize()) {
+        throw new ReLinkException(e);
+      } else {
+        throw e;
+      }
     }
   }
 }
