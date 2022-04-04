@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import java.util.Collection;
 import java.util.function.Consumer;
 import lombok.experimental.UtilityClass;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 
@@ -11,6 +12,12 @@ public class BeanUtils {
 
   public <T> void setNotNull(T value, Consumer<T> consumer) {
     if (value != null) {
+      consumer.accept(value);
+    }
+  }
+
+  public <T> void setIfTrue(java.lang.Boolean value, Consumer<java.lang.Boolean> consumer) {
+    if (BooleanUtils.isTrue(value)) {
       consumer.accept(value);
     }
   }

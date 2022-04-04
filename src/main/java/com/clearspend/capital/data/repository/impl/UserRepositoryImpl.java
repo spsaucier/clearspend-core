@@ -60,18 +60,18 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     userCriteriaBuilder.where("user.businessId").eqLiteral(businessId);
 
-    BeanUtils.setNotNull(
+    BeanUtils.setIfTrue(
         criteria.getWithoutCard(), withoutCard -> userCriteriaBuilder.where("card").isNull());
 
-    BeanUtils.setNotNull(
+    BeanUtils.setIfTrue(
         criteria.getHasVirtualCard(),
         hasVirtualCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.VIRTUAL));
 
-    BeanUtils.setNotNull(
+    BeanUtils.setIfTrue(
         criteria.getHasPhysicalCard(),
         hasPlasticCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.PHYSICAL));
 
-    BeanUtils.setNotNull(
+    BeanUtils.setNotEmpty(
         criteria.getAllocations(),
         allocations -> userCriteriaBuilder.where("card.allocationId").in(allocations));
 

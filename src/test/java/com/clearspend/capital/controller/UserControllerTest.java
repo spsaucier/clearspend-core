@@ -1149,6 +1149,10 @@ class UserControllerTest extends BaseCapitalTest {
         false);
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
+    searchUserRequest.setWithoutCard(false);
+    searchUserRequest.setHasPhysicalCard(false);
+    searchUserRequest.setHasVirtualCard(false);
+    searchUserRequest.setAllocations(List.of());
     searchUserRequest.setPageRequest(new PageRequest(0, 10));
 
     String body = objectMapper.writeValueAsString(searchUserRequest);
