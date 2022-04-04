@@ -9,8 +9,6 @@ import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountsGetResponse;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Products;
-import com.plaid.client.model.SandboxItemResetLoginRequest;
-import com.plaid.client.model.SandboxItemResetLoginResponse;
 import com.plaid.client.model.SandboxPublicTokenCreateRequest;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import com.plaid.client.request.PlaidApi;
@@ -28,10 +26,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import retrofit2.Response;
 
-@Profile("!prod")
+@Profile("test")
 @Component
 @Slf4j
-public class TestPlaidClient extends PlaidClient {
+public class TestPlaidClient extends SandboxPlaidClient {
 
   private final ObjectMapper objectMapper;
   private final Resource mockAccountsResponse;
@@ -217,26 +215,5 @@ public class TestPlaidClient extends PlaidClient {
       String plaidAccessToken, String plaidAccountId, TypedId<BusinessId> businessId) {
 
     return "dummy_btok";
-  }
-
-  /**
-   * For testing only
-   *
-   * @param businessId the business being reset (for logging)
-   * @param plaidAccessToken the accessToken to reset
-   * @return true upon success
-   */
-  public Boolean sandboxItemResetLogin(TypedId<BusinessId> businessId, String plaidAccessToken) {
-    SandboxItemResetLoginRequest request =
-        new SandboxItemResetLoginRequest().accessToken(plaidAccessToken);
-
-    try {
-      Response<SandboxItemResetLoginResponse> response =
-          plaidApi.sandboxItemResetLogin(request).execute();
-
-      return validBody(businessId, response).getResetLogin();
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to reset login", e);
-    }
   }
 }
