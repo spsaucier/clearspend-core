@@ -7,12 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class CodatSyncDirectCostResponse {
-
-  @JsonProperty("data")
-  @NonNull
-  private CodatDataIdStub data;
-
+public class CodatSyncReceiptResponse {
   @JsonProperty("status")
   @NonNull
   private String status;
@@ -20,7 +15,4 @@ public class CodatSyncDirectCostResponse {
   @JsonProperty("pushOperationKey")
   @NonNull
   private String pushOperationKey;
-
-  @JsonProperty("validation")
-  private CodatValidation validation;
 }

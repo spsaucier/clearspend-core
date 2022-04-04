@@ -15,6 +15,8 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
@@ -22,10 +24,12 @@ import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
+import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -56,13 +60,15 @@ import org.springframework.stereotype.Service;
 public class CodatService {
 
   private final CodatClient codatClient;
+
   private final AccountActivityService accountActivityService;
+  private final AccountActivityRepository accountActivityRepository;
+  private final BusinessRepository businessRepository;
   private final BusinessService businessService;
+  private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
+  private final ReceiptService receiptService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
-  private final BusinessRepository businessRepository;
-  private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
-  private final AccountActivityRepository accountActivityRepository;
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -134,11 +140,11 @@ public class CodatService {
           chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
               businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
 
-      if (expenseAccount.isEmpty()) {
+      if (expenseCategoryMapping.isEmpty()) {
         return new SyncTransactionResponse("FAILED (Expense category for transaction is unmapped");
       }
 
-      CodatSyncDirectCostResponse syncResponse =
+      CodatSyncDirectCostResponse directCostSyncResponse =
           codatClient.syncTransactionAsDirectCost(
               business.getCodatCompanyRef(),
               connectionId,
@@ -148,6 +154,21 @@ public class CodatService {
               expenseAccount.get(),
               expenseCategoryMapping.get().getAccountRefId());
 
+      if (accountActivity.getReceipt() != null) {
+        for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
+          Receipt receipt = receiptService.getReceipt(id);
+          CodatSyncReceiptResponse receiptResponse =
+              codatClient.syncReceiptsForDirectCost(
+                  new CodatSyncReceiptRequest(
+                      business.getCodatCompanyRef(),
+                      connectionId,
+                      directCostSyncResponse.getData().getId(),
+                      receiptService.getReceiptImage(id),
+                      receipt.getContentType(),
+                      receipt.getId()));
+        }
+      }
+
       User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
           new TransactionSyncLog(
@@ -155,7 +176,7 @@ public class CodatService {
               accountActivityId,
               supplier.getId(), // TODO look back at this
               TransactionSyncStatus.IN_PROGRESS,
-              syncResponse.getPushOperationKey(),
+              directCostSyncResponse.getPushOperationKey(),
               business.getCodatCompanyRef(),
               currentUserDetails.getFirstName(),
               currentUserDetails.getLastName()));
@@ -163,7 +184,7 @@ public class CodatService {
       accountActivityService.updateAccountActivitySyncStatus(
           business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
 
-      return new SyncTransactionResponse("IN_PROGRESS", syncResponse);
+      return new SyncTransactionResponse("IN_PROGRESS", directCostSyncResponse);
     } else {
       // if supplier does not exist, create it
 
@@ -352,7 +373,7 @@ public class CodatService {
               businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
 
       if (expenseAccount.isPresent()) {
-        CodatSyncDirectCostResponse syncResponse =
+        CodatSyncDirectCostResponse directCostSyncResponse =
             codatClient.syncTransactionAsDirectCost(
                 business.getCodatCompanyRef(),
                 business.getCodatConnectionId(),
@@ -361,6 +382,21 @@ public class CodatService {
                 supplier,
                 expenseAccount.get(),
                 expenseCategoryMapping.get().getAccountRefId());
+
+        if (accountActivity.getReceipt() != null) {
+          for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
+            Receipt receipt = receiptService.getReceipt(id);
+            CodatSyncReceiptResponse receiptResponse =
+                codatClient.syncReceiptsForDirectCost(
+                    new CodatSyncReceiptRequest(
+                        business.getCodatCompanyRef(),
+                        business.getCodatConnectionId(),
+                        directCostSyncResponse.getData().getId(),
+                        receiptService.getReceiptImage(id),
+                        receipt.getContentType(),
+                        receipt.getId()));
+          }
+        }
 
         Optional<TransactionSyncLog> transactionSyncLogOptional =
             transactionSyncLogRepository.findById(transaction.getId());
@@ -372,7 +408,8 @@ public class CodatService {
         TransactionSyncLog transactionSyncLog = transactionSyncLogOptional.get();
 
         transactionSyncLog.setStatus(TransactionSyncStatus.IN_PROGRESS);
-        transactionSyncLog.setDirectCostPushOperationKey(syncResponse.getPushOperationKey());
+        transactionSyncLog.setDirectCostPushOperationKey(
+            directCostSyncResponse.getPushOperationKey());
         transactionSyncLogRepository.saveAndFlush(transactionSyncLog);
       }
     }

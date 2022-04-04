@@ -6,6 +6,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
+import com.clearspend.capital.client.codat.types.CodatDataIdStub;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
@@ -100,7 +101,8 @@ public class CodatMockClient extends CodatClient {
 
   public CodatSyncDirectCostResponse syncDirectCostToCodat(
       String companyRef, String connectionId, DirectCostRequest request) {
-    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
+    return new CodatSyncDirectCostResponse(
+        new CodatDataIdStub("123"), "Started", "test-push-operation-key-cost");
   }
 
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
@@ -111,7 +113,8 @@ public class CodatMockClient extends CodatClient {
       CodatSupplier supplier,
       CodatAccount expenseAccount,
       String expenseCategoryRef) {
-    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
+    return new CodatSyncDirectCostResponse(
+        new CodatDataIdStub("123"), "Started", "test-push-operation-key-cost");
   }
 
   public void addSupplierToList(CodatSupplier supplier) {

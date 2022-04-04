@@ -15,6 +15,7 @@ import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PostAuthorize;
@@ -56,6 +57,15 @@ public class ReceiptService {
   @PreAuthorize("isSelfOwned(#receipt) or hasAllocationPermission(#receipt.allocationId, 'READ')")
   public byte[] getReceiptImage(Receipt receipt) {
     return receiptImageService.getReceiptImage(receipt.getPath());
+  }
+
+  // FIXME: PRM - Permissions?
+  public byte[] getReceiptImage(TypedId<ReceiptId> receiptId) {
+    Optional<Receipt> receipt = receiptRepository.findById(receiptId);
+    if (receipt.isPresent()) {
+      return receiptImageService.getReceiptImage(receipt.get().getPath());
+    }
+    return null;
   }
 
   @PostAuthorize(

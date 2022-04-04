@@ -16,6 +16,8 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
@@ -24,6 +26,8 @@ import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
+import com.clearspend.capital.common.typedid.data.ReceiptId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +42,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -287,5 +292,56 @@ public class CodatClient {
   public CodatSyncResponse syncDataTypeForCompany(String companyRef, String dataType) {
     return callCodatApi(
         "/companies/%s/data/queue/%s".formatted(companyRef, dataType), "", CodatSyncResponse.class);
+  }
+
+  public CodatSyncReceiptResponse syncReceiptsForDirectCost(
+      CodatSyncReceiptRequest codatSyncReceiptRequest) {
+    return callCodatApiForBinaryUpload(
+        "/companies/%s/connections/%s/push/directCosts/%s/attachment"
+            .formatted(
+                codatSyncReceiptRequest.companyRef(),
+                codatSyncReceiptRequest.connectionId(),
+                codatSyncReceiptRequest.directCostId()),
+        codatSyncReceiptRequest.imageData(),
+        codatSyncReceiptRequest.contentType(),
+        codatSyncReceiptRequest.receiptId(),
+        CodatSyncReceiptResponse.class);
+  }
+
+  private <T> T callCodatApiForBinaryUpload(
+      String uri,
+      byte[] imageData,
+      String contentType,
+      TypedId<ReceiptId> receiptId,
+      Class<T> responseType) {
+    T result = null;
+    try {
+      result =
+          codatWebClient
+              .post()
+              .uri(uri)
+              .contentType(MediaType.valueOf(contentType))
+              .header(
+                  "Content-Disposition",
+                  "attachment",
+                  String.format("filename=\"%s\"", receiptId.toString()))
+              .bodyValue(imageData)
+              .exchangeToMono(
+                  response -> {
+                    if (response.statusCode().equals(HttpStatus.OK)) {
+                      return response.bodyToMono(responseType);
+                    }
+
+                    return response.createException().flatMap(Mono::error);
+                  })
+              .block();
+      return result;
+    } finally {
+      if (log.isInfoEnabled()) {
+        log.info(
+            "Calling Codat [%s] method. \n ReceiptId: %s, \n Response: %s"
+                .formatted(uri, receiptId, result));
+      }
+    }
   }
 }
