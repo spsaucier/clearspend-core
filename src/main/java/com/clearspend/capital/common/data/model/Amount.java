@@ -54,9 +54,13 @@ public class Amount {
   public static Amount fromStripeAmount(Currency currency, Long amount) {
     return switch (currency) {
       case UNSPECIFIED -> null;
-      case USD -> of(
+      default -> of(
           currency,
-          BigDecimal.valueOf(amount).divide(BigDecimal.valueOf(100), 2, RoundingMode.UNNECESSARY));
+          BigDecimal.valueOf(amount)
+              .divide(
+                  BigDecimal.valueOf(Math.pow(10, currency.getDecimalScale())),
+                  currency.getDecimalScale(),
+                  RoundingMode.UNNECESSARY));
     };
   }
 
@@ -68,7 +72,9 @@ public class Amount {
   public long toStripeAmount() {
     return switch (currency) {
       case UNSPECIFIED -> 0;
-      case USD -> amount.multiply(BigDecimal.valueOf(100)).longValue();
+      default -> amount
+          .multiply(BigDecimal.valueOf(Math.pow(10, currency.getDecimalScale())))
+          .longValue();
     };
   }
 

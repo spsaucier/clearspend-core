@@ -1,5 +1,6 @@
 package com.clearspend.capital.data.model.embedded;
 
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import java.math.BigDecimal;
@@ -19,6 +20,8 @@ import lombok.NoArgsConstructor;
 public class MerchantDetails {
 
   private String name;
+
+  private Amount amount;
 
   @Enumerated(EnumType.STRING)
   private MerchantType type;

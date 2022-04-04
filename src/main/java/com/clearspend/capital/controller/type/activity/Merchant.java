@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.type.activity;
 
+import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
@@ -22,6 +23,9 @@ public class Merchant {
   @JsonProperty("type")
   @NonNull
   private MerchantType type;
+
+  @JsonProperty("amount")
+  private Amount amount;
 
   @JsonProperty("merchantNumber")
   @NonNull
@@ -52,6 +56,7 @@ public class Merchant {
     return new Merchant(
         in.getName(),
         in.getType(),
+        Amount.of(in.getAmount()),
         in.getMerchantNumber(),
         in.getMerchantCategoryCode(),
         in.getMerchantCategoryGroup(),

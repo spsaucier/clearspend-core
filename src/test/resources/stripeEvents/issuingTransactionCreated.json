@@ -1,0 +1,52 @@
+{
+  "id": "evt_1KUaNk4g2Xo63Nb8Uw7dvKMv",
+  "data": {
+    "object": {
+      "id": "ipi_1Kka4E4g2Xo63Nb8nSaBJoF1",
+      "object": "issuing.transaction",
+      "amount": -1000,
+      "amount_details": {
+        "atm_fee": null
+      },
+      "authorization": "iauth_1Kka4C4g2Xo63Nb8h37Hdi8J",
+      "balance_transaction": null,
+      "card": "{{cardExternalRef}}",
+      "cardholder": "ich_1KfxaQ4g2Xo63Nb8M7ptQoDv",
+      "created": 1649017834,
+      "currency": "usd",
+      "dispute": null,
+      "livemode": false,
+      "merchant_amount": -1000,
+      "merchant_currency": "usd",
+      "merchant_data": {
+        "category": "transportation_services",
+        "category_code": "4789",
+        "city": "San Francisco",
+        "country": "US",
+        "name": "Rocket Rides",
+        "network_id": "1234567890",
+        "postal_code": "94103",
+        "state": "CA"
+      },
+      "metadata": {
+      },
+      "type": "capture",
+      "wallet": null,
+      "flow_transaction": "trxn_1Kka4F4g2Xo63Nb8NQfIFUNj",
+      "interchange": {
+        "amount_decimal": "{{interchange}}"
+      }
+    }
+  },
+  "type": "issuing_transaction.created",
+  "object": "event",
+  "account": "{{stripeAccountId}}",
+  "created": 1645205796,
+  "request": {
+    "id": "req_fXCaykmwqh6YpW",
+    "idempotency_key": "bbdd11d9-1026-4f9f-a49f-de73a828eff9"
+  },
+  "livemode": false,
+  "api_version": "2020-08-27; financial_accounts_beta=v3; issuing_flows_beta=v1; money_flows_beta=v2",
+  "pending_webhooks": 1
+}

@@ -25,11 +25,15 @@ import com.clearspend.capital.data.model.enums.network.VerificationResultType;
 import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.MerchantData;
+import com.stripe.model.issuing.Authorization.PendingRequest;
 import com.stripe.model.issuing.Authorization.VerificationData;
 import com.stripe.model.issuing.Transaction;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -59,6 +63,10 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 public class NetworkCommon {
+  private static final Configuration jsonPathConfiguration =
+      Configuration.defaultConfiguration()
+          .addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL, Option.SUPPRESS_EXCEPTIONS);
+
   private static final Map<NetworkMessageType, AccountActivityType> accountActivityMappings =
       Map.of(
           NetworkMessageType.AUTH_REQUEST, AccountActivityType.NETWORK_AUTHORIZATION,
@@ -93,6 +101,9 @@ public class NetworkCommon {
 
   // the name of the merchant from the location field in the ISO message
   @NonNull private String merchantName;
+
+  // the amount that the merchant is asking for in the merchant currency
+  @NonNull private Amount merchantAmount;
 
   // an approximate address for the merchant. Note that it's not a full address given how the data
   // comes to us
@@ -163,6 +174,8 @@ public class NetworkCommon {
 
   private AccountActivityDetails accountActivityDetails = new AccountActivityDetails();
 
+  private BigDecimal interchange;
+
   // The type of Stripe event being processed. This isn't used in the actual processing (we use
   // networkMessageType for that) but is used in tests
   StripeEventType stripeEventType;
@@ -173,9 +186,18 @@ public class NetworkCommon {
     cardExternalRef = authorization.getCard().getId();
     Currency currency = Currency.of(authorization.getCurrency());
     Amount amount = Amount.fromStripeAmount(currency, authorization.getAmount());
-    if (authorization.getPendingRequest() != null) {
-      allowPartialApproval = authorization.getPendingRequest().getIsAmountControllable();
-      amount = Amount.fromStripeAmount(currency, authorization.getPendingRequest().getAmount());
+    PendingRequest pendingRequest = authorization.getPendingRequest();
+    if (pendingRequest != null) {
+      allowPartialApproval = pendingRequest.getIsAmountControllable();
+      amount = Amount.fromStripeAmount(currency, pendingRequest.getAmount());
+      merchantAmount =
+          Amount.fromStripeAmount(
+              Currency.of(pendingRequest.getMerchantCurrency()),
+              pendingRequest.getMerchantAmount());
+    } else {
+      merchantAmount =
+          Amount.fromStripeAmount(
+              Currency.of(authorization.getMerchantCurrency()), authorization.getMerchantAmount());
     }
     // amounts from Stripe for authorization requests are always debits and zero or positive
     amount = amount.negate().ensureLessThanOrEqualToZero();
@@ -209,9 +231,11 @@ public class NetworkCommon {
       addressPostalCodeCheck =
           VerificationResultType.fromStripe(verificationData.getAddressPostalCodeCheck());
       if (addressPostalCodeCheck == VerificationResultType.MISMATCH) {
-        // TODO: JsonPath is not needed when stripe sdk includes this field support
+        // TODO: Should be reworked to stripe sdk once they support this field
         addressPostalCode =
-            JsonPath.read(log.getRequest(), "$.data.object.verification_data.postal_code");
+            JsonPath.using(jsonPathConfiguration)
+                .parse(log.getRequest())
+                .read("$.data.object.verification_data.postal_code");
       }
       cvcCheck = VerificationResultType.fromStripe(verificationData.getCvcCheck());
       expiryCheck = VerificationResultType.fromStripe(verificationData.getExpiryCheck());
@@ -231,6 +255,10 @@ public class NetworkCommon {
     paddedAmount = requestedAmount;
     approvedAmount = Amount.of(amount.getCurrency());
 
+    merchantAmount =
+        Amount.fromStripeAmount(
+            Currency.of(transaction.getMerchantCurrency()), transaction.getMerchantAmount());
+
     if (transaction.getMerchantData() != null) {
       MerchantData merchantData = transaction.getMerchantData();
       merchantNumber = merchantData.getNetworkId();
@@ -244,6 +272,15 @@ public class NetworkCommon {
         OffsetDateTime.ofInstant(Instant.ofEpochSecond(transaction.getCreated()), ZoneOffset.UTC);
     externalRef = transaction.getId();
     stripeAuthorizationExternalRef = transaction.getAuthorization();
+
+    // TODO: Should be reworked to stripe sdk once they support this field
+    String rawInterchange =
+        JsonPath.using(jsonPathConfiguration)
+            .parse(log.getRequest())
+            .read("$.data.object.interchange.amount_decimal");
+    if (rawInterchange != null) {
+      interchange = new BigDecimal(rawInterchange);
+    }
 
     stripeWebhookLog = log;
   }
@@ -269,12 +306,14 @@ public class NetworkCommon {
             requestedAmount,
             approvedAmount,
             merchantName,
+            merchantAmount,
             merchantAddress,
             merchantNumber,
             merchantCategoryCode,
             externalRef);
 
     networkMessage.setSubType(networkMessageSubType);
+    networkMessage.setInterchange(interchange);
 
     return networkMessage;
   }

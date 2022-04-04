@@ -309,6 +309,7 @@ public class AccountActivityService {
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
+            common.getMerchantAmount(),
             common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
@@ -343,6 +344,8 @@ public class AccountActivityService {
       accountActivity.setPaymentDetails(
           new PaymentDetails(authorizationMethod, PaymentType.from(authorizationMethod)));
     }
+
+    accountActivity.setInterchange(common.getInterchange());
 
     common.setAccountActivity(accountActivityRepository.save(accountActivity));
   }

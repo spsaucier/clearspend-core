@@ -143,6 +143,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     newAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Restaurant",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -192,6 +193,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     newAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Business",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -238,6 +240,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     newAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Store",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -444,6 +447,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     firstAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Business",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -482,6 +486,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     secondAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Business 2",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -550,6 +555,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     firstAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Business",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -574,6 +580,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     secondAccountActivity.setMerchant(
         new MerchantDetails(
             "Test Business 2",
+            new Amount(Currency.USD, BigDecimal.TEN),
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,

@@ -904,7 +904,10 @@ public class TestDataController {
     transaction.setType("capture");
     transaction.setWallet(null);
 
-    return new NetworkCommon(transaction, new StripeWebhookLog());
+    StripeWebhookLog stripeWebhookLog = new StripeWebhookLog();
+    stripeWebhookLog.setRequest("{}");
+
+    return new NetworkCommon(transaction, stripeWebhookLog);
   }
 
   private String getValidPhoneNumber() {

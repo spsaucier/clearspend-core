@@ -641,11 +641,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     transaction.setType(amount < 0 ? "capture" : "refund");
     transaction.setWallet(null);
 
+    StripeWebhookLog stripeWebhookLog = new StripeWebhookLog();
+    stripeWebhookLog.setRequest("{}");
+
     NetworkCommon networkCommon =
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new ParseRecord(
-                new StripeWebhookLog(),
+                stripeWebhookLog,
                 transaction,
                 transaction,
                 StripeEventType.ISSUING_TRANSACTION_CREATED),
@@ -1104,5 +1107,38 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
     assertThat(accountActivity.getDeclineDetails())
         .containsOnly(new AddressPostalCodeMismatch("94103"));
+  }
+
+  @Test
+  void interchangeShouldBeSaved() {
+    Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    Template template = MustacheResourceLoader.load("stripeEvents/issuingTransactionCreated.json");
+    String json =
+        template.execute(
+            Map.of(
+                "cardExternalRef", card.getExternalRef(),
+                "interchange", new BigDecimal("38.4"),
+                "stripeAccountId", business.getStripeData().getAccountRef()));
+
+    stripeWebhookController.directWebhook(new StripeMockEventRequest(json));
+
+    AccountActivity accountActivity =
+        accountActivityRepository.findAll().stream()
+            .max(
+                (a1, a2) ->
+                    OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
+            .orElseThrow();
+
+    assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.APPROVED);
+    assertThat(accountActivity.getInterchange()).isEqualTo(new BigDecimal("38.4"));
   }
 }

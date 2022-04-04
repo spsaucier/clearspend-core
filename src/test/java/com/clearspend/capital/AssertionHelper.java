@@ -394,5 +394,7 @@ public class AssertionHelper {
         .isEqualTo(networkCommon.getMerchantCategoryCode());
     assertThat(accountActivity.getMerchant().getMerchantCategoryGroup())
         .isEqualTo(MccGroup.fromMcc(networkCommon.getMerchantCategoryCode()));
+    assertThat(accountActivity.getMerchant().getAmount())
+        .isEqualTo(networkCommon.getMerchantAmount());
   }
 }

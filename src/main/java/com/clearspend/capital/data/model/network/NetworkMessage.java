@@ -14,6 +14,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.network.NetworkMessageId;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
+import java.math.BigDecimal;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -104,6 +105,8 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
 
   @NonNull private String merchantName;
 
+  @NonNull private Amount merchantAmount;
+
   @NonNull @Embedded private ClearAddress merchantAddress;
 
   @NonNull private String merchantNumber;
@@ -111,4 +114,6 @@ public class NetworkMessage extends TypedMutable<NetworkMessageId> {
   @NonNull private Integer merchantCategoryCode;
 
   @NonNull private String externalRef;
+
+  private BigDecimal interchange;
 }
