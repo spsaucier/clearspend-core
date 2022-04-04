@@ -6,10 +6,8 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.MapSchema;
 import io.swagger.v3.oas.models.media.NumberSchema;
-import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,20 +24,25 @@ public class OpenApiConfiguration {
     return new OpenAPI()
         .components(
             new Components()
+                .addSchemas("LimitTypeMap", createEnumMapSchema(LimitType.class, "LimitPeriodMap"))
+                .addSchemas("LimitPeriodMap", createEnumMapSchema(LimitPeriod.class, "LimitPeriod"))
                 .addSchemas(
-                    "LimitTypeMap",
-                    new MapSchema()
-                        .addProperties(
-                            "limitType", new StringSchema()._enum(enumToList(LimitType.class)))
-                        .additionalProperties(
-                            new MapSchema()
-                                .addProperties(
-                                    "limitPeriod",
-                                    new StringSchema()._enum(enumToList(LimitPeriod.class)))
-                                .additionalProperties(new NumberSchema()))));
+                    "LimitPeriod",
+                    new ObjectSchema()
+                        .addProperties("amount", new NumberSchema())
+                        .addProperties("usedAmount", new NumberSchema())));
   }
 
-  private <T extends Enum<T>> List<String> enumToList(Class<T> enumClass) {
-    return EnumSet.allOf(enumClass).stream().map(Enum::name).collect(Collectors.toList());
+  private <T extends Enum<T>> MapSchema createEnumMapSchema(Class<T> enumClass, String objectName) {
+    MapSchema mapSchema = new MapSchema();
+
+    EnumSet.allOf(enumClass)
+        .forEach(
+            enumValue ->
+                mapSchema.addProperties(
+                    enumValue.name(),
+                    new ObjectSchema().$ref(Components.COMPONENTS_SCHEMAS_REF + objectName)));
+
+    return mapSchema;
   }
 }
