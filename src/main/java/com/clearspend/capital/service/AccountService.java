@@ -15,13 +15,13 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.decline.Decline;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.HoldStatus;
-import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
 import com.clearspend.capital.data.model.ledger.LedgerAccount;
 import com.clearspend.capital.data.repository.AccountRepository;
@@ -38,6 +38,7 @@ import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -135,8 +136,6 @@ public class AccountService {
 
   @Transactional(TxType.REQUIRED)
   public AdjustmentAndHoldRecord returnFunds(Account rootAllocationAccount, Amount amount) {
-    amount.ensureNonNegative();
-
     Adjustment adjustment = adjustmentService.recordReturnFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
@@ -214,12 +213,13 @@ public class AccountService {
         account, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());
   }
 
+  @SneakyThrows
   @Transactional(TxType.REQUIRED)
   Decline recordNetworkDecline(
-      Account account, Card card, Amount amount, List<DeclineReason> declineReasons) {
+      Account account, Card card, Amount amount, List<DeclineDetails> declineDetails) {
     return declineRepository.save(
         new Decline(
-            account.getBusinessId(), account.getId(), card.getId(), amount, declineReasons));
+            account.getBusinessId(), account.getId(), card.getId(), amount, declineDetails));
   }
 
   private Account retrieveAccount(TypedId<AccountId> accountId, boolean fetchHolds) {

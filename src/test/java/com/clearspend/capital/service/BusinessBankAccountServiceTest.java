@@ -27,13 +27,13 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.testutils.data.TestDataHelper;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -364,7 +364,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId(),
                 businessBankAccount.getId(),
                 amount,
-                Collections.emptyList());
+                DeclineReason.ST_FAILED);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)

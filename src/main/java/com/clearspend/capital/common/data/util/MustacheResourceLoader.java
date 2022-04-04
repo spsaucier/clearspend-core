@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
-public class MustacheSqlResourceLoader {
+public class MustacheResourceLoader {
   private static final ConcurrentMap<String, Template> cache = new ConcurrentHashMap<>();
 
   public static Template load(final Resource resource) {

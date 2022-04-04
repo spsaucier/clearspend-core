@@ -1,4 +1,4 @@
-package com.clearspend.capital.data.model;
+package com.clearspend.capital.data.model.decline;
 
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.TypedImmutable;
@@ -7,13 +7,10 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.DeclineId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -59,6 +56,5 @@ public class Decline extends TypedImmutable<DeclineId> {
   @NonNull
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
-  @Enumerated(EnumType.STRING)
-  private List<DeclineReason> declineReasons;
+  private List<DeclineDetails> details;
 }

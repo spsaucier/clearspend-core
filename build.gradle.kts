@@ -148,6 +148,7 @@ dependencies {
 
 //3rd party libs managed by spring BOM
     implementation("org.apache.commons:commons-lang3")
+    implementation("org.apache.commons:commons-collections4:4.4")
     implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
@@ -164,9 +165,10 @@ dependencies {
     implementation("com.blazebit:blaze-persistence-core-impl:$blazePersistenceVersion")
     implementation("com.blazebit:blaze-persistence-integration-hibernate-5.6:$blazePersistenceVersion")
     implementation("com.samskivert:jmustache:$jmustacheVersion")
+    implementation("com.jayway.jsonpath:json-path:2.7.0")
 
 //client libs
-    implementation("com.stripe:stripe-java:20.94.0") // from: https://github.com/stripe/stripe-java
+    implementation("com.stripe:stripe-java:20.111.0") // from: https://github.com/stripe/stripe-java
     implementation("com.google.cloud:google-cloud-nio:0.123.20")
     implementation("com.sendgrid:sendgrid-java:4.8.3")
     implementation("com.plaid:plaid-java:9.0.0")

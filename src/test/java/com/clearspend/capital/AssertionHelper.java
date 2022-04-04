@@ -11,10 +11,10 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
@@ -360,6 +360,7 @@ public class AssertionHelper {
       assertThat(accountActivity.getAmount()).isEqualTo(decline.getAmount());
       assertThat(accountActivity.getHideAfter()).isNull();
       assertThat(decline).isEqualTo(declineRepository.findById(decline.getId()).orElseThrow());
+      assertThat(decline.getDetails()).isEqualTo(accountActivity.getDeclineDetails());
     } else {
       assertThat(accountActivity.getHold()).isNull();
       assertThat(accountActivity.getHideAfter()).isNotNull();

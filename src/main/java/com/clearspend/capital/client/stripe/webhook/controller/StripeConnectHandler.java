@@ -42,8 +42,6 @@ import com.google.gson.JsonSyntaxException;
 import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.model.StripeRawJsonObject;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -134,21 +132,22 @@ public class StripeConnectHandler {
         Amount.fromStripeAmount(
             Currency.of(inboundTransfer.getCurrency()), inboundTransfer.getAmount());
 
-    List<DeclineReason> declineReasons = new ArrayList<>();
     if (inboundTransfer.getFailureDetails() != null) {
       // TODO: General note for failures - revisit if should have some sort of user
       // notification (email/push/sms) in case of money movement failure
-      declineReasons.add(
+      businessBankAccountService.processBankAccountDepositFailure(
+          businessId,
+          businessBankAccountId,
+          StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
+          StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
+          amount,
           DeclineReason.fromStripeTransferFailure(inboundTransfer.getFailureDetails().getCode()));
+    } else {
+      businessBankAccountService.processBankAccountDeposit(
+          businessId,
+          StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
+          amount);
     }
-
-    businessBankAccountService.processBankAccountDepositOutcome(
-        businessId,
-        businessBankAccountId,
-        StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
-        StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
-        amount,
-        declineReasons);
   }
 
   public void receivedCreditCreated(StripeObject stripeObject) {
@@ -192,16 +191,14 @@ public class StripeConnectHandler {
     switch (outboundTransfer.getStatus()) {
       case "posted", "processing" -> {} // do nothing since we assume the happy path by default
       case "canceled" -> businessBankAccountService.processBankAccountWithdrawFailure(
-          businessId, businessBankAccountId, amount, List.of(DeclineReason.ST_CANCELLED));
+          businessId, businessBankAccountId, amount, DeclineReason.ST_CANCELLED);
       case "failed" -> businessBankAccountService.processBankAccountWithdrawFailure(
-          businessId, businessBankAccountId, amount, List.of(DeclineReason.ST_FAILED));
+          businessId, businessBankAccountId, amount, DeclineReason.ST_FAILED);
       case "returned" -> businessBankAccountService.processBankAccountWithdrawFailure(
           businessId,
           businessBankAccountId,
           amount,
-          List.of(
-              DeclineReason.fromStripeTransferFailure(
-                  outboundTransfer.getReturnedDetails().getCode())));
+          DeclineReason.fromStripeTransferFailure(outboundTransfer.getReturnedDetails().getCode()));
       default -> log.error(
           "Unknown outbound transfer status received: " + outboundTransfer.getStatus());
     }

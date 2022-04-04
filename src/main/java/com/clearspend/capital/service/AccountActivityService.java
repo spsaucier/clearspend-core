@@ -301,6 +301,11 @@ public class AccountActivityService {
       accountActivity.setUser(UserDetails.of(cardOwner));
     }
 
+    if (common.getDecline() != null) {
+      // showing user only one decline reason to user
+      accountActivity.setDeclineDetails(common.getDeclineDetails());
+    }
+
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
@@ -342,6 +347,7 @@ public class AccountActivityService {
     common.setAccountActivity(accountActivityRepository.save(accountActivity));
   }
 
+  @Transactional
   @PreAuthorize(
       "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
   public AccountActivity updateAccountActivity(

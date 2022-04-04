@@ -11,20 +11,21 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.Decline;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.decline.Decline;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
-import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.model.enums.network.VerificationResultType;
 import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
+import com.jayway.jsonpath.JsonPath;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.MerchantData;
 import com.stripe.model.issuing.Authorization.VerificationData;
@@ -118,6 +119,9 @@ public class NetworkCommon {
   @NonNull private VerificationResultType cvcCheck = VerificationResultType.UNKNOWN;
   @NonNull private VerificationResultType expiryCheck = VerificationResultType.UNKNOWN;
 
+  // will be filled if addressPostalCodeCheck = MISMATCH
+  private String addressPostalCode;
+
   private AuthorizationMethod authorizationMethod;
 
   private String stripeAuthorizationExternalRef;
@@ -155,7 +159,7 @@ public class NetworkCommon {
   private boolean postDecline = false;
   private Decline decline;
 
-  private List<DeclineReason> declineReasons = new ArrayList<>();
+  private List<DeclineDetails> declineDetails = new ArrayList<>();
 
   private AccountActivityDetails accountActivityDetails = new AccountActivityDetails();
 
@@ -204,6 +208,11 @@ public class NetworkCommon {
     if (verificationData != null) {
       addressPostalCodeCheck =
           VerificationResultType.fromStripe(verificationData.getAddressPostalCodeCheck());
+      if (addressPostalCodeCheck == VerificationResultType.MISMATCH) {
+        // TODO: JsonPath is not needed when stripe sdk includes this field support
+        addressPostalCode =
+            JsonPath.read(log.getRequest(), "$.data.object.verification_data.postal_code");
+      }
       cvcCheck = VerificationResultType.fromStripe(verificationData.getCvcCheck());
       expiryCheck = VerificationResultType.fromStripe(verificationData.getExpiryCheck());
     }
@@ -285,10 +294,12 @@ public class NetworkCommon {
     if (getAccount() != null && getAccount().getId() != null) {
       metadata.put(StripeMetadataEntry.ACCOUNT_ID.getKey(), getAllocation().getId().toString());
     }
-    if (getDeclineReasons() != null && !getDeclineReasons().isEmpty()) {
+    if (this.getDeclineDetails() != null && !this.getDeclineDetails().isEmpty()) {
       metadata.put(
           StripeMetadataEntry.DECLINE_REASONS.getKey(),
-          getDeclineReasons().stream().map(Enum::toString).collect(Collectors.joining(",")));
+          this.getDeclineDetails().stream()
+              .map(reason -> reason.getReason().toString())
+              .collect(Collectors.joining(",")));
     }
 
     if (getNetworkMessage() != null) {

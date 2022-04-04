@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.BankAccountDetails;
@@ -23,6 +24,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncSta
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import java.time.OffsetDateTime;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -120,6 +122,10 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   private AccountActivityIntegrationSyncStatus integrationSyncStatus;
 
   private OffsetDateTime lastSyncTime;
+
+  @Type(type = "json")
+  @Column(columnDefinition = "jsonb")
+  private List<DeclineDetails> declineDetails;
 
   @Override
   public TypedId<UserId> getUserId() {

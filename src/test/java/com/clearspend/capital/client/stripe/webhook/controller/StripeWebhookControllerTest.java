@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.AssertionHelper;
 import com.clearspend.capital.AssertionHelper.AuthorizationRecord;
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.StripeMockEventRequest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
@@ -12,6 +13,7 @@ import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.util.MustacheResourceLoader;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
@@ -21,6 +23,8 @@ import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -49,6 +53,7 @@ import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
+import com.samskivert.mustache.Template;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.RequestHistory;
 import com.stripe.model.issuing.Transaction;
@@ -99,12 +104,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   private Business business;
   private Allocation rootAllocation;
   private BusinessBankAccount businessBankAccount;
+  private User user;
 
   // create business, root allocation, fund account with $1,000,000
   @BeforeEach
   public void setup() {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
+      user = createBusinessRecord.user();
       business = createBusinessRecord.business();
       rootAllocation = createBusinessRecord.allocationRecord().allocation();
       testHelper.setCurrentUser(createBusinessRecord.user());
@@ -1060,5 +1067,42 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(testHelper.retrieveBusiness().getStripeData().getFinancialAccountState())
         .isEqualTo(FinancialAccountState.READY);
     assertThat(pendingStripeTransferService.retrievePendingTransfers(business.getId())).isEmpty();
+  }
+
+  @Test
+  void declineReason_postalCodeShouldBeSaved() {
+    Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    Template template =
+        MustacheResourceLoader.load("stripeEvents/authorizationWrongPostalCode.json");
+    String json =
+        template.execute(
+            Map.of(
+                "businessId", business.getBusinessId(),
+                "userId", user.getId(),
+                "cardExternalRef", card.getExternalRef(),
+                "stripeAccountId", business.getStripeData().getAccountRef(),
+                "postalCode", "94103"));
+
+    stripeWebhookController.directWebhook(new StripeMockEventRequest(json));
+
+    AccountActivity accountActivity =
+        accountActivityRepository.findAll().stream()
+            .max(
+                (a1, a2) ->
+                    OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
+            .orElseThrow();
+
+    assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
+    assertThat(accountActivity.getDeclineDetails())
+        .containsOnly(new AddressPostalCodeMismatch("94103"));
   }
 }

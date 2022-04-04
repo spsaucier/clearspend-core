@@ -8,7 +8,6 @@ import com.clearspend.capital.data.model.User;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
@@ -78,6 +77,7 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
     assertThat(documentTimestamp.isAfter(user.getTermsAndConditionsAcceptanceTimestamp())).isTrue();
   }
 
+  @SneakyThrows
   private String readFileContent(File file) {
     StringBuilder content = new StringBuilder();
     try (BufferedReader br = new BufferedReader(new FileReader(file))) {
@@ -85,8 +85,6 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
       while ((line = br.readLine()) != null) {
         content.append(line + "\n");
       }
-    } catch (IOException e) {
-      e.printStackTrace();
     }
     return content.substring(0, 100);
   }

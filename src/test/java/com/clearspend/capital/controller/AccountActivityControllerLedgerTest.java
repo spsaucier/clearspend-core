@@ -32,6 +32,7 @@ import com.clearspend.capital.controller.type.ledger.LedgerUser;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -39,13 +40,14 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -73,7 +75,7 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
   private final BusinessService businessService;
   private final BusinessBankAccountService businessBankAccountService;
   private final StripeConnectHandlerAccessor stripeConnectHandler;
-  private final AccountActivityRepository accountActivityRepository;
+  private final ObjectMapper springObjectMapper;
 
   private CreateBusinessRecord businessRecord;
   private User user;
@@ -276,21 +278,37 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
 
     // when
     PagedData<LedgerActivityResponse> result =
-        callLedgerApi(AccountActivityType.BANK_DEPOSIT_RETURN);
+        callLedgerApi(
+            AccountActivityType.BANK_DEPOSIT_RETURN, AccountActivityType.BANK_DEPOSIT_STRIPE);
 
     // then
-    assertThat(result.getContent()).hasSize(1);
+    assertThat(result.getContent()).hasSize(2);
 
-    LedgerActivityResponse response = result.getContent().get(0);
-    assertThat(response.getAccountActivityId()).isNotNull();
-    assertThat(response.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
-    assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
-    assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
-    assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
-    assertThat(response.getTargetAccount())
+    LedgerActivityResponse returnActivity =
+        result.getContent().stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_DEPOSIT_RETURN)
+            .findFirst()
+            .orElseThrow();
+    assertThat(returnActivity.getAccountActivityId()).isNotNull();
+    assertThat(returnActivity.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(returnActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
+    assertThat(returnActivity.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
+    assertThat(returnActivity.getHold()).isNull();
+    assertThat(returnActivity.getSourceAccount())
+        .isEqualTo(LedgerBankAccount.of(businessBankAccount));
+    assertThat(returnActivity.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN.negate());
+    assertThat(returnActivity.getAmount().getAmount())
+        .isEqualByComparingTo(BigDecimal.TEN.negate());
+
+    LedgerActivityResponse depositActivity =
+        result.getContent().stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_DEPOSIT_STRIPE)
+            .findFirst()
+            .orElseThrow();
+    assertThat(depositActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
+    assertThat(depositActivity.getDeclineDetails())
+        .isEqualTo(new DeclineDetails(DeclineReason.ST_COULD_NOT_PROCESS));
   }
 
   @SneakyThrows
@@ -321,21 +339,37 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
 
     // when
     PagedData<LedgerActivityResponse> result =
-        callLedgerApi(AccountActivityType.BANK_WITHDRAWAL_RETURN);
+        callLedgerApi(
+            AccountActivityType.BANK_WITHDRAWAL_RETURN, AccountActivityType.BANK_WITHDRAWAL);
 
     // then
-    assertThat(result.getContent()).hasSize(1);
+    assertThat(result.getContent()).hasSize(2);
 
-    LedgerActivityResponse response = result.getContent().get(0);
-    assertThat(response.getAccountActivityId()).isNotNull();
-    assertThat(response.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
-    assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
-    assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
-    assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount())
+    LedgerActivityResponse returnActivity =
+        result.getContent().stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_WITHDRAWAL_RETURN)
+            .findFirst()
+            .orElseThrow();
+    assertThat(returnActivity.getAccountActivityId()).isNotNull();
+    assertThat(returnActivity.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(returnActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
+    assertThat(returnActivity.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
+    assertThat(returnActivity.getHold()).isNull();
+    assertThat(returnActivity.getSourceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(response.getTargetAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
-    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(returnActivity.getTargetAccount())
+        .isEqualTo(LedgerBankAccount.of(businessBankAccount));
+    assertThat(returnActivity.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+
+    LedgerActivityResponse withdrawActivity =
+        result.getContent().stream()
+            .filter(activity -> activity.getType() == AccountActivityType.BANK_WITHDRAWAL)
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(withdrawActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
+    assertThat(withdrawActivity.getDeclineDetails())
+        .isEqualTo(new DeclineDetails(DeclineReason.ST_ACCOUNT_CLOSED));
   }
 
   @ParameterizedTest
@@ -439,6 +473,6 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    return objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+    return springObjectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
   }
 }

@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.common.CardInfo;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -15,6 +16,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
+import org.apache.commons.collections4.CollectionUtils;
 
 @SuppressWarnings("MissingSummary")
 @Builder
@@ -71,6 +73,9 @@ public class AccountActivityResponse {
   @JsonProperty("lastSyncTime")
   private OffsetDateTime lastSynctime;
 
+  @JsonProperty("declineDetails")
+  private DeclineDetails declineDetails;
+
   public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
@@ -87,5 +92,9 @@ public class AccountActivityResponse {
     this.expenseDetails = ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails());
     this.syncStatus = accountActivity.getIntegrationSyncStatus();
     this.lastSynctime = accountActivity.getLastSyncTime();
+
+    if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
+      this.declineDetails = accountActivity.getDeclineDetails().get(0);
+    }
   }
 }

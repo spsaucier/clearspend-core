@@ -4,6 +4,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,6 +13,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.collections4.CollectionUtils;
 
 @Setter
 @Getter
@@ -50,6 +52,9 @@ public class LedgerActivityResponse {
   @JsonProperty("amount")
   @NonNull
   private Amount amount;
+
+  @JsonProperty("declineDetails")
+  private DeclineDetails declineDetails;
 
   public static LedgerActivityResponse of(AccountActivity accountActivity) {
     LedgerHoldInfo holdInfo = LedgerHoldInfo.of(accountActivity.getHold());
@@ -131,6 +136,10 @@ public class LedgerActivityResponse {
     response.setHold(holdInfo);
     response.setSourceAccount(sourceAccount);
     response.setTargetAccount(targetAccount);
+
+    if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
+      response.setDeclineDetails(accountActivity.getDeclineDetails().get(0));
+    }
 
     return response;
   }

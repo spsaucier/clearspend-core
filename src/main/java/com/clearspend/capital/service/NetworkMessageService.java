@@ -7,7 +7,9 @@ import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.data.model.Decline;
+import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.decline.Decline;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
@@ -74,7 +76,7 @@ public class NetworkMessageService {
     try {
       cardRecord = cardService.getCardByExternalRef(common.getCardExternalRef());
     } catch (RecordNotFoundException e) {
-      common.getDeclineReasons().add(DeclineReason.CARD_NOT_FOUND);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.CARD_NOT_FOUND));
       common.setPostDecline(true);
       throw e;
     }
@@ -225,7 +227,7 @@ public class NetworkMessageService {
               common.getAccount(),
               common.getCard(),
               common.getPaddedAmount(),
-              common.getDeclineReasons());
+              common.getDeclineDetails());
       common.setDecline(decline);
       networkMessage.setDeclineId(decline.getId());
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
@@ -307,31 +309,31 @@ public class NetworkMessageService {
 
     // decline if we have any mismatches on address, CVN or card expiration date
     if (common.getAddressPostalCodeCheck() == VerificationResultType.MISMATCH) {
-      common.getDeclineReasons().add(DeclineReason.ADDRESS_POSTAL_CODE_MISMATCH);
+      common.getDeclineDetails().add(new AddressPostalCodeMismatch(common.getAddressPostalCode()));
       common.setPostDecline(true);
     }
     if (common.getCvcCheck() == VerificationResultType.MISMATCH) {
-      common.getDeclineReasons().add(DeclineReason.CVC_MISMATCH);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.CVC_MISMATCH));
       common.setPostDecline(true);
     }
     if (common.getExpiryCheck() == VerificationResultType.MISMATCH) {
-      common.getDeclineReasons().add(DeclineReason.EXPIRY_MISMATCH);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.EXPIRY_MISMATCH));
       common.setPostDecline(true);
     }
 
     // card must be active
     if (!common.getCard().getStatus().equals(CardStatus.ACTIVE)) {
-      common.getDeclineReasons().add(DeclineReason.INVALID_CARD_STATUS);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.INVALID_CARD_STATUS));
       common.setPostDecline(true);
     }
 
     // account has no money at all
     if (common.getAccount().getAvailableBalance().isLessThanOrEqualToZero()) {
-      common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
       common.setPostDecline(true);
     }
 
-    if (!common.getDeclineReasons().isEmpty()) {
+    if (!common.getDeclineDetails().isEmpty()) {
       return;
     }
 
@@ -342,7 +344,7 @@ public class NetworkMessageService {
           .getAvailableBalance()
           .add(common.getPaddedAmount())
           .isLessThanZero()) {
-        common.getDeclineReasons().add(DeclineReason.INSUFFICIENT_FUNDS);
+        common.getDeclineDetails().add(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
         common.setPostDecline(true);
         return;
       }
@@ -374,7 +376,7 @@ public class NetworkMessageService {
           common.getAuthorizationMethod());
     } catch (LimitViolationException e) {
       log.warn("Failed to accept a transaction due to a limit violation: {}", e.getMessage());
-      common.getDeclineReasons().add(DeclineReason.LIMIT_EXCEEDED);
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.LIMIT_EXCEEDED));
       common.setPostDecline(true);
       return;
     }

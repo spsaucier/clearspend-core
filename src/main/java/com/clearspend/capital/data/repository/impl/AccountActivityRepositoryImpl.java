@@ -3,7 +3,7 @@ package com.clearspend.capital.data.repository.impl;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.data.util.MustacheSqlResourceLoader;
+import com.clearspend.capital.common.data.util.MustacheResourceLoader;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -101,11 +101,11 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     this.entityManager = entityManager;
     this.criteriaBuilderFactory = criteriaBuilderFactory;
     this.crypto = crypto;
-    this.findAccountActivityTemplate = MustacheSqlResourceLoader.load(findAccountActivityQuery);
+    this.findAccountActivityTemplate = MustacheResourceLoader.load(findAccountActivityQuery);
     this.findAccountActivityForLineGraphTemplate =
-        MustacheSqlResourceLoader.load(findAccountActivityForLineGraphQuery);
+        MustacheResourceLoader.load(findAccountActivityForLineGraphQuery);
     this.findAccountActivityForChartTemplate =
-        MustacheSqlResourceLoader.load(findAccountActivityForChartQuery);
+        MustacheResourceLoader.load(findAccountActivityForChartQuery);
   }
 
   private Timestamp nullableDateTimeToTimestamp(final OffsetDateTime offsetDateTime) {
