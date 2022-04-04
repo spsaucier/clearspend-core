@@ -3,12 +3,14 @@ package com.clearspend.capital.controller.nonprod;
 import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
 import static java.util.stream.Collectors.joining;
 
+import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.HttpReqRespUtils;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
@@ -42,6 +44,7 @@ import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -164,6 +167,8 @@ public class TestDataController {
   private final Faker faker = new Faker();
 
   private final StripeClient stripeClient;
+  private final PlaidClient plaidClient;
+  private final BusinessBankAccountRepository businessBankAccountRepository;
 
   public record BusinessRecord(
       Business business, List<BusinessOwner> businessOwners, User user, Allocation allocation) {}
@@ -928,5 +933,21 @@ public class TestDataController {
               .mapToObj(Integer::toString)
               .collect(joining()));
     }
+  }
+
+  @GetMapping("/plaid/un-link/{businessBankAccountId}")
+  void unLink(
+      @PathVariable(value = "businessBankAccountId")
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessBankAccountId> businessBankAccountId)
+      throws IOException {
+    BusinessBankAccount businessBankAccount =
+        businessBankAccountRepository.findById(businessBankAccountId).orElseThrow();
+    plaidClient.sandboxItemResetLogin(
+        businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
   }
 }
