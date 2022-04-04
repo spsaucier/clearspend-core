@@ -28,7 +28,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import retrofit2.Response;
 
-@Profile("test")
+@Profile("!prod")
 @Component
 @Slf4j
 public class TestPlaidClient extends PlaidClient {

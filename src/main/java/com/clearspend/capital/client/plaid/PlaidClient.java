@@ -41,7 +41,7 @@ import retrofit2.Response;
 
 @Component
 @Slf4j
-@Profile("!test")
+@Profile("prod")
 public class PlaidClient {
 
   public static final String PLAID_CLIENT_NAME = "ClearSpend";
