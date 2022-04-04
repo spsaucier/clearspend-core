@@ -277,8 +277,9 @@ public class CodatService {
 
     for (CodatAccount account : accounts) {
       Tree<String, CodatAccount> walker = current;
-      for (String segment : account.getQualifiedName().split("\\.")) {
-        current = current.child(segment);
+      String[] baseElements = account.getQualifiedName().split("\\.");
+      for (int i = 3; i < baseElements.length; i++) {
+        current = current.child(baseElements[i]);
       }
       current.setPayload(account);
       current = walker;

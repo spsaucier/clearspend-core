@@ -806,7 +806,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             .withName("child1b")
             .withStatus(CodatAccountStatus.ACTIVE)
             .withCategory("Testing")
-            .withQualifiedName("aaa.bbb.ccc.dd2.ee1")
+            .withQualifiedName("aaa.bbb.ddd.dd2.ee1")
             .withType(CodatAccountType.EXPENSE)
             .build());
 
@@ -819,12 +819,22 @@ public class CodatServiceTest extends BaseCapitalTest {
             .withQualifiedName("aaa.bbb.ccc.dd2.ee2")
             .withType(CodatAccountType.EXPENSE)
             .build());
+    input.add(
+        CodatAccountBuilder.builder()
+            .withId(UUID.randomUUID().toString())
+            .withName("child3a")
+            .withStatus(CodatAccountStatus.ACTIVE)
+            .withCategory("Testing")
+            .withQualifiedName("aaa.bbb.ccc.dd1.ee3")
+            .withType(CodatAccountType.EXPENSE)
+            .build());
 
     List<CodatAccountNested> result = codatService.nestCodatAccounts(input);
     Collections.reverse(input);
     List<CodatAccountNested> resultShuffle = codatService.nestCodatAccounts(input);
 
     assertThat(resultShuffle).isNotNull().hasSize(2);
+    assertThat(resultShuffle.get(0).getChildren()).hasSize(3);
   }
 
   @SneakyThrows
