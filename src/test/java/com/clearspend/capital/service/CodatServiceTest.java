@@ -991,4 +991,33 @@ public class CodatServiceTest extends BaseCapitalTest {
     codatService.createBankAccountForBusiness(
         business.getId(), new CreateCreditCardRequest("My Card"));
   }
+
+  @Test
+  public void canGetSyncableCount() {
+    accountActivityRepository.save(
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY));
+
+    accountActivityRepository.save(
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.NOT_READY));
+
+    assertThat(codatService.getSyncReadyCount(business.getId())).isEqualTo(1);
+  }
 }

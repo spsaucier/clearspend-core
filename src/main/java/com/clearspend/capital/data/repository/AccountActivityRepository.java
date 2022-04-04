@@ -49,4 +49,7 @@ public interface AccountActivityRepository
 
   List<AccountActivity> findByIntegrationSyncStatusAndBusinessId(
       AccountActivityIntegrationSyncStatus ready, TypedId<BusinessId> businessId);
+
+  int countByIntegrationSyncStatusAndBusinessId(
+      AccountActivityIntegrationSyncStatus ready, TypedId<BusinessId> businessId);
 }

@@ -5,6 +5,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
+import com.clearspend.capital.client.codat.types.SyncCountResponse;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
@@ -65,6 +66,11 @@ public class CodatController {
           TypedId<AccountActivityId> accountActivityId)
       throws RuntimeException {
     return codatService.syncTransactionAsDirectCost(accountActivityId, CurrentUser.getBusinessId());
+  }
+
+  @GetMapping("/sync-count")
+  SyncCountResponse getCountOfSyncableTransactions() {
+    return new SyncCountResponse(codatService.getSyncReadyCount(CurrentUser.getBusinessId()));
   }
 
   @PostMapping("/sync")

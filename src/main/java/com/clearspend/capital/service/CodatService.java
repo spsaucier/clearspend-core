@@ -499,6 +499,11 @@ public class CodatService {
         businessId);
   }
 
+  public Integer getSyncReadyCount(TypedId<BusinessId> businessId) {
+    return accountActivityRepository.countByIntegrationSyncStatusAndBusinessId(
+        AccountActivityIntegrationSyncStatus.READY, businessId);
+  }
+
   private static final class Tree<T, R> {
     private final Set<Tree<T, R>> children = new LinkedHashSet<>();
     private final T pathSegment;
