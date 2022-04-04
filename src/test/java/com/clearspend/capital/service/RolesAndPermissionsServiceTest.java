@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestAppender;
 import com.clearspend.capital.TestHelper;
@@ -49,9 +48,9 @@ import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -61,7 +60,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   private static final BigDecimal TWO = new BigDecimal(2);
 
   @Autowired private TestHelper testHelper;
-  @Autowired private TestAppender testAppender;
   @Autowired AllocationService allocationService;
   @Autowired UserAllocationRoleRepository userAllocationRoleRepository;
   @Autowired RolesAndPermissionsService rolesAndPermissionsService;
@@ -73,6 +71,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   private CreateBusinessRecord createBusinessRecord;
   private Allocation rootAllocation;
   private User rootAllocationOwner;
+  private TestAppender testAppender;
 
   @BeforeEach
   void init() {
@@ -93,10 +92,12 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         false);
 
     // Capturing the log
-    Logger rolesAndPermissionsLogger =
-        (Logger) LoggerFactory.getLogger(RolesAndPermissionsService.class);
-    rolesAndPermissionsLogger.addAppender(testAppender);
-    testAppender.start();
+    testAppender = TestAppender.watching(RolesAndPermissionsService.class, Level.INFO);
+  }
+
+  @AfterEach
+  void tearDown() {
+    testAppender.close();
   }
 
   /* All these commented-out tests will come out as their assertions are refactored

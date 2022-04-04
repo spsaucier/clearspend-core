@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -15,11 +16,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PermissionEnrichmentService {
 
   private final RolesAndPermissionsService rolesAndPermissionsService;
@@ -31,6 +34,7 @@ public class PermissionEnrichmentService {
       String permissions) {
     UserRolesAndPermissions userPermissions =
         getPermissions(authentication, allocationId, businessId);
+    log.trace("User Permissions: {}", userPermissions);
 
     if (userPermissions == null
         || (userPermissions.allocationPermissions().isEmpty()
@@ -39,14 +43,36 @@ public class PermissionEnrichmentService {
     }
 
     RequiredPermissions overlapPermissions = resolvePermission(String.valueOf(permissions));
+    log.trace("Overlap permissions: {}", overlapPermissions);
 
     overlapPermissions.allocationPermissions.retainAll(userPermissions.allocationPermissions());
     overlapPermissions.globalUserPermissions.retainAll(userPermissions.globalUserPermissions());
 
-    final boolean hasPermission =
-        !overlapPermissions.allocationPermissions.isEmpty()
-            || !overlapPermissions.globalUserPermissions.isEmpty();
-    return hasPermission;
+    if (log.isInfoEnabled()) {
+      EnumSet<GlobalUserPermission> customerServiceUsed =
+          GlobalUserPermission.ALL_CUSTOMER_SERVICE.clone();
+
+      customerServiceUsed.retainAll(overlapPermissions.globalUserPermissions);
+      log.trace("Customer service permissions: {}", customerServiceUsed);
+
+      if (overlapPermissions.allocationPermissions.isEmpty() && !customerServiceUsed.isEmpty()) {
+        StackTraceElement lastCall =
+            Arrays.stream(Thread.currentThread().getStackTrace())
+                .filter(
+                    ste ->
+                        ste.getClassName().contains("clearspend")
+                            && !ste.getClassName().equals(this.getClass().getName()))
+                .findFirst()
+                .orElseThrow();
+        log.info(
+            "Customer service action {}.{}() by user {}",
+            lastCall.getClassName(),
+            lastCall.getMethodName(),
+            CurrentUser.getUserId());
+      }
+    }
+    return !(overlapPermissions.allocationPermissions.isEmpty()
+        && overlapPermissions.globalUserPermissions.isEmpty());
   }
 
   private UserRolesAndPermissions getPermissions(
