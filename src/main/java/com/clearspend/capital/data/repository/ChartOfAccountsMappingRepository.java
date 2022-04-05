@@ -17,6 +17,9 @@ public interface ChartOfAccountsMappingRepository
 
   List<ChartOfAccountsMapping> findAllByBusinessId(TypedId<BusinessId> businessId);
 
+  boolean existsByBusinessIdAndExpenseCategoryId(
+      TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId);
+
   Optional<ChartOfAccountsMapping> findByBusinessIdAndExpenseCategoryId(
       TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId);
 }

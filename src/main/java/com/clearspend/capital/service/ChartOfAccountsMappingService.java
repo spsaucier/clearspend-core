@@ -4,6 +4,7 @@ import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
@@ -107,6 +108,11 @@ public class ChartOfAccountsMappingService {
                     mapping.getExpenseCategoryIconRef(),
                     mapping.getExpenseCategoryId()))
         .collect(Collectors.toList());
+  }
+
+  public boolean isExpenseCategoryMapped(
+      TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId) {
+    return mappingRepository.existsByBusinessIdAndExpenseCategoryId(businessId, expenseCategoryId);
   }
 
   public ChartOfAccountsMapping getAccountMappingForBusiness(

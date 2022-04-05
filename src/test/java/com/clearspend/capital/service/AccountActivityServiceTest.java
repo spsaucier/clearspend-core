@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -41,6 +42,7 @@ import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.service.AccountActivityService.CardAccountActivity;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -75,6 +77,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired AccountActivityService accountActivityService;
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired BusinessService businessService;
+  @Autowired ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
   @Autowired NetworkMessageService networkMessageService;
 
   @Autowired TestHelper testHelper;
@@ -435,7 +438,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void updateAccountActivity_settingExpenseCategoryUpdatesIntegrationStatus() {
+  void updateAccountActivity_settingExpenseCategoryUpdatesIntegrationStatusWhenCategoryIsMapped() {
     CreateBusinessRecord businessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(businessRecord.user());
     AccountActivity accountActivity =
@@ -454,17 +457,63 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountActivity = accountActivityRepository.save(accountActivity);
     testHelper.setCurrentUser(businessRecord.user());
 
+    // Add an Expense Category
     ExpenseCategory expenseCategory =
         new ExpenseCategory(
             businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+    expenseCategory = expenseCategoryRepository.save(expenseCategory);
 
-    expenseCategoryRepository.save(expenseCategory);
+    // Make sure that the Expense Category is 'mapped' to a QBO Account
+    testHelper.setCurrentUser(businessRecord.user());
+    ChartOfAccountsMapping mapping = new ChartOfAccountsMapping();
+    mapping.setBusinessId(businessRecord.businessOwner().getBusinessId());
+    mapping.setExpenseCategoryId(expenseCategory.getId());
+    mapping.setAccountRefId("Testing");
+    mapping.setExpenseCategoryIconRef(42);
+    chartOfAccountsMappingRepository.saveAndFlush(mapping);
 
     assertThat(
             accountActivityService.updateAccountActivity(
                 accountActivity, "After Update", expenseCategory.getId()))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+  }
+
+  @Test
+  void
+      updateAccountActivity_settingExpenseCategoryDoesNotUpdatesIntegrationStatusWhenCategoryIsUnmapped() {
+    CreateBusinessRecord businessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(businessRecord.user());
+    AccountActivity accountActivity =
+        new AccountActivity(
+            businessRecord.business().getId(),
+            businessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
+            OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setNotes("");
+    accountActivity.setUser(UserDetails.of(businessRecord.user()));
+    accountActivity = accountActivityRepository.save(accountActivity);
+    testHelper.setCurrentUser(businessRecord.user());
+
+    // Add an Expense Category
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+    expenseCategory = expenseCategoryRepository.save(expenseCategory);
+
+    // Don't map the Expense Category before the update. This should set the Expense Category but
+    // not
+    // transitively update the Integration Sync Status
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "After Update", expenseCategory.getId()))
+        .extracting(it -> it.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
   }
 
   @Test

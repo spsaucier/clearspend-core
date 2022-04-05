@@ -40,6 +40,7 @@ import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
@@ -75,12 +76,10 @@ import org.springframework.stereotype.Service;
 public class AccountActivityService {
 
   private final AccountActivityRepository accountActivityRepository;
-
   private final CardRepository cardRepository;
-
-  private final UserRepository userRepository;
-
+  private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
   private final ExpenseCategoryService expenseCategoryService;
+  private final UserRepository userRepository;
 
   @Transactional(TxType.REQUIRED)
   void recordBankAccountAccountActivity(
@@ -370,8 +369,10 @@ public class AccountActivityService {
                           category.getIconRef(), category.getId(), category.getCategoryName()))
               .orElse(null));
       if (accountActivity
-          .getIntegrationSyncStatus()
-          .equals(AccountActivityIntegrationSyncStatus.NOT_READY)) {
+              .getIntegrationSyncStatus()
+              .equals(AccountActivityIntegrationSyncStatus.NOT_READY)
+          && chartOfAccountsMappingRepository.existsByBusinessIdAndExpenseCategoryId(
+              accountActivity.getBusinessId(), expenseCategoryId)) {
         accountActivity.setIntegrationSyncStatus(
             accountActivity
                 .getIntegrationSyncStatus()
