@@ -9,10 +9,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CodatSyncDirectCostResponse {
 
-  @JsonProperty("data")
-  @NonNull
-  private CodatDataIdStub data;
-
   @JsonProperty("status")
   @NonNull
   private String status;

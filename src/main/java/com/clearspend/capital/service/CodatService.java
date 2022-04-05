@@ -53,6 +53,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -153,21 +154,6 @@ public class CodatService {
               supplier,
               expenseAccount.get(),
               expenseCategoryMapping.get().getAccountRefId());
-
-      if (accountActivity.getReceipt() != null) {
-        for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
-          Receipt receipt = receiptService.getReceipt(id);
-          CodatSyncReceiptResponse receiptResponse =
-              codatClient.syncReceiptsForDirectCost(
-                  new CodatSyncReceiptRequest(
-                      business.getCodatCompanyRef(),
-                      connectionId,
-                      directCostSyncResponse.getData().getId(),
-                      receiptService.getReceiptImage(id),
-                      receipt.getContentType(),
-                      receipt.getId()));
-        }
-      }
 
       User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
       transactionSyncLogRepository.save(
@@ -383,21 +369,6 @@ public class CodatService {
                 expenseAccount.get(),
                 expenseCategoryMapping.get().getAccountRefId());
 
-        if (accountActivity.getReceipt() != null) {
-          for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
-            Receipt receipt = receiptService.getReceipt(id);
-            CodatSyncReceiptResponse receiptResponse =
-                codatClient.syncReceiptsForDirectCost(
-                    new CodatSyncReceiptRequest(
-                        business.getCodatCompanyRef(),
-                        business.getCodatConnectionId(),
-                        directCostSyncResponse.getData().getId(),
-                        receiptService.getReceiptImage(id),
-                        receipt.getContentType(),
-                        receipt.getId()));
-          }
-        }
-
         Optional<TransactionSyncLog> transactionSyncLogOptional =
             transactionSyncLogRepository.findById(transaction.getId());
 
@@ -473,6 +444,24 @@ public class CodatService {
         accountActivity -> {
           accountActivity.setLastSyncTime(OffsetDateTime.now());
           accountActivityRepository.save(accountActivity);
+
+          if (accountActivity.getReceipt() != null
+              && accountActivity.getReceipt().getReceiptIds() != null
+              && !accountActivity.getReceipt().getReceiptIds().isEmpty()
+              && StringUtils.hasText(status.getDataId().getId())) {
+            for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
+              Receipt receipt = receiptService.getReceipt(id);
+              CodatSyncReceiptResponse receiptResponse =
+                  codatClient.syncReceiptsForDirectCost(
+                      new CodatSyncReceiptRequest(
+                          business.getCodatCompanyRef(),
+                          business.getCodatConnectionId(),
+                          status.getDataId().getId(),
+                          receiptService.getReceiptImage(id),
+                          receipt.getContentType(),
+                          receipt.getId()));
+            }
+          }
         });
   }
 

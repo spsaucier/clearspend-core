@@ -101,8 +101,7 @@ public class CodatMockClient extends CodatClient {
 
   public CodatSyncDirectCostResponse syncDirectCostToCodat(
       String companyRef, String connectionId, DirectCostRequest request) {
-    return new CodatSyncDirectCostResponse(
-        new CodatDataIdStub("123"), "Started", "test-push-operation-key-cost");
+    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
   }
 
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
@@ -113,8 +112,7 @@ public class CodatMockClient extends CodatClient {
       CodatSupplier supplier,
       CodatAccount expenseAccount,
       String expenseCategoryRef) {
-    return new CodatSyncDirectCostResponse(
-        new CodatDataIdStub("123"), "Started", "test-push-operation-key-cost");
+    return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
   }
 
   public void addSupplierToList(CodatSupplier supplier) {
@@ -122,7 +120,9 @@ public class CodatMockClient extends CodatClient {
   }
 
   public CodatPushStatusResponse getPushStatus(String pushOperationKey, String companyRef) {
-    return new CodatPushStatusResponse("Success");
+    CodatPushStatusResponse success = new CodatPushStatusResponse("Success");
+    success.setDataId(new CodatDataIdStub("123"));
+    return success;
   }
 
   public Boolean deleteCodatIntegrationConnectionForBusiness(
