@@ -39,6 +39,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -127,7 +128,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
         (jpaQuery, isCount) -> {
           jpaQuery
               .setParameter("businessId", businessId.toUuid())
-              .setParameter("invokingUser", CurrentUser.getUserId().toUuid());
+              .setParameter("invokingUser", CurrentUser.getUserId().toUuid())
+              .setParameter("globalRoles", CurrentUser.get().roles());
           if (!isCount) {
             jpaQuery
                 .setParameter("limit", pageToken.getPageSize())
@@ -237,7 +239,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
             .addValue("type", AccountActivityType.NETWORK_CAPTURE.name())
             .addValue("userId", userId)
             .addValue("allocationId", allocationId)
-            .addValue("owningUserId", CurrentUser.getUserId().toUuid());
+            .addValue("owningUserId", CurrentUser.getUserId().toUuid())
+            .addValue("globalRoles", CurrentUser.get().roles().toArray(new String[0]), Types.ARRAY);
 
     final List<GraphData> graphDataList =
         JDBCUtils.query(
@@ -289,7 +292,8 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
             .addValue("type", AccountActivityType.NETWORK_CAPTURE.name())
             .addValue("from", nullableDateTimeToTimestamp(criteria.getFrom()))
             .addValue("to", nullableDateTimeToTimestamp(criteria.getTo()))
-            .addValue("owningUserId", CurrentUser.getUserId().toUuid());
+            .addValue("owningUserId", CurrentUser.getUserId().toUuid())
+            .addValue("globalRoles", CurrentUser.get().roles().toArray(new String[0]), Types.ARRAY);
 
     final String query = findAccountActivityForChartTemplate.execute(context);
     final ChartData chartData = new ChartData(null, null, null, null);

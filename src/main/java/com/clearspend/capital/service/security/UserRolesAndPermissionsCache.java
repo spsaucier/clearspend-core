@@ -27,7 +27,7 @@ public class UserRolesAndPermissionsCache {
 
   public UserRolesAndPermissions cachePermissions(UserRolesAndPermissions permissions) {
     permissionsByAllocation.put(permissions.allocationId(), permissions);
-    if (permissions.ancestorAllocationIds().isEmpty()) {
+    if (permissions.parentAllocationId() == null) {
       permissionsByBusiness.put(permissions.businessId(), permissions);
     }
     return permissions;

@@ -16,9 +16,9 @@ FROM account_activity activity
 {{#isEmployee}}
     LEFT JOIN users ON activity.user_id = users.id
 {{/isEmployee}}
-LEFT JOIN getAllocationPermissions(:businessId, :owningUserId, 'VIEW_OWN') as Self_Permission
+LEFT JOIN get_allocation_permissions(:businessId, :owningUserId, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') as Self_Permission
     ON (activity.allocation_id = Self_Permission.Allocation_id AND activity.user_id = :owningUserId)
-LEFT JOIN getAllocationPermissions(:businessId, :owningUserId, 'MANAGE_FUNDS') AS Manage_Funds_Permission
+LEFT JOIN get_allocation_permissions(:businessId, :owningUserId, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_FUNDS') AS Manage_Funds_Permission
     ON activity.allocation_id = Manage_Funds_Permission.Allocation_id
 WHERE activity.business_id = :businessId
 AND activity.type = :type

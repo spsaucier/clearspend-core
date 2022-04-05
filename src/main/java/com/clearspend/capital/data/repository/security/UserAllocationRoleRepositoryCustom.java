@@ -69,14 +69,6 @@ public interface UserAllocationRoleRepositoryCustom {
       TypedId<UserId> userId,
       Set<String> userGlobalRoles);
 
-  default EnumSet<AllocationPermission> getRolePermissions(
-      TypedId<BusinessId> businessId, String role) {
-    return getRolePermissions(businessId, Set.of(role));
-  }
-
-  EnumSet<AllocationPermission> getRolePermissions(
-      TypedId<BusinessId> businessId, Set<String> roles);
-
   /**
    * Delete roles on descendants of the given allocation which have less than all the permissions
    * that the given role has, for use in enforcing no lowered permissions below the current
@@ -88,4 +80,9 @@ public interface UserAllocationRoleRepositoryCustom {
    */
   void deleteLesserAndEqualRolesBelow(
       TypedId<UserId> granteeUserId, TypedId<AllocationId> allocationId, String referenceRole);
+
+  List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
+      final TypedId<UserId> userId,
+      final TypedId<BusinessId> businessId,
+      final Set<String> globalRoles);
 }

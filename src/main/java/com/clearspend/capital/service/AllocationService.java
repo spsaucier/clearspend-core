@@ -118,6 +118,15 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
+  public List<AllocationRecord> getAllocationsForBusiness(final TypedId<BusinessId> businessId) {
+    final Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+    return getAllocationRecords(business, allocationRepository.findByBusinessId(businessId));
+  }
+
   @Transactional
   @PreAuthorize("hasPermission(#parentAllocationId, 'MANAGE_FUNDS')")
   public AllocationRecord createAllocation(

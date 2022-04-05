@@ -417,6 +417,24 @@ public class TestHelper {
   }
 
   /**
+   * Sets a user in the SecurityContext with every possible global role. Useful for extremely
+   * elevated permission actions to support tests.
+   */
+  @FusionAuthUserAccessor(
+      reviewer = "Craig Miller",
+      explanation = "to create master user for testing purposes")
+  public void setUserAsMaster(@NonNull User user) {
+    CurrentUserSwitcher.setCurrentUser(user, DefaultRoles.ALL_GLOBAL);
+  }
+
+  public CreateUpdateUserRecord createUserWithGlobalRole(
+      final Business business, final String role) {
+    final CreateUpdateUserRecord user = createUser(business);
+    rolesAndPermissionsService.grantGlobalRole(user.user(), role);
+    return user;
+  }
+
+  /**
    * Set the current user for direct service testing, including global roles, if any.
    *
    * @param user the user who will be taking subsequent

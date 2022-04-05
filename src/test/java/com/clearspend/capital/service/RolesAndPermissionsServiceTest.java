@@ -1,6 +1,6 @@
 package com.clearspend.capital.service;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,6 +31,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
+import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
@@ -62,6 +63,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   @Autowired private TestHelper testHelper;
   @Autowired AllocationService allocationService;
   @Autowired UserAllocationRoleRepository userAllocationRoleRepository;
+  @Autowired AllocationRolePermissionsRepository allocationRolePermissionsRepo;
   @Autowired RolesAndPermissionsService rolesAndPermissionsService;
   @Autowired UserService userService;
   @Autowired BusinessBankAccountService businessBankAccountService;
@@ -724,7 +726,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
-        true,
+        false,
         userAllocationRoleRepository
             .getUserPermissionAtBusiness(
                 childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null)
@@ -736,7 +738,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
-        true,
+        false,
         userAllocationRoleRepository
             .getUserPermissionAtBusiness(
                 childAllocation2.getBusinessId(), rootAllocationOwner.getId(), null)
@@ -752,7 +754,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
-        true,
+        false,
         userAllocationRoleRepository
             .getUserPermissionAtBusiness(
                 createBusinessRecord.business().getId(), otherOwner.user().getId(), null)
@@ -766,45 +768,11 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     createBusinessRecord.business().setStatus(BusinessStatus.SUSPENDED);
 
     assertUserRolesAndPermissions(
-        DefaultRoles.ALLOCATION_ADMIN,
+        null,
         EnumSet.noneOf(AllocationPermission.class),
         EnumSet.noneOf(GlobalUserPermission.class),
         false,
         rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(rootAllocation.getId()));
-  }
-
-  @SneakyThrows
-  @SwitchesCurrentUser(reviewer = "pmorton", explanation = "For testing")
-  @FusionAuthRoleAdministrator(reviewer = "pmorton", explanation = "For testing")
-  @Test
-  public void testGlobalRolesHaveNoTranscendentPermissionsOnInactiveBusinessAccount() {
-    fusionAuthService.changeUserRole(
-        RoleChange.GRANT, rootAllocationOwner.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
-    setCurrentUser(rootAllocationOwner);
-
-    CreateBusinessRecord disjointBusiness = testHelper.createBusiness();
-    Allocation disjointAllocation = disjointBusiness.allocationRecord().allocation();
-
-    // Ensure our Global Customer Service Manager has access to the Disjoint Business before
-    // 'closing'
-    setCurrentUser(rootAllocationOwner);
-    assertDoesNotThrow(
-        () ->
-            rolesAndPermissionsService.assertUserHasPermission(
-                disjointAllocation.getId(),
-                EnumSet.noneOf(AllocationPermission.class),
-                EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE_MANAGER)));
-
-    disjointBusiness.business().setStatus(BusinessStatus.CLOSED);
-
-    // Now that the Business has been Closed, we need to ensure that our Global CS Manager is
-    // still able to access the Closed Business
-    assertDoesNotThrow(
-        () ->
-            rolesAndPermissionsService.assertUserHasPermission(
-                disjointAllocation.getId(),
-                EnumSet.noneOf(AllocationPermission.class),
-                EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE_MANAGER)));
   }
 
   @SneakyThrows
@@ -814,7 +782,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     createBusinessRecord.business().setStatus(BusinessStatus.CLOSED);
 
     assertUserRolesAndPermissions(
-        DefaultRoles.ALLOCATION_ADMIN, // null allocation from the
+        DefaultRoles.ALLOCATION_VIEW_ONLY, // null allocation from the
         // RolesAndPermissionsService::ensureNonNullPermissions(...)
         EnumSet.of(AllocationPermission.READ, AllocationPermission.VIEW_OWN),
         EnumSet.noneOf(GlobalUserPermission.class),

@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import static com.clearspend.capital.data.model.security.DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -18,14 +19,17 @@ import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import javax.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +45,8 @@ public class AllocationServiceTest extends BaseCapitalTest {
   @Autowired private LedgerService ledgerService;
   @Autowired private FusionAuthService fusionAuthService;
   @Autowired private RolesAndPermissionsService rolesAndPermissionsService;
-  @Autowired UserService userService;
+  @Autowired private UserService userService;
+  @Autowired private PermissionValidationHelper permissionValidationHelper;
 
   @Autowired private EntityManager entityManager;
 
@@ -53,6 +58,30 @@ public class AllocationServiceTest extends BaseCapitalTest {
     createBusinessRecord = testHelper.createBusiness();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
     testHelper.setCurrentUser(createBusinessRecord.user());
+  }
+
+  @Test
+  void getAllocationsForBusiness() {
+    final AllocationRecord child =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            rootAllocation.getId(),
+            createBusinessRecord.user());
+
+    final List<AllocationRecord> result =
+        allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
+    assertThat(result).hasSize(2).contains(createBusinessRecord.allocationRecord(), child);
+  }
+
+  @Test
+  void getAllocationsForBusiness_UserPermissions() {
+    final ThrowingRunnable action =
+        () -> allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test

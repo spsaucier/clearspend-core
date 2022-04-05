@@ -87,7 +87,11 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   @Override
   public Page<SearchCardData> filter(CardFilterCriteria criteria) {
     StringWriter out = new StringWriter();
-    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(false), out);
+    final String globalRoles =
+        CurrentUser.get().roles().stream().map("'%s'"::formatted).collect(Collectors.joining(","));
+    final Map<String, Object> parentContext =
+        Map.of("globalRoles", globalRoles, "javaNow", OffsetDateTime.now());
+    template.execute(criteria, parentContext, out);
     String query = out.toString();
 
     List<SearchCardData> rawOutput =
@@ -125,8 +129,10 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
           rawOutput.size());
     }
 
+    final Map<String, Object> countParentContext =
+        Map.of("globalRoles", globalRoles, "count", true, "javaNow", OffsetDateTime.now());
     StringWriter outputCounter = new StringWriter();
-    template.execute(criteria, new JDBCUtils.CountObjectForSqlQuery(true), outputCounter);
+    template.execute(criteria, countParentContext, outputCounter);
     long totalElements =
         JDBCUtils.query(
                 entityManager,

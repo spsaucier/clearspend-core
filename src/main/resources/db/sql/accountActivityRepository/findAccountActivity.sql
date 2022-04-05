@@ -1,7 +1,7 @@
 select {{#count}}count(*){{/count}}{{^count}}*{{/count}} from account_activity
-left outer join getAllocationPermissions(:businessId, :invokingUser, 'VIEW_OWN') as Self_Permission
+left outer join get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') as Self_Permission
     on (account_activity.allocation_id = Self_Permission.Allocation_Id and account_activity.user_id = :invokingUser)
-left outer join getAllocationPermissions(:businessId, :invokingUser, 'MANAGE_FUNDS') as Manage_Funds_Permission
+left outer join get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_FUNDS') as Manage_Funds_Permission
     on account_activity.allocation_id = Manage_Funds_Permission.Allocation_Id
 where
     ( account_activity.hide_after >= clock_timestamp() or account_activity.hide_after is null )

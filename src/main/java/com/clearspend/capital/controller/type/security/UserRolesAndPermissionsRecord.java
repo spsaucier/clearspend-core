@@ -3,7 +3,6 @@ package com.clearspend.capital.controller.type.security;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserAllocationRoleId;
 import com.clearspend.capital.controller.type.user.UserData;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
@@ -20,15 +19,14 @@ import lombok.NonNull;
 @NoArgsConstructor
 public class UserRolesAndPermissionsRecord {
 
-  /** Null for new or root allocation owner / business owner */
-  @JsonProperty("userAllocationRoleId")
-  private TypedId<UserAllocationRoleId> userAllocationRoleId;
-
   /** The allocation owning this record (which may be an ancestor of the allocation queried) */
   @JsonProperty("allocationId")
   @NonNull
   @NotNull(message = "allocationId required")
   private TypedId<AllocationId> allocationId;
+
+  @JsonProperty("parentAllocationId")
+  private TypedId<AllocationId> parentAllocationId;
 
   @NonNull
   @JsonProperty("user")
@@ -50,9 +48,9 @@ public class UserRolesAndPermissionsRecord {
   private List<GlobalUserPermission> globalUserPermissions;
 
   public UserRolesAndPermissionsRecord(UserRolesAndPermissions permissions) {
-    userAllocationRoleId = permissions.userAllocationRoleId();
     allocationRole = permissions.allocationRole();
     allocationId = permissions.allocationId();
+    parentAllocationId = permissions.parentAllocationId();
     user =
         new UserData(
             permissions.userId(),

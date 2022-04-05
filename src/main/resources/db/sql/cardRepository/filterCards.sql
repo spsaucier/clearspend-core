@@ -19,9 +19,9 @@ SELECT
     {{/count}}
 FROM Card INNER JOIN Allocation
     ON Card.Allocation_Id = Allocation.Id
-    LEFT OUTER JOIN getAllocationPermissions('{{businessId}}', '{{invokingUser}}', 'VIEW_OWN') AS Self_Permission
+    LEFT OUTER JOIN get_allocation_permissions('{{businessId}}', '{{invokingUser}}', ARRAY[{{globalRoles}}]::VARCHAR[], 'VIEW_OWN') AS Self_Permission
         ON (Allocation.Id = Self_Permission.Allocation_Id AND Card.User_Id = '{{invokingUser}}')
-    LEFT OUTER JOIN getAllocationPermissions('{{businessId}}', '{{invokingUser}}', 'MANAGE_CARDS') AS Card_Manager_Permission
+    LEFT OUTER JOIN get_allocation_permissions('{{businessId}}', '{{invokingUser}}', ARRAY[{{globalRoles}}]::VARCHAR[], 'MANAGE_CARDS') AS Card_Manager_Permission
         ON Allocation.Id = Card_Manager_Permission.Allocation_Id
     INNER JOIN Account
         ON Card.Account_Id = Account.Id

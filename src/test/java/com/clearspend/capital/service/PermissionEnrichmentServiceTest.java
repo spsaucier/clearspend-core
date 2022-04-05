@@ -20,7 +20,6 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.security.PermissionEnrichmentService;
 import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
 import com.clearspend.capital.service.type.CurrentUser;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
@@ -54,14 +53,13 @@ public class PermissionEnrichmentServiceTest {
           .thenReturn(
               Optional.of(
                   new UserRolesAndPermissions(
-                      null,
                       "John",
                       "Smith",
                       UserType.EMPLOYEE,
                       userId,
                       allocationId,
+                      null,
                       businessId,
-                      Collections.emptyList(),
                       false,
                       DefaultRoles.ALLOCATION_EMPLOYEE,
                       EnumSet.of(AllocationPermission.VIEW_OWN, AllocationPermission.LINK_RECEIPTS),

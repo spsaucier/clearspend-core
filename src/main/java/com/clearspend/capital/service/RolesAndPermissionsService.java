@@ -60,8 +60,13 @@ import org.springframework.stereotype.Service;
  * object type to avoid circular references between this service and the postulated services per
  * object.
  *
- * <p>There are two important defaults to note: A root allocation owner always has Owner role on
+ * <p>There are two important defaults to note: A root allocation owner always has Admin role on
  * that allocation.
+ *
+ * <p>IMPORTANT: this class cannot be annotated with Pre/PostAuthorize annotations because this
+ * class is part of the flow for validating authorizations. This bean is instantiated before the
+ * annotations are fully enabled. Because of this, each method in this class is responsible for
+ * validating appropriate permissions directly.
  */
 @Service
 @RequiredArgsConstructor
@@ -186,10 +191,17 @@ public class RolesAndPermissionsService {
         CurrentUser.get(),
         grantee.getId(),
         allocation.getId());
-    EnumSet<AllocationPermission> newPerms =
-        newRole == null
-            ? EnumSet.noneOf(AllocationPermission.class)
-            : userAllocationRoleRepository.getRolePermissions(allocation.getBusinessId(), newRole);
+    final EnumSet<AllocationPermission> newPerms =
+        Optional.ofNullable(newRole)
+            .flatMap(
+                role ->
+                    allocationRolePermissionsRepository
+                        .findAllocationRolePermissionsByBusinessAndRole(
+                            allocation.getBusinessId(), role))
+            .map(AllocationRolePermissions::getPermissions)
+            .stream()
+            .flatMap(Arrays::stream)
+            .collect(Collectors.toCollection(() -> EnumSet.noneOf(AllocationPermission.class)));
 
     // Establish the minimum permission applicable
     //
@@ -201,7 +213,10 @@ public class RolesAndPermissionsService {
     //     descendant allocations with permissions and update according to the above
     // - Permissions cannot be taken away lower in the tree
     // See where they got the existing role from
-    TypedId<AllocationId> foundRoleAllocationId = oldEffectivePermissions.allocationId();
+    // Another Thing: if the user has no allocation permissions, but has global permissions,
+    // Allocation ID will be null
+    TypedId<AllocationId> foundRoleAllocationId =
+        Optional.ofNullable(oldEffectivePermissions.allocationId()).orElse(allocation.getId());
 
     List<TypedId<AllocationId>> allocationIds =
         new ArrayList<>(allocation.getAncestorAllocationIds());
@@ -224,8 +239,13 @@ public class RolesAndPermissionsService {
     EnumSet<AllocationPermission> requiredPermissions = EnumSet.noneOf(AllocationPermission.class);
     if (isAllocationOwner) {
       requiredPermissions.addAll(
-          userAllocationRoleRepository.getRolePermissions(
-              allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER));
+          allocationRolePermissionsRepository
+              .findAllocationRolePermissionsByBusinessAndRole(
+                  allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER)
+              .map(AllocationRolePermissions::getPermissions)
+              .stream()
+              .flatMap(Arrays::stream)
+              .collect(Collectors.toCollection(() -> EnumSet.noneOf(AllocationPermission.class))));
       log.info("Allocation owner permissions: {}", allocation.getBusinessId());
     }
     if (allocation.getParentAllocationId() != null) {
@@ -498,14 +518,13 @@ public class RolesAndPermissionsService {
         () -> {
           CurrentUser user = CurrentUser.get();
           return new UserRolesAndPermissions(
-              null,
               "",
               "",
               user.userType(),
               user.userId(),
               allocationId,
+              null,
               CurrentUser.getBusinessId(),
-              Collections.emptyList(),
               false,
               null,
               EnumSet.noneOf(AllocationPermission.class),
