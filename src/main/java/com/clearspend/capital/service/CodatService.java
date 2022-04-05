@@ -40,6 +40,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.ReceiptService.ReceiptViewer;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.annotations.VisibleForTesting;
 import java.time.OffsetDateTime;
@@ -406,12 +407,12 @@ public class CodatService {
     List<TransactionSyncLog> transactionsWaitingForSupplier =
         transactionSyncLogRepository.findByStatusAndCodatCompanyRef(
             TransactionSyncStatus.IN_PROGRESS, companyRef);
-    ;
 
     transactionsWaitingForSupplier.stream()
         .forEach(transaction -> updateSyncStatusIfComplete(transaction));
   }
 
+  @ReceiptViewer(reviewer = "patrick.morton", explanation = "Need to upload Receipts")
   private void updateSyncStatusIfComplete(TransactionSyncLog transaction) {
     Business business =
         businessService.retrieveBusinessForService(transaction.getBusinessId(), true);
@@ -450,7 +451,7 @@ public class CodatService {
               && !accountActivity.getReceipt().getReceiptIds().isEmpty()
               && StringUtils.hasText(status.getDataId().getId())) {
             for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
-              Receipt receipt = receiptService.getReceipt(id);
+              Receipt receipt = receiptService.getReceiptByTypedId(id);
               CodatSyncReceiptResponse receiptResponse =
                   codatClient.syncReceiptsForDirectCost(
                       new CodatSyncReceiptRequest(

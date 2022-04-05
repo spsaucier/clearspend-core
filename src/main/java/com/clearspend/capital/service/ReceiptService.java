@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -59,13 +60,32 @@ public class ReceiptService {
     return receiptImageService.getReceiptImage(receipt.getPath());
   }
 
-  // FIXME: PRM - Permissions?
+  @RestrictedApi(
+      explanation = "Protected Receipt access for Codat Webhooks",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {ReceiptViewer.class})
   public byte[] getReceiptImage(TypedId<ReceiptId> receiptId) {
     Optional<Receipt> receipt = receiptRepository.findById(receiptId);
     if (receipt.isPresent()) {
       return receiptImageService.getReceiptImage(receipt.get().getPath());
     }
     return null;
+  }
+
+  @RestrictedApi(
+      explanation = "Protected Receipt access for Codat Webhooks",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowedOnPath = "/test/.*",
+      allowlistAnnotations = {ReceiptViewer.class})
+  public Receipt getReceiptByTypedId(TypedId<ReceiptId> receiptId) {
+    return receiptRepository
+        .findReceiptByBusinessIdAndId(CurrentUser.getBusinessId(), receiptId)
+        .orElseThrow(
+            () ->
+                new RecordNotFoundException(Table.RECEIPT, CurrentUser.getBusinessId(), receiptId));
   }
 
   @PostAuthorize(
@@ -166,5 +186,11 @@ public class ReceiptService {
     receiptRepository.delete(receipt);
     receiptImageService.deleteReceiptImage(receipt.getPath());
     log.debug("deleted receipt {} {}", receipt.getId(), receipt.getPath());
+  }
+
+  public @interface ReceiptViewer {
+    public String reviewer();
+
+    public String explanation();
   }
 }
