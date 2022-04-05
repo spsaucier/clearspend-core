@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import static com.clearspend.capital.testutils.data.TestDataHelper.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1340,6 +1341,40 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     merchantDetails.setType(MerchantType.ADVERTISING_SERVICES);
     merchantDetails.setName("MerchantName-%d".formatted(index));
     return merchantDetails;
+  }
+
+  @Test
+  void find_WithGlobalRoles() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setUserAsMaster(createBusinessRecord.user());
+    final User customerServiceManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+            .user();
+    testHelper.setCurrentUser(customerServiceManager);
+
+    final List<AccountActivity> allActivities =
+        IntStream.range(0, 20)
+            .mapToObj(
+                index ->
+                    testDataHelper.createAccountActivity(
+                        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                            .activityTime(OffsetDateTime.now().plusMinutes(index))
+                            .merchant(createMerchant(index))
+                            .build()))
+            .sorted((a1, a2) -> a1.getActivityTime().compareTo(a2.getActivityTime()) * -1)
+            .toList();
+
+    final AccountActivityFilterCriteria criteria = new AccountActivityFilterCriteria();
+    criteria.setFrom(OffsetDateTime.now().minusYears(1));
+    criteria.setTo(OffsetDateTime.now().plusYears(1));
+    criteria.setTypes(List.of(AccountActivityType.BANK_DEPOSIT_STRIPE));
+    final PageRequest pageRequest = new PageRequest(0, 10);
+    criteria.setPageToken(PageRequest.toPageToken(pageRequest));
+
+    assertDoesNotThrow(
+        () -> accountActivityService.find(createBusinessRecord.business().getId(), criteria));
   }
 
   @Test

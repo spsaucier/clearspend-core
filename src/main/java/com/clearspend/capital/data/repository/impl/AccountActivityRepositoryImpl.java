@@ -35,9 +35,11 @@ import com.clearspend.capital.service.type.MerchantChartData;
 import com.clearspend.capital.service.type.PageToken;
 import com.clearspend.capital.service.type.UserChartData;
 import com.samskivert.mustache.Template;
+import com.vladmihalcea.hibernate.type.array.StringArrayType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.sql.Array;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
@@ -61,6 +63,8 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Session;
+import org.hibernate.jpa.TypedParameterValue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -126,10 +130,19 @@ public class AccountActivityRepositoryImpl implements AccountActivityRepositoryC
     final String query = JDBCUtils.generateQuery(findAccountActivityTemplate, criteria, false);
     final BiConsumer<Query, Boolean> setParams =
         (jpaQuery, isCount) -> {
+          final Array array =
+              entityManager
+                  .unwrap(Session.class)
+                  .doReturningWork(
+                      conn -> conn.createArrayOf("VARCHAR", CurrentUser.get().roles().toArray()));
+
           jpaQuery
               .setParameter("businessId", businessId.toUuid())
               .setParameter("invokingUser", CurrentUser.getUserId().toUuid())
-              .setParameter("globalRoles", CurrentUser.get().roles());
+              .setParameter(
+                  "globalRoles",
+                  new TypedParameterValue(
+                      StringArrayType.INSTANCE, CurrentUser.get().roles().toArray(String[]::new)));
           if (!isCount) {
             jpaQuery
                 .setParameter("limit", pageToken.getPageSize())
