@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-class PlaidClientTest extends BaseCapitalTest {
+public class PlaidClientTest extends BaseCapitalTest {
 
   @Autowired private PlaidClient underTest;
 
@@ -181,7 +182,31 @@ class PlaidClientTest extends BaseCapitalTest {
     // Mock Link to use the link token to tie things together. (but they have to tell me how)
     // List<AccountBase> newBalances = underTest.getBalances(businessId(), newAccessToken);
     // assertNotNull(newBalances);
+    /*
+        https://dashboard.plaid.com/support/case/410638
+        There's not a way to re-authenticate or update an item without using the Link UI just like
+        there's not a way to create an Item initially without using the Link UI. The exception,
+        obviously, is the sandbox endpoint to create a link token, but this endpoint does not work
+        for update mode.
 
+        In the standard Link flow, you begin the process by calling /link/token/create to
+        create a link_token . Then you use the temporary public_token and exchange that for
+        the permanent access_token. The access_token is then what you use for making calls to the Item.
+
+        With update mode, you do not need the original link_token used to create the Item. An Item's
+        access_token does not change when using Link in update mode, so there is no need to repeat
+        the exchange token process. You just need to initialize Link with a link_token configured
+        with the access_token for the Item that you wish to update. You can create this link_token
+        using the /link/token/create endpoint as normal, but no products should be specified when
+        creating the link_token for update mode.
+
+        When launched with this new token, Link will automatically detect the institution ID
+        associated with the link_token and present the appropriate credential view to your user.
+
+        This credential re-validation will need to be done via the UI, just like the initial Link,
+        as that is all done through Plaid's back-end and these user credentials are not stored or
+        visible anywhere for security purposes.
+    */
   }
 
   /**
@@ -277,14 +302,12 @@ class PlaidClientTest extends BaseCapitalTest {
     assertTrue(uniqueCells.contains("First Gingham Credit Union"));
   }
 
-  private TypedId<BusinessId> businessId() {
+  public static TypedId<BusinessId> businessId() {
     return businessId("Tartan Bank");
   }
 
-  private TypedId<BusinessId> businessId(String bankName) {
-    if (!TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.containsKey(bankName)) {
-      throw new NoSuchElementException(bankName);
-    }
-    return TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get(bankName);
+  public static TypedId<BusinessId> businessId(String bankName) {
+    return Optional.ofNullable(TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get(bankName))
+        .orElseThrow(() -> new NoSuchElementException(bankName));
   }
 }

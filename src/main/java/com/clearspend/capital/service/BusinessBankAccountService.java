@@ -5,6 +5,7 @@ import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
@@ -778,13 +779,21 @@ public class BusinessBankAccountService {
     }
   }
 
-  @PreAuthorize("hasRootPermission(#businessBankAccount, 'LINK_BANK_ACCOUNTS')")
-  public String reLink(@NonNull TypedId<BusinessBankAccountId> businessBankAccountId)
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  public String reLink(
+      @NonNull TypedId<BusinessId> businessId,
+      @NonNull TypedId<BusinessBankAccountId> businessBankAccountId)
       throws IOException, ReLinkException {
     BusinessBankAccount businessBankAccount =
-        businessBankAccountRepository.findAllById(List.of(businessBankAccountId)).stream()
-            .findFirst()
-            .orElseThrow();
+        businessBankAccountRepository
+            .findById(businessBankAccountId)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    if (!businessId.equals(businessBankAccount.getBusinessId())) {
+      throw new ForbiddenException();
+    }
     try {
       return plaidClient.createLinkToken(
           businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());

@@ -67,7 +67,8 @@ public class BusinessBankAccountController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId)
       throws IOException {
-    return new LinkTokenResponse(businessBankAccountService.reLink(businessBankAccountId));
+    return new LinkTokenResponse(
+        businessBankAccountService.reLink(CurrentUser.getBusinessId(), businessBankAccountId));
   }
 
   @GetMapping(

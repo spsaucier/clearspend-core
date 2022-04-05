@@ -1,6 +1,8 @@
 package com.clearspend.capital.controller.business;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,7 +12,13 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.plaid.PlaidClient;
+import com.clearspend.capital.client.plaid.PlaidClientException;
+import com.clearspend.capital.client.plaid.PlaidClientTest;
 import com.clearspend.capital.client.plaid.PlaidProperties;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.business.BusinessBankAccountController.LinkTokenResponse;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
@@ -23,15 +31,20 @@ import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
+import com.github.javafaker.Faker;
+import com.plaid.client.model.AccountBase;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
@@ -44,6 +57,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   private final MockMvcHelper mvcHelper;
   private final TestHelper testHelper;
   private final PlaidProperties plaidProperties;
+  private final PlaidClient plaidClient;
 
   private final PendingStripeTransferService pendingStripeTransferService;
   private final BusinessService businessService;
@@ -318,5 +332,60 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
 
     assertThat(businessBankAccount.getDeleted()).isTrue();
+  }
+
+  @SneakyThrows
+  @Test
+  void plaidPasswordReset() {
+    assumeTrue(plaidClient.isConfigured());
+    final TypedId<BusinessId> businessId = PlaidClientTest.businessId();
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(businessId);
+    String linkToken = plaidClient.createLinkToken(businessId);
+    String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
+    PlaidClient.AccountsResponse accounts = plaidClient.getAccounts(accessToken, businessId);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    BusinessBankAccount linkedAccount =
+        businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId).stream()
+            .findFirst()
+            .orElseThrow();
+    List<AccountBase> balances = plaidClient.getBalances(businessId, accessToken);
+    assertNotNull(balances);
+    assertNotNull(accounts);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get(
+                        "/non-production/test-data/plaid/un-link/{businessBankAccountId}",
+                        linkedAccount.getId().toString())
+                    .header(
+                        HttpHeaders.USER_AGENT,
+                        new Faker(new SecureRandom(new byte[] {0})).internet().userAgentAny())
+                    .cookie(createBusinessRecord.authCookie())
+                    .contentType("application/json"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    Assertions.assertThatExceptionOfType(PlaidClientException.class)
+        .isThrownBy(() -> plaidClient.getBalances(businessId, accessToken));
+
+    MockHttpServletResponse response2 =
+        mvc.perform(
+                get(
+                        "/business-bank-accounts/re-link/{businessBankAccountId}",
+                        linkedAccount.getId().toString())
+                    .header(
+                        HttpHeaders.USER_AGENT,
+                        new Faker(new SecureRandom(new byte[] {0})).internet().userAgentAny())
+                    .cookie(createBusinessRecord.authCookie())
+                    .contentType("application/json"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    assertNotNull(response2);
+    LinkTokenResponse linkTokenResponse =
+        objectMapper.readValue(response2.getContentAsString(), LinkTokenResponse.class);
+    assertTrue(linkTokenResponse.linkToken().startsWith("link-sandbox-"));
   }
 }

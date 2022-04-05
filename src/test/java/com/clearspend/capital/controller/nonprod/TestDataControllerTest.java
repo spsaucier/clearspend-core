@@ -4,7 +4,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
-import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.controller.nonprod.TestDataController.BusinessRecord;
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -24,8 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @Slf4j
 public class TestDataControllerTest extends BaseCapitalTest {
 
-  private final MockMvc mvc;
-  private final TestHelper testHelper;
+  @Autowired private final MockMvc mvc;
 
   @SneakyThrows
   @Test
