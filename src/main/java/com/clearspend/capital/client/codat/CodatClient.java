@@ -44,6 +44,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -316,15 +317,21 @@ public class CodatClient {
       Class<T> responseType) {
     T result = null;
     try {
+
+      MediaType mediaType = MediaType.parseMediaType(contentType);
+      String suffix = "txt";
+      if (StringUtils.hasText(mediaType.getSubtype())) {
+        suffix = mediaType.getSubtype();
+      }
+
       result =
           codatWebClient
               .post()
               .uri(uri)
-              .contentType(MediaType.valueOf(contentType))
+              .contentType(mediaType)
               .header(
                   "Content-Disposition",
-                  "attachment",
-                  String.format("filename=\"%s\"", receiptId.toString()))
+                  String.format("attachment; filename=\"%s.%s\"", receiptId.toString(), suffix))
               .bodyValue(imageData)
               .exchangeToMono(
                   response -> {
@@ -339,8 +346,12 @@ public class CodatClient {
     } finally {
       if (log.isInfoEnabled()) {
         log.info(
-            "Calling Codat [%s] method. \n ReceiptId: %s, \n Response: %s"
-                .formatted(uri, receiptId, result));
+            "Calling Codat [%s] method. \n ReceiptId: %s, Headers Text: %s, \n Response: %s"
+                .formatted(
+                    uri,
+                    receiptId,
+                    String.format("attachment; filename=\"%s\"", receiptId.toString()),
+                    result));
       }
     }
   }
