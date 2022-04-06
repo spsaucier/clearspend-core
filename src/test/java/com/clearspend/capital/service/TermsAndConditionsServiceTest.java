@@ -8,6 +8,7 @@ import com.clearspend.capital.data.model.User;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +18,7 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,25 +49,16 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
   void getCorrectDocumentTimestamp() {
     TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    File termsFile = termsResource.getFile();
-    File privacyPolicyFile = privacyPolicyResource.getFile();
-    String termsContent = readFileContent(termsFile);
-    String privacyPolicyContent = readFileContent(privacyPolicyFile);
-    Matcher termsMatcher = timestampPattern.matcher(termsContent);
-    Matcher privacyPolicyMatcher = timestampPattern.matcher(privacyPolicyContent);
-    DateTimeFormatter f = DateTimeFormatter.ofPattern("EEE MMM dd yyyy HH:mm:ss");
-    LocalDateTime termsTimestamp = null;
-    LocalDateTime privacyPolicyTimestamp = null;
-    if (termsMatcher.find()) {
-      termsTimestamp = LocalDateTime.parse(termsMatcher.group(), f);
-    }
-    if (privacyPolicyMatcher.find()) {
-      privacyPolicyTimestamp = LocalDateTime.parse(privacyPolicyMatcher.group(), f);
-    }
+
+    LocalDateTime termsTimestamp = getTimestampFromResource(termsResource);
+    LocalDateTime privacyPolicyTimestamp = getTimestampFromResource(privacyPolicyResource);
     LocalDateTime documentTimestamp =
         termsAndConditionsService.max(termsTimestamp, privacyPolicyTimestamp);
     log.info("documentTimestamp: {}", documentTimestamp);
     User user = userService.retrieveUser(createBusinessRecord.user().getId());
+
+    testHelper.setCurrentUser(user);
+
     user.setTermsAndConditionsAcceptanceTimestamp(
         LocalDateTime.of(2015, Month.JULY, 29, 19, 30, 40));
     log.info("userAcceptanceTimestamp: {}", user.getTermsAndConditionsAcceptanceTimestamp());
@@ -75,6 +68,30 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
     user.setTermsAndConditionsAcceptanceTimestamp(
         LocalDateTime.of(1970, Month.SEPTEMBER, 12, 00, 00, 00));
     assertThat(documentTimestamp.isAfter(user.getTermsAndConditionsAcceptanceTimestamp())).isTrue();
+
+    // User who just got created and hasn't accepted anything yet CAP-878
+    User peon = testHelper.createUser(createBusinessRecord.business()).user();
+
+    testHelper.setCurrentUser(peon);
+    assertThat(peon.getTermsAndConditionsAcceptanceTimestamp()).isNull();
+    assertThat(
+            termsAndConditionsService
+                .userAcceptedTermsAndConditions()
+                .isAcceptedTermsAndConditions())
+        .isFalse();
+  }
+
+  @Nullable
+  private LocalDateTime getTimestampFromResource(Resource termsResource) throws IOException {
+    DateTimeFormatter f = DateTimeFormatter.ofPattern("EEE MMM dd yyyy HH:mm:ss");
+    File file = termsResource.getFile();
+    String fileContent = readFileContent(file);
+    Matcher matcher = timestampPattern.matcher(fileContent);
+    LocalDateTime time = null;
+    if (matcher.find()) {
+      time = LocalDateTime.parse(matcher.group(), f);
+    }
+    return time;
   }
 
   @SneakyThrows

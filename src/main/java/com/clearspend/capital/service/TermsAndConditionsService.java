@@ -62,7 +62,9 @@ public class TermsAndConditionsService {
 
     LocalDateTime maxDocumentTimestamp = max(termsTimestamp, privacyPolicyTimestamp);
     boolean isAcceptedTermsAndConditions =
-        user.getTermsAndConditionsAcceptanceTimestamp().isAfter(maxDocumentTimestamp);
+        Optional.ofNullable(user.getTermsAndConditionsAcceptanceTimestamp())
+            .map(d -> d.isAfter(maxDocumentTimestamp))
+            .orElse(false);
 
     return new TermsAndConditionsRecord(
         user.getId(),

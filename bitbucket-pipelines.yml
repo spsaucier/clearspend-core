@@ -15,6 +15,7 @@ pipelines:
         artifacts:
           - build/libs/*.jar
           - build/reports/jacoco/test/html/**
+          - build/reports/test/test/**
         caches:
           - gradle
         services:
@@ -48,6 +49,7 @@ pipelines:
           artifacts:
             - build/libs/*.jar
             - build/reports/jacoco/test/html/**
+            - build/reports/test/test/**
           caches:
             - gradle
           services:
