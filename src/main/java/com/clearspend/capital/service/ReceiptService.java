@@ -82,10 +82,8 @@ public class ReceiptService {
       allowlistAnnotations = {ReceiptViewer.class})
   public Receipt getReceiptByTypedId(TypedId<ReceiptId> receiptId) {
     return receiptRepository
-        .findReceiptByBusinessIdAndId(CurrentUser.getBusinessId(), receiptId)
-        .orElseThrow(
-            () ->
-                new RecordNotFoundException(Table.RECEIPT, CurrentUser.getBusinessId(), receiptId));
+        .findById(receiptId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.RECEIPT, receiptId));
   }
 
   @PostAuthorize(
