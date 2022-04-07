@@ -307,7 +307,8 @@ public class BusinessOwnerService {
   }
 
   // This works because the one place this is called, the CurrentUser should be the business owner
-  @PostAuthorize("hasRootPermission(returnObject.orElse(null)?.businessId, 'MANAGE_USERS')")
+  @PostAuthorize(
+      "returnObject.isEmpty() || hasRootPermission(returnObject.orElse(null)?.businessId, 'MANAGE_USERS')")
   public Optional<BusinessOwner> retrieveBusinessOwnerNotThrowingException(
       TypedId<BusinessOwnerId> businessOwnerId) {
     return businessOwnerRepository.findById(businessOwnerId);
