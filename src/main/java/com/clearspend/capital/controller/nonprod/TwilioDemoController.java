@@ -3,6 +3,7 @@ package com.clearspend.capital.controller.nonprod;
 import com.clearspend.capital.controller.nonprod.type.twilio.KycFailRequest;
 import com.clearspend.capital.controller.nonprod.type.twilio.KycPassRequest;
 import com.clearspend.capital.service.TwilioService;
+import com.clearspend.capital.service.TwilioService.TwilioKycKybOp;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
@@ -25,28 +26,43 @@ public class TwilioDemoController {
   private final TwilioService twilioService;
 
   @PostMapping(value = "/kyc-pass", produces = MediaType.APPLICATION_JSON_VALUE)
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a demo controller for non-prod operations")
   void kycFail(@RequestBody @Validated KycPassRequest request) {
     twilioService.sendKybKycPassEmail(request.getTo(), request.getFirstName());
   }
 
   @PostMapping(value = "/kyc-fail", produces = MediaType.APPLICATION_JSON_VALUE)
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a demo controller for non-prod operations")
   void kycFail(@RequestBody @Validated KycFailRequest request) {
     twilioService.sendKybKycFailEmail(
         request.getTo(), request.getFirstName(), request.getReasons());
   }
 
   @PostMapping(value = "/kyc-review", produces = MediaType.APPLICATION_JSON_VALUE)
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a demo controller for non-prod operations")
   private void kycReview(@RequestBody @Validated KycPassRequest request) {
     twilioService.sendKybKycReviewStateEmail(request.getTo(), request.getFirstName());
   }
 
   @PostMapping(value = "/kyc-additional-info", produces = MediaType.APPLICATION_JSON_VALUE)
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a demo controller for non-prod operations")
   private void kycAdditionalInfo(@RequestBody @Validated KycFailRequest request) {
     twilioService.sendKybKycRequireAdditionalInfoEmail(
         request.getTo(), request.getFirstName(), request.getReasons());
   }
 
   @PostMapping(value = "/kyc-required-documents", produces = MediaType.APPLICATION_JSON_VALUE)
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a demo controller for non-prod operations")
   private void kycRequiredDocuments(@RequestBody @Validated KycFailRequest request) {
     twilioService.sendKybKycRequireDocumentsEmail(
         request.getTo(), request.getFirstName(), request.getReasons());

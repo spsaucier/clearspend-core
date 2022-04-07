@@ -6,6 +6,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
+import com.clearspend.capital.service.TwilioService.TwilioKycKybOp;
 import com.stripe.model.Account.Requirements;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,10 @@ public class BusinessKycStep7BusinessReview extends BusinessKycStep {
   }
 
   @Override
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation =
+          "The KYB/KYC logic happens within onboarding and cannot enforce user permissions")
   public List<String> execute(
       Requirements requirements, Business business, Account account, boolean sendEmail) {
     if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.REVIEW)) {

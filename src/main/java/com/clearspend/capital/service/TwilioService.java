@@ -4,6 +4,7 @@ import com.clearspend.capital.client.sendgrid.SendGridProperties;
 import com.clearspend.capital.client.twilio.TwilioProperties;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.RestrictedApi;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.Response;
@@ -32,6 +33,12 @@ import org.springframework.stereotype.Service;
 @Profile("!test")
 @Service
 public class TwilioService {
+
+  public @interface TwilioKycKybOp {
+    String reviewer();
+
+    String explanation();
+  }
 
   private final String FIRST_NAME_KEY = "first_name";
   private final String REASONS_KEY = "reasons";
@@ -70,7 +77,7 @@ public class TwilioService {
     Twilio.destroy();
   }
 
-  public void sendNotificationEmail(String to, String messageText) {
+  protected void sendNotificationEmail(String to, String messageText) {
     send(
         new Mail(
             new Email(sendGridProperties.getNotificationsSenderEmail()),
@@ -79,7 +86,7 @@ public class TwilioService {
             new Content("text/plain", messageText)));
   }
 
-  public void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {
+  protected void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
     mail.setTemplateId(sendGridProperties.getOnboardingWelcomeEmailTemplateId());
@@ -94,6 +101,12 @@ public class TwilioService {
     send(mail);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendKybKycPassEmail(String to, String firstName) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -108,6 +121,12 @@ public class TwilioService {
     send(mail);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -123,6 +142,12 @@ public class TwilioService {
     send(mail);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendKybKycReviewStateEmail(String to, String firstName) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
@@ -137,6 +162,12 @@ public class TwilioService {
     send(mail);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendKybKycRequireAdditionalInfoEmail(
       String to, String firstName, List<String> additionalRequirements) {
 
@@ -159,6 +190,12 @@ public class TwilioService {
     send(mail);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendKybKycRequireDocumentsEmail(
       String to, String firstName, List<String> requiredDocuments) {
 
@@ -181,7 +218,7 @@ public class TwilioService {
     send(mail);
   }
 
-  public void sendResetPasswordEmail(String to, String changePasswordId) {
+  protected void sendResetPasswordEmail(String to, String changePasswordId) {
     Mail mail = new Mail();
     mail.setFrom(new Email(sendGridProperties.getNotificationsSenderEmail()));
     mail.setTemplateId(sendGridProperties.getForgotPasswordEmailTemplateId());
@@ -227,19 +264,19 @@ public class TwilioService {
     }
   }
 
-  public Verification sendVerificationSms(String to) {
+  protected Verification sendVerificationSms(String to) {
     return Verification.creator(twilioProperties.getVerifyServiceId(), to, Channel.SMS.toString())
         .create();
   }
 
-  public Verification sendVerificationEmail(String to, BusinessProspect businessProspect) {
+  protected Verification sendVerificationEmail(String to, BusinessProspect businessProspect) {
     return Verification.creator(twilioProperties.getVerifyServiceId(), to, Channel.EMAIL.toString())
         .setChannelConfiguration(
             Map.of("substitutions", Map.of(FIRST_NAME_KEY, businessProspect.getFirstName())))
         .create();
   }
 
-  public VerificationCheck checkVerification(String subject, String challenge) {
+  protected VerificationCheck checkVerification(String subject, String challenge) {
     return VerificationCheck.creator(twilioProperties.getVerifyServiceId(), challenge)
         .setTo(subject)
         .create();
@@ -256,7 +293,7 @@ public class TwilioService {
   }
 
   /* Login: Password Reset Success */
-  public void sendPasswordResetSuccessEmail(String to, String firstName) {
+  protected void sendPasswordResetSuccessEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
@@ -265,28 +302,8 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Onboarding: Welcome Invite only */
-  public void sendWelcomeByInviteOnlyEmail(String to, String firstName) {
-    Personalization personalization = new Personalization();
-    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
-    Mail mail =
-        initMailWithTemplate(
-            sendGridProperties.getWelcomeInviteOnlyTemplateId(), to, personalization);
-    send(mail);
-  }
-
-  /* Onboarding: KYB/KYC docs received */
-  public void sendKybKycDocsReceivedEmail(String to, String firstName) {
-    Personalization personalization = new Personalization();
-    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
-    Mail mail =
-        initMailWithTemplate(
-            sendGridProperties.getKybKycDocsReceivedTemplateId(), to, personalization);
-    send(mail);
-  }
-
   /* Bank Details Added */
-  public void sendBankDetailsAddedEmail(
+  protected void sendBankDetailsAddedEmail(
       String to,
       String firstName,
       String accountOwnerName,
@@ -308,7 +325,7 @@ public class TwilioService {
   }
 
   /* Bank Funds Available */
-  public void sendBankFundsAvailableEmail(String to, String firstName) {
+  protected void sendBankFundsAvailableEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
@@ -318,7 +335,7 @@ public class TwilioService {
   }
 
   /* Bank Funds Deposit Request */
-  public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {
+  protected void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
@@ -328,18 +345,8 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Bank Details Removed */
-  public void sendBankDetailsRemovedEmail(String to, String firstName) {
-    Personalization personalization = new Personalization();
-    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
-    Mail mail =
-        initMailWithTemplate(
-            sendGridProperties.getBankDetailsRemovedTemplateId(), to, personalization);
-    send(mail);
-  }
-
   /* Bank Funds Available */
-  public void sendBankFundsReturnEmail(String to, String firstName) {
+  protected void sendBankFundsReturnEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
@@ -349,7 +356,7 @@ public class TwilioService {
   }
 
   /* Bank Funds Withdrawal */
-  public void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {
+  protected void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
@@ -360,7 +367,7 @@ public class TwilioService {
   }
 
   /* Card : Card issued Owner Notification */
-  public void sendCardIssuedNotifyOwnerEmail(String to, String ownerName, String employeeName) {
+  protected void sendCardIssuedNotifyOwnerEmail(String to, String ownerName, String employeeName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, ownerName);
     personalization.addDynamicTemplateData(EMPLOYEE_NAME_KEY, employeeName);
@@ -371,7 +378,7 @@ public class TwilioService {
   }
 
   /* Card : Virtual Card issued to Employee Notification */
-  public void sendCardIssuedVirtualNotifyUserEmail(
+  protected void sendCardIssuedVirtualNotifyUserEmail(
       String to, String firstName, String companyName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -383,7 +390,7 @@ public class TwilioService {
   }
 
   /* Card : Physical Card issued to Employee Notification */
-  public void sendCardIssuedPhysicalNotifyUserEmail(
+  protected void sendCardIssuedPhysicalNotifyUserEmail(
       String to, String firstName, String companyName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -395,7 +402,7 @@ public class TwilioService {
   }
 
   /* Card : Physical Card Shipped to Employee Notification */
-  public void sendCardShippedNotifyUserEmail(String to, String firstName) {
+  protected void sendCardShippedNotifyUserEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
@@ -404,18 +411,8 @@ public class TwilioService {
     send(mail);
   }
 
-  /* Card : Physical Card Activation Email */
-  public void sendCardStartActivationEmail(String to, String firstName) {
-    Personalization personalization = new Personalization();
-    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
-    Mail mail =
-        initMailWithTemplate(
-            sendGridProperties.getCardStartActivationTemplateId(), to, personalization);
-    send(mail);
-  }
-
   /* Card : Physical Card Activation Completed email */
-  public void sendCardActivationCompletedEmail(String to, String firstName) {
+  protected void sendCardActivationCompletedEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =
@@ -425,7 +422,7 @@ public class TwilioService {
   }
 
   /* Card : Card Freeze email */
-  public void sendCardFrozenEmail(String to, String firstName, String lastFour) {
+  protected void sendCardFrozenEmail(String to, String firstName, String lastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
@@ -435,7 +432,7 @@ public class TwilioService {
   }
 
   /* Card : Card Unfreeze email */
-  public void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {
+  protected void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
@@ -455,7 +452,7 @@ public class TwilioService {
   }
 
   /* Login: User Account Created Notification */
-  public void sendUserAccountCreatedEmail(
+  protected void sendUserAccountCreatedEmail(
       String to, String firstName, String companyName, String password) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
@@ -468,6 +465,12 @@ public class TwilioService {
   }
 
   /* Financial Account Ready */
+  @RestrictedApi(
+      explanation =
+          "This service is needed for KYC/KYB operations where an authenticated user is not available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TwilioKycKybOp.class})
   public void sendFinancialAccountReadyEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);

@@ -88,12 +88,6 @@ public class TwilioServiceMock extends TwilioService {
   public void sendPasswordResetSuccessEmail(String to, String firstName) {}
 
   @Override
-  public void sendWelcomeByInviteOnlyEmail(String to, String firstName) {}
-
-  @Override
-  public void sendKybKycDocsReceivedEmail(String to, String firstName) {}
-
-  @Override
   public void sendBankDetailsAddedEmail(
       String to,
       String firstName,
@@ -103,9 +97,6 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   public void sendBankFundsAvailableEmail(String to, String firstName) {}
-
-  @Override
-  public void sendBankDetailsRemovedEmail(String to, String firstName) {}
 
   @Override
   public void sendBankFundsReturnEmail(String to, String firstName) {}
@@ -126,9 +117,6 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   public void sendCardShippedNotifyUserEmail(String to, String firstName) {}
-
-  @Override
-  public void sendCardStartActivationEmail(String to, String firstName) {}
 
   @Override
   public void sendCardActivationCompletedEmail(String to, String firstName) {}

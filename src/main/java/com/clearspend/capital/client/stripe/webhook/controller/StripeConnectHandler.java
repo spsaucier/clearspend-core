@@ -33,6 +33,7 @@ import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TwilioService;
+import com.clearspend.capital.service.TwilioService.TwilioKycKybOp;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.FieldNamingPolicy;
@@ -332,6 +333,9 @@ public class StripeConnectHandler {
   @StripeBusinessOp(
       reviewer = "Craig Miller",
       explanation = "This is a method where Stripe messages flow to the BusinessService")
+  @TwilioKycKybOp(
+      reviewer = "Craig Miller",
+      explanation = "Stripe operations cannot enforce user permissions")
   public void financialAccountFeaturesUpdated(
       TypedId<BusinessId> businessId, FinancialAccount financialAccount) {
     if (financialAccount.getPendingFeatures().isEmpty()
