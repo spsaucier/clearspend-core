@@ -19,9 +19,9 @@ SELECT
     {{/count}}
 FROM Card INNER JOIN Allocation
     ON Card.Allocation_Id = Allocation.Id
-    LEFT OUTER JOIN get_allocation_permissions('{{businessId}}', '{{invokingUser}}', ARRAY[{{globalRoles}}]::VARCHAR[], 'VIEW_OWN') AS Self_Permission
-        ON (Allocation.Id = Self_Permission.Allocation_Id AND Card.User_Id = '{{invokingUser}}')
-    LEFT OUTER JOIN get_allocation_permissions('{{businessId}}', '{{invokingUser}}', ARRAY[{{globalRoles}}]::VARCHAR[], 'MANAGE_CARDS') AS Card_Manager_Permission
+    LEFT OUTER JOIN get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') AS Self_Permission
+        ON (Allocation.Id = Self_Permission.Allocation_Id AND Card.User_Id = :invokingUser)
+    LEFT OUTER JOIN get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_CARDS') AS Card_Manager_Permission
         ON Allocation.Id = Card_Manager_Permission.Allocation_Id
     INNER JOIN Account
         ON Card.Account_Id = Account.Id
@@ -29,21 +29,21 @@ FROM Card INNER JOIN Allocation
         ON Card.User_Id = Users.Id
     {{^count}}
     LEFT OUTER JOIN Hold
-        ON (Account.Id = Hold.Account_Id AND Hold.Status = 'PLACED' AND Hold.Expiration_Date > '{{javaNow}}')
+        ON (Account.Id = Hold.Account_Id AND Hold.Status = 'PLACED' AND Hold.Expiration_Date > :javaNow)
     {{/count}}
 WHERE (Self_Permission.Allocation_Id IS NOT NULL OR Card_Manager_Permission.Allocation_Id IS NOT NULL)
-    AND (Card.Expiration_Date > '{{javaNow}}'
+    AND (Card.Expiration_Date > :javaNow
         OR Card.Expiration_Date IS NULL)
-    AND Card.Business_Id = '{{businessId}}'
-    {{#cardHolders}} AND Card.User_Id IN ( {{{userIdsString}}} ) {{/cardHolders}}
-    {{#allocationIds}} AND Card.Allocation_Id IN ( {{{allocationsString}}} ) {{/allocationIds}}
-    AND Card.Status IN ( {{{statusString}}} )
-    AND Card.Type IN ( {{{typeString}}} )
+    AND Card.Business_Id = :businessId
+    {{#cardHolders}} AND Card.User_Id IN (:cardHolders) {{/cardHolders}}
+    {{#allocationIds}} AND Card.Allocation_Id IN (:allocationIds) {{/allocationIds}}
+    {{#statuses}} AND Card.Status IN (:statuses) {{/statuses}}
+    {{#types}} AND Card.Type IN (:types) {{/types}}
     {{#searchText}}
-        AND (Allocation.Name LIKE ('%{{searchText}}%')
-        OR Card.Last_Four = '{{searchText}}'
-        OR Users.First_Name_Hash = decode('{{searchStringHash}}', 'hex')
-        OR Users.Last_Name_Hash = decode('{{searchStringHash}}', 'hex')
+        AND (Allocation.Name LIKE :likeSearchText
+        OR Card.Last_Four = :searchText
+        OR Users.First_Name_Hash = decode(:searchStringHash, 'hex')
+        OR Users.Last_Name_Hash = decode(:searchStringHash, 'hex')
         )
     {{/searchText}}
 {{^count}}
@@ -62,13 +62,13 @@ GROUP BY Card.Id,
     Account.Ledger_Balance_Amount,
     Account.Ledger_Balance_Currency
 HAVING 1 = 1
-    {{#minimumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) > {{minimumBalance}} {{/minimumBalance}}
-    {{#maximumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) < {{maximumBalance}} {{/maximumBalance}}
+    {{#minimumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) > :minimumBalance {{/minimumBalance}}
+    {{#maximumBalance}} AND (ledger_balance_amount + SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END)) < :maximumBalance {{/maximumBalance}}
 ORDER BY  card_activation_date
-{{#pageToken.pageSize}}
-LIMIT {{.}}
-{{/pageToken.pageSize}}
-{{#pageToken.firstResult}}
-OFFSET {{.}}
-{{/pageToken.firstResult}}
+{{#pageSize}}
+LIMIT :pageSize
+{{/pageSize}}
+{{#firstResult}}
+OFFSET :firstResult
+{{/firstResult}}
 {{/count}}

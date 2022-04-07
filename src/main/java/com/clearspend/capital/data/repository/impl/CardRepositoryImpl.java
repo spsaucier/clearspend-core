@@ -26,14 +26,17 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
+import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
-import java.io.StringWriter;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,6 +45,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import javax.validation.constraints.NotNull;
@@ -84,42 +88,76 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     this.template = Mustache.compiler().compile(this.filterCardsQueryText);
   }
 
-  @Override
-  public Page<SearchCardData> filter(CardFilterCriteria criteria) {
-    StringWriter out = new StringWriter();
-    final String globalRoles =
-        CurrentUser.get().roles().stream().map("'%s'"::formatted).collect(Collectors.joining(","));
-    final Map<String, Object> parentContext =
-        Map.of("globalRoles", globalRoles, "javaNow", OffsetDateTime.now());
-    template.execute(criteria, parentContext, out);
-    String query = out.toString();
+  private UUID nullableTypedId(@Nullable final TypedId<?> typedId) {
+    return Optional.ofNullable(typedId).map(TypedId::toUuid).orElse(null);
+  }
 
-    List<SearchCardData> rawOutput =
-        JDBCUtils.query(
-            entityManager,
-            query,
-            new MapSqlParameterSource(),
-            (resultSet, rowNumber) ->
-                new SearchCardData(
-                    new TypedId<>(resultSet.getObject("card_id", UUID.class)),
-                    resultSet.getString("card_number"),
-                    new UserData(
-                        new TypedId<>(resultSet.getObject("user_id", UUID.class)),
-                        UserType.valueOf(resultSet.getString("user_type")),
-                        new String(crypto.decrypt(resultSet.getBytes("user_first_name_enc"))),
-                        new String(crypto.decrypt(resultSet.getBytes("user_last_name_enc")))),
-                    new Item<>(
-                        new TypedId<>(resultSet.getObject("allocation_id", UUID.class)),
-                        resultSet.getString("allocation_name")),
-                    new com.clearspend.capital.controller.type.Amount(
-                        Currency.valueOf(resultSet.getString("ledger_balance_currency")),
-                        resultSet
-                            .getBigDecimal("ledger_balance_amount")
-                            .add(resultSet.getBigDecimal("hold_total"))),
-                    CardStatus.valueOf(resultSet.getString("card_status")),
-                    CardType.valueOf(resultSet.getString("card_type")),
-                    resultSet.getBoolean("card_activated"),
-                    resultSet.getObject("card_activation_date", OffsetDateTime.class)));
+  private <T> List<UUID> nullableTypedIdList(@Nullable List<TypedId<T>> typedIdList) {
+    return Optional.ofNullable(typedIdList)
+        .map(list -> list.stream().map(TypedId::toUuid).toList())
+        .orElse(null);
+  }
+
+  private <T extends Enum<T>> List<String> nullableEnumList(@Nullable List<T> enumList) {
+    return Optional.ofNullable(enumList)
+        .map(list -> list.stream().map(Enum::name).toList())
+        .orElse(null);
+  }
+
+  private SearchCardData cardFilterRowMapper(final ResultSet resultSet, final int rowNum)
+      throws SQLException {
+    return new SearchCardData(
+        new TypedId<>(resultSet.getObject("card_id", UUID.class)),
+        resultSet.getString("card_number"),
+        new UserData(
+            new TypedId<>(resultSet.getObject("user_id", UUID.class)),
+            UserType.valueOf(resultSet.getString("user_type")),
+            new String(crypto.decrypt(resultSet.getBytes("user_first_name_enc"))),
+            new String(crypto.decrypt(resultSet.getBytes("user_last_name_enc")))),
+        new Item<>(
+            new TypedId<>(resultSet.getObject("allocation_id", UUID.class)),
+            resultSet.getString("allocation_name")),
+        new com.clearspend.capital.controller.type.Amount(
+            Currency.valueOf(resultSet.getString("ledger_balance_currency")),
+            resultSet
+                .getBigDecimal("ledger_balance_amount")
+                .add(resultSet.getBigDecimal("hold_total"))),
+        CardStatus.valueOf(resultSet.getString("card_status")),
+        CardType.valueOf(resultSet.getString("card_type")),
+        resultSet.getBoolean("card_activated"),
+        resultSet.getObject("card_activation_date", OffsetDateTime.class));
+  }
+
+  @Override
+  public Page<SearchCardData> filter(final CardFilterCriteria criteria) {
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("businessId", nullableTypedId(criteria.getBusinessId()))
+            .addValue("invokingUser", nullableTypedId(criteria.getInvokingUser()))
+            .addValue("javaNow", OffsetDateTime.now())
+            .addValue("globalRoles", CurrentUser.get().roles().toArray(String[]::new), Types.ARRAY)
+            .addValue("permission", criteria.getPermission())
+            .addValue("cardHolders", nullableTypedIdList(criteria.getCardHolders()))
+            .addValue("allocationIds", nullableTypedIdList(criteria.getAllocationIds()))
+            .addValue("searchText", criteria.getSearchText())
+            .addValue("likeSearchText", "%%%s%%".formatted(criteria.getSearchText()))
+            .addValue("searchStringHash", criteria.getSearchStringHash())
+            .addValue("statuses", nullableEnumList(criteria.getStatuses()))
+            .addValue("types", nullableEnumList(criteria.getTypes()))
+            .addValue("pageSize", criteria.getPageToken().getPageSize())
+            .addValue("firstResult", criteria.getPageToken().getFirstResult())
+            .addValue("minimumBalance", criteria.getMinimumBalance())
+            .addValue("maximumBalance", criteria.getMaximumBalance());
+
+    final List<SearchCardData> rawOutput =
+        JDBCUtils.executeMustacheQuery(
+                entityManager,
+                template,
+                MustacheQueryConfig.<SearchCardData>builder()
+                    .rowMapper(this::cardFilterRowMapper)
+                    .parameterSource(params)
+                    .build())
+            .result();
     PageToken pageToken = criteria.getPageToken();
 
     if (rawOutput.size() < pageToken.getPageSize() && pageToken.getPageNumber() == 0) {
@@ -129,16 +167,16 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
           rawOutput.size());
     }
 
-    final Map<String, Object> countParentContext =
-        Map.of("globalRoles", globalRoles, "count", true, "javaNow", OffsetDateTime.now());
-    StringWriter outputCounter = new StringWriter();
-    template.execute(criteria, countParentContext, outputCounter);
-    long totalElements =
-        JDBCUtils.query(
+    final MapSqlParameterSource countParams = params.addValue("count", true);
+    final long totalElements =
+        JDBCUtils.executeMustacheQuery(
                 entityManager,
-                outputCounter.toString(),
-                new MapSqlParameterSource(),
-                (resultSet, row) -> resultSet.getLong(1))
+                template,
+                MustacheQueryConfig.<Long>builder()
+                    .parameterSource(countParams)
+                    .rowMapper((resultSet, row) -> resultSet.getLong(1))
+                    .build())
+            .result()
             .get(0);
     return new PageImpl<>(
         rawOutput,
