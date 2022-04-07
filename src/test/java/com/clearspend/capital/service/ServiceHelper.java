@@ -6,8 +6,10 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.TransactionLimit;
+import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -40,6 +42,7 @@ public class ServiceHelper {
   private final AccountService accountService;
   private final TransactionLimitService transactionLimitService;
   private final BusinessService businessService;
+  private final BusinessOwnerService businessOwnerService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -51,6 +54,19 @@ public class ServiceHelper {
 
   public BusinessServiceWrapper businessService() {
     return new BusinessServiceWrapper(businessService);
+  }
+
+  public BusinessOwnerServiceWrapper businessOwnerService() {
+    return new BusinessOwnerServiceWrapper(businessOwnerService);
+  }
+
+  @RequiredArgsConstructor
+  public static class BusinessOwnerServiceWrapper {
+    private final BusinessOwnerService businessOwnerService;
+
+    public BusinessOwner retrieveBusinessOwner(final TypedId<BusinessOwnerId> businessOwnerId) {
+      return businessOwnerService.retrieveBusinessOwner(businessOwnerId);
+    }
   }
 
   @RequiredArgsConstructor

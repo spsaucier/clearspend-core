@@ -51,6 +51,8 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ApplicationReviewService;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessOwnerService;
+import com.clearspend.capital.service.BusinessOwnerService.CreateBusinessOwner;
+import com.clearspend.capital.service.BusinessOwnerService.TestDataBusinessOp;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
@@ -439,6 +441,12 @@ public class TestDataController {
   // This test data method is used to simulate an onboarding flow as in UI ,
   // and upload test documents provided by Stripe for application review.
   @GetMapping("/business/{type}/onboard")
+  @TestDataBusinessOp(
+      reviewer = "Craig Miller",
+      explanation = "This is just for generating test data.")
+  @CreateBusinessOwner(
+      reviewer = "Craig Miller",
+      explanation = "This is just for generating test data.")
   BusinessRecord onboardNewBusiness(
       @PathVariable(value = "type") BusinessType businessType,
       @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
@@ -484,7 +492,7 @@ public class TestDataController {
 
     List<BusinessOwner> businessOwners =
         List.of(
-            businessOwnerService.updateBusinessOwner(
+            businessOwnerService.restrictedUpdateBusinessOwner(
                 new BusinessOwnerData(
                     convertBusinessProspectRecord.businessOwner().getId(),
                     business.getId(),
@@ -509,7 +517,7 @@ public class TestDataController {
                     convertBusinessProspectRecord.businessOwner().getPhone().getEncrypted(),
                     null,
                     true)),
-            businessOwnerService.createBusinessOwner(
+            businessOwnerService.restrictedCreateBusinessOwner(
                 new BusinessOwnerData(
                     null,
                     business.getId(),
@@ -589,6 +597,9 @@ public class TestDataController {
     return businessRecords;
   }
 
+  @TestDataBusinessOp(
+      explanation = "This is part of generating test data",
+      reviewer = "Craig Miller")
   private BusinessRecord generateTestBusinessAndBusinessOwner(
       String userAgent,
       HttpServletRequest httpServletRequest,
@@ -649,7 +660,7 @@ public class TestDataController {
 
     businessOwners.add(
         businessOwnerService
-            .updateBusinessOwnerAndStripePerson(
+            .restrictedUpdateBusinessOwnerAndStripePerson(
                 business.getId(),
                 new BusinessOwnerData(
                     convertBusinessProspectRecord.businessOwner().getId(),
@@ -677,7 +688,8 @@ public class TestDataController {
                     true))
             .businessOwner());
 
-    businessOwnerService.allOwnersProvided(business.getId(), new OwnersProvidedRequest(true, true));
+    businessOwnerService.restrictedAllOwnersProvided(
+        business.getId(), new OwnersProvidedRequest(true, true));
 
     return new BusinessRecord(business, businessOwners, null, null);
   }

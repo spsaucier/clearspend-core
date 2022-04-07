@@ -393,8 +393,9 @@ public class TestHelper {
 
     return new OnboardBusinessRecord(
         serviceHelper.businessService().getBusiness(businessProspect.getBusinessId()).business(),
-        businessOwnerService.retrieveBusinessOwner(
-            convertBusinessProspectResponse.getBusinessOwnerId()),
+        serviceHelper
+            .businessOwnerService()
+            .retrieveBusinessOwner(convertBusinessProspectResponse.getBusinessOwnerId()),
         businessProspect,
         defaultAuthCookie);
   }

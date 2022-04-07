@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.google.errorprone.annotations.RestrictedApi;
 import com.stripe.model.Person;
 import io.jsonwebtoken.lang.Assert;
 import java.util.List;
@@ -29,6 +30,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +39,30 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessOwnerService {
+
+  public @interface TestDataBusinessOp {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface CreateBusinessOwner {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface KycBusinessOwner {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface LoginBusinessOwner {
+    String reviewer();
+
+    String explanation();
+  }
 
   private final BusinessOwnerRepository businessOwnerRepository;
 
@@ -49,8 +76,24 @@ public class BusinessOwnerService {
 
   public record BusinessAndAccountErrorMessages(Business business, List<String> errorMessages) {}
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public BusinessAndAccountErrorMessages allOwnersProvided(
       TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
+    return doAllOwnersProvided(businessId, ownersProvidedRequest);
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This method is needed for generating test data when no security context is available",
+      link = "",
+      allowlistAnnotations = {TestDataBusinessOp.class})
+  public BusinessAndAccountErrorMessages restrictedAllOwnersProvided(
+      final TypedId<BusinessId> businessId, final OwnersProvidedRequest ownersProvidedRequest) {
+    return doAllOwnersProvided(businessId, ownersProvidedRequest);
+  }
+
+  private BusinessAndAccountErrorMessages doAllOwnersProvided(
+      final TypedId<BusinessId> businessId, final OwnersProvidedRequest ownersProvidedRequest) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
     List<BusinessOwner> businessOwners = findBusinessOwnerByBusinessId(business.getId());
 
@@ -70,6 +113,7 @@ public class BusinessOwnerService {
         java.util.Collections.emptyList());
   }
 
+  @PreAuthorize("hasRootPermission(#businessOwnerData.businessId, 'MANAGE_USERS')")
   public void validateOwner(BusinessOwnerData businessOwnerData) {
 
     Assert.notNull(businessOwnerData);
@@ -107,6 +151,7 @@ public class BusinessOwnerService {
     }
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public void validateBusinessOwners(
       TypedId<BusinessId> businessId, OwnersProvidedRequest ownersProvidedRequest) {
 
@@ -147,6 +192,7 @@ public class BusinessOwnerService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public BusinessOwnerAndStripePersonRecord createBusinessOwnerAndStripePerson(
       TypedId<BusinessId> businessId, BusinessOwnerData businessOwnerData) {
 
@@ -166,6 +212,7 @@ public class BusinessOwnerService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#user.businessId, 'MANAGE_USERS')")
   public BusinessOwnerAndStripePersonRecord updateBusinessOwnerAndStripePerson(User user) {
     BusinessOwner businessOwner =
         businessOwnerRepository.findBySubjectRef(user.getSubjectRef()).orElseThrow();
@@ -192,9 +239,14 @@ public class BusinessOwnerService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public BusinessOwnerAndStripePersonRecord updateBusinessOwnerAndStripePerson(
       TypedId<BusinessId> businessId, BusinessOwnerData businessOwnerData) {
+    return doUpdateBusinessOwnerAndStripePerson(businessId, businessOwnerData);
+  }
 
+  private BusinessOwnerAndStripePersonRecord doUpdateBusinessOwnerAndStripePerson(
+      final TypedId<BusinessId> businessId, final BusinessOwnerData businessOwnerData) {
     Assert.notNull(businessOwnerData);
     // TODO:gb: In case this will be updated not on the onboarding
     // what will be the flow to validate email and phone before this method
@@ -214,8 +266,19 @@ public class BusinessOwnerService {
     return new BusinessOwnerAndStripePersonRecord(businessOwner, stripePerson);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This method is needed for generating test data which cannot support permissions restriction",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {TestDataBusinessOp.class})
+  public BusinessOwnerAndStripePersonRecord restrictedUpdateBusinessOwnerAndStripePerson(
+      final TypedId<BusinessId> businessId, final BusinessOwnerData businessOwnerData) {
+    return doUpdateBusinessOwnerAndStripePerson(businessId, businessOwnerData);
+  }
+
   @Transactional
-  public BusinessOwner createBusinessOwner(BusinessOwnerData businessOwnerData) {
+  BusinessOwner createBusinessOwner(BusinessOwnerData businessOwnerData) {
 
     BusinessOwner businessOwner = businessOwnerData.toBusinessOwner();
     businessOwner = businessOwnerRepository.save(businessOwner);
@@ -224,23 +287,43 @@ public class BusinessOwnerService {
     return businessOwner;
   }
 
-  public BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation = "This mainly exists to support generating test data.",
+      allowlistAnnotations = {CreateBusinessOwner.class})
+  public BusinessOwner restrictedCreateBusinessOwner(final BusinessOwnerData businessOwnerData) {
+    return createBusinessOwner(businessOwnerData);
+  }
+
+  BusinessOwner retrieveBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
     return businessOwnerRepository
         .findById(businessOwnerId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_OWNER, businessOwnerId));
   }
 
-  public Optional<BusinessOwner> retrieveBusinessOwnerByEmail(String email) {
+  Optional<BusinessOwner> retrieveBusinessOwnerByEmail(String email) {
     return businessOwnerRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
+  // This works because the one place this is called, the CurrentUser should be the business owner
+  @PostAuthorize("hasRootPermission(returnObject.orElse(null)?.businessId, 'MANAGE_USERS')")
   public Optional<BusinessOwner> retrieveBusinessOwnerNotThrowingException(
       TypedId<BusinessOwnerId> businessOwnerId) {
     return businessOwnerRepository.findById(businessOwnerId);
   }
 
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation = "This mainly exists to support generating test data.",
+      allowlistAnnotations = {TestDataBusinessOp.class})
+  public BusinessOwner restrictedUpdateBusinessOwner(final BusinessOwnerData businessOwnerData) {
+    return updateBusinessOwner(businessOwnerData);
+  }
+
   @Transactional
-  public BusinessOwner updateBusinessOwner(BusinessOwnerData businessOwnerData) {
+  BusinessOwner updateBusinessOwner(BusinessOwnerData businessOwnerData) {
     BusinessOwner businessOwner =
         businessOwnerRepository
             .findById(businessOwnerData.getBusinessOwnerId())
@@ -310,15 +393,36 @@ public class BusinessOwnerService {
     return owner;
   }
 
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation =
+          "This method is used as part of the login flow before the SecurityContext is available",
+      allowlistAnnotations = {LoginBusinessOwner.class})
   public Optional<BusinessOwner> retrieveBusinessOwnerBySubjectRef(String subjectRef) {
     return businessOwnerRepository.findBySubjectRef(subjectRef);
   }
 
-  public List<BusinessOwner> findBusinessOwnerByBusinessId(TypedId<BusinessId> businessIdTypedId) {
+  List<BusinessOwner> findBusinessOwnerByBusinessId(TypedId<BusinessId> businessIdTypedId) {
     return businessOwnerRepository.findByBusinessId(businessIdTypedId);
   }
 
-  public BusinessOwner findBusinessOwnerByStripePersonReference(String stripePersonReference) {
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
+  public List<BusinessOwner> secureFindBusinessOwner(final TypedId<BusinessId> businessId) {
+    return findBusinessOwnerByBusinessId(businessId);
+  }
+
+  @RestrictedApi(
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      explanation =
+          "This method needs to be accessible by the KYC process which is called from Stripe webhooks, so permissions are not possible.",
+      allowlistAnnotations = {KycBusinessOwner.class})
+  public List<BusinessOwner> findBusinessOwnerForKyc(final TypedId<BusinessId> businessId) {
+    return findBusinessOwnerByBusinessId(businessId);
+  }
+
+  BusinessOwner findBusinessOwnerByStripePersonReference(String stripePersonReference) {
     return businessOwnerRepository
         .findByStripePersonReference(stripePersonReference)
         .orElseThrow(
@@ -326,6 +430,7 @@ public class BusinessOwnerService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
   public void deleteBusinessOwner(
       TypedId<BusinessOwnerId> businessOwnerId, TypedId<BusinessId> businessId) {
     Business business = businessService.getBusiness(businessId).business();

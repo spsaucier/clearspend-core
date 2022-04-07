@@ -95,7 +95,7 @@ public class BusinessOwnerController {
   @GetMapping(value = "/list")
   List<BusinessOwnerInfo> getBusinessOwnersForCurrentLoggedBusiness() {
     TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    return businessOwnerService.findBusinessOwnerByBusinessId(businessId).stream()
+    return businessOwnerService.secureFindBusinessOwner(businessId).stream()
         .map(BusinessOwnerInfo::fromBusinessOwner)
         .toList();
   }

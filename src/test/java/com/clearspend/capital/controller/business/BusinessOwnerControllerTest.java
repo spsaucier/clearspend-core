@@ -172,7 +172,9 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
         .getResponse();
 
     BusinessOwner businessOwner =
-        businessOwnerService.retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
+        serviceHelper
+            .businessOwnerService()
+            .retrieveBusinessOwner(onboardBusinessRecord.businessOwner().getId());
     Assertions.assertNotNull(businessOwner.getStripePersonReference());
   }
 
@@ -239,7 +241,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
-    businessOwnerService.retrieveBusinessOwner(businessOwner.getId());
+    serviceHelper.businessOwnerService().retrieveBusinessOwner(businessOwner.getId());
     Business businessResponse =
         serviceHelper.businessService().getBusiness(business.getId()).business();
     assertThat(businessResponse.getOnboardingStep())

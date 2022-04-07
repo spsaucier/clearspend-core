@@ -69,6 +69,7 @@ class ApplicationReviewControllerTest extends BaseCapitalTest {
   @SneakyThrows
   void testUploadDocuments() {
     TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business = createBusinessRecord.business();
     BusinessOwnerAndStripePersonRecord businessOwnerAndStripePersonRecord =
         businessOwnerService.updateBusinessOwnerAndStripePerson(
@@ -122,6 +123,7 @@ class ApplicationReviewControllerTest extends BaseCapitalTest {
   @Test
   void testUploadIdentityDocuments() {
     TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business = createBusinessRecord.business();
     BusinessOwnerAndStripePersonRecord businessOwnerAndStripePersonRecord =
         businessOwnerService.updateBusinessOwnerAndStripePerson(

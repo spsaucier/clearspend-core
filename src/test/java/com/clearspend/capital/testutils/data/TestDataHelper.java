@@ -50,6 +50,8 @@ import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.ledger.JournalEntryRepository;
 import com.clearspend.capital.data.repository.ledger.LedgerAccountRepository;
 import com.clearspend.capital.data.repository.ledger.PostingRepository;
+import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.github.javafaker.Faker;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -74,6 +76,7 @@ public class TestDataHelper {
   private final AccountActivityRepository accountActivityRepo;
   private final CardRepository cardRepo;
   private final TransactionLimitRepository transactionLimitRepo;
+  private final Faker faker = new Faker();
 
   private Amount createAmount() {
     final Amount amount = new Amount();
@@ -116,6 +119,21 @@ public class TestDataHelper {
     adjustment.setAmount(createAmount());
 
     return adjustmentRepo.save(adjustment);
+  }
+
+  public BusinessOwnerData createBusinessOwnerData(@NonNull final TypedId<BusinessId> businessId) {
+    final BusinessOwnerData data = new BusinessOwnerData();
+    data.setBusinessId(businessId);
+    data.setFirstName(faker.name().firstName());
+    data.setLastName(faker.name().lastName());
+    data.setRelationshipOwner(true);
+    data.setRelationshipRepresentative(true);
+    data.setRelationshipExecutive(true);
+    data.setRelationshipDirector(true);
+    data.setEmail(faker.internet().emailAddress());
+    data.setPhone(faker.phoneNumber().phoneNumber());
+    data.setSubjectRef(UUID.randomUUID().toString());
+    return data;
   }
 
   public AdjustmentRecord createAdjustmentWithJoins(

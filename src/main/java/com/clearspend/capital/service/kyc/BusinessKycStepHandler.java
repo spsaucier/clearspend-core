@@ -8,6 +8,7 @@ import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
 import com.clearspend.capital.service.ApplicationReviewService;
 import com.clearspend.capital.service.BusinessOwnerService;
+import com.clearspend.capital.service.BusinessOwnerService.KycBusinessOwner;
 import com.stripe.model.Account.Requirements;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,10 @@ public class BusinessKycStepHandler {
   private final ApplicationReviewService applicationReviewService;
 
   @Transactional
+  @KycBusinessOwner(
+      reviewer = "Craig Miller",
+      explanation =
+          "This KYC handler is called by the Stripe handler which cannot have permissions enforced on it.")
   public List<String> execute(Business business, Account account) {
     log.info("Execute update account event for businessId {}.", business.getBusinessId());
     Requirements requirements = account.getRequirements();
@@ -47,7 +52,7 @@ public class BusinessKycStepHandler {
     if (stripeRequirementsOptional.isPresent()) {
       StripeRequirements entityStripeRequirements = stripeRequirementsOptional.get();
       List<BusinessOwner> businessOwners =
-          businessOwnerService.findBusinessOwnerByBusinessId(business.getId());
+          businessOwnerService.findBusinessOwnerForKyc(business.getId());
       if (!applicationReviewService
           .getReviewRequirements(business, businessOwners, requirements)
           .equals(
