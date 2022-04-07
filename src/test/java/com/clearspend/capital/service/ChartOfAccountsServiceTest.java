@@ -73,6 +73,6 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     ChartOfAccounts chartOfAccounts =
         chartOfAccountsService.getChartOfAccountsForBusiness(business.getId());
     assertThat(chartOfAccounts.getNestedAccounts()).isNotNull();
-    assertThat(chartOfAccounts.getNestedAccounts().size()).isEqualTo(29);
+    assertThat(chartOfAccounts.getNestedAccounts().size()).isEqualTo(30);
   }
 }

@@ -8,7 +8,9 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.client.codat.CodatMockClient;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
+import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountStatus;
+import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
@@ -983,7 +985,9 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Expense.Utilities.Utilities.Telephone",
         "Expense.Other Expense.Depreciation.Depreciation",
         "Expense.Other Expense.OtherMiscellaneousExpense.Miscellaneous",
-        "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements");
+        "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements",
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck",
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation");
   }
 
   @Test
@@ -1019,5 +1023,15 @@ public class CodatServiceTest extends BaseCapitalTest {
             AccountActivityIntegrationSyncStatus.NOT_READY));
 
     assertThat(codatService.getSyncReadyCount(business.getId())).isEqualTo(1);
+  }
+
+  @Test
+  public void canGetChartOfAccountsForBusiness() {
+    CodatAccountNestedResponse response =
+        codatService.getCodatChartOfAccountsForBusiness(
+            business.getId(),
+            CodatAccountType.EXPENSE,
+            List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
+    assertThat(response.getResults().size()).isEqualTo(1);
   }
 }
