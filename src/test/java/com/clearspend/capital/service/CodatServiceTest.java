@@ -911,7 +911,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     int i = 3;
   }
 
-  private class CodatAccountBuilder {
+  public class CodatAccountBuilder {
     public static CodatAccountShard builder() {
       return new CodatAccountBuilder.CodatAccountShard();
     }
@@ -919,7 +919,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     @AllArgsConstructor
     @NoArgsConstructor
     @With
-    private static class CodatAccountShard {
+    public static class CodatAccountShard {
       private String id;
       private String name;
       private CodatAccountStatus status;
@@ -933,7 +933,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     }
   }
 
-  private static List<String> getQualifiedNames() {
+  public static List<String> getQualifiedNames() {
     return List.of(
         "Expense.Cost of Goods Sold.SuppliesMaterialsCogs.Cost of Goods Sold",
         "Expense.Expense.AdvertisingPromotional.Advertising",

@@ -229,7 +229,7 @@ public class CodatService {
 
   @PreAuthorize(
       "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
-  public CodatAccountNestedResponse getChartOfAccountsForBusiness(
+  public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, CodatAccountType type) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 

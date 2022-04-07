@@ -101,8 +101,8 @@ public class CodatController {
   }
 
   @GetMapping("/chart-of-accounts/expense")
-  CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
-    return codatService.getChartOfAccountsForBusiness(
+  CodatAccountNestedResponse getCodatChartOfAccountsForBusiness() {
+    return codatService.getCodatChartOfAccountsForBusiness(
         CurrentUser.getBusinessId(), CodatAccountType.EXPENSE);
   }
 

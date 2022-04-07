@@ -24,7 +24,8 @@ public enum Table {
   SPEND_LIMIT("SpendLimit"),
   TRANSACTION_SYNC_LOG("transaction_sync_log"),
   USER("user"),
-  USER_ALLOCATION_ROLE("user_allocation_role");
+  USER_ALLOCATION_ROLE("user_allocation_role"),
+  CHART_OF_ACCOUNTS("chart_of_accounts");
 
   private final String name;
 
