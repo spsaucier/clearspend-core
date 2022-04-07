@@ -221,7 +221,8 @@ public class CodatClient {
             -transaction.getAmount().getAmount().doubleValue(),
             paymentAllocations,
             lineItems,
-            contactRef);
+            contactRef,
+            transaction.getNotes());
     return syncDirectCostToCodat(companyRef, connectionId, request);
   }
 

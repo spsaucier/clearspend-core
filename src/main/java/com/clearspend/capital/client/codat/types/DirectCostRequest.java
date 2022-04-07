@@ -39,4 +39,7 @@ public class DirectCostRequest {
   @JsonProperty("contactRef")
   @NonNull
   private CodatContactRef contactRef;
+
+  @JsonProperty("note")
+  private String note;
 }
