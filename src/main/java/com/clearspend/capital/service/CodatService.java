@@ -36,6 +36,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
+import com.clearspend.capital.data.model.enums.ChartOfAccountsUpdateStatus;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
@@ -325,6 +326,7 @@ public class CodatService {
 
   private CodatAccountNested createNestedAccountFromAccount(CodatAccount account) {
     CodatAccountNested newAccount = new CodatAccountNested(account.getId(), account.getName());
+    newAccount.setUpdateStatus(ChartOfAccountsUpdateStatus.NOT_CHANGED);
     newAccount.setStatus(account.getStatus().getName());
     newAccount.setCategory(account.getCategory());
     newAccount.setQualifiedName(account.getQualifiedName());

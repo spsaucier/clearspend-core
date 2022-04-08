@@ -1,7 +1,9 @@
 package com.clearspend.capital.client.codat.webhook.controller;
 
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCompleteRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
+import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.CodatService;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -25,6 +27,8 @@ public class CodatWebhookController {
 
   @Getter(AccessLevel.PRIVATE)
   private final CodatService codatService;
+
+  private final ChartOfAccountsService chartOfAccountsService;
 
   @Value("${client.codat.auth-secret}")
   private String authSecret;
@@ -69,6 +73,16 @@ public class CodatWebhookController {
         && "Linked".equals(request.getData().getNewStatus())) {
       codatService.updateConnectionIdForBusiness(
           request.getCompanyId(), request.getData().getDataConnectionId());
+    }
+  }
+
+  @PostMapping("/data-sync-complete")
+  public void handleWebhookCall(
+      @RequestHeader("Authorization") String validation,
+      @RequestBody @Validated CodatWebhookDataSyncCompleteRequest request) {
+    if (validateToken(validation.replace("Bearer ", ""))
+        && "chartOfAccounts".equals(request.getData().getDataType())) {
+      chartOfAccountsService.updateChartOfAccountsFromCodatWebhook(request.getCompanyId());
     }
   }
 }

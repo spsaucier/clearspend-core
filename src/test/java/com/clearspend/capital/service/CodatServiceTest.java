@@ -1043,6 +1043,70 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation");
   }
 
+  public static List<String> getModifiedQualifiedNames() {
+    return List.of(
+        "Expense.Cost of Goods Sold.SuppliesMaterialsCogs.Cost of Goods Sold",
+        "Expense.Expense.AdvertisingPromotional.Advertising",
+        "Expense.Expense.AdvertisingPromotional.Promotional",
+        "Expense.Expense.Auto.Automobile",
+        "Expense.Expense.Auto.Automobile.Fuel",
+        "Expense.Expense.BankCharges.Bank Charges",
+        "Expense.Expense.DuesSubscriptions.Dues & Subscriptions",
+        "Expense.Expense.EntertainmentMeals.Meals and Entertainment",
+        "Expense.Expense.EquipmentRental.Equipment Rental",
+        "Expense.Expense.EquipmentRental.Job Expenses.Equipment Rental",
+        "Expense.Expense.Insurance.Insurance",
+        "Expense.Expense.Insurance.Insurance.Workers Compensation",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Accounting",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Bookkeeper",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Lawyer",
+        // New categories:
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Retainer",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Additional",
+        //
+        "Expense.Expense.OfficeGeneralAdministrativeExpenses.Office Expenses",
+        "Expense.Expense.OfficeGeneralAdministrativeExpenses.Stationery & Printing",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Commissions & fees",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Disposal Fees",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Job Expenses",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Job Expenses.Cost of Labor",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Job Expenses.Cost of Labor.Installation",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Job Expenses.Cost of Labor.Maintenance and Repairs",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Job Expenses.Permits",
+        "Expense.Expense.OtherMiscellaneousServiceCost.Uncategorized Expense",
+        "Expense.Expense.RentOrLeaseOfBuildings.Rent or Lease",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair",
+        // new categories:
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.AC Repairs",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Hardware Repairs",
+        //
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Building Repairs",
+        // deleted categories:
+        // "Expense.Expense.RepairMaintenance.Maintenance and Repair.Computer Repairs",
+        // "Expense.Expense.RepairMaintenance.Maintenance and Repair.Equipment Repairs",
+        "Expense.Expense.RepairMaintenance.Repair & Maintenance (deleted)",
+        "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials",
+        "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials.Decks and Patios",
+        "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials.Fountain and Garden Lighting",
+        "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials.Plants and Soil",
+        "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials.Sprinklers and Drip Systems",
+        "Expense.Expense.SuppliesMaterials.Purchases",
+        "Expense.Expense.SuppliesMaterials.Supplies",
+        "Expense.Expense.TaxesPaid.Taxes & Licenses",
+        "Expense.Expense.Travel.Travel",
+        "Expense.Expense.TravelMeals.Travel Meals",
+        "Expense.Expense.UnappliedCashBillPaymentExpense.Unapplied Cash Bill Payment Expense",
+        "Expense.Expense.Utilities.Utilities",
+        "Expense.Expense.Utilities.Utilities.Gas and Electric",
+        "Expense.Expense.Utilities.Utilities.Telephone",
+        "Expense.Other Expense.Depreciation.Depreciation",
+        "Expense.Other Expense.OtherMiscellaneousExpense.Miscellaneous",
+        "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements",
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck",
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation");
+  }
+
   @Test
   public void canCreateBankAccount() {
     codatService.createBankAccountForBusiness(

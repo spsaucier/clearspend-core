@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.codat.types;
 
+import com.clearspend.capital.data.model.enums.ChartOfAccountsUpdateStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,9 @@ public class CodatAccountNested {
 
   @JsonProperty("type")
   private String type;
+
+  @JsonProperty("updateStatus")
+  private ChartOfAccountsUpdateStatus updateStatus;
 
   @JsonProperty("children")
   private List<CodatAccountNested> children = new ArrayList<CodatAccountNested>();

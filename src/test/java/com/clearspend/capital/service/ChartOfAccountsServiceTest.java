@@ -75,4 +75,44 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     assertThat(chartOfAccounts.getNestedAccounts()).isNotNull();
     assertThat(chartOfAccounts.getNestedAccounts().size()).isEqualTo(30);
   }
+
+  @Test
+  public void canGenerateChartOfAccountsDiff() {
+    List<CodatAccount> accounts =
+        CodatServiceTest.getQualifiedNames().stream()
+            .map(
+                walker ->
+                    CodatServiceTest.CodatAccountBuilder.builder()
+                        .withId(UUID.randomUUID().toString())
+                        .withName(faker.name().firstName())
+                        .withStatus(CodatAccountStatus.ACTIVE)
+                        .withCategory("Testing")
+                        .withQualifiedName(walker)
+                        .withType(CodatAccountType.EXPENSE)
+                        .build())
+            .collect(Collectors.toList());
+
+    List<CodatAccountNested> oldNestedAccount = codatService.nestCodatAccounts(accounts);
+
+    List<CodatAccount> newAccounts =
+        CodatServiceTest.getModifiedQualifiedNames().stream()
+            .map(
+                walker ->
+                    CodatServiceTest.CodatAccountBuilder.builder()
+                        .withId(UUID.randomUUID().toString())
+                        .withName(faker.name().firstName())
+                        .withStatus(CodatAccountStatus.ACTIVE)
+                        .withCategory("Testing")
+                        .withQualifiedName(walker)
+                        .withType(CodatAccountType.EXPENSE)
+                        .build())
+            .collect(Collectors.toList());
+
+    List<CodatAccountNested> newNestedAccount = codatService.nestCodatAccounts(newAccounts);
+
+    chartOfAccountsService.updateStatusesForChartOfAccounts(
+        new ChartOfAccounts(business.getId(), oldNestedAccount),
+        new ChartOfAccounts(business.getId(), newNestedAccount));
+    assertThat(newNestedAccount.size()).isGreaterThan(0);
+  }
 }

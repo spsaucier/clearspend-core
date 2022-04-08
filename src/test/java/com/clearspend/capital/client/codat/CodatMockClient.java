@@ -36,16 +36,21 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Slf4j
 public class CodatMockClient extends CodatClient {
   private List<CodatSupplier> supplierList;
+  private List<CodatAccount> accountList;
 
   public CodatMockClient(WebClient codatWebClient, ObjectMapper objectMapper) {
     super(codatWebClient, objectMapper, "quickbooksonlinesandbox");
     supplierList = new ArrayList<>();
     supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
+    createDefaultAccountList();
   }
 
-  @Override
-  public GetAccountsResponse getAccountsForBusiness(String companyRef) {
-    List<CodatAccount> accountList = new ArrayList<CodatAccount>();
+  public void overrideDefaultAccountList(List<CodatAccount> accountList) {
+    this.accountList = accountList;
+  }
+
+  public void createDefaultAccountList() {
+    accountList = new ArrayList();
     accountList.add(
         new CodatAccount(
             "codat-card-id",
@@ -94,6 +99,11 @@ public class CodatMockClient extends CodatClient {
             "category",
             "Asset.Fixed Asset.my asset",
             CodatAccountType.ASSET));
+  }
+
+  @Override
+  public GetAccountsResponse getAccountsForBusiness(String companyRef) {
+
     return new GetAccountsResponse(accountList);
   }
 
