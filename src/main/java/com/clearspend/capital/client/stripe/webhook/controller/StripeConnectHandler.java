@@ -126,7 +126,10 @@ public class StripeConnectHandler {
     // be safely removed after 7 days after deployment to prod
     if (businessBankAccountId == null) {
       businessBankAccountId =
-          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
+          businessBankAccountService
+              .getBusinessBankAccountsForStripe(businessId, true)
+              .get(0)
+              .getId();
     }
 
     Amount amount =
@@ -169,6 +172,9 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
+  @StripeBankAccountOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
   void processOutboundTransferResult(OutboundTransfer outboundTransfer) {
     TypedId<BusinessId> businessId =
         StripeMetadataEntry.extractId(
@@ -182,7 +188,10 @@ public class StripeConnectHandler {
     // be safely removed after 7 days after deployment to prod
     if (businessBankAccountId == null) {
       businessBankAccountId =
-          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
+          businessBankAccountService
+              .getBusinessBankAccountsForStripe(businessId, true)
+              .get(0)
+              .getId();
     }
 
     Amount amount =
@@ -216,6 +225,9 @@ public class StripeConnectHandler {
   @StripeBusinessOp(
       reviewer = "Craig Miller",
       explanation = "This is a method where Stripe messages flow to the BusinessService")
+  @StripeBankAccountOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
   private void onStripeCreditsReceived(ReceivedCredit receivedCredit) {
     if (StringUtils.equals(
         stripeProperties.getClearspendFinancialAccountId(), receivedCredit.getFinancialAccount())) {
@@ -227,7 +239,9 @@ public class StripeConnectHandler {
           businessService.retrieveBusinessByStripeFinancialAccount(
               receivedCredit.getFinancialAccount());
       BusinessBankAccount businessBankAccount =
-          businessBankAccountService.getBusinessBankAccounts(business.getId(), true).get(0);
+          businessBankAccountService
+              .getBusinessBankAccountsForStripe(business.getId(), true)
+              .get(0);
 
       stripeClient.executeOutboundTransfer(
           business.getId(),
