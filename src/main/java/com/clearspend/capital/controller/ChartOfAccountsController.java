@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChartOfAccountsController {
   private final ChartOfAccountsService chartOfAccountsService;
 
-  @GetMapping()
+  @GetMapping("/")
   ChartOfAccounts getChartOfAccountsForBusiness() {
     return chartOfAccountsService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId());
   }
@@ -25,5 +25,10 @@ public class ChartOfAccountsController {
   @PostMapping("/update")
   ChartOfAccounts updateChartOfAccountsFromCodat() {
     return chartOfAccountsService.updateChartOfAccountsFromCodat(CurrentUser.getBusinessId());
+  }
+
+  @GetMapping("/total-changes")
+  Integer getTotalChartOfAccountsChangesForBusiness() {
+    return chartOfAccountsService.getTotalChangesForBusiness(CurrentUser.getBusinessId());
   }
 }

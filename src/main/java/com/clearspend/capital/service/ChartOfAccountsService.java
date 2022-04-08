@@ -119,4 +119,27 @@ public class ChartOfAccountsService {
       setUpdateStatusRecursively(codatAccount, status);
     }
   }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public Integer getTotalChangesForBusiness(TypedId<BusinessId> businessId) {
+    Optional<ChartOfAccounts> chartOfAccounts =
+        chartOfAccountsRepository.findByBusinessId(businessId);
+    if (chartOfAccounts.isEmpty()) {
+      return 0;
+    }
+    CodatAccountNested parentAccount = new CodatAccountNested("-1", "Parent");
+    parentAccount.setChildren(chartOfAccounts.get().getNestedAccounts());
+    return getTotalChangesForNestedAccount(parentAccount);
+  }
+
+  private Integer getTotalChangesForNestedAccount(CodatAccountNested codatAccountNested) {
+    int total = 0;
+    for (CodatAccountNested codatAccount : codatAccountNested.getChildren()) {
+      if (codatAccount.getUpdateStatus() != ChartOfAccountsUpdateStatus.NOT_CHANGED) {
+        total++;
+      }
+      total += getTotalChangesForNestedAccount(codatAccount);
+    }
+    return total;
+  }
 }

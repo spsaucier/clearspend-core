@@ -114,5 +114,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
         new ChartOfAccounts(business.getId(), oldNestedAccount),
         new ChartOfAccounts(business.getId(), newNestedAccount));
     assertThat(newNestedAccount.size()).isGreaterThan(0);
+    chartOfAccountsService.updateChartOfAccountsForBusiness(business.getId(), newNestedAccount);
+    assertThat(chartOfAccountsService.getTotalChangesForBusiness(business.getId())).isEqualTo(6);
   }
 }
