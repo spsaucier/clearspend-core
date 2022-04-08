@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.data.model.ChartOfAccounts;
 import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -18,8 +19,11 @@ public class ChartOfAccountsController {
   private final ChartOfAccountsService chartOfAccountsService;
 
   @GetMapping("/")
-  ChartOfAccounts getChartOfAccountsForBusiness() {
-    return chartOfAccountsService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId());
+  CodatAccountNestedResponse getChartOfAccountsForBusiness() {
+    return new CodatAccountNestedResponse(
+        chartOfAccountsService
+            .getChartOfAccountsForBusiness(CurrentUser.getBusinessId())
+            .getNestedAccounts());
   }
 
   @PostMapping("/update")
