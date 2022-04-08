@@ -8,8 +8,5 @@ public enum LimitType {
   ACH_WITHDRAW,
 
   /** Limit for any type of purchase transaction */
-  PURCHASE,
-
-  /** Limit for the ATM withdraw */
-  ATM_WITHDRAW
+  PURCHASE
 }

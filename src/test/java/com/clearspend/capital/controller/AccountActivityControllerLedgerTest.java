@@ -34,6 +34,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.UserDetails;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -120,6 +121,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+
+    assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(response.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(response.getReceipt()).isNull();
+    assertThat(response.getNotes()).isNull();
+    assertThat(response.getExpenseDetails()).isNull();
   }
 
   @SneakyThrows
@@ -152,6 +159,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+
+    assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(response.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(response.getReceipt()).isNull();
+    assertThat(response.getNotes()).isNull();
+    assertThat(response.getExpenseDetails()).isNull();
   }
 
   @SneakyThrows
@@ -163,7 +176,7 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         businessBankAccount.getId(),
         user.getId(),
         BankAccountTransactType.WITHDRAW,
-        Amount.of(Currency.USD, 10),
+        Amount.of(Currency.USD, BigDecimal.TEN),
         false);
 
     // when
@@ -181,7 +194,14 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getSourceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getTargetAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
-    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-10));
+    assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN.negate());
+
+    assertThat(response.getRequestedAmount().getAmount())
+        .isEqualByComparingTo(BigDecimal.TEN.negate());
+    assertThat(response.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(response.getReceipt()).isNull();
+    assertThat(response.getNotes()).isNull();
+    assertThat(response.getExpenseDetails()).isNull();
   }
 
   @SneakyThrows
@@ -232,6 +252,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(from.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
 
+    assertThat(from.getRequestedAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
+    assertThat(from.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(from.getReceipt()).isNull();
+    assertThat(from.getNotes()).isNull();
+    assertThat(from.getExpenseDetails()).isNull();
+
     // checking to
     assertThat(to.getAccountActivityId()).isNotNull();
     assertThat(to.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
@@ -244,6 +270,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(to.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(to.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));
+
+    assertThat(to.getRequestedAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));
+    assertThat(to.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(to.getReceipt()).isNull();
+    assertThat(to.getNotes()).isNull();
+    assertThat(to.getExpenseDetails()).isNull();
   }
 
   @SneakyThrows
@@ -300,6 +332,14 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(returnActivity.getAmount().getAmount())
         .isEqualByComparingTo(BigDecimal.TEN.negate());
+
+    assertThat(returnActivity.getRequestedAmount().getAmount())
+        .isEqualByComparingTo(BigDecimal.TEN.negate());
+    assertThat(returnActivity.getSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(returnActivity.getReceipt()).isNull();
+    assertThat(returnActivity.getNotes()).isNull();
+    assertThat(returnActivity.getExpenseDetails()).isNull();
 
     LedgerActivityResponse depositActivity =
         result.getContent().stream()
@@ -361,6 +401,14 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         .isEqualTo(LedgerBankAccount.of(businessBankAccount));
     assertThat(returnActivity.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 
+    assertThat(returnActivity.getRequestedAmount().getAmount())
+        .isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(returnActivity.getSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(returnActivity.getReceipt()).isNull();
+    assertThat(returnActivity.getNotes()).isNull();
+    assertThat(returnActivity.getExpenseDetails()).isNull();
+
     LedgerActivityResponse withdrawActivity =
         result.getContent().stream()
             .filter(activity -> activity.getType() == AccountActivityType.BANK_WITHDRAWAL)
@@ -413,6 +461,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+
+    assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(response.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(response.getReceipt()).isNull();
+    assertThat(response.getNotes()).isNull();
+    assertThat(response.getExpenseDetails()).isNull();
   }
 
   @Test
@@ -452,6 +506,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+
+    assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
+    assertThat(response.getSyncStatus()).isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+    assertThat(response.getReceipt()).isNull();
+    assertThat(response.getNotes()).isNull();
+    assertThat(response.getExpenseDetails()).isNull();
   }
 
   @SneakyThrows

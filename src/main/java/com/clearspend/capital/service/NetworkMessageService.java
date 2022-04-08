@@ -5,11 +5,14 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.SpendControlViolationException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.decline.LimitExceeded;
+import com.clearspend.capital.data.model.decline.SpendControlViolated;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
@@ -374,9 +377,15 @@ public class NetworkMessageService {
           common.getApprovedAmount(),
           common.getMerchantCategoryCode(),
           common.getAuthorizationMethod());
-    } catch (LimitViolationException e) {
-      log.warn("Failed to accept a transaction due to a limit violation: {}", e.getMessage());
-      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.LIMIT_EXCEEDED));
+    } catch (LimitViolationException | SpendControlViolationException e) {
+      log.warn("Failed to accept a transaction due to a decline: {}", e.getMessage());
+      if (e instanceof LimitViolationException limitViolationException) {
+        common.getDeclineDetails().add(LimitExceeded.from(limitViolationException));
+      } else {
+        common
+            .getDeclineDetails()
+            .add(SpendControlViolated.from((SpendControlViolationException) e));
+      }
       common.setPostDecline(true);
       return;
     }

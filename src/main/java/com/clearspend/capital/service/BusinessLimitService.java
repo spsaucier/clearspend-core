@@ -169,13 +169,15 @@ public class BusinessLimitService {
                             : adjustment.getAmount().getAmount().negate())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (usage.add(amount.getAmount()).compareTo(limit.getValue()) > 0) {
+        BigDecimal total = usage.add(amount.getAmount());
+        if (total.compareTo(limit.getValue()) > 0) {
           throw new LimitViolationException(
               businessId,
               TransactionLimitType.BUSINESS,
               type == AdjustmentType.DEPOSIT ? LimitType.ACH_DEPOSIT : LimitType.ACH_WITHDRAW,
               limit.getKey(),
-              amount);
+              amount,
+              total.subtract(limit.getValue()));
         }
       }
     }

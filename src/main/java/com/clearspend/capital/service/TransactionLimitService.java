@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.SpendControlViolationException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -166,20 +167,22 @@ public class TransactionLimitService {
     TransactionLimit cardTransactionLimits =
         retrieveSpendLimit(businessId, TransactionLimitType.CARD, cardId.toUuid());
     if (cardTransactionLimits.getDisabledMccGroups().contains(mccGroup)) {
-      throw new LimitViolationException(cardId, TransactionLimitType.CARD, mccGroup);
+      throw new SpendControlViolationException(cardId, TransactionLimitType.CARD, mccGroup);
     }
     if (cardTransactionLimits.getDisabledPaymentTypes().contains(paymentType)) {
-      throw new LimitViolationException(cardId, TransactionLimitType.CARD, paymentType);
+      throw new SpendControlViolationException(cardId, TransactionLimitType.CARD, paymentType);
     }
 
     // allocation mcc groups and payment types
     TransactionLimit allocationTransactionLimits =
         retrieveSpendLimit(businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid());
     if (allocationTransactionLimits.getDisabledMccGroups().contains(mccGroup)) {
-      throw new LimitViolationException(allocationId, TransactionLimitType.ALLOCATION, mccGroup);
+      throw new SpendControlViolationException(
+          allocationId, TransactionLimitType.ALLOCATION, mccGroup);
     }
     if (allocationTransactionLimits.getDisabledPaymentTypes().contains(paymentType)) {
-      throw new LimitViolationException(allocationId, TransactionLimitType.ALLOCATION, paymentType);
+      throw new SpendControlViolationException(
+          allocationId, TransactionLimitType.ALLOCATION, paymentType);
     }
 
     // spend limits
@@ -228,9 +231,15 @@ public class TransactionLimitService {
                 .map(e -> e.getValue().getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (limit.getValue().add(amount.getAmount()).add(usage).compareTo(BigDecimal.ZERO) < 0) {
+        BigDecimal remaining = limit.getValue().add(amount.getAmount()).add(usage);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
           throw new LimitViolationException(
-              limitOwner, transactionLimitType, LimitType.PURCHASE, limit.getKey(), amount);
+              limitOwner,
+              transactionLimitType,
+              LimitType.PURCHASE,
+              limit.getKey(),
+              amount,
+              remaining.abs());
         }
       }
     }

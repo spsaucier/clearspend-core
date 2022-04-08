@@ -4,42 +4,40 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.MccGroup;
-import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
+import java.math.BigDecimal;
+import java.util.UUID;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class LimitViolationException extends RuntimeException {
+@Getter
+public class LimitViolationException extends OperationDeclinedException {
+
+  private final UUID entityId;
+  private final TransactionLimitType transactionLimitType;
+  private final LimitType limitType;
+  private final LimitPeriod limitPeriod;
+  private final Amount amount;
+  private final BigDecimal exceededAmount;
 
   public <T> LimitViolationException(
       TypedId<T> id,
       TransactionLimitType transactionLimitType,
       LimitType limitType,
       LimitPeriod limitPeriod,
-      Amount amount) {
-
+      Amount amount,
+      BigDecimal exceededAmount) {
     super(
         String.format(
-            "Entity id=%s, type=%s exceeds limit type=%s, period=%s for amount=%s",
-            id, transactionLimitType, limitType, limitPeriod, amount.getAmount()));
-  }
+            "Entity id=%s, type=%s violates limit type=%s for period=%s for amount=%s",
+            id, transactionLimitType, limitType, limitPeriod, exceededAmount));
 
-  public <T> LimitViolationException(
-      TypedId<T> id, TransactionLimitType transactionLimitType, MccGroup mccGroup) {
-
-    super(
-        String.format(
-            "Entity id=%s, type=%s violates disabled mcc group %s",
-            id, transactionLimitType, mccGroup));
-  }
-
-  public <T> LimitViolationException(
-      TypedId<T> id, TransactionLimitType transactionLimitType, PaymentType paymentType) {
-
-    super(
-        String.format(
-            "Entity id=%s, type=%s violates disabled payment type %s",
-            id, transactionLimitType, paymentType));
+    this.entityId = id.toUuid();
+    this.transactionLimitType = transactionLimitType;
+    this.limitType = limitType;
+    this.limitPeriod = limitPeriod;
+    this.amount = amount;
+    this.exceededAmount = exceededAmount;
   }
 }

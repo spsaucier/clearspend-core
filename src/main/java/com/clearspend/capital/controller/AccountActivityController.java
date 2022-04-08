@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.ledger.LedgerActivityRequest;
 import com.clearspend.capital.controller.type.ledger.LedgerActivityResponse;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
@@ -29,11 +30,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -177,8 +178,8 @@ public class AccountActivityController {
             new AccountActivityFilterCriteria(
                 CurrentUser.get().businessId(),
                 request.getAllocationId(),
-                null,
-                null,
+                request.getUserId(),
+                request.getCardId(),
                 CollectionUtils.isEmpty(request.getTypes())
                     ? Arrays.stream(AccountActivityType.values()).toList()
                     : request.getTypes(),
@@ -190,11 +191,13 @@ public class AccountActivityController {
                     : request.getStatuses(),
                 request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
                 request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
-                null,
-                null,
-                null,
-                null,
-                false,
+                request.getCategories(),
+                request.getWithReceipt(),
+                request.getWithoutReceipt(),
+                CollectionUtils.isEmpty(request.getSyncStatuses())
+                    ? Arrays.stream(AccountActivityIntegrationSyncStatus.values()).toList()
+                    : request.getSyncStatuses(),
+                request.getMissingExpenseCategory(),
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, LedgerActivityResponse::of);

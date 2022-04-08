@@ -618,7 +618,7 @@ class CardServiceTest extends BaseCapitalTest {
     Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
         Map.of(
             Currency.USD,
-            Map.of(LimitType.ATM_WITHDRAW, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
+            Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
     Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
     Set<PaymentType> disabledPaymentTypes = Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
 

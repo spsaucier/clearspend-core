@@ -7,10 +7,9 @@ import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.IdMismatchException;
-import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
-import com.clearspend.capital.common.error.LimitViolationException;
+import com.clearspend.capital.common.error.OperationDeclinedException;
 import com.clearspend.capital.common.error.ReLinkException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
@@ -46,9 +45,8 @@ public class GlobalControllerExceptionHandler {
     AmountException.class,
     CurrencyMismatchException.class,
     IdMismatchException.class,
-    InsufficientFundsException.class,
     InvalidRequestException.class,
-    LimitViolationException.class
+    OperationDeclinedException.class
   })
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);

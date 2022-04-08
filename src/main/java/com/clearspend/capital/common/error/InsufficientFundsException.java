@@ -8,7 +8,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class InsufficientFundsException extends RuntimeException {
+public class InsufficientFundsException extends OperationDeclinedException {
 
   public <T> InsufficientFundsException(
       Account account, AdjustmentType adjustmentType, @NonNull Amount amount) {

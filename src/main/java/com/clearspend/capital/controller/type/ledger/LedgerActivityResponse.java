@@ -3,8 +3,11 @@ package com.clearspend.capital.controller.type.ledger;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.controller.type.activity.ReceiptDetails;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -52,6 +55,27 @@ public class LedgerActivityResponse {
   @JsonProperty("amount")
   @NonNull
   private Amount amount;
+
+  // the amount we received from Stripe or a copy of amount otherwise
+  @JsonProperty("requestedAmount")
+  @NonNull
+  private Amount requestedAmount;
+
+  @JsonProperty("receipt")
+  private ReceiptDetails receipt;
+
+  @JsonProperty("notes")
+  private String notes;
+
+  @JsonProperty("expenseDetails")
+  private ExpenseDetails expenseDetails;
+
+  @JsonProperty("syncStatus")
+  @NonNull
+  private AccountActivityIntegrationSyncStatus syncStatus;
+
+  @JsonProperty("lastSyncTime")
+  private OffsetDateTime lastSynctime;
 
   @JsonProperty("declineDetails")
   private DeclineDetails declineDetails;
@@ -106,11 +130,20 @@ public class LedgerActivityResponse {
         sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
         targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
-      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE, NETWORK_REFUND -> {
+      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE -> {
         ledgerUser =
             holdInfo != null ? LedgerUser.SYSTEM_USER : new LedgerUser(accountActivity.getUser());
+        sourceAccount =
+            LedgerCardAccount.of(
+                accountActivity.getAllocation().getName(), accountActivity.getCard());
+        targetAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
+      }
+      case NETWORK_REFUND -> {
+        ledgerUser = LedgerUser.SYSTEM_USER;
         sourceAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        targetAccount =
+            LedgerCardAccount.of(
+                accountActivity.getAllocation().getName(), accountActivity.getCard());
       }
       case CARD_FUND_RETURN -> {
         ledgerUser = LedgerUser.EXTERNAL_USER;
@@ -131,11 +164,18 @@ public class LedgerActivityResponse {
             accountActivity.getType(),
             accountActivity.getStatus(),
             ledgerUser,
-            accountActivity.getAmount());
+            accountActivity.getAmount(),
+            accountActivity.getRequestedAmount(),
+            accountActivity.getIntegrationSyncStatus());
 
     response.setHold(holdInfo);
     response.setSourceAccount(sourceAccount);
     response.setTargetAccount(targetAccount);
+    response.setReceipt(ReceiptDetails.toReceiptDetails(accountActivity.getReceipt()));
+    response.setNotes(accountActivity.getNotes());
+    response.setExpenseDetails(
+        ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails()));
+    response.setLastSynctime(accountActivity.getLastSyncTime());
 
     if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
       response.setDeclineDetails(accountActivity.getDeclineDetails().get(0));
