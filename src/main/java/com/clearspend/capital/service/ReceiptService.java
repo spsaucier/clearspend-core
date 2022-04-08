@@ -13,10 +13,8 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.type.CurrentUser;
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PostAuthorize;
@@ -34,6 +32,7 @@ public class ReceiptService {
   private final AccountActivityRepository accountActivityRepository;
 
   private final AccountActivityService accountActivityService;
+  private final CodatService codatService;
   private final ReceiptImageService receiptImageService;
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
@@ -58,32 +57,6 @@ public class ReceiptService {
   @PreAuthorize("isSelfOwned(#receipt) or hasAllocationPermission(#receipt.allocationId, 'READ')")
   public byte[] getReceiptImage(Receipt receipt) {
     return receiptImageService.getReceiptImage(receipt.getPath());
-  }
-
-  @RestrictedApi(
-      explanation = "Protected Receipt access for Codat Webhooks",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {ReceiptViewer.class})
-  public byte[] getReceiptImage(TypedId<ReceiptId> receiptId) {
-    Optional<Receipt> receipt = receiptRepository.findById(receiptId);
-    if (receipt.isPresent()) {
-      return receiptImageService.getReceiptImage(receipt.get().getPath());
-    }
-    return null;
-  }
-
-  @RestrictedApi(
-      explanation = "Protected Receipt access for Codat Webhooks",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {ReceiptViewer.class})
-  public Receipt getReceiptByTypedId(TypedId<ReceiptId> receiptId) {
-    return receiptRepository
-        .findById(receiptId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.RECEIPT, receiptId));
   }
 
   @PostAuthorize(
@@ -139,6 +112,7 @@ public class ReceiptService {
         receipt.getId(),
         accountActivity.getId(),
         accountActivity.getReceipt());
+    codatService.syncIndividualReceipt(receipt, accountActivity);
   }
 
   @Transactional

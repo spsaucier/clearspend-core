@@ -26,17 +26,20 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.ExpenseCategory;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -52,6 +55,7 @@ import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -98,6 +102,7 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired ServiceHelper serviceHelper;
   @Autowired ExpenseCategoryRepository expenseCategoryRepository;
   @Autowired ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
+  @Autowired ReceiptService receiptService;
 
   @BeforeEach
   public void setup() {
@@ -648,6 +653,56 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
+  void updateStatusForSyncedTransactions_whenTransactionHasReceipt_thenReceiptIsUploaded() {
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity newAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    String myFileContents = "My file contents!!!";
+
+    Receipt receipt =
+        receiptService.storeReceiptImage(
+            createBusinessRecord.user().getBusinessId(),
+            createBusinessRecord.user().getId(),
+            myFileContents.getBytes(StandardCharsets.UTF_8),
+            "image/jpeg");
+    ReceiptDetails details = new ReceiptDetails();
+    details.getReceiptIds().add(receipt.getId());
+    newAccountActivity.setReceipt(details);
+    newAccountActivity = accountActivityRepository.save(newAccountActivity);
+
+    TransactionSyncLog log = new TransactionSyncLog();
+    log.setBusinessId(createBusinessRecord.user().getBusinessId());
+    log.setAccountActivityId(newAccountActivity.getId());
+    log.setDirectCostPushOperationKey("MY_KEY");
+    log.setFirstName(new RequiredEncryptedStringWithHash("First"));
+    log.setLastName(new RequiredEncryptedStringWithHash("Last"));
+    log = transactionSyncLogRepository.save(log);
+
+    codatService.updateStatusForSyncedTransaction("UNUSED", "MY_KEY");
+
+    assertThat(transactionSyncLogRepository.findById(log.getId()))
+        .isPresent()
+        .get()
+        .extracting(TransactionSyncLog::getStatus)
+        .isEqualTo(TransactionSyncStatus.UPLOADED_RECEIPTS);
+  }
+
+  @SneakyThrows
+  @Test
   void nestCodatAccounts_simpleAccountNesting() {
     List<CodatAccount> input = new ArrayList<>();
     input.add(
@@ -909,8 +964,6 @@ public class CodatServiceTest extends BaseCapitalTest {
             .collect(Collectors.toList());
 
     List<CodatAccountNested> result = codatService.nestCodatAccounts(accounts);
-
-    int i = 3;
   }
 
   public class CodatAccountBuilder {

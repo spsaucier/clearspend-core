@@ -39,9 +39,9 @@ import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
-import com.clearspend.capital.service.ReceiptService.ReceiptViewer;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.annotations.VisibleForTesting;
 import java.time.OffsetDateTime;
@@ -69,7 +69,8 @@ public class CodatService {
   private final BusinessRepository businessRepository;
   private final BusinessService businessService;
   private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
-  private final ReceiptService receiptService;
+  private final ReceiptRepository receiptRepository;
+  private final ReceiptImageService receiptImageService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
 
@@ -412,16 +413,6 @@ public class CodatService {
     }
   }
 
-  public void updateSyncedTransactionsInLog(String companyRef) {
-    List<TransactionSyncLog> transactionsWaitingForSupplier =
-        transactionSyncLogRepository.findByStatusAndCodatCompanyRef(
-            TransactionSyncStatus.IN_PROGRESS, companyRef);
-
-    transactionsWaitingForSupplier.stream()
-        .forEach(transaction -> updateSyncStatusIfComplete(transaction));
-  }
-
-  @ReceiptViewer(reviewer = "patrick.morton", explanation = "Need to upload Receipts")
   private void updateSyncStatusIfComplete(TransactionSyncLog transaction) {
     Business business =
         businessService.retrieveBusinessForService(transaction.getBusinessId(), true);
@@ -437,42 +428,79 @@ public class CodatService {
     }
 
     TransactionSyncLog transactionSyncLog = transactionSyncLogOptional.get();
+    try {
+      if (status.getStatus().equals("Success")) {
+        transactionSyncLog.setStatus(TransactionSyncStatus.COMPLETED);
+      } else if (status.getStatus().equals("Failed")) {
+        transactionSyncLog.setStatus(TransactionSyncStatus.FAILED);
+      }
+      Optional<AccountActivity> accountActivityForSyncOptional =
+          accountActivityRepository.findByBusinessIdAndId(
+              business.getId(), transactionSyncLog.getAccountActivityId());
 
-    if (status.getStatus().equals("Success")) {
-      transactionSyncLog.setStatus(TransactionSyncStatus.COMPLETED);
-    } else if (status.getStatus().equals("Failed")) {
-      transactionSyncLog.setStatus(TransactionSyncStatus.FAILED);
-    }
+      accountActivityForSyncOptional.ifPresent(
+          accountActivity -> {
+            accountActivity.setLastSyncTime(OffsetDateTime.now());
+            accountActivityRepository.save(accountActivity);
 
-    transactionSyncLogRepository.save(transactionSyncLog);
-
-    Optional<AccountActivity> accountActivityForSyncOptional =
-        accountActivityRepository.findByBusinessIdAndId(
-            business.getId(), transactionSyncLog.getAccountActivityId());
-
-    accountActivityForSyncOptional.ifPresent(
-        accountActivity -> {
-          accountActivity.setLastSyncTime(OffsetDateTime.now());
-          accountActivityRepository.save(accountActivity);
-
-          if (accountActivity.getReceipt() != null
-              && accountActivity.getReceipt().getReceiptIds() != null
-              && !accountActivity.getReceipt().getReceiptIds().isEmpty()
-              && StringUtils.hasText(status.getDataId().getId())) {
-            for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
-              Receipt receipt = receiptService.getReceiptByTypedId(id);
-              CodatSyncReceiptResponse receiptResponse =
-                  codatClient.syncReceiptsForDirectCost(
-                      new CodatSyncReceiptRequest(
-                          business.getCodatCompanyRef(),
-                          business.getCodatConnectionId(),
-                          status.getDataId().getId(),
-                          receiptService.getReceiptImage(id),
-                          receipt.getContentType(),
-                          receipt.getId()));
+            if (accountActivity.getReceipt() != null
+                && accountActivity.getReceipt().getReceiptIds() != null
+                && !accountActivity.getReceipt().getReceiptIds().isEmpty()) {
+              syncReceiptsForAccountActivity(accountActivity, status.getDataId().getId());
+              transactionSyncLog.setStatus(TransactionSyncStatus.UPLOADED_RECEIPTS);
             }
-          }
-        });
+          });
+
+    } finally {
+      if (transactionSyncLog != null) {
+        transactionSyncLogRepository.save(transactionSyncLog);
+      }
+    }
+  }
+
+  private void syncReceiptsForAccountActivity(AccountActivity accountActivity, String externalId) {
+    Business business =
+        businessService.retrieveBusinessForService(accountActivity.getBusinessId(), true);
+    if (accountActivity.getReceipt() != null
+        && accountActivity.getReceipt().getReceiptIds() != null
+        && !accountActivity.getReceipt().getReceiptIds().isEmpty()
+        && StringUtils.hasText(externalId)) {
+      for (TypedId<ReceiptId> id : accountActivity.getReceipt().getReceiptIds()) {
+        Receipt receipt = receiptRepository.findById(id).orElseThrow();
+        syncIndividualReceipt(receipt, business, externalId);
+      }
+    }
+  }
+
+  public void syncIndividualReceipt(Receipt receipt, AccountActivity accountActivity) {
+    Optional<TransactionSyncLog> transactionLog =
+        transactionSyncLogRepository.findFirstByAccountActivityIdSortByUpdated(
+            accountActivity.getId());
+
+    if (transactionLog.isPresent()) {
+      TransactionSyncLog transaction = transactionLog.get();
+      Business business =
+          businessService.retrieveBusinessForService(accountActivity.getBusinessId(), true);
+      CodatPushStatusResponse status =
+          codatClient.getPushStatus(
+              transaction.getDirectCostPushOperationKey(), transaction.getCodatCompanyRef());
+      syncIndividualReceipt(receipt, business, status.getDataId().getId());
+
+      transaction.setStatus(TransactionSyncStatus.UPLOADED_RECEIPTS);
+      transactionSyncLogRepository.save(transaction);
+    }
+  }
+
+  private CodatSyncReceiptResponse syncIndividualReceipt(
+      Receipt receipt, Business business, String externalId) {
+    return codatClient.syncReceiptsForDirectCost(
+        new CodatSyncReceiptRequest(
+            business.getCodatCompanyRef(),
+            business.getCodatConnectionId(),
+            externalId,
+            receiptImageService.getReceiptImage(receipt.getPath()),
+            receipt.getContentType(),
+            receipt.getId()));
   }
 
   public void syncTransactionAwaitingSupplier(String companyId, String pushOperationKey) {

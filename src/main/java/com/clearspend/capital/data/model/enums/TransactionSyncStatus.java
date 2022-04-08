@@ -4,5 +4,6 @@ public enum TransactionSyncStatus {
   AWAITING_SUPPLIER,
   IN_PROGRESS,
   FAILED,
-  COMPLETED
+  COMPLETED,
+  UPLOADED_RECEIPTS
 }

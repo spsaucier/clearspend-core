@@ -12,6 +12,8 @@ import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
+import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
@@ -160,5 +162,10 @@ public class CodatMockClient extends CodatClient {
 
   public CodatSyncResponse syncDataTypeForCompany(String companyRef, String dataType) {
     return new CodatSyncResponse("company-id", companyRef, dataType);
+  }
+
+  public CodatSyncReceiptResponse syncReceiptsForDirectCost(
+      CodatSyncReceiptRequest codatSyncReceiptRequest) {
+    return new CodatSyncReceiptResponse("A-OK", "push-key");
   }
 }

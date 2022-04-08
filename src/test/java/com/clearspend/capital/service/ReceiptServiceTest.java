@@ -8,9 +8,11 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Receipt;
+import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
@@ -19,9 +21,11 @@ import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncSta
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
+import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -45,6 +49,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @Autowired private ReceiptRepository receiptRepository;
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AdjustmentService adjustmentService;
+  @Autowired private TransactionSyncLogRepository transactionSyncLogRepository;
 
   private CreateUpdateUserRecord userRecord;
   private String fileContents;
@@ -127,6 +132,38 @@ class ReceiptServiceTest extends BaseCapitalTest {
     receiptRepository.save(receipt);
     testHelper.setCurrentUser(userRecord.user());
     receiptService.deleteReceipt(receipt);
+  }
+
+  @SneakyThrows
+  @Test
+  void linkReceipts_whenAccountActivityAlreadySynced_thenReceiptIsUploaded() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    receipt =
+        receiptService.storeReceiptImage(
+            userRecord.user().getBusinessId(),
+            createBusinessRecord.user().getId(),
+            fileContents.getBytes(),
+            contentType);
+
+    // Create an Account Activity object to 'link'
+    AccountActivity accountActivity = createAccountActivity(createBusinessRecord.user());
+
+    TransactionSyncLog log = new TransactionSyncLog();
+    log.setBusinessId(createBusinessRecord.user().getBusinessId());
+    log.setStatus(TransactionSyncStatus.COMPLETED);
+    log.setAccountActivityId(accountActivity.getId());
+    log.setDirectCostPushOperationKey("whatever");
+    log.setFirstName(new RequiredEncryptedStringWithHash("first"));
+    log.setLastName(new RequiredEncryptedStringWithHash("last"));
+    log = transactionSyncLogRepository.save(log);
+
+    receiptService.linkReceipt(receipt, accountActivity);
+
+    assertThat(transactionSyncLogRepository.findById(log.getId()))
+        .isPresent()
+        .get()
+        .extracting(TransactionSyncLog::getStatus)
+        .isEqualTo(TransactionSyncStatus.UPLOADED_RECEIPTS);
   }
 
   @SneakyThrows
