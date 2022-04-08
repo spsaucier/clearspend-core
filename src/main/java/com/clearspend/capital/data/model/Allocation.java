@@ -31,7 +31,7 @@ import org.hibernate.annotations.TypeDefs;
 @DynamicUpdate
 @TypeDefs({@TypeDef(name = "uuid-array", typeClass = TypedIdArrayType.class)})
 @Slf4j
-public class Allocation extends TypedMutable<AllocationId> {
+public class Allocation extends TypedMutable<AllocationId> implements Ownable {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -60,4 +60,14 @@ public class Allocation extends TypedMutable<AllocationId> {
   private TypedId<UserId> ownerId;
 
   @NonNull private String name;
+
+  @Override
+  public TypedId<AllocationId> getAllocationId() {
+    return getId();
+  }
+
+  @Override
+  public TypedId<UserId> getUserId() {
+    return getOwnerId();
+  }
 }

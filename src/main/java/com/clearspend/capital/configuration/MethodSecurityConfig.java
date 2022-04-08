@@ -18,7 +18,7 @@ public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
   @Override
   protected MethodSecurityExpressionHandler createExpressionHandler() {
     CapitalMethodSecurityExpressionHandler expressionHandler =
-        new CapitalMethodSecurityExpressionHandler(permissionEnrichmentService);
+        new CapitalMethodSecurityExpressionHandler();
     expressionHandler.setPermissionEvaluator(
         new CapitalPermissionEvaluator(permissionEnrichmentService));
     return expressionHandler;

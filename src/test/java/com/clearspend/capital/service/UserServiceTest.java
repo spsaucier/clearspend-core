@@ -7,9 +7,10 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
-import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
+import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -26,12 +27,14 @@ import com.github.javafaker.Faker;
 import com.stripe.model.Person;
 import com.stripe.model.issuing.Cardholder;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -213,23 +216,24 @@ class UserServiceTest extends BaseCapitalTest {
   private void changeNameAndAddress(User user, Class<?> clazz) {
     String newFirstName = testHelper.generateFirstName();
     String newLastName = testHelper.generateLastName();
-    Address newAddress = testHelper.generateEntityAddress();
+    com.clearspend.capital.controller.type.Address newAddress = testHelper.generateApiAddress();
     long stripePersonWrites = stripeMockClient.countCreatedObjectsByType(clazz);
     userService.updateUser(
-        user.getBusinessId(),
-        user.getId(),
-        newFirstName,
-        newLastName,
-        newAddress,
-        user.getEmail().getEncrypted(),
-        user.getPhone().getEncrypted(),
-        false);
+        new UpdateUserRequest(
+            user.getId(),
+            user.getBusinessId(),
+            newFirstName,
+            newLastName,
+            newAddress,
+            user.getEmail().getEncrypted(),
+            user.getPhone().getEncrypted(),
+            false));
 
     // Check the change landed in the Users table
     User revisedUser = userService.retrieveUser(user.getId());
     assertThat(revisedUser.getFirstName().getEncrypted()).isEqualTo(newFirstName);
     assertThat(revisedUser.getLastName().getEncrypted()).isEqualTo(newLastName);
-    assertThat(revisedUser.getAddress()).isEqualTo(newAddress);
+    assertThat(revisedUser.getAddress()).isEqualTo(newAddress.toAddress());
 
     // Names and addresses aren't in FusionAuth, so skipping that
 
@@ -262,16 +266,17 @@ class UserServiceTest extends BaseCapitalTest {
         InvalidRequestException.class,
         () ->
             userService.updateUser(
-                createBusinessRecord.business().getId(),
-                toChange.getId(),
-                toChange.getFirstName().toString(),
-                toChange.getLastName().toString(),
-                toChange.getAddress(),
-                existingUser
-                    .getEmail()
-                    .toString(), // This should cause an Exception when update is invoked
-                toChange.getPhone().toString(),
-                false));
+                new UpdateUserRequest(
+                    toChange.getId(),
+                    createBusinessRecord.business().getId(),
+                    toChange.getFirstName().toString(),
+                    toChange.getLastName().toString(),
+                    new Address(toChange.getAddress()),
+                    existingUser
+                        .getEmail()
+                        .toString(), // This should cause an Exception when update is invoked
+                    toChange.getPhone().toString(),
+                    false)));
 
     // Ensure we have different email addresses in the end
     assertThat(existingUser.getEmail())
@@ -283,14 +288,15 @@ class UserServiceTest extends BaseCapitalTest {
     assertThat(
             userService
                 .updateUser(
-                    createBusinessRecord.business().getId(),
-                    toChange.getId(),
-                    toChange.getFirstName().toString(),
-                    faker.name().lastName(),
-                    toChange.getAddress(),
-                    toChange.getEmail().toString(),
-                    toChange.getPhone().toString(),
-                    false)
+                    new UpdateUserRequest(
+                        toChange.getId(),
+                        createBusinessRecord.business().getId(),
+                        toChange.getFirstName().toString(),
+                        faker.name().lastName(),
+                        new Address(toChange.getAddress()),
+                        toChange.getEmail().toString(),
+                        toChange.getPhone().toString(),
+                        false))
                 .user()
                 .getEmail()
                 .toString())
@@ -334,14 +340,15 @@ class UserServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action =
         () ->
             userService.updateUser(
-                createBusinessRecord.business().getId(),
-                existing.getId(),
-                "Bob",
-                "Saget",
-                null,
-                "bs@clearspend.com",
-                "123456789",
-                false);
+                new UpdateUserRequest(
+                    existing.getId(),
+                    createBusinessRecord.business().getId(),
+                    "Bob",
+                    "Saget",
+                    null,
+                    "bs@clearspend.com",
+                    "123456789",
+                    false));
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .addAllRootAllocationFailingRoles(
@@ -355,14 +362,26 @@ class UserServiceTest extends BaseCapitalTest {
   }
 
   @Test
+  @SneakyThrows
   void retrieveUsersForBusiness_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final ThrowingRunnable action =
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final ThrowingSupplier<List<User>> action =
         () -> userService.retrieveUsersForBusiness(createBusinessRecord.business().getId());
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .build()
-        .validateServiceMethod(action);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final List<User> adminResults = action.get();
+    assertThat(adminResults).hasSize(2).contains(createBusinessRecord.user(), employee);
+
+    testHelper.setCurrentUser(employee);
+    final List<User> employeeResults = action.get();
+    assertThat(employeeResults).hasSize(1).contains(employee);
   }
 
   @Test
@@ -428,6 +447,11 @@ class UserServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action = () -> userService.retrieveUser(owner.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .addAllRootAllocationFailingRoles(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_VIEW_ONLY,
+                DefaultRoles.ALLOCATION_MANAGER))
         .addRootAllocationCustomUser(CustomUser.pass(owner))
         .build()
         .validateServiceMethod(action);

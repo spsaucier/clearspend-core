@@ -31,6 +31,7 @@ import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
+import com.clearspend.capital.util.function.TypeFunctions;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 import java.math.BigDecimal;
@@ -45,7 +46,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import javax.validation.constraints.NotNull;
@@ -88,22 +88,6 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     this.template = Mustache.compiler().compile(this.filterCardsQueryText);
   }
 
-  private UUID nullableTypedId(@Nullable final TypedId<?> typedId) {
-    return Optional.ofNullable(typedId).map(TypedId::toUuid).orElse(null);
-  }
-
-  private <T> List<UUID> nullableTypedIdList(@Nullable List<TypedId<T>> typedIdList) {
-    return Optional.ofNullable(typedIdList)
-        .map(list -> list.stream().map(TypedId::toUuid).toList())
-        .orElse(null);
-  }
-
-  private <T extends Enum<T>> List<String> nullableEnumList(@Nullable List<T> enumList) {
-    return Optional.ofNullable(enumList)
-        .map(list -> list.stream().map(Enum::name).toList())
-        .orElse(null);
-  }
-
   private SearchCardData cardFilterRowMapper(final ResultSet resultSet, final int rowNum)
       throws SQLException {
     return new SearchCardData(
@@ -132,18 +116,24 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   public Page<SearchCardData> filter(final CardFilterCriteria criteria) {
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("businessId", nullableTypedId(criteria.getBusinessId()))
-            .addValue("invokingUser", nullableTypedId(criteria.getInvokingUser()))
+            .addValue("businessId", TypeFunctions.nullableTypedIdToUUID(criteria.getBusinessId()))
+            .addValue(
+                "invokingUser", TypeFunctions.nullableTypedIdToUUID(criteria.getInvokingUser()))
             .addValue("javaNow", OffsetDateTime.now())
             .addValue("globalRoles", CurrentUser.get().roles().toArray(String[]::new), Types.ARRAY)
             .addValue("permission", criteria.getPermission())
-            .addValue("cardHolders", nullableTypedIdList(criteria.getCardHolders()))
-            .addValue("allocationIds", nullableTypedIdList(criteria.getAllocationIds()))
+            .addValue(
+                "cardHolders",
+                TypeFunctions.nullableTypedIdListToUuidList(criteria.getCardHolders()))
+            .addValue(
+                "allocationIds",
+                TypeFunctions.nullableTypedIdListToUuidList(criteria.getAllocationIds()))
             .addValue("searchText", criteria.getSearchText())
             .addValue("likeSearchText", "%%%s%%".formatted(criteria.getSearchText()))
             .addValue("searchStringHash", criteria.getSearchStringHash())
-            .addValue("statuses", nullableEnumList(criteria.getStatuses()))
-            .addValue("types", nullableEnumList(criteria.getTypes()))
+            .addValue(
+                "statuses", TypeFunctions.nullableEnumListToStringList(criteria.getStatuses()))
+            .addValue("types", TypeFunctions.nullableEnumListToStringList(criteria.getTypes()))
             .addValue("pageSize", criteria.getPageToken().getPageSize())
             .addValue("firstResult", criteria.getPageToken().getFirstResult())
             .addValue("minimumBalance", criteria.getMinimumBalance())

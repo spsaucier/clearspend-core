@@ -54,13 +54,12 @@ public class ReceiptService {
   }
 
   // returns data held in GCS (Google Cloud Storage)
-  @PreAuthorize("isSelfOwned(#receipt) or hasAllocationPermission(#receipt.allocationId, 'READ')")
+  @PreAuthorize("isSelfOwned(#receipt) or hasPermission(#receipt, 'READ')")
   public byte[] getReceiptImage(Receipt receipt) {
     return receiptImageService.getReceiptImage(receipt.getPath());
   }
 
-  @PostAuthorize(
-      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'READ')")
+  @PostAuthorize("isSelfOwned(returnObject) or hasPermission(returnObject, 'READ')")
   public Receipt getReceipt(TypedId<ReceiptId> receiptId) {
     return receiptRepository
         .findReceiptByBusinessIdAndId(CurrentUser.getBusinessId(), receiptId)
@@ -83,7 +82,7 @@ public class ReceiptService {
   @Transactional
   @PreAuthorize(
       "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
-          + "(hasAllocationPermission(#accountActivity.allocationId, 'LINK_RECEIPTS') and hasAllocationPermission(#receipt.allocationId, 'READ'))")
+          + "(hasPermission(#accountActivity, 'LINK_RECEIPTS') and hasPermission(#receipt, 'READ'))")
   public void linkReceipt(Receipt receipt, AccountActivity accountActivity) {
 
     // if this receipt is already linked to an existing adjustment, unlink it

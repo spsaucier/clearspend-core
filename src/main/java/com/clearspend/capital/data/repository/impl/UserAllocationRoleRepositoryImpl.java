@@ -4,7 +4,6 @@ import static com.clearspend.capital.data.repository.impl.JDBCUtils.safeUUID;
 
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
-import com.clearspend.capital.common.data.util.MustacheResourceLoader;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -14,26 +13,20 @@ import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepositoryCustom;
-import com.clearspend.capital.service.type.CurrentUser;
-import com.samskivert.mustache.Template;
+import com.clearspend.capital.util.function.TypeFunctions;
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import lombok.Builder;
@@ -42,7 +35,6 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
@@ -58,8 +50,10 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
   private final Crypto crypto;
 
-  private final Template allPermissionsForSingleUserQuery;
-  private final Template allPermissionsForAllUsersQuery;
+  private final String allPermissionsForAllUsersQuery;
+  private final String getAllAllocationPermissionsForBusinessQuery;
+  private final String getAllAllocationPermissionsForAllocationQuery;
+  private final String getAllAllocationPermissionsQuery;
   private final String deleteLesserAndEqualRolesBelow;
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
@@ -70,39 +64,48 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
       EntityManager entityManager,
       @Value("classpath:db/sql/allocationRoleRepository/deleteLesserAndEqualRolesBelow.sql")
           Resource deleteLesserAndEqualRolesBelow,
-      @Value(
-              "classpath:db/sql/allocationRoleRepository/getAllAllocationPermissionsForSingleUser.sql")
-          Resource allPermissionsForSingleUserQuery,
       @Value("classpath:db/sql/allocationRoleRepository/getAllAllocationPermissionsForAllUsers.sql")
           Resource allPermissionsForAllUsersQuery,
+      @Value("classpath:db/sql/allocationRoleRepository/getAllAllocationPermissionsForBusiness.sql")
+          Resource getAllAllocationPermissionsForBusinessQuery,
+      @Value(
+              "classpath:db/sql/allocationRoleRepository/getAllAllocationPermissionsForAllocation.sql")
+          Resource getAllAllocationPermissionsForAllocation,
+      @Value(
+              "classpath:db/sql/allocationRoleRepository/getAllAllocationPermissionsForAllocation.sql")
+          Resource getAllAllocationPermissionsQuery,
       CriteriaBuilderFactory criteriaBuilderFactory) {
     this.crypto = crypto;
     this.entityManager = entityManager;
-    this.allPermissionsForSingleUserQuery =
-        MustacheResourceLoader.load(allPermissionsForSingleUserQuery);
-    this.allPermissionsForAllUsersQuery =
-        MustacheResourceLoader.load(allPermissionsForAllUsersQuery);
+    this.allPermissionsForAllUsersQuery = SqlResourceLoader.load(allPermissionsForAllUsersQuery);
     this.deleteLesserAndEqualRolesBelow = SqlResourceLoader.load(deleteLesserAndEqualRolesBelow);
     this.criteriaBuilderFactory = criteriaBuilderFactory;
+    this.getAllAllocationPermissionsForBusinessQuery =
+        SqlResourceLoader.load(getAllAllocationPermissionsForBusinessQuery);
+    this.getAllAllocationPermissionsForAllocationQuery =
+        SqlResourceLoader.load(getAllAllocationPermissionsForAllocation);
+    this.getAllAllocationPermissionsQuery =
+        SqlResourceLoader.load(getAllAllocationPermissionsQuery);
   }
 
   private UserRolesAndPermissions userPermissionsRowMapper(
       final ResultSet resultSet, final Integer rowNum) throws SQLException {
     return new UserRolesAndPermissions(
-        nullableBytesToDecryptedString(resultSet.getBytes("first_name"), crypto),
-        nullableBytesToDecryptedString(resultSet.getBytes("last_name"), crypto),
-        nullableToEnum(resultSet.getString("user_type"), UserType::valueOf),
-        nullableTypedId(resultSet.getObject("user_id", UUID.class)),
-        nullableTypedId(resultSet.getObject("allocation_id", UUID.class)),
-        nullableTypedId(resultSet.getObject("parent_allocation_id", UUID.class)),
-        nullableTypedId(resultSet.getObject("business_id", UUID.class)),
+        TypeFunctions.nullableBytesToDecryptedString(resultSet.getBytes("first_name"), crypto),
+        TypeFunctions.nullableBytesToDecryptedString(resultSet.getBytes("last_name"), crypto),
+        TypeFunctions.nullableStringToEnum(resultSet.getString("user_type"), UserType::valueOf),
+        TypeFunctions.nullableUuidToTypedId(resultSet.getObject("user_id", UUID.class)),
+        TypeFunctions.nullableUuidToTypedId(resultSet.getObject("allocation_id", UUID.class)),
+        TypeFunctions.nullableUuidToTypedId(
+            resultSet.getObject("parent_allocation_id", UUID.class)),
+        TypeFunctions.nullableUuidToTypedId(resultSet.getObject("business_id", UUID.class)),
         resultSet.getBoolean("inherited"),
         resultSet.getString("role_name"),
-        nullableArrayToEnumSet(
+        TypeFunctions.nullableSqlArrayToEnumSet(
             resultSet.getObject("permissions", Array.class),
             AllocationPermission.class,
             AllocationPermission::valueOf),
-        nullableArrayToEnumSet(
+        TypeFunctions.nullableSqlArrayToEnumSet(
             resultSet.getObject("global_permissions", Array.class),
             GlobalUserPermission.class,
             GlobalUserPermission::valueOf));
@@ -110,36 +113,57 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
   @Override
   public List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
-      final TypedId<UserId> userId,
-      final TypedId<BusinessId> businessId,
+      @NonNull final TypedId<UserId> userId,
+      @NonNull final TypedId<BusinessId> businessId,
       // globalRoles should be for provided userId
-      final Set<String> globalRoles) {
+      @Nullable final Set<String> globalRoles) {
     final SqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("businessId", businessId.toUuid())
             .addValue("userId", userId.toUuid())
-            .addValue("globalRoles", CurrentUser.get().roles().toArray(String[]::new), Types.ARRAY);
-    final GetAllPermissionsContext context =
-        GetAllPermissionsContext.builder()
-            .businessId(businessId.toUuid())
-            .userId(userId.toUuid())
-            .globalRoles(globalRoles.toArray(String[]::new))
-            .build();
+            .addValue("businessId", businessId.toUuid())
+            .addValue(
+                "globalRoles",
+                TypeFunctions.nullableCollectionToNonNullArray(globalRoles, String[]::new),
+                Types.ARRAY);
+    return JDBCUtils.query(
+        entityManager,
+        getAllAllocationPermissionsForBusinessQuery,
+        params,
+        this::userPermissionsRowMapper);
+  }
 
-    final MustacheQueryConfig<UserRolesAndPermissions> config =
-        MustacheQueryConfig.<UserRolesAndPermissions>builder()
-            .rowMapper(this::userPermissionsRowMapper)
-            .parameterSource(new BeanPropertySqlParameterSource(context))
-            .build();
-
-    return JDBCUtils.executeMustacheQuery(entityManager, allPermissionsForSingleUserQuery, config)
-        .result();
+  @Override
+  public Optional<UserRolesAndPermissions> findAllByUserIdAndBusinessIdAndAllocationId(
+      @NonNull TypedId<UserId> userId,
+      @Nullable TypedId<BusinessId> businessId,
+      @Nullable TypedId<AllocationId> allocationId,
+      @Nullable Set<String> globalRoles) {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId.toUuid())
+            .addValue("allocationId", TypeFunctions.nullableTypedIdToUUID(allocationId))
+            .addValue("businessId", TypeFunctions.nullableTypedIdToUUID(businessId))
+            .addValue(
+                "globalRoles",
+                TypeFunctions.nullableCollectionToNonNullArray(globalRoles, String[]::new),
+                Types.ARRAY);
+    // This should only ever return one row
+    return JDBCUtils.query(
+            entityManager, getAllAllocationPermissionsQuery, params, this::userPermissionsRowMapper)
+        .stream()
+        .findFirst();
   }
 
   @Override
   public Map<TypedId<UserId>, UserRolesAndPermissions> getActiveUsersWithAllocationPermission(
-      TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
-    return getUserPermissions(businessId, allocationId, null, Collections.emptySet(), false)
+      @NonNull TypedId<BusinessId> businessId, @Nullable TypedId<AllocationId> allocationId) {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("businessId", businessId.toUuid())
+            .addValue("allocationId", TypeFunctions.nullableTypedIdToUUID(allocationId));
+
+    return JDBCUtils.query(
+            entityManager, allPermissionsForAllUsersQuery, params, this::userPermissionsRowMapper)
         .stream()
         .collect(Collectors.toMap(UserRolesAndPermissions::userId, p -> p));
   }
@@ -178,61 +202,40 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
       TypedId<UserId> userId,
       // userGlobalRoles should be for the userId provided
       Set<String> userGlobalRoles) {
-    return getUserPermissions(businessId, null, userId, userGlobalRoles, true).stream().findFirst();
+    return findAllByUserIdAndBusinessId(userId, businessId, userGlobalRoles).stream()
+        .filter(userPermissions -> userPermissions.parentAllocationId() == null)
+        .findFirst();
   }
 
-  /**
-   * For internal use only - call the userPermissions query with appropriate parameters query.
-   *
-   * @param businessId The businessId of interest
-   * @param allocationId The allocationId of interest, null for business's root allocation
-   * @param userId The userId of interest, null for all users on the allocation
-   * @param userGlobalRoles Only in conjunction with a userId, the user's roles, null otherwise
-   * @return a list of who has what permissions. global roles and permissions will only be populated
-   *     in case of a query for an individual user.
-   */
-  private List<UserRolesAndPermissions> getUserPermissions(
-      @NonNull TypedId<BusinessId> businessId,
-      TypedId<AllocationId> allocationId,
-      TypedId<UserId> userId,
-      Set<String> userGlobalRoles,
-      boolean rootOnly) {
+  @Override
+  public Optional<UserRolesAndPermissions> findAllByUserIdAndAllocationId(
+      @NonNull TypedId<UserId> userId,
+      @NonNull TypedId<AllocationId> allocationId,
+      @Nullable Set<String> globalRoles) {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId.toUuid())
+            .addValue("allocationId", allocationId.toUuid())
+            .addValue(
+                "globalRoles",
+                TypeFunctions.nullableCollectionToNonNullArray(globalRoles, String[]::new),
+                Types.ARRAY);
+    // This query should only return a single record
+    return JDBCUtils.query(
+            entityManager,
+            getAllAllocationPermissionsForAllocationQuery,
+            params,
+            this::userPermissionsRowMapper)
+        .stream()
+        .findFirst();
+  }
 
-    if ((userId == null) && (userGlobalRoles != null && !userGlobalRoles.isEmpty())) {
-      throw new IllegalArgumentException(
-          "userGlobalRoles are only valid on queries for individual user permissions");
-    }
-
-    final String[] globalRoles =
-        Optional.ofNullable(userGlobalRoles).stream().flatMap(Set::stream).toArray(String[]::new);
-
-    final UUID userIdParam = Optional.ofNullable(userId).map(TypedId::toUuid).orElse(null);
-    final UUID allocationIdParam =
-        Optional.ofNullable(allocationId).map(TypedId::toUuid).orElse(null);
-
-    final GetAllPermissionsContext context =
-        GetAllPermissionsContext.builder()
-            .businessId(businessId.toUuid())
-            .globalRoles(globalRoles)
-            .userId(userIdParam)
-            .allocationId(allocationIdParam)
-            .isRootAllocationOnly(rootOnly)
-            .build();
-    final BeanPropertySqlParameterSource params = new BeanPropertySqlParameterSource(context);
-    entityManager.flush(); // needs to be fresh for permissions
-
-    final Template queryTemplate =
-        Optional.ofNullable(userId)
-            .map(id -> allPermissionsForSingleUserQuery)
-            .orElse(allPermissionsForAllUsersQuery);
-
-    final MustacheQueryConfig<UserRolesAndPermissions> config =
-        MustacheQueryConfig.<UserRolesAndPermissions>builder()
-            .parameterSource(params)
-            .rowMapper(this::userPermissionsRowMapper)
-            .build();
-
-    return JDBCUtils.executeMustacheQuery(entityManager, queryTemplate, config).result();
+  private EnumSet<GlobalUserPermission> globalPermissionsRowMapper(
+      final ResultSet resultSet, final int rowNum) throws SQLException {
+    return TypeFunctions.nullableSqlArrayToEnumSet(
+        resultSet.getObject(1, Array.class),
+        GlobalUserPermission.class,
+        GlobalUserPermission::valueOf);
   }
 
   @Override
@@ -254,8 +257,8 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
       @NonNull TypedId<UserId> userId,
       // Global Roles should be for the userId provided
       Set<String> userGlobalRoles) {
-    return getUserPermissions(businessId, allocationId, userId, userGlobalRoles, false).stream()
-        .findFirst();
+    return findAllByUserIdAndBusinessIdAndAllocationId(
+        userId, businessId, allocationId, userGlobalRoles);
   }
 
   @Override
@@ -270,55 +273,6 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         .addValue("referenceRole", referenceRole);
     JDBCUtils.execute(
         entityManager, deleteLesserAndEqualRolesBelow, params, PreparedStatement::executeUpdate);
-  }
-
-  private static <T extends Enum<T>> T nullableToEnum(
-      @Nullable final String value, @NonNull final Function<String, T> valueOf) {
-    return Optional.ofNullable(value).map(valueOf).orElse(null);
-  }
-
-  private static <T> TypedId<T> nullableTypedId(@Nullable final UUID uuid) {
-    return Optional.ofNullable(uuid).map(id -> new TypedId<T>(id)).orElse(null);
-  }
-
-  private static Stream<Object> nullableArrayToStream(@Nullable Array array) {
-    return Optional.ofNullable(array)
-        .map(sneakyThrows(Array::getArray))
-        .map(arr -> (Object[]) arr)
-        .stream()
-        .flatMap(Arrays::stream);
-  }
-
-  private static <T extends Enum<T>> EnumSet<T> nullableArrayToEnumSet(
-      @Nullable Array array,
-      @NonNull final Class<T> enumType,
-      @NonNull final Function<String, T> valueOf) {
-    return nullableArrayToStream(array)
-        .map(item -> valueOf.apply(String.valueOf(item)))
-        .collect(Collectors.toCollection(() -> EnumSet.noneOf(enumType)));
-  }
-
-  private static String nullableBytesToDecryptedString(
-      @Nullable final byte[] bytes, @NonNull final Crypto crypto) {
-    return Optional.ofNullable(bytes).map(crypto::decrypt).map(String::new).orElse(null);
-  }
-
-  private static <I, O> Function<I, O> sneakyThrows(final ThrowingFunction<I, O> fn) {
-    return input -> {
-      try {
-        return fn.apply(input);
-      } catch (Throwable ex) {
-        if (ex instanceof RuntimeException runEX) {
-          throw runEX;
-        }
-        throw new RuntimeException(ex);
-      }
-    };
-  }
-
-  @FunctionalInterface
-  private interface ThrowingFunction<I, O> {
-    O apply(final I input) throws Exception;
   }
 
   @Getter

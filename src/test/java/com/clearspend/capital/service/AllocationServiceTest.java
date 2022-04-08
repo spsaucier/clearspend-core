@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LedgerAccountType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
@@ -27,6 +28,7 @@ import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import javax.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
@@ -76,12 +78,53 @@ public class AllocationServiceTest extends BaseCapitalTest {
 
   @Test
   void getAllocationsForBusiness_UserPermissions() {
+    final User manager =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    final User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    final Allocation childAllocation1 =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child1",
+                rootAllocation.getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final Allocation childAllocation2 =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(), "Child2", rootAllocation.getId(), employee)
+            .allocation();
+
     final ThrowingRunnable action =
         () -> allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .build()
         .validateServiceMethod(action);
+
+    final Function<List<AllocationRecord>, List<Allocation>> toAllocations =
+        records -> records.stream().map(AllocationRecord::allocation).toList();
+
+    testHelper.setCurrentUser(manager);
+    final List<AllocationRecord> managerAllocations =
+        allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
+    assertThat(toAllocations.apply(managerAllocations)).hasSize(3);
+
+    // Employee should only see self-owned allocation
+    testHelper.setCurrentUser(employee);
+    final List<AllocationRecord> employeeAllocations =
+        allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
+    assertThat(toAllocations.apply(employeeAllocations)).hasSize(1);
   }
 
   @Test

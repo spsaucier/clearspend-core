@@ -1,7 +1,6 @@
 package com.clearspend.capital.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
@@ -15,19 +14,17 @@ import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
-import com.clearspend.capital.testutils.permission.CustomUser;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -80,21 +77,47 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void getAllPermissionsForUserInBusiness_UserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    final User user = testHelper.createUser(createBusinessRecord.business()).user();
-    final ThrowingRunnable action =
+    final User user =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    entityManager.flush();
+
+    final ThrowingSupplier<List<UserRolesAndPermissions>> action =
         () ->
             secureRolesAndPermissionsService.getAllPermissionsForUserInBusiness(
                 user.getId(), createBusinessRecord.business().getId());
+
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(user))
         .build()
-        .validateServiceMethod(action);
+        .validateServiceMethod(action::get);
+
+    final User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    testHelper.setCurrentUser(employee);
+    final List<UserRolesAndPermissions> employeeResults = action.get();
+    assertThat(employeeResults).isEmpty();
+
+    final User admin =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    testHelper.setCurrentUser(admin);
+    final List<UserRolesAndPermissions> adminResults = action.get();
+    assertThat(adminResults).hasSize(1);
+
+    // Owner should still see their permissions
+    testHelper.setCurrentUser(user);
+    final List<UserRolesAndPermissions> ownerResults = action.get();
+    assertThat(ownerResults).hasSize(1);
 
     testHelper.setUserAsMaster(createBusinessRecord.user());
     final User customerServiceUser = testHelper.createUser(createBusinessRecord.business()).user();
@@ -103,6 +126,7 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
         customerServiceUser.getSubjectRef(),
         DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
     testHelper.setCurrentUser(customerServiceUser);
-    assertDoesNotThrow(action::run);
+    final List<UserRolesAndPermissions> customerServiceResults = action.get();
+    assertThat(customerServiceResults).hasSize(1);
   }
 }

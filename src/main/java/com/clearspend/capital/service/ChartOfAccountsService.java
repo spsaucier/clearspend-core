@@ -24,8 +24,7 @@ public class ChartOfAccountsService {
   private final CodatService codatService;
   private final BusinessRepository businessRepository;
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public ChartOfAccounts updateChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
     Optional<ChartOfAccounts> chartOfAccounts =
@@ -44,16 +43,14 @@ public class ChartOfAccountsService {
     }
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public ChartOfAccounts getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     return chartOfAccountsRepository
         .findByBusinessId(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.CHART_OF_ACCOUNTS));
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public ChartOfAccounts updateChartOfAccountsFromCodat(TypedId<BusinessId> businessId) {
     return updateChartOfAccountsForBusiness(
         businessId, codatService.getChartOfAccountsForBusiness(businessId).getResults());

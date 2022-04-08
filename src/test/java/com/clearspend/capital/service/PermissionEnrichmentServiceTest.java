@@ -1,8 +1,11 @@
 package com.clearspend.capital.service;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
@@ -18,60 +21,70 @@ import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.service.security.PermissionEnrichmentService;
+import com.clearspend.capital.service.security.PermissionEvaluationIds;
 import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.Authentication;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+/**
+ * Nearly every integration test in our application also serves as an integration test for
+ * PermissionEnrichmentService. It's fine to have this one be simple unit tests with mocks.
+ */
 @Slf4j
+@ExtendWith(MockitoExtension.class)
 public class PermissionEnrichmentServiceTest {
+
+  private static final TypedId<BusinessId> BUSINESS_ID = new TypedId<>();
+  private static final TypedId<AllocationId> ALLOCATION_ID = new TypedId<>();
+  private static final TypedId<UserId> USER_ID = new TypedId<>();
+
+  @Mock private RolesAndPermissionsService rolesAndPermissionsService;
+  @InjectMocks private PermissionEnrichmentService permissionEnrichmentService;
+
+  @BeforeEach
+  void setup() {
+    SecurityContextHolder.clearContext();
+  }
+
+  @AfterEach
+  void cleanup() {
+    SecurityContextHolder.clearContext();
+  }
 
   @Test
   @SneakyThrows
   void testLoggingCustomerServiceAction() {
     try (TestAppender testAppender =
         TestAppender.watching(PermissionEnrichmentService.class, Level.TRACE)) {
-
-      RolesAndPermissionsService rolesAndPermissionsService =
-          mock(RolesAndPermissionsService.class);
-      PermissionEnrichmentService permissionEnrichmentService =
+      final PermissionEnrichmentService serviceForLogWatching =
           new PermissionEnrichmentService(rolesAndPermissionsService);
-
-      TypedId<AllocationId> allocationId = new TypedId<>(new UUID(5L, 5L));
-      TypedId<BusinessId> businessId = new TypedId<>(new UUID(19L, 1L));
-      TypedId<UserId> userId = new TypedId<>(new UUID(1L, 5L));
-
-      Authentication authentication = mock(Authentication.class);
-      UserRolesAndPermissionsCache mockCache = mock(UserRolesAndPermissionsCache.class);
-      when(mockCache.getPermissionsForAllocation(allocationId))
-          .thenReturn(
-              Optional.of(
-                  new UserRolesAndPermissions(
-                      "John",
-                      "Smith",
-                      UserType.EMPLOYEE,
-                      userId,
-                      allocationId,
-                      null,
-                      businessId,
-                      false,
-                      DefaultRoles.ALLOCATION_EMPLOYEE,
-                      EnumSet.of(AllocationPermission.VIEW_OWN, AllocationPermission.LINK_RECEIPTS),
-                      EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE))));
-      when(authentication.getDetails()).thenReturn(mockCache);
       CurrentUserSwitcher.setCurrentUser(
-          new CurrentUser(
-              UserType.EMPLOYEE, userId, businessId, Set.of(DefaultRoles.GLOBAL_CUSTOMER_SERVICE)));
+          createCurrentUser(Set.of(DefaultRoles.GLOBAL_CUSTOMER_SERVICE)));
+      final UserRolesAndPermissions permissions =
+          createEmptyPermissions()
+              .withAllocationPermissions(
+                  EnumSet.of(AllocationPermission.VIEW_OWN, AllocationPermission.LINK_RECEIPTS))
+              .withGlobalPermissions(EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE));
+      getCurrentContextCache().cachePermissionsForBusiness(BUSINESS_ID, List.of(permissions));
 
       boolean hasPermission =
-          evaluatePermissionInAFunction(
-              permissionEnrichmentService, allocationId, businessId, authentication);
+          serviceForLogWatching.evaluatePermission(
+              SecurityContextHolder.getContext().getAuthentication(),
+              new PermissionEvaluationIds(BUSINESS_ID, ALLOCATION_ID, null),
+              "MANAGE_PERMISSIONS|CUSTOMER_SERVICE");
 
       assertTrue(hasPermission);
       assertNotNull(testAppender.getLoggedEvents());
@@ -80,18 +93,225 @@ public class PermissionEnrichmentServiceTest {
           testAppender.contains(
               "Customer service action "
                   + this.getClass().getName()
-                  + ".evaluatePermissionInAFunction() by user "
-                  + userId,
+                  + ".testLoggingCustomerServiceAction() by user "
+                  + USER_ID,
               Level.INFO));
     }
   }
 
-  private boolean evaluatePermissionInAFunction(
-      PermissionEnrichmentService permissionEnrichmentService,
-      TypedId<AllocationId> allocationId,
-      TypedId<BusinessId> businessId,
-      Authentication authentication) {
-    return permissionEnrichmentService.evaluatePermission(
-        authentication, businessId, allocationId, "MANAGE_PERMISSIONS|CUSTOMER_SERVICE");
+  private CurrentUser createCurrentUser(final Set<String> globalRoles) {
+    return new CurrentUser(UserType.EMPLOYEE, USER_ID, BUSINESS_ID, globalRoles);
+  }
+
+  private UserRolesAndPermissions createEmptyPermissions() {
+    return new UserRolesAndPermissions(
+        "John",
+        "Smith",
+        UserType.EMPLOYEE,
+        USER_ID,
+        ALLOCATION_ID,
+        null,
+        BUSINESS_ID,
+        false,
+        DefaultRoles.ALLOCATION_EMPLOYEE,
+        EnumSet.of(AllocationPermission.VIEW_OWN, AllocationPermission.LINK_RECEIPTS),
+        EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE));
+  }
+
+  private UserRolesAndPermissionsCache getCurrentContextCache() {
+    return (UserRolesAndPermissionsCache)
+        SecurityContextHolder.getContext().getAuthentication().getDetails();
+  }
+
+  @Test
+  void evaluatePermissions_BusinessAndAllocationId_NotFoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    when(rolesAndPermissionsService.findAllByUserIdAndBusinessIdAndAllocationId(
+            USER_ID, BUSINESS_ID, ALLOCATION_ID, Set.of()))
+        .thenReturn(Optional.of(permissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(BUSINESS_ID, ALLOCATION_ID, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(1))
+        .findAllByUserIdAndBusinessIdAndAllocationId(any(), any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_BusinessAndAllocationId_FoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    getCurrentContextCache().cachePermissionsForAllocation(ALLOCATION_ID, permissions);
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(BUSINESS_ID, ALLOCATION_ID, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(0))
+        .findAllByUserIdAndBusinessIdAndAllocationId(any(), any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_BusinessIdOnly_NotFoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions rootPermissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    final UserRolesAndPermissions childPermissions =
+        createEmptyPermissions()
+            .withAllocationId(new TypedId<>())
+            .withParentAllocationId(rootPermissions.allocationId());
+
+    when(rolesAndPermissionsService.findAllByUserIdAndBusinessId(USER_ID, BUSINESS_ID, Set.of()))
+        .thenReturn(List.of(rootPermissions, childPermissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(BUSINESS_ID, null, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_BusinessIdOnly_FoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions rootPermissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    final UserRolesAndPermissions childPermissions =
+        createEmptyPermissions()
+            .withAllocationId(new TypedId<>())
+            .withParentAllocationId(rootPermissions.allocationId());
+    getCurrentContextCache()
+        .cachePermissionsForBusiness(BUSINESS_ID, List.of(rootPermissions, childPermissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(BUSINESS_ID, null, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_AllocationIdOnly_NotFoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+
+    when(rolesAndPermissionsService.findAllByUserIdAndAllocationId(
+            USER_ID, ALLOCATION_ID, Set.of()))
+        .thenReturn(Optional.of(permissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, ALLOCATION_ID, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(1))
+        .findAllByUserIdAndAllocationId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_AllocationIdOnly_FoundInCache() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    getCurrentContextCache().cachePermissionsForAllocation(ALLOCATION_ID, permissions);
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, ALLOCATION_ID, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(0))
+        .findAllByUserIdAndAllocationId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_ViewOwn() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions()
+            .withAllocationPermissions(EnumSet.of(AllocationPermission.VIEW_OWN));
+    getCurrentContextCache().cachePermissionsForAllocation(ALLOCATION_ID, permissions);
+    // UserId must be provided or ownership cannot be evaluated
+    assertFalse(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, ALLOCATION_ID, null),
+            "VIEW_OWN"));
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, ALLOCATION_ID, USER_ID),
+            "VIEW_OWN"));
+
+    verify(rolesAndPermissionsService, times(0))
+        .findAllByUserIdAndAllocationId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_NoIds_NotFoundInCache() {
+    final Set<String> globalRoles = Set.of(DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(globalRoles));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    when(rolesAndPermissionsService.findAllByUserIdAndBusinessId(USER_ID, BUSINESS_ID, globalRoles))
+        .thenReturn(List.of(permissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, null, null),
+            "CUSTOMER_SERVICE"));
+    // This scenario should validate global permissions only and reject allocation permissions even
+    // if the user technically has them
+    // That is because in this scenario we do not have enough information to properly validate that
+    // tha allocation permissions apply to the operation
+    assertFalse(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, null, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_NoIds_FoundInCache() {
+    final Set<String> globalRoles = Set.of(DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(globalRoles));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions().withAllocationPermissions(EnumSet.of(AllocationPermission.READ));
+    getCurrentContextCache().cachePermissionsForBusiness(BUSINESS_ID, List.of(permissions));
+
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, null, null),
+            "CUSTOMER_SERVICE"));
+    // This scenario should validate global permissions only and reject allocation permissions even
+    // if the user technically has them
+    // That is because in this scenario we do not have enough information to properly validate that
+    // tha allocation permissions apply to the operation
+    assertFalse(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationIds(null, null, null),
+            "READ"));
+
+    verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());
   }
 }

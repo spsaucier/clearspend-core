@@ -767,15 +767,18 @@ public class TestHelper {
         entityManager.getReference(
             User.class, allocationService.getRootAllocation(businessId).allocation().getOwnerId()));
     entityManager.flush();
-    return allocationService.createAllocation(
-        businessId,
-        parentAllocationId,
-        name,
-        user,
-        Amount.of(Currency.USD),
-        DEFAULT_TRANSACTION_LIMITS,
-        Collections.emptySet(),
-        Collections.emptySet());
+    final AllocationRecord allocationRecord =
+        allocationService.createAllocation(
+            businessId,
+            parentAllocationId,
+            name,
+            user,
+            Amount.of(Currency.USD),
+            DEFAULT_TRANSACTION_LIMITS,
+            Collections.emptySet(),
+            Collections.emptySet());
+    entityManager.flush();
+    return allocationRecord;
   }
 
   @SneakyThrows
@@ -898,13 +901,16 @@ public class TestHelper {
 
     business = businessRepository.save(business);
 
-    return new CreateBusinessRecord(
-        business,
-        businessOwner.businessOwner(),
-        businessOwner.user(),
-        email,
-        rootAllocation,
-        login(email, password));
+    final CreateBusinessRecord createBusinessRecord =
+        new CreateBusinessRecord(
+            business,
+            businessOwner.businessOwner(),
+            businessOwner.user(),
+            email,
+            rootAllocation,
+            login(email, password));
+    entityManager.flush();
+    return createBusinessRecord;
   }
 
   public Cookie getDefaultAuthCookie() {
@@ -969,6 +975,7 @@ public class TestHelper {
       card = cardService.activateMyCard(card, CardStatusReason.NONE);
     }
 
+    entityManager.flush();
     return card;
   }
 

@@ -21,17 +21,15 @@ import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.util.function.TypeFunctions;
 import java.sql.Array;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.sql.DataSource;
 import lombok.NonNull;
@@ -43,7 +41,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
-import org.testcontainers.utility.ThrowingFunction;
 
 /**
  * Given the importance of our SQL permissions checking functions, these tests are intended to
@@ -56,10 +53,20 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
           SELECT *
           FROM get_allocation_permissions(:businessId, :userId, :globalRoles::VARCHAR[], :permission::allocationpermission);
           """;
-  private static final String GET_ALL_ALLOCATION_PERMISSIONS_SQL =
+  private static final String GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL =
       """
           SELECT *
-          FROM get_all_allocation_permissions(:businessId, :userId, :globalRoles::VARCHAR[]);
+          FROM get_all_allocation_permissions_for_business(:businessId, :userId, :globalRoles::VARCHAR[]);
+          """;
+  private static final String GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_AND_ALLOCATION_SQL =
+      """
+          SELECT *
+          FROM get_all_allocation_permissions(:businessId, :userId, :allocationId, :globalRoles::VARCHAR[]);
+          """;
+  private static final String GET_ALL_ALLOCATION_PERMISSIONS_FOR_ALLOCATION_SQL =
+      """
+          SELECT *
+          FROM get_all_allocation_permissions_for_allocation(:allocationId, :userId, :globalRoles::VARCHAR[]);
           """;
   private static final String GET_GLOBAL_PERMISSIONS_SQL =
       """
@@ -68,68 +75,37 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
   private static final String GET_ALL_PERMISSIONS_FOR_ALL_USERS_SQL =
       """
           SELECT *
-          FROM get_all_allocation_permissions_for_all_users_in_business(:businessId);
+          FROM get_all_allocation_permissions_for_all_users(:businessId, null);
           """;
   private static final RowMapper<TypedId<AllocationId>> GET_ALLOCATION_PERMISSIONS_ROW_MAPPER =
-      (resultSet, rowNum) -> nullableTypedId(resultSet.getObject(1, UUID.class));
+      (resultSet, rowNum) ->
+          TypeFunctions.nullableUuidToTypedId(resultSet.getObject(1, UUID.class));
   private static final RowMapper<AllAllocationPermissions>
       GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER =
           (resultSet, rowNum) ->
               new AllAllocationPermissions(
-                  nullableTypedId(resultSet.getObject("user_id", UUID.class)),
-                  nullableTypedId(resultSet.getObject("allocation_id", UUID.class)),
-                  nullableTypedId(resultSet.getObject("parent_allocation_id", UUID.class)),
+                  TypeFunctions.nullableUuidToTypedId(resultSet.getObject("user_id", UUID.class)),
+                  TypeFunctions.nullableUuidToTypedId(
+                      resultSet.getObject("allocation_id", UUID.class)),
+                  TypeFunctions.nullableUuidToTypedId(
+                      resultSet.getObject("parent_allocation_id", UUID.class)),
                   resultSet.getInt("ordinal"),
                   resultSet.getString("role_name"),
                   resultSet.getBoolean("inherited"),
-                  nullableArrayToEnumSet(
+                  TypeFunctions.nullableSqlArrayToEnumSet(
                       resultSet.getObject("permissions", Array.class),
                       AllocationPermission.class,
                       AllocationPermission::valueOf),
-                  nullableArrayToEnumSet(
+                  TypeFunctions.nullableSqlArrayToEnumSet(
                       resultSet.getObject("global_permissions", Array.class),
                       GlobalUserPermission.class,
                       GlobalUserPermission::valueOf));
   private static final RowMapper<EnumSet<GlobalUserPermission>> GET_GLOBAL_PERMISSIONS_ROW_MAPPER =
       (resultSet, rowNum) ->
-          nullableArrayToEnumSet(
+          TypeFunctions.nullableSqlArrayToEnumSet(
               resultSet.getObject(1, Array.class),
               GlobalUserPermission.class,
               GlobalUserPermission::valueOf);
-
-  private static <T> TypedId<T> nullableTypedId(@Nullable final UUID uuid) {
-    return Optional.ofNullable(uuid).map(id -> new TypedId<T>(id)).orElse(null);
-  }
-
-  private static Stream<Object> nullableArrayToStream(@Nullable Array array) {
-    return Optional.ofNullable(array)
-        .map(sneakyThrows(Array::getArray))
-        .map(arr -> (Object[]) arr)
-        .stream()
-        .flatMap(Arrays::stream);
-  }
-
-  private static <T extends Enum<T>> EnumSet<T> nullableArrayToEnumSet(
-      @Nullable Array array,
-      @NonNull final Class<T> enumType,
-      @NonNull final Function<String, T> valueOf) {
-    return nullableArrayToStream(array)
-        .map(item -> valueOf.apply(String.valueOf(item)))
-        .collect(Collectors.toCollection(() -> EnumSet.noneOf(enumType)));
-  }
-
-  private static <I, O> Function<I, O> sneakyThrows(final ThrowingFunction<I, O> fn) {
-    return input -> {
-      try {
-        return fn.apply(input);
-      } catch (Throwable ex) {
-        if (ex instanceof RuntimeException runEX) {
-          throw runEX;
-        }
-        throw new RuntimeException(ex);
-      }
-    };
-  }
 
   private final TestHelper testHelper;
   private final DataSource dataSource;
@@ -257,7 +233,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
 
     assertThat(permissions)
         .hasSize(2)
@@ -304,7 +282,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(1)
         .containsExactly(
@@ -367,7 +347,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(4)
         .containsExactly(
@@ -420,7 +402,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -455,7 +439,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -505,7 +491,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(3)
         .containsExactly(
@@ -584,7 +572,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
 
     final AllAllocationPermissions[] expected =
         Stream.of(
@@ -641,7 +631,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -666,6 +658,59 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
   }
 
   @Test
+  void getAllAllocationPermissions_BusinessAndAllocation() {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("businessId", createBusinessRecord.business().getId().toUuid())
+            .addValue("allocationId", childAllocation.getId().toUuid())
+            .addValue("userId", managerOnRoot.getId().toUuid())
+            .addValue("globalRoles", new String[0], Types.ARRAY);
+    final List<AllAllocationPermissions> permissions =
+        jdbcTemplate.query(
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_AND_ALLOCATION_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+    assertThat(permissions)
+        .hasSize(1)
+        .containsExactly(
+            new AllAllocationPermissions(
+                managerOnRoot.getId(),
+                childAllocation.getId(),
+                rootAllocation.getId(),
+                2,
+                DefaultRoles.ALLOCATION_MANAGER,
+                true,
+                managerPermissions,
+                EnumSet.noneOf(GlobalUserPermission.class)));
+  }
+
+  @Test
+  void getAllAllocationPermissions_AllocationButNoBusiness() {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("allocationId", childAllocation.getId().toUuid())
+            .addValue("userId", managerOnRoot.getId().toUuid())
+            .addValue("globalRoles", new String[0], Types.ARRAY);
+    final List<AllAllocationPermissions> permissions =
+        jdbcTemplate.query(
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_ALLOCATION_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+    assertThat(permissions)
+        .hasSize(1)
+        .containsExactly(
+            new AllAllocationPermissions(
+                managerOnRoot.getId(),
+                childAllocation.getId(),
+                rootAllocation.getId(),
+                2,
+                DefaultRoles.ALLOCATION_MANAGER,
+                true,
+                managerPermissions,
+                EnumSet.noneOf(GlobalUserPermission.class)));
+  }
+
+  @Test
   void getAllAllocationPermissions_HasRootAndChildAllocations() {
     final SqlParameterSource params =
         new MapSqlParameterSource()
@@ -674,7 +719,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -708,7 +755,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -724,7 +773,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -737,7 +788,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -752,7 +805,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -767,7 +822,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -805,7 +862,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[0], Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -834,7 +893,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
 
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -855,7 +916,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(1)
         .containsExactly(
@@ -889,7 +952,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -998,7 +1063,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
 
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(1)
         .containsExactly(
@@ -1033,7 +1100,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(2)
         .containsExactly(
@@ -1074,7 +1143,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions)
         .hasSize(1)
         .containsExactly(
@@ -1110,7 +1181,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -1135,7 +1208,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .addValue("globalRoles", new String[] {DefaultRoles.GLOBAL_BOOKKEEPER}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     assertThat(permissions).isEmpty();
   }
 
@@ -1158,7 +1233,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 "globalRoles", new String[] {DefaultRoles.GLOBAL_CUSTOMER_SERVICE}, Types.ARRAY);
     final List<AllAllocationPermissions> permissions =
         jdbcTemplate.query(
-            GET_ALL_ALLOCATION_PERMISSIONS_SQL, params, GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
+            GET_ALL_ALLOCATION_PERMISSIONS_FOR_BUSINESS_SQL,
+            params,
+            GET_ALL_ALLOCATION_PERMISSIONS_ROW_MAPPER);
     final AllAllocationPermissions expected =
         new AllAllocationPermissions(
             customerService.getId(),

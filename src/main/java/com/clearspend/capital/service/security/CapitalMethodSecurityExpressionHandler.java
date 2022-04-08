@@ -9,18 +9,12 @@ import org.springframework.security.core.Authentication;
 
 public class CapitalMethodSecurityExpressionHandler extends DefaultMethodSecurityExpressionHandler {
   private final AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
-  private final PermissionEnrichmentService permissionEnrichmentService;
-
-  public CapitalMethodSecurityExpressionHandler(
-      PermissionEnrichmentService permissionEnrichmentService) {
-    this.permissionEnrichmentService = permissionEnrichmentService;
-  }
 
   @Override
   protected MethodSecurityExpressionOperations createSecurityExpressionRoot(
       Authentication authentication, MethodInvocation invocation) {
     final CapitalMethodSecurityExpressionRoot root =
-        new CapitalMethodSecurityExpressionRoot(authentication, permissionEnrichmentService);
+        new CapitalMethodSecurityExpressionRoot(authentication);
     root.setPermissionEvaluator(getPermissionEvaluator());
     root.setTrustResolver(this.trustResolver);
     root.setRoleHierarchy(getRoleHierarchy());

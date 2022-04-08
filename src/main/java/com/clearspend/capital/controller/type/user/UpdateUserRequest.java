@@ -4,7 +4,12 @@ import static com.clearspend.capital.controller.type.Constants.EMAIL_PATTERN;
 import static com.clearspend.capital.controller.type.Constants.PHONE_PATTERN;
 
 import com.clearspend.capital.common.masking.annotation.Sensitive;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.data.model.UserRelated;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.constraints.NotNull;
@@ -15,7 +20,10 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class UpdateUserRequest {
+public class UpdateUserRequest implements UserRelated {
+
+  @JsonIgnore private TypedId<UserId> userId;
+  @JsonIgnore private TypedId<BusinessId> businessId;
 
   @Sensitive
   @JsonProperty("firstName")

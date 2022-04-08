@@ -53,6 +53,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -118,7 +119,7 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
+  @PostFilter("hasRootPermission(#businessId, 'READ') or isSelfOwned(filterObject.allocation)")
   public List<AllocationRecord> getAllocationsForBusiness(final TypedId<BusinessId> businessId) {
     final Business business =
         businessRepository
@@ -128,7 +129,7 @@ public class AllocationService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#parentAllocationId, 'MANAGE_FUNDS')")
+  @PreAuthorize("hasAllocationPermission(#parentAllocationId, 'MANAGE_FUNDS')")
   public AllocationRecord createAllocation(
       TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> parentAllocationId,
@@ -246,7 +247,7 @@ public class AllocationService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#allocationId, 'MANAGE_FUNDS')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS')")
   public void updateAllocation(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
@@ -354,7 +355,7 @@ public class AllocationService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#allocationId, 'MANAGE_FUNDS')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateAllocationFunds(
       Business business,
       @NonNull TypedId<UserId> userId,
@@ -419,7 +420,7 @@ public class AllocationService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#allocationId, 'CUSTOMER_SERVICE_MANAGER')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'CUSTOMER_SERVICE_MANAGER')")
   public AdjustmentRecord updateAllocationBalance(
       @NonNull TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> allocationId,

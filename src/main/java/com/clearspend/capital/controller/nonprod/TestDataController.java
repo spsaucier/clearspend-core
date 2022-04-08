@@ -18,6 +18,7 @@ import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResp
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements.KycDocuments;
+import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUser;
 import com.clearspend.capital.data.model.Account;
@@ -396,14 +397,15 @@ public class TestDataController {
     // If this doesn't bomb, then something is right with the Stripe integration
     Name user2NewName = faker.name();
     userService.updateUser(
-        user2.user().getBusinessId(),
-        user2.user().getId(),
-        user2NewName.firstName(),
-        user2NewName.lastName(),
-        null,
-        null,
-        null,
-        false);
+        new UpdateUserRequest(
+            user2.user().getId(),
+            user2.user().getBusinessId(),
+            user2NewName.firstName(),
+            user2NewName.lastName(),
+            null,
+            null,
+            null,
+            false));
 
     CreateUpdateUserRecord user3 = createUser(business);
     users.add(user3);

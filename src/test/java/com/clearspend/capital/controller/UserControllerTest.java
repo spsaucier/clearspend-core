@@ -216,6 +216,8 @@ class UserControllerTest extends BaseCapitalTest {
 
     UpdateUserRequest userRecord =
         new UpdateUserRequest(
+            null,
+            null,
             faker.name().firstName(),
             createdUser.user().getLastName().toString(),
             new Address(createdUser.user().getAddress()),
@@ -265,6 +267,8 @@ class UserControllerTest extends BaseCapitalTest {
     // Use the Business Owner email to demonstrate that no duplicate emails are permitted
     UpdateUserRequest userRecord =
         new UpdateUserRequest(
+            null,
+            null,
             faker.name().firstName(),
             createdUser.user().getLastName().toString(),
             new Address(createdUser.user().getAddress()),

@@ -75,8 +75,7 @@ public class CodatService {
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
     Business business = businessService.retrieveBusinessForService(businessId, true);
@@ -91,8 +90,7 @@ public class CodatService {
     return codatClient.createQboConnectionForBusiness(business.getCodatCompanyRef()).getLinkUrl();
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean getIntegrationConnectionStatus(TypedId<BusinessId> businessId) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
 
@@ -103,8 +101,7 @@ public class CodatService {
     return business.getCodatConnectionId() != null;
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public SyncTransactionResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
       throws CodatApiCallException {
@@ -207,8 +204,7 @@ public class CodatService {
     }
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
@@ -219,8 +215,7 @@ public class CodatService {
     return bankAccounts;
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
@@ -230,8 +225,7 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(chartOfAccounts.getResults()));
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId,
       CodatAccountType type,
@@ -255,8 +249,7 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(response));
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CreateCreditCardRequest createBankAccountRequest)
       throws CodatApiCallException {
@@ -268,8 +261,7 @@ public class CodatService {
         createBankAccountRequest.getAccountName());
   }
 
-  @PreAuthorize(
-      "hasPermission(#businessId, 'BusinessId', 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public Boolean deleteCodatIntegrationConnection(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);

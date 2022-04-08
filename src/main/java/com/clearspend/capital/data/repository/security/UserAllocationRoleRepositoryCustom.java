@@ -81,8 +81,49 @@ public interface UserAllocationRoleRepositoryCustom {
   void deleteLesserAndEqualRolesBelow(
       TypedId<UserId> granteeUserId, TypedId<AllocationId> allocationId, String referenceRole);
 
+  /**
+   * Retrieves all possible permissions for the specified user within the specified business,
+   * factoring in global permissions.
+   *
+   * @param userId the User to get permissions for.
+   * @param businessId the Business the user is trying to access.
+   * @param globalRoles any global roles associated with the specified user.
+   * @return all possible permissions.
+   */
   List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
       final TypedId<UserId> userId,
       final TypedId<BusinessId> businessId,
+      final Set<String> globalRoles);
+
+  /**
+   * Retrieves all possible permissions for the specified user and allocation, factoring in global
+   * permissions.
+   *
+   * @param userId the User to get permissions for.
+   * @param allocationId the Allocation the user is trying to access.
+   * @param globalRoles any global roles associated with the specified user.
+   * @return all possible permissions
+   */
+  Optional<UserRolesAndPermissions> findAllByUserIdAndAllocationId(
+      final TypedId<UserId> userId,
+      final TypedId<AllocationId> allocationId,
+      final Set<String> globalRoles);
+
+  /**
+   * Retrieves all possible permissions for the specified user within the business & allocation,
+   * factoring in global permissions. The Business ID, Allocation ID, or both must be present, and
+   * the Allocation ID must be within the Business ID if both are present. This will be enforced by
+   * the SQL query.
+   *
+   * @param userId the User to get permissions for.
+   * @param businessId the Business the user is trying to access.
+   * @param allocationId the Allocation the user is trying to access.
+   * @param globalRoles any global roles associated with the user.
+   * @return all possible permissions.
+   */
+  Optional<UserRolesAndPermissions> findAllByUserIdAndBusinessIdAndAllocationId(
+      final TypedId<UserId> userId,
+      final TypedId<BusinessId> businessId,
+      final TypedId<AllocationId> allocationId,
       final Set<String> globalRoles);
 }

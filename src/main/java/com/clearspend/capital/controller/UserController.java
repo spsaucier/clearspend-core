@@ -112,16 +112,9 @@ public class UserController {
       @RequestBody UpdateUserRequest request) {
 
     try {
-      final CreateUpdateUserRecord updateUserRecord =
-          userService.updateUser(
-              CurrentUser.get().businessId(),
-              userId,
-              request.getFirstName(),
-              request.getLastName(),
-              request.getAddress() != null ? request.getAddress().toAddress() : null,
-              request.getEmail(),
-              request.getPhone(),
-              request.isGeneratePassword());
+      request.setBusinessId(CurrentUser.getBusinessId());
+      request.setUserId(userId);
+      final CreateUpdateUserRecord updateUserRecord = userService.updateUser(request);
       return new UpdateUserResponse(updateUserRecord.user().getId(), null);
     } catch (IllegalArgumentException e) {
       throw new DataIntegrityViolationException(e.getMessage(), e);

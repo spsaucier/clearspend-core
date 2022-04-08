@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,8 +24,8 @@ public class SecuredRolesAndPermissionsService {
   private final FusionAuthService fusionAuthService;
   private final UserRepository userRepository;
 
-  @PreAuthorize(
-      "isSelf(#userId) OR hasRootPermission(#businessId, 'MANAGE_USERS') OR hasGlobalPermission('CUSTOMER_SERVICE')")
+  @PostFilter(
+      "isSelfOwned(filterObject) OR hasRootPermission(filterObject, 'MANAGE_USERS|CUSTOMER_SERVICE')")
   public List<UserRolesAndPermissions> getAllPermissionsForUserInBusiness(
       final TypedId<UserId> userId, final TypedId<BusinessId> businessId) {
     final Set<String> globalRoles = getGlobalRoles(userId);

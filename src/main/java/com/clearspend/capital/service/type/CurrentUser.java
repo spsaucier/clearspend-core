@@ -56,6 +56,10 @@ public record CurrentUser(
     return new TypedId<>(getClaim(CAPITAL_USER_ID).toString());
   }
 
+  public static Set<String> getRoles() {
+    return get().roles();
+  }
+
   public static UserType getUserType() {
     return UserType.valueOf(getClaim(USER_TYPE).toString());
   }

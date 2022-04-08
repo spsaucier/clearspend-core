@@ -8,6 +8,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.PasswordUtil;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
@@ -34,7 +35,6 @@ import java.util.Optional;
 import java.util.StringJoiner;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
-import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +43,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -211,68 +212,59 @@ public class UserService {
     return new CreateUpdateUserRecord(user, password);
   }
 
-  /**
-   * Make changes to the user
-   *
-   * @param businessId must match the user being modified
-   * @param userId the user to modify
-   * @param firstName the new first name
-   * @param lastName the new last name
-   * @param address the new address
-   * @param email the new email address
-   * @param phone the new phone number
-   * @param generatePassword true to generate a new password (and send an email)
-   * @return the new User and password
-   */
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
-  @PreAuthorize("isSelf(#userId) or hasRootPermission(#businessId, 'MANAGE_USERS')")
-  public CreateUpdateUserRecord updateUser(
-      @NotNull TypedId<BusinessId> businessId,
-      @NotNull TypedId<UserId> userId,
-      @Nullable String firstName,
-      @Nullable String lastName,
-      @Nullable Address address,
-      @Nullable String email,
-      @Nullable String phone,
-      boolean generatePassword) {
+  @PreAuthorize(
+      "isSelfOwned(#updateUserRequest) or hasRootPermission(#updateUserRequest, 'MANAGE_USERS')")
+  public CreateUpdateUserRecord updateUser(@NonNull final UpdateUserRequest updateUserRequest) {
 
-    User user = retrieveUser(userId);
-    if (!businessId.equals(user.getBusinessId())) {
+    User user = retrieveUser(updateUserRequest.getUserId());
+    if (!updateUserRequest.getBusinessId().equals(user.getBusinessId())) {
       throw new IllegalArgumentException("businessId");
     }
-    if (isChanged(firstName, user.getFirstName())) {
-      user.setFirstName(new RequiredEncryptedStringWithHash(firstName));
+    if (isChanged(updateUserRequest.getFirstName(), user.getFirstName())) {
+      user.setFirstName(new RequiredEncryptedStringWithHash(updateUserRequest.getFirstName()));
     }
-    if (isChanged(lastName, user.getLastName())) {
-      user.setLastName(new RequiredEncryptedStringWithHash(lastName));
+    if (isChanged(updateUserRequest.getLastName(), user.getLastName())) {
+      user.setLastName(new RequiredEncryptedStringWithHash(updateUserRequest.getLastName()));
     }
     // TODO CAP-727 forbid changing email
-    if (isChanged(email, user.getEmail())) {
+    if (isChanged(updateUserRequest.getEmail(), user.getEmail())) {
       // Ensure that this email address does NOT already exist within the database.
-      RequiredEncryptedStringWithHash newHash = new RequiredEncryptedStringWithHash(email);
-      Optional<User> duplicate = userRepository.findByEmailHash(HashUtil.calculateHash(email));
-      if (duplicate.isPresent() && !duplicate.get().getId().equals(userId)) {
+      RequiredEncryptedStringWithHash newHash =
+          new RequiredEncryptedStringWithHash(updateUserRequest.getEmail());
+      Optional<User> duplicate =
+          userRepository.findByEmailHash(HashUtil.calculateHash(updateUserRequest.getEmail()));
+      if (duplicate.isPresent() && !duplicate.get().getId().equals(updateUserRequest.getUserId())) {
         throw new InvalidRequestException("A user with that email address already exists");
       }
       user.setEmail(newHash);
     }
-    if (isChanged(phone, user.getPhone())) {
-      user.setPhone(new NullableEncryptedStringWithHash(phone));
+    if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
+      user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
     }
-    if (isChanged(address, user.getAddress())) {
-      user.setAddress(address);
+    final Address updatedAddress =
+        Optional.ofNullable(updateUserRequest.getAddress())
+            .map(com.clearspend.capital.controller.type.Address::toAddress)
+            .orElse(null);
+    if (isChanged(updatedAddress, user.getAddress())) {
+      user.setAddress(updatedAddress);
     }
 
     String password = null;
-    if (generatePassword) {
+    if (updateUserRequest.isGeneratePassword()) {
       password = PasswordUtil.generatePassword();
       user.setSubjectRef(
           fusionAuthService
               .updateUser(
-                  businessId, user.getId(), email, password, user.getType(), user.getSubjectRef())
+                  updateUserRequest.getBusinessId(),
+                  user.getId(),
+                  updateUserRequest.getEmail(),
+                  password,
+                  user.getType(),
+                  user.getSubjectRef())
               .toString());
       twilioService.sendNotificationEmail(
           user.getEmail().getEncrypted(),
@@ -300,7 +292,7 @@ public class UserService {
     return StringUtils.isNotEmpty(newValue) && !oldValue.getEncrypted().equals(newValue);
   }
 
-  @PostAuthorize("isSelf(returnObject.id) or hasRootPermission(returnObject, 'VIEW_OWN')")
+  @PostAuthorize("isSelfOwned(returnObject) or hasRootPermission(returnObject, 'MANAGE_USERS')")
   public User retrieveUser(TypedId<UserId> userId) {
     return retrieveUserForService(userId);
   }
@@ -321,8 +313,8 @@ public class UserService {
     return userRepository.findBySubjectRef(subjectRef);
   }
 
-  @PreAuthorize(
-      "hasRootPermission(#businessId, 'VIEW_OWN') or hasGlobalPermission('CUSTOMER_SERVICE')")
+  @PostFilter(
+      "hasRootPermission(#businessId, 'MANAGE_USERS|CUSTOMER_SERVICE') or isSelfOwned(filterObject)")
   public List<User> retrieveUsersForBusiness(TypedId<BusinessId> businessId) {
     return userRepository.findByBusinessId(businessId);
   }
@@ -331,7 +323,7 @@ public class UserService {
     return userRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
+  //  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN|MANAGE_USERS')")
   public Page<FilteredUserWithCardListRecord> retrieveUserPage(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
     return userRepository.find(businessId, userFilterCriteria);
@@ -347,7 +339,7 @@ public class UserService {
     return userRepository.save(user).isArchived();
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
+  //  @PreAuthorize("hasRootPermission(#businessId, 'VIEW_OWN')")
   public byte[] createCSVFile(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
 

@@ -151,6 +151,31 @@ public class RolesAndPermissionsService {
         .orElseThrow(() -> new InvalidRequestException("Does not exist."));
   }
 
+  public List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
+      final TypedId<UserId> userId,
+      final TypedId<BusinessId> businessId,
+      final Set<String> globalRoles) {
+    return userAllocationRoleRepository.findAllByUserIdAndBusinessId(
+        userId, businessId, globalRoles);
+  }
+
+  public Optional<UserRolesAndPermissions> findAllByUserIdAndAllocationId(
+      final TypedId<UserId> userId,
+      final TypedId<AllocationId> allocationId,
+      final Set<String> globalRoles) {
+    return userAllocationRoleRepository.findAllByUserIdAndAllocationId(
+        userId, allocationId, globalRoles);
+  }
+
+  public Optional<UserRolesAndPermissions> findAllByUserIdAndBusinessIdAndAllocationId(
+      final TypedId<UserId> userId,
+      final TypedId<BusinessId> businessId,
+      final TypedId<AllocationId> allocationId,
+      final Set<String> globalRoles) {
+    return userAllocationRoleRepository.findAllByUserIdAndBusinessIdAndAllocationId(
+        userId, businessId, allocationId, globalRoles);
+  }
+
   @FusionAuthUserAccessor(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
