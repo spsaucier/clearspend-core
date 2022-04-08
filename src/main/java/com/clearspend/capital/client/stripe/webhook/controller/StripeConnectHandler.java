@@ -333,6 +333,9 @@ public class StripeConnectHandler {
   @StripeBusinessOp(
       reviewer = "Craig Miller",
       explanation = "This is a method where Stripe messages flow to the BusinessService")
+  @StripeBankAccountOp(
+      reviewer = "Craig Miller",
+      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
   @TwilioKycKybOp(
       reviewer = "Craig Miller",
       explanation = "Stripe operations cannot enforce user permissions")
@@ -373,7 +376,9 @@ public class StripeConnectHandler {
 
       // send notification only to onboarded customers who haven't selected plaid route
       if (business.getStatus() == BusinessStatus.ACTIVE
-          && businessBankAccountService.getBusinessBankAccounts(businessId, true).isEmpty()) {
+          && businessBankAccountService
+              .getBusinessBankAccountsForStripe(businessId, true)
+              .isEmpty()) {
         twilioService.sendFinancialAccountReadyEmail(
             business.getBusinessEmail().getEncrypted(), business.getLegalName());
       }

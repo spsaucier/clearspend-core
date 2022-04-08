@@ -274,6 +274,11 @@ public class BusinessBankAccountService {
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public List<BusinessBankAccount> getBusinessBankAccounts(
       TypedId<BusinessId> businessId, boolean stripeRegisteredOnly) {
+    return doGetBusinessBankAccounts(businessId, stripeRegisteredOnly);
+  }
+
+  private List<BusinessBankAccount> doGetBusinessBankAccounts(
+      final TypedId<BusinessId> businessId, final boolean stripeRegisteredOnly) {
     return businessBankAccountRepository.findByBusinessId(businessId).stream()
         .filter(businessBankAccount -> !businessBankAccount.getDeleted())
         .filter(
@@ -281,6 +286,17 @@ public class BusinessBankAccountService {
                 !stripeRegisteredOnly
                     || StringUtils.isNotEmpty(businessBankAccount.getStripeBankAccountRef()))
         .collect(Collectors.toList());
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This method is used on Stripe operations, where permissions are not available.",
+      allowlistAnnotations = {StripeBankAccountOp.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public List<BusinessBankAccount> getBusinessBankAccountsForStripe(
+      final TypedId<BusinessId> businessId, final boolean stripeRegisteredOnly) {
+    return doGetBusinessBankAccounts(businessId, stripeRegisteredOnly);
   }
 
   @Transactional
