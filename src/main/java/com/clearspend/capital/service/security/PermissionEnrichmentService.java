@@ -91,15 +91,15 @@ public class PermissionEnrichmentService {
       }
     }
 
-    return hasPermissions(overlapPermissions)
-        // For VIEW_OWN:
-        // 1) If there are any other valid permissions besides VIEW_OWN, we don't need to evaluate
-        // it. They already have permission
-        // 2) If the only permission is VIEW_OWN, then there must be a non-null User ID that matches
-        // the CurrentUser.userId().
-        // This is because the User ID passed to this method is the User ID of the resource being
-        // retrieved and it determines ownership
-        && (!isOnlyPermissionViewOwn(overlapPermissions) || isAllowedViewOwn(userId));
+    // For VIEW_OWN:
+    // 1) If there are any other valid permissions besides VIEW_OWN, we don't need to evaluate
+    // it. They already have permission
+    // 2) If the only permission is VIEW_OWN, then there must be a non-null User ID that matches
+    // the CurrentUser.userId().
+    // This is because the User ID passed to this method is the User ID of the resource being
+    // retrieved and it determines ownership
+    return (hasPermissions(overlapPermissions) && !isOnlyPermissionViewOwn(overlapPermissions))
+        || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId));
   }
 
   private boolean hasPermissions(@NonNull final RequiredPermissions overlapPermissions) {

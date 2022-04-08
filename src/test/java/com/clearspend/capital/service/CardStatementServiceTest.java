@@ -14,6 +14,7 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import java.util.Set;
 import lombok.SneakyThrows;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +66,16 @@ public class CardStatementServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_EMPLOYEE)
+        .allowRolesOnAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE,
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER,
+                DefaultRoles.GLOBAL_VIEWER))
         .build()
         .validateServiceMethod(action);
   }

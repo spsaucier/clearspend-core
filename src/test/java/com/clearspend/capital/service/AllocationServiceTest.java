@@ -28,12 +28,13 @@ import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import javax.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -105,15 +106,32 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId(), "Child2", rootAllocation.getId(), employee)
             .allocation();
 
-    final ThrowingRunnable action =
+    final Function<List<AllocationRecord>, List<Allocation>> toAllocations =
+        records -> records.stream().map(AllocationRecord::allocation).toList();
+
+    final ThrowingSupplier<List<AllocationRecord>> action =
         () -> allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .<List<AllocationRecord>>allowRolesOnAllocationWithResult(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            records ->
+                assertThat(toAllocations.apply(records))
+                    .hasSize(3)
+                    .contains(rootAllocation, childAllocation1, childAllocation2))
+        .<List<AllocationRecord>>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_EMPLOYEE, records -> assertThat(records).isEmpty())
+        .<List<AllocationRecord>>allowUserWithResult(
+            employee,
+            records ->
+                assertThat(toAllocations.apply(records)).hasSize(1).contains(childAllocation2))
+        .<List<AllocationRecord>>allowAllGlobalRolesWithResult(
+            records -> assertThat(records).isEmpty())
         .build()
         .validateServiceMethod(action);
-
-    final Function<List<AllocationRecord>, List<Allocation>> toAllocations =
-        records -> records.stream().map(AllocationRecord::allocation).toList();
 
     testHelper.setCurrentUser(manager);
     final List<AllocationRecord> managerAllocations =

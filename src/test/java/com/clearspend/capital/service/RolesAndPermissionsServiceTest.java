@@ -15,7 +15,6 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -53,6 +52,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
@@ -563,7 +563,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     entityManager.flush();
     makeBookkeeperBusinessUser.run();
     assertThrows(
-        ForbiddenException.class,
+        AccessDeniedException.class,
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
                 rootAllocation.getId(),
@@ -588,7 +588,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     entityManager.flush();
     makeBookkeeperBusinessUser.run();
     assertThrows(
-        ForbiddenException.class,
+        AccessDeniedException.class,
         () ->
             rolesAndPermissionsService.assertUserHasPermission(
                 rootAllocation.getId(),

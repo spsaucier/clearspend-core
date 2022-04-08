@@ -52,7 +52,6 @@ import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
 import com.clearspend.capital.service.type.PageToken;
 import com.clearspend.capital.testutils.data.TestDataHelper;
-import com.clearspend.capital.testutils.permission.CustomUser;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.math.BigDecimal;
@@ -63,9 +62,9 @@ import java.util.stream.IntStream;
 import javax.persistence.EntityManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -361,9 +360,9 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(primaryBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowUser(activityOwner)
         .build()
         .validateServiceMethod(
             () -> accountActivityService.getAccountActivity(accountActivity.getId()));
@@ -388,16 +387,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             .build();
     final AccountActivity accountActivity = testDataHelper.createAccountActivity(config);
 
-    final ThrowingRunnable action =
+    final ThrowingSupplier<AccountActivity> action =
         () ->
             accountActivityService.updateAccountActivity(
                 accountActivity, "I am updating this activity", null);
 
     permissionValidationHelper
         .buildValidator(primaryBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowUser(activityOwner)
         .build()
         .validateServiceMethod(action);
   }
@@ -535,9 +534,9 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(primaryBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(activityOwner))
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowUser(activityOwner)
         .build()
         .validateServiceMethod(
             () ->
@@ -548,38 +547,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void getCardAccountActivity_UserFilterPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
-
     final CardAndLimit cardAndLimit =
         testDataHelper.createCardAndLimit(
             CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
@@ -609,29 +576,24 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     final PageRequest pageRequest = new PageRequest(0, 10);
     criteria.setPageToken(PageRequest.toPageToken(pageRequest));
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final CardAccountActivity adminPage =
-        accountActivityService.getCardAccountActivity(
-            createBusinessRecord.business().getId(),
-            createBusinessRecord.user().getId(),
-            card.getId(),
-            criteria);
-    assertEquals(3, adminPage.activityPage().getTotalElements());
-    assertEquals(3, adminPage.activityPage().getContent().size());
+    final ThrowingSupplier<CardAccountActivity> action =
+        () ->
+            accountActivityService.getCardAccountActivity(
+                createBusinessRecord.business().getId(),
+                createBusinessRecord.user().getId(),
+                card.getId(),
+                criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final CardAccountActivity managerPage =
-        accountActivityService.getCardAccountActivity(
-            createBusinessRecord.business().getId(),
-            createBusinessRecord.user().getId(),
-            card.getId(),
-            criteria);
-    assertEquals(3, managerPage.activityPage().getTotalElements());
-    assertEquals(3, managerPage.activityPage().getContent().size());
-
-    // Other users don't matter, because this method is restricted based on the Card anyway
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<CardAccountActivity>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER),
+            result -> {
+              assertEquals(3, result.activityPage().getTotalElements());
+              assertEquals(3, result.activityPage().getContent().size());
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
@@ -706,202 +668,16 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     assertEquals(2, new String(employeeOwnerBytes).split("\n").length);
   }
 
-  @Test
-  void getCardAccountActivity_UserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final CardAndLimit cardAndLimit =
-        testDataHelper.createCardAndLimit(
-            CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
-    final AccountActivityFilterCriteria criteria = createCriteria();
-
-    final ThrowingRunnable action =
-        () ->
-            accountActivityService.getCardAccountActivity(
-                createBusinessRecord.business().getId(),
-                createBusinessRecord.user().getId(),
-                cardAndLimit.card().getId(),
-                criteria);
-
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .build()
-        .validateServiceMethod(action);
+  private User createEmployeeOwnerUser(final CreateBusinessRecord createBusinessRecord) {
+    return testHelper
+        .createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE)
+        .user();
   }
 
-  @Test
-  void findDataForChart_Merchant_FullTestWithUserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
-    final CardAndLimit cardAndLimit =
-        testDataHelper.createCardAndLimit(
-            CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
-    final Card card = cardAndLimit.card();
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Howdy",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
-            .allocation();
-
-    final MerchantDetails merchant1 = testDataHelper.createMerchant();
-    final MerchantDetails merchant2 = testDataHelper.createMerchant();
-    merchant2.setName("OtherMerchant");
-
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().minusDays(1))
-            .cardId(card.getId())
-            .merchant(merchant1)
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now())
-            .cardId(card.getId())
-            .merchant(merchant1)
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .allocation(allocation)
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().plusDays(1))
-            .cardId(card.getId())
-            .merchant(merchant2)
-            .build());
-
-    entityManager.flush();
-
-    final ChartFilterCriteria criteria =
-        new ChartFilterCriteria(
-            ChartFilterType.MERCHANT,
-            null,
-            null,
-            OffsetDateTime.now().minusWeeks(1),
-            OffsetDateTime.now().plusWeeks(1),
-            Sort.Direction.ASC);
-
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final ChartData adminResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(adminResult.getAllocationChartData());
-    assertNull(adminResult.getMerchantCategoryChartData());
-    assertNull(adminResult.getUserChartData());
-    assertEquals(2, adminResult.getMerchantChartData().size());
-    assertTrue(
-        adminResult.getMerchantChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        adminResult.getMerchantChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
-
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final ChartData managerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(managerResult.getMerchantCategoryChartData());
-    assertNull(managerResult.getAllocationChartData());
-    assertNull(managerResult.getUserChartData());
-    assertEquals(2, managerResult.getMerchantChartData().size());
-    assertTrue(
-        managerResult.getMerchantChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        managerResult.getMerchantChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final ChartData otherEmployeeResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(otherEmployeeResult.getMerchantCategoryChartData());
-    assertNull(otherEmployeeResult.getAllocationChartData());
-    assertNull(otherEmployeeResult.getUserChartData());
-    assertEquals(0, otherEmployeeResult.getMerchantChartData().size());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final ChartData empOwnerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(empOwnerResult.getMerchantCategoryChartData());
-    assertNull(empOwnerResult.getAllocationChartData());
-    assertNull(empOwnerResult.getUserChartData());
-    assertEquals(1, empOwnerResult.getMerchantChartData().size());
-    assertEquals(
-        new BigDecimal("1.00"),
-        empOwnerResult.getMerchantChartData().get(0).getAmount().getAmount());
-  }
-
-  @Test
-  void findDataForChart_MerchantCategory_FullTestWithUserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
+  private void prepareChartTestData(
+      final CreateBusinessRecord createBusinessRecord, final User employeeOwner) {
+    final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
     final CardAndLimit cardAndLimit =
         testDataHelper.createCardAndLimit(
             CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
@@ -922,7 +698,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
+            .owner(employeeOwner)
             .type(AccountActivityType.NETWORK_CAPTURE)
             .activityTime(OffsetDateTime.now().minusDays(1))
             .cardId(card.getId())
@@ -930,6 +706,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             .build());
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .owner(otherUser)
             .type(AccountActivityType.NETWORK_CAPTURE)
             .activityTime(OffsetDateTime.now())
             .cardId(card.getId())
@@ -937,6 +714,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             .build());
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .owner(otherUser)
             .allocation(allocation)
             .type(AccountActivityType.NETWORK_CAPTURE)
             .activityTime(OffsetDateTime.now().plusDays(1))
@@ -945,6 +723,99 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             .build());
 
     entityManager.flush();
+  }
+
+  @Test
+  void findDataForChart_Merchant_FullTestWithUserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    prepareChartTestData(createBusinessRecord, employeeOwner);
+
+    final ChartFilterCriteria criteria =
+        new ChartFilterCriteria(
+            ChartFilterType.MERCHANT,
+            null,
+            null,
+            OffsetDateTime.now().minusWeeks(1),
+            OffsetDateTime.now().plusWeeks(1),
+            Sort.Direction.ASC);
+
+    final ThrowingSupplier<ChartData> action =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteria);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<ChartData>allowAllGlobalRolesWithResult(
+            globalRoleResult -> {
+              assertNull(globalRoleResult.getMerchantCategoryChartData());
+              assertNull(globalRoleResult.getAllocationChartData());
+              assertNull(globalRoleResult.getUserChartData());
+              assertEquals(0, globalRoleResult.getMerchantChartData().size());
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN,
+            adminResult -> {
+              assertNull(adminResult.getAllocationChartData());
+              assertNull(adminResult.getMerchantCategoryChartData());
+              assertNull(adminResult.getUserChartData());
+              assertEquals(2, adminResult.getMerchantChartData().size());
+              assertTrue(
+                  adminResult.getMerchantChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  adminResult.getMerchantChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_MANAGER,
+            managerResult -> {
+              assertNull(managerResult.getMerchantCategoryChartData());
+              assertNull(managerResult.getAllocationChartData());
+              assertNull(managerResult.getUserChartData());
+              assertEquals(2, managerResult.getMerchantChartData().size());
+              assertTrue(
+                  managerResult.getMerchantChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  managerResult.getMerchantChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            otherEmployeeResult -> {
+              assertNull(otherEmployeeResult.getMerchantCategoryChartData());
+              assertNull(otherEmployeeResult.getAllocationChartData());
+              assertNull(otherEmployeeResult.getUserChartData());
+              assertEquals(0, otherEmployeeResult.getMerchantChartData().size());
+            })
+        .<ChartData>allowUserWithResult(
+            employeeOwner,
+            empOwnerResult -> {
+              assertNull(empOwnerResult.getMerchantCategoryChartData());
+              assertNull(empOwnerResult.getAllocationChartData());
+              assertNull(empOwnerResult.getUserChartData());
+              assertEquals(1, empOwnerResult.getMerchantChartData().size());
+              assertEquals(
+                  new BigDecimal("1.00"),
+                  empOwnerResult.getMerchantChartData().get(0).getAmount().getAmount());
+            })
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void findDataForChart_MerchantCategory_FullTestWithUserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    prepareChartTestData(createBusinessRecord, employeeOwner);
 
     final ChartFilterCriteria criteria =
         new ChartFilterCriteria(
@@ -955,128 +826,81 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             OffsetDateTime.now().plusWeeks(1),
             Sort.Direction.ASC);
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final ChartData adminResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(adminResult.getAllocationChartData());
-    assertNull(adminResult.getMerchantChartData());
-    assertNull(adminResult.getUserChartData());
-    assertEquals(2, adminResult.getMerchantCategoryChartData().size());
-    assertTrue(
-        adminResult.getMerchantCategoryChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        adminResult.getMerchantCategoryChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+    final ThrowingSupplier<ChartData> action =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final ChartData managerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(managerResult.getMerchantChartData());
-    assertNull(managerResult.getAllocationChartData());
-    assertNull(managerResult.getUserChartData());
-    assertEquals(2, managerResult.getMerchantCategoryChartData().size());
-    assertTrue(
-        managerResult.getMerchantCategoryChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        managerResult.getMerchantCategoryChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final ChartData otherEmployeeResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(otherEmployeeResult.getMerchantChartData());
-    assertNull(otherEmployeeResult.getAllocationChartData());
-    assertNull(otherEmployeeResult.getUserChartData());
-    assertEquals(0, otherEmployeeResult.getMerchantCategoryChartData().size());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final ChartData empOwnerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(empOwnerResult.getMerchantChartData());
-    assertNull(empOwnerResult.getAllocationChartData());
-    assertNull(empOwnerResult.getUserChartData());
-    assertEquals(1, empOwnerResult.getMerchantCategoryChartData().size());
-    assertEquals(
-        new BigDecimal("1.00"),
-        empOwnerResult.getMerchantCategoryChartData().get(0).getAmount().getAmount());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<ChartData>allowAllGlobalRolesWithResult(
+            globalRoleResult -> {
+              assertNull(globalRoleResult.getMerchantChartData());
+              assertNull(globalRoleResult.getAllocationChartData());
+              assertNull(globalRoleResult.getUserChartData());
+              assertEquals(0, globalRoleResult.getMerchantCategoryChartData().size());
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN,
+            adminResult -> {
+              assertNull(adminResult.getAllocationChartData());
+              assertNull(adminResult.getMerchantChartData());
+              assertNull(adminResult.getUserChartData());
+              assertEquals(2, adminResult.getMerchantCategoryChartData().size());
+              assertTrue(
+                  adminResult.getMerchantCategoryChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  adminResult.getMerchantCategoryChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_MANAGER,
+            managerResult -> {
+              assertNull(managerResult.getMerchantChartData());
+              assertNull(managerResult.getAllocationChartData());
+              assertNull(managerResult.getUserChartData());
+              assertEquals(2, managerResult.getMerchantCategoryChartData().size());
+              assertTrue(
+                  managerResult.getMerchantCategoryChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  managerResult.getMerchantCategoryChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            otherEmployeeResult -> {
+              assertNull(otherEmployeeResult.getMerchantChartData());
+              assertNull(otherEmployeeResult.getAllocationChartData());
+              assertNull(otherEmployeeResult.getUserChartData());
+              assertEquals(0, otherEmployeeResult.getMerchantCategoryChartData().size());
+            })
+        .<ChartData>allowUserWithResult(
+            employeeOwner,
+            empOwnerResult -> {
+              assertNull(empOwnerResult.getMerchantChartData());
+              assertNull(empOwnerResult.getAllocationChartData());
+              assertNull(empOwnerResult.getUserChartData());
+              assertEquals(1, empOwnerResult.getMerchantCategoryChartData().size());
+              assertEquals(
+                  new BigDecimal("1.00"),
+                  empOwnerResult.getMerchantCategoryChartData().get(0).getAmount().getAmount());
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
   void findDataForChart_User_FullTestWithUserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
-    final CardAndLimit cardAndLimit =
-        testDataHelper.createCardAndLimit(
-            CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
-    final Card card = cardAndLimit.card();
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Howdy",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
-            .allocation();
-
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().minusDays(1))
-            .cardId(card.getId())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(createBusinessRecord.user())
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now())
-            .cardId(card.getId())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(createBusinessRecord.user())
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().plusDays(1))
-            .cardId(card.getId())
-            .build());
-
-    entityManager.flush();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    prepareChartTestData(createBusinessRecord, employeeOwner);
 
     final ChartFilterCriteria criteria =
         new ChartFilterCriteria(
@@ -1087,126 +911,81 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             OffsetDateTime.now().plusWeeks(1),
             Sort.Direction.ASC);
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final ChartData adminResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(adminResult.getMerchantCategoryChartData());
-    assertNull(adminResult.getMerchantChartData());
-    assertNull(adminResult.getAllocationChartData());
-    assertEquals(2, adminResult.getUserChartData().size());
-    assertTrue(
-        adminResult.getUserChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        adminResult.getUserChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+    final ThrowingSupplier<ChartData> action =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final ChartData managerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(managerResult.getMerchantCategoryChartData());
-    assertNull(managerResult.getMerchantChartData());
-    assertNull(managerResult.getAllocationChartData());
-    assertEquals(2, managerResult.getUserChartData().size());
-    assertTrue(
-        managerResult.getUserChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        managerResult.getUserChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final ChartData otherEmployeeResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(otherEmployeeResult.getMerchantCategoryChartData());
-    assertNull(otherEmployeeResult.getMerchantChartData());
-    assertNull(otherEmployeeResult.getAllocationChartData());
-    assertEquals(0, otherEmployeeResult.getUserChartData().size());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final ChartData empOwnerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(empOwnerResult.getMerchantCategoryChartData());
-    assertNull(empOwnerResult.getMerchantChartData());
-    assertNull(empOwnerResult.getAllocationChartData());
-    assertEquals(1, empOwnerResult.getUserChartData().size());
-    assertEquals(
-        new BigDecimal("1.00"), empOwnerResult.getUserChartData().get(0).getAmount().getAmount());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<ChartData>allowAllGlobalRolesWithResult(
+            globalRoleResult -> {
+              assertNull(globalRoleResult.getMerchantCategoryChartData());
+              assertNull(globalRoleResult.getAllocationChartData());
+              assertNull(globalRoleResult.getMerchantChartData());
+              assertEquals(0, globalRoleResult.getUserChartData().size());
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN,
+            adminResult -> {
+              assertNull(adminResult.getAllocationChartData());
+              assertNull(adminResult.getMerchantCategoryChartData());
+              assertNull(adminResult.getMerchantChartData());
+              assertEquals(2, adminResult.getUserChartData().size());
+              assertTrue(
+                  adminResult.getUserChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  adminResult.getUserChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_MANAGER,
+            managerResult -> {
+              assertNull(managerResult.getMerchantCategoryChartData());
+              assertNull(managerResult.getAllocationChartData());
+              assertNull(managerResult.getMerchantChartData());
+              assertEquals(2, managerResult.getUserChartData().size());
+              assertTrue(
+                  managerResult.getUserChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  managerResult.getUserChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            otherEmployeeResult -> {
+              assertNull(otherEmployeeResult.getMerchantCategoryChartData());
+              assertNull(otherEmployeeResult.getAllocationChartData());
+              assertNull(otherEmployeeResult.getMerchantChartData());
+              assertEquals(0, otherEmployeeResult.getUserChartData().size());
+            })
+        .<ChartData>allowUserWithResult(
+            employeeOwner,
+            empOwnerResult -> {
+              assertNull(empOwnerResult.getMerchantCategoryChartData());
+              assertNull(empOwnerResult.getAllocationChartData());
+              assertNull(empOwnerResult.getMerchantChartData());
+              assertEquals(1, empOwnerResult.getUserChartData().size());
+              assertEquals(
+                  new BigDecimal("1.00"),
+                  empOwnerResult.getUserChartData().get(0).getAmount().getAmount());
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
   void findDataForChart_Allocation_FullTestWithUserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
-    final CardAndLimit cardAndLimit =
-        testDataHelper.createCardAndLimit(
-            CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
-    final Card card = cardAndLimit.card();
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Howdy",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
-            .allocation();
-
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().minusDays(1))
-            .cardId(card.getId())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now())
-            .cardId(card.getId())
-            .build());
-    testDataHelper.createAccountActivity(
-        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .allocation(allocation)
-            .type(AccountActivityType.NETWORK_CAPTURE)
-            .activityTime(OffsetDateTime.now().plusDays(1))
-            .cardId(card.getId())
-            .build());
-
-    entityManager.flush();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    prepareChartTestData(createBusinessRecord, employeeOwner);
 
     final ChartFilterCriteria criteria =
         new ChartFilterCriteria(
@@ -1217,92 +996,80 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             OffsetDateTime.now().plusWeeks(1),
             Sort.Direction.ASC);
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final ChartData adminResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(adminResult.getMerchantCategoryChartData());
-    assertNull(adminResult.getMerchantChartData());
-    assertNull(adminResult.getUserChartData());
-    assertEquals(2, adminResult.getAllocationChartData().size());
-    assertTrue(
-        adminResult.getAllocationChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        adminResult.getAllocationChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+    final ThrowingSupplier<ChartData> action =
+        () ->
+            accountActivityService.findDataForChart(
+                createBusinessRecord.business().getId(), criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final ChartData managerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(managerResult.getMerchantCategoryChartData());
-    assertNull(managerResult.getMerchantChartData());
-    assertNull(managerResult.getUserChartData());
-    assertEquals(2, managerResult.getAllocationChartData().size());
-    assertTrue(
-        managerResult.getAllocationChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
-    assertTrue(
-        managerResult.getAllocationChartData().stream()
-            .anyMatch(data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final ChartData otherEmployeeResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(otherEmployeeResult.getMerchantCategoryChartData());
-    assertNull(otherEmployeeResult.getMerchantChartData());
-    assertNull(otherEmployeeResult.getUserChartData());
-    assertEquals(0, otherEmployeeResult.getAllocationChartData().size());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final ChartData empOwnerResult =
-        accountActivityService.findDataForChart(createBusinessRecord.business().getId(), criteria);
-    assertNull(empOwnerResult.getMerchantCategoryChartData());
-    assertNull(empOwnerResult.getMerchantChartData());
-    assertNull(empOwnerResult.getUserChartData());
-    assertEquals(1, empOwnerResult.getAllocationChartData().size());
-    assertEquals(
-        new BigDecimal("1.00"),
-        empOwnerResult.getAllocationChartData().get(0).getAmount().getAmount());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<ChartData>allowAllGlobalRolesWithResult(
+            globalRoleResult -> {
+              assertNull(globalRoleResult.getMerchantCategoryChartData());
+              assertNull(globalRoleResult.getMerchantChartData());
+              assertNull(globalRoleResult.getUserChartData());
+              assertEquals(0, globalRoleResult.getAllocationChartData().size());
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN,
+            adminResult -> {
+              assertNull(adminResult.getMerchantChartData());
+              assertNull(adminResult.getMerchantCategoryChartData());
+              assertNull(adminResult.getUserChartData());
+              assertEquals(2, adminResult.getAllocationChartData().size());
+              assertTrue(
+                  adminResult.getAllocationChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  adminResult.getAllocationChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_MANAGER,
+            managerResult -> {
+              assertNull(managerResult.getMerchantCategoryChartData());
+              assertNull(managerResult.getMerchantChartData());
+              assertNull(managerResult.getUserChartData());
+              assertEquals(2, managerResult.getAllocationChartData().size());
+              assertTrue(
+                  managerResult.getAllocationChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("2.00"))));
+              assertTrue(
+                  managerResult.getAllocationChartData().stream()
+                      .anyMatch(
+                          data -> data.getAmount().getAmount().equals(new BigDecimal("1.00"))));
+            })
+        .<ChartData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            otherEmployeeResult -> {
+              assertNull(otherEmployeeResult.getMerchantCategoryChartData());
+              assertNull(otherEmployeeResult.getMerchantChartData());
+              assertNull(otherEmployeeResult.getUserChartData());
+              assertEquals(0, otherEmployeeResult.getAllocationChartData().size());
+            })
+        .<ChartData>allowUserWithResult(
+            employeeOwner,
+            empOwnerResult -> {
+              assertNull(empOwnerResult.getMerchantCategoryChartData());
+              assertNull(empOwnerResult.getMerchantChartData());
+              assertNull(empOwnerResult.getUserChartData());
+              assertEquals(1, empOwnerResult.getAllocationChartData().size());
+              assertEquals(
+                  new BigDecimal("1.00"),
+                  empOwnerResult.getAllocationChartData().get(0).getAmount().getAmount());
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
   void findDataForLineGraph_FullTestWithUserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
     final CardAndLimit cardAndLimit =
         testDataHelper.createCardAndLimit(
             CardConfig.fromCreateBusinessRecord(createBusinessRecord).build());
@@ -1310,7 +1077,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     testDataHelper.createAccountActivity(
         AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-            .owner(users.employeeOwner())
+            .owner(employeeOwner)
             .type(AccountActivityType.NETWORK_CAPTURE)
             .activityTime(OffsetDateTime.now().minusDays(1))
             .cardId(card.getId())
@@ -1337,42 +1104,41 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             OffsetDateTime.now().minusWeeks(1),
             OffsetDateTime.now().plusWeeks(1));
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final DashboardData adminResult =
-        accountActivityService.findDataForLineGraph(
-            createBusinessRecord.business().getId(), criteria);
-    assertEquals(10, adminResult.getGraphData().size());
-    assertEquals(new BigDecimal("2.00"), adminResult.getGraphData().get(4).getAmount());
-    assertEquals(new BigDecimal("1.00"), adminResult.getGraphData().get(5).getAmount());
-    assertEquals(new BigDecimal("3.00"), adminResult.getTotalAmount());
+    final ThrowingSupplier<DashboardData> action =
+        () ->
+            accountActivityService.findDataForLineGraph(
+                createBusinessRecord.business().getId(), criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final DashboardData managerResult =
-        accountActivityService.findDataForLineGraph(
-            createBusinessRecord.business().getId(), criteria);
-    assertEquals(10, managerResult.getGraphData().size());
-    assertEquals(new BigDecimal("3.00"), managerResult.getTotalAmount());
-    assertEquals(new BigDecimal("2.00"), managerResult.getGraphData().get(4).getAmount());
-    assertEquals(new BigDecimal("1.00"), managerResult.getGraphData().get(5).getAmount());
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final DashboardData otherEmployeeResult =
-        accountActivityService.findDataForLineGraph(
-            createBusinessRecord.business().getId(), criteria);
-    assertEquals(10, otherEmployeeResult.getGraphData().size());
-    assertEquals(new BigDecimal("0"), otherEmployeeResult.getTotalAmount());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final DashboardData employeeOwnerResult =
-        accountActivityService.findDataForLineGraph(
-            createBusinessRecord.business().getId(), criteria);
-    assertEquals(10, employeeOwnerResult.getGraphData().size());
-    assertEquals(new BigDecimal("1.00"), employeeOwnerResult.getTotalAmount());
-    assertEquals(new BigDecimal("1.00"), employeeOwnerResult.getGraphData().get(4).getAmount());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<DashboardData>allowAllGlobalRolesWithResult(
+            result -> {
+              assertEquals(10, result.getGraphData().size());
+              assertEquals(new BigDecimal("0"), result.getTotalAmount());
+            })
+        .<DashboardData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER),
+            result -> {
+              assertEquals(10, result.getGraphData().size());
+              assertEquals(new BigDecimal("2.00"), result.getGraphData().get(4).getAmount());
+              assertEquals(new BigDecimal("1.00"), result.getGraphData().get(5).getAmount());
+              assertEquals(new BigDecimal("3.00"), result.getTotalAmount());
+            })
+        .<DashboardData>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            result -> {
+              assertEquals(10, result.getGraphData().size());
+              assertEquals(new BigDecimal("0"), result.getTotalAmount());
+            })
+        .<DashboardData>allowUserWithResult(
+            employeeOwner,
+            result -> {
+              assertEquals(10, result.getGraphData().size());
+              assertEquals(new BigDecimal("1.00"), result.getTotalAmount());
+              assertEquals(new BigDecimal("1.00"), result.getGraphData().get(4).getAmount());
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 
   private AccountActivityFilterCriteria createCriteria() {
@@ -1471,41 +1237,12 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Test
   void find_UserFilterPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
-            createBusinessRecord.user(),
-            () -> {
-              final User employeeOwner =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User otherEmployee =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_EMPLOYEE)
-                      .user();
-              final User admin =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_ADMIN)
-                      .user();
-              final User manager =
-                  testHelper
-                      .createUserWithRole(
-                          createBusinessRecord.allocationRecord().allocation(),
-                          DefaultRoles.ALLOCATION_MANAGER)
-                      .user();
-
-              return new FindPermissionUsers(employeeOwner, otherEmployee, admin, manager);
-            });
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
     final AccountActivity activity1 =
         testDataHelper.createAccountActivity(
             AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
-                .owner(users.employeeOwner())
+                .owner(employeeOwner)
                 .build());
     final AccountActivity activity2 =
         testDataHelper.createAccountActivity(
@@ -1522,35 +1259,38 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     final PageRequest pageRequest = new PageRequest(0, 10);
     criteria.setPageToken(PageRequest.toPageToken(pageRequest));
 
-    // Admin user should see all
-    testHelper.setCurrentUser(users.admin());
-    final Page<AccountActivity> adminPage =
-        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
-    assertEquals(3, adminPage.getTotalElements());
-    assertEquals(3, adminPage.getContent().size());
-    assertThat(adminPage.getContent()).containsExactlyInAnyOrder(activity1, activity2, activity3);
+    final ThrowingSupplier<Page<AccountActivity>> action =
+        () -> accountActivityService.find(createBusinessRecord.business().getId(), criteria);
 
-    // Manager user should see all
-    testHelper.setCurrentUser(users.manager());
-    final Page<AccountActivity> managerPage =
-        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
-    assertEquals(3, managerPage.getTotalElements());
-    assertEquals(3, managerPage.getContent().size());
-    assertThat(managerPage.getContent()).containsExactlyInAnyOrder(activity1, activity2, activity3);
-
-    // Other Employee user should see none
-    testHelper.setCurrentUser(users.otherEmployee());
-    final Page<AccountActivity> otherEmployeePage =
-        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
-    assertEquals(0, otherEmployeePage.getTotalElements());
-    assertEquals(0, otherEmployeePage.getContent().size());
-
-    // Employee owner should see self owned
-    testHelper.setCurrentUser(users.employeeOwner());
-    final Page<AccountActivity> selfOwnedPage =
-        accountActivityService.find(createBusinessRecord.business().getId(), criteria);
-    assertEquals(1, selfOwnedPage.getTotalElements());
-    assertEquals(1, selfOwnedPage.getContent().size());
-    assertThat(selfOwnedPage.getContent()).contains(activity1);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<Page<AccountActivity>>allowAllGlobalRolesWithResult(
+            result -> {
+              assertEquals(0, result.getTotalElements());
+              assertEquals(0, result.getContent().size());
+            })
+        .<Page<AccountActivity>>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER),
+            result -> {
+              assertEquals(3, result.getTotalElements());
+              assertEquals(3, result.getContent().size());
+              assertThat(result.getContent())
+                  .containsExactlyInAnyOrder(activity1, activity2, activity3);
+            })
+        .<Page<AccountActivity>>allowRolesOnAllocationWithResult(
+            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY),
+            result -> {
+              assertEquals(0, result.getTotalElements());
+              assertEquals(0, result.getContent().size());
+            })
+        .<Page<AccountActivity>>allowUserWithResult(
+            employeeOwner,
+            result -> {
+              assertEquals(1, result.getTotalElements());
+              assertEquals(1, result.getContent().size());
+              assertThat(result.getContent()).contains(activity1);
+            })
+        .build()
+        .validateServiceMethod(action);
   }
 }

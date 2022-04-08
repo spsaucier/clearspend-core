@@ -1,6 +1,5 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -44,6 +43,7 @@ import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -321,7 +321,7 @@ public class AuthenticationController {
   @PostMapping("/change-password")
   void changePassword(@Validated @RequestBody ChangePasswordRequest request) {
     if (!CurrentUser.getEmail().equals(request.getUsername())) {
-      throw new ForbiddenException();
+      throw new AccessDeniedException("");
     }
     fusionAuthService.changePassword(
         request.getUsername(), request.getCurrentPassword(), request.getNewPassword());

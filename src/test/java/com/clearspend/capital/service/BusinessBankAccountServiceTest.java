@@ -23,6 +23,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -37,7 +38,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -45,23 +45,12 @@ import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 class BusinessBankAccountServiceTest extends BaseCapitalTest {
-  private static final Set<String> rootAllocationFailingRoles =
-      Set.of(
-          DefaultRoles.ALLOCATION_MANAGER,
-          DefaultRoles.ALLOCATION_EMPLOYEE,
-          DefaultRoles.ALLOCATION_VIEW_ONLY);
-  private static final Set<String> childAllocationFailingRoles =
-      Set.of(
-          DefaultRoles.ALLOCATION_ADMIN,
-          DefaultRoles.ALLOCATION_MANAGER,
-          DefaultRoles.ALLOCATION_EMPLOYEE,
-          DefaultRoles.ALLOCATION_VIEW_ONLY);
-
   @Autowired private TestHelper testHelper;
   @Autowired private BusinessBankAccountService bankAccountService;
   @Autowired private PlaidClient plaidClient;
@@ -69,10 +58,19 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   @Autowired private TestDataHelper testDataHelper;
   private CreateBusinessRecord createBusinessRecord;
+  private Allocation childAllocation;
 
   @BeforeEach
   void setup() {
     createBusinessRecord = testHelper.createBusiness();
+    childAllocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
   }
 
   @Test
@@ -167,7 +165,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final Amount amount = new Amount();
     amount.setCurrency(Currency.USD);
     amount.setAmount(new BigDecimal(10));
-    final ThrowingRunnable action =
+    final ThrowingSupplier<AdjustmentAndHoldRecord> action =
         () ->
             bankAccountService.transactBankAccount(
                 createBusinessRecord.business().getId(),
@@ -178,9 +176,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 true);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -198,15 +195,14 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void getBusinessBankAccounts_UserPermissions() {
-    final ThrowingRunnable action =
+    final ThrowingSupplier<List<BusinessBankAccount>> action =
         () ->
             bankAccountService.getBusinessBankAccounts(
                 createBusinessRecord.business().getId(), false);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -249,7 +245,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final String accountName = "Account";
     final String accessToken = "Token";
     final String accountRef = "Ref";
-    final ThrowingRunnable action =
+    final ThrowingSupplier<BusinessBankAccount> action =
         () ->
             bankAccountService.createBusinessBankAccount(
                 routingNumber,
@@ -260,9 +256,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -276,13 +271,12 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void getLinkToken_UserPermissions() {
-    final ThrowingRunnable action =
+    final ThrowingSupplier<String> action =
         () -> bankAccountService.getLinkToken(createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -336,15 +330,14 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
 
   @Test
   void linkBusinessBankAccounts_UserPermissions() {
-    final ThrowingRunnable action =
+    final ThrowingSupplier<List<BusinessBankAccount>> action =
         () ->
             bankAccountService.linkBusinessBankAccounts(
                 "link-token-mock-LinkToken", createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -367,9 +360,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 DeclineReason.ST_FAILED);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -385,9 +377,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId(), bankAccount.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -407,13 +398,12 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     testHelper.setCurrentUser(createBusinessRecord.user());
     final BusinessBankAccount bankAccount =
         testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
-    final ThrowingRunnable action =
+    final ThrowingSupplier<BusinessBankAccount> action =
         () -> bankAccountService.retrieveBusinessBankAccount(bankAccount.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }

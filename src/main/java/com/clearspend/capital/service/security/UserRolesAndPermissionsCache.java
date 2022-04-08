@@ -101,7 +101,7 @@ public class UserRolesAndPermissionsCache {
       @Nullable final UserRolesAndPermissions permissions) {
     if (permissions == null) {
       allocationPermissionsMap.put(allocationId, EMPTY_PERMISSIONS);
-      return permissions;
+      return EMPTY_PERMISSIONS;
     }
     allocationPermissionsMap.put(permissions.allocationId(), permissions);
     return permissions;

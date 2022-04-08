@@ -18,6 +18,7 @@ import com.clearspend.capital.common.error.BalanceNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -31,7 +32,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,17 +47,6 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   private static final Amount AVAILABLE_AMOUNT = toAmount(AVAILABLE);
   private static final Amount LIMIT_AMOUNT = toAmount(LIMIT);
   private static final String ACCESS_TOKEN = "access-mock-Token";
-  private static final Set<String> rootAllocationFailingRoles =
-      Set.of(
-          DefaultRoles.ALLOCATION_MANAGER,
-          DefaultRoles.ALLOCATION_EMPLOYEE,
-          DefaultRoles.ALLOCATION_VIEW_ONLY);
-  private static final Set<String> childAllocationFailingRoles =
-      Set.of(
-          DefaultRoles.ALLOCATION_ADMIN,
-          DefaultRoles.ALLOCATION_MANAGER,
-          DefaultRoles.ALLOCATION_EMPLOYEE,
-          DefaultRoles.ALLOCATION_VIEW_ONLY);
 
   private static Amount toAmount(final double value) {
     return new Amount(Currency.USD, BigDecimal.valueOf(value));
@@ -71,6 +60,7 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   private TestHelper.CreateBusinessRecord createBusinessRecord;
   private BusinessBankAccount businessBankAccount;
+  private Allocation childAllocation;
 
   @BeforeEach
   public void setup() throws Exception {
@@ -80,6 +70,14 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
             .findFirst()
             .orElseThrow(() -> new RuntimeException("Unable to get TestPlaidClient business"));
     createBusinessRecord = testHelper.createBusiness(businessSandboxEntry.getKey());
+    childAllocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
 
     final AccountBase accountBase =
         plaidClient.getBalances(createBusinessRecord.business().getId(), ACCESS_TOKEN).stream()
@@ -138,9 +136,8 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
                 businessBankAccount, CURRENT_AMOUNT, AVAILABLE_AMOUNT, LIMIT_AMOUNT);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -177,9 +174,8 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
                 businessBankAccount, balance);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -222,9 +218,8 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
         () -> businessBankAccountBalanceService.getNewBalance(businessBankAccount);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(rootAllocationFailingRoles)
-        .addAllChildAllocationFailingRoles(childAllocationFailingRoles)
-        .useDefaultChildAllocation()
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }

@@ -8,6 +8,7 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -45,11 +46,7 @@ class BusinessServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -65,11 +62,7 @@ class BusinessServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -77,11 +70,23 @@ class BusinessServiceTest extends BaseCapitalTest {
   @Test
   void getBusiness_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final CreateBusinessRecord otherBusiness = testHelper.createBusiness();
+
+    testHelper.setCurrentUser(otherBusiness.user());
+    final User noRole = testHelper.createUser(otherBusiness.business()).user();
+
     final ThrowingRunnable action =
-        () -> businessService.getBusiness(createBusinessRecord.business().getId(), true);
+        () -> businessService.getBusiness(otherBusiness.business().getId(), true);
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        // Testing that a user, any user, within the business can use the method
+        .allowUser(noRole)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE,
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER,
+                DefaultRoles.GLOBAL_VIEWER))
         .build()
         .validateServiceMethod(action);
   }
@@ -119,8 +124,8 @@ class BusinessServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(DefaultRoles.ALLOCATION_EMPLOYEE, DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
         .build()
         .validateServiceMethod(action);
   }

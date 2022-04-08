@@ -62,6 +62,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.persistence.EntityManager;
 import javax.servlet.http.Cookie;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -103,6 +104,7 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired ExpenseCategoryRepository expenseCategoryRepository;
   @Autowired ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
   @Autowired ReceiptService receiptService;
+  @Autowired EntityManager entityManager;
 
   @BeforeEach
   public void setup() {
@@ -123,6 +125,7 @@ public class CodatServiceTest extends BaseCapitalTest {
               FundingType.POOLED,
               CardType.VIRTUAL,
               false);
+      entityManager.flush();
     }
   }
 

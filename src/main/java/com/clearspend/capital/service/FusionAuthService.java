@@ -1,7 +1,6 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
@@ -50,6 +49,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -256,7 +256,7 @@ public class FusionAuthService {
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NotNull String destination) {
     if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
-      throw new ForbiddenException();
+      throw new AccessDeniedException("");
     }
     TwoFactorSendRequest request = new TwoFactorSendRequest();
     request.method = method.name();
@@ -312,7 +312,7 @@ public class FusionAuthService {
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NonNull String destination) {
     if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
-      throw new ForbiddenException();
+      throw new AccessDeniedException("");
     }
 
     TwoFactorRequest request = new TwoFactorRequest();
@@ -480,7 +480,7 @@ public class FusionAuthService {
       case 200 -> {
         twilioService.sendPasswordResetSuccessEmail(fusionAuthUser.successResponse.user.email, "");
       }
-      case 404 -> throw new ForbiddenException();
+      case 404 -> throw new AccessDeniedException("");
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", changePasswordResponse.exception);
       default -> throw new RuntimeException(

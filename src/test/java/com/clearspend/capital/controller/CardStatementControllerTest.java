@@ -17,6 +17,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import java.util.Set;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -80,8 +81,8 @@ public class CardStatementControllerTest extends BaseCapitalTest {
                     .cookie(cookie));
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_EMPLOYEE)
-        .addRootAllocationFailingRole(DefaultRoles.ALLOCATION_VIEW_ONLY)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
         .build()
         .validateMockMvcCall(action);
   }

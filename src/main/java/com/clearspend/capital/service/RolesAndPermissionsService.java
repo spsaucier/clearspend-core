@@ -4,7 +4,6 @@ import static com.clearspend.capital.data.model.security.DefaultRoles.GLOBAL_BOO
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
 import com.clearspend.capital.common.error.DataAccessViolationException;
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
@@ -46,6 +45,7 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -90,7 +90,7 @@ public class RolesAndPermissionsService {
    * @param allocationId The Allocation ID on which to grant the permissions
    * @param newRole The new role to set
    * @return The newly created UserAllocationRole
-   * @throws ForbiddenException when the current user's permissions are insufficient
+   * @throws AccessDeniedException when the current user's permissions are insufficient
    */
   public UserAllocationRole createUserAllocationRole(
       @NonNull TypedId<UserId> granteeId,
@@ -125,7 +125,7 @@ public class RolesAndPermissionsService {
    * @param granteeId The ID of the user whose permission is to change
    * @param allocationId The allocation ID
    * @param newRole The new role to set
-   * @throws ForbiddenException when the current user's permissions are insufficient
+   * @throws AccessDeniedException when the current user's permissions are insufficient
    */
   public UserAllocationRole updateUserAllocationRole(
       @NonNull TypedId<UserId> granteeId,
@@ -348,7 +348,7 @@ public class RolesAndPermissionsService {
    *
    * @param allocationId The allocation ID
    * @param granteeId The ID of the user whose permission is to change
-   * @throws ForbiddenException when the current user's permissions are insufficient
+   * @throws AccessDeniedException when the current user's permissions are insufficient
    * @throws RecordNotFoundException if there is nothing to delete, with the exception's id
    *     consisting of a Map of the grantee Id and allocation Id
    */
@@ -377,13 +377,12 @@ public class RolesAndPermissionsService {
    *     global
    * @param allocationPermission Each allocation permission that would be sufficient
    * @param globalUserPermissions Each given user permission is sufficient
-   * @throws ForbiddenException when user permissions are insufficient
+   * @throws AccessDeniedException when user permissions are insufficient
    */
   public void assertUserHasPermission(
       TypedId<AllocationId> allocationId,
       @NonNull EnumSet<AllocationPermission> allocationPermission,
-      EnumSet<GlobalUserPermission> globalUserPermissions)
-      throws ForbiddenException {
+      EnumSet<GlobalUserPermission> globalUserPermissions) {
     entityManager.flush();
     CurrentUser user = CurrentUser.get();
     if (!userAllocationRoleRepository.userHasPermission(
@@ -393,7 +392,7 @@ public class RolesAndPermissionsService {
         user.roles(),
         allocationPermission,
         globalUserPermissions)) {
-      throw new ForbiddenException(
+      throw new AccessDeniedException(
           Map.of(
                   "businessId",
                   user.businessId(),
@@ -437,7 +436,7 @@ public class RolesAndPermissionsService {
       return permissionsMap;
     }
 
-    throw new ForbiddenException();
+    throw new AccessDeniedException("");
   }
 
   @FusionAuthRoleAdministrator(
@@ -477,7 +476,7 @@ public class RolesAndPermissionsService {
         EnumSet.of(
             GlobalUserPermission.BATCH_ONBOARD, GlobalUserPermission.CROSS_BUSINESS_BOUNDARY));
     if (!grantorPermissions.containsAll(grantorNeedsPermissions)) {
-      throw new ForbiddenException("Grantor does not have sufficient permission.");
+      throw new AccessDeniedException("Grantor does not have sufficient permission.");
     }
   }
 

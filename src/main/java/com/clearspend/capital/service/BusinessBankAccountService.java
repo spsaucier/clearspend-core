@@ -5,7 +5,6 @@ import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
@@ -54,6 +53,7 @@ import com.stripe.model.Account;
 import com.stripe.model.ExternalAccount;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.AccessDeniedException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -808,7 +808,7 @@ public class BusinessBankAccountService {
                     new RecordNotFoundException(
                         Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
     if (!businessId.equals(businessBankAccount.getBusinessId())) {
-      throw new ForbiddenException();
+      throw new AccessDeniedException("");
     }
     try {
       return plaidClient.createLinkToken(

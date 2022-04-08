@@ -4,7 +4,6 @@ import com.clearspend.capital.client.stripe.StripeClientException;
 import com.clearspend.capital.common.error.AmountException;
 import com.clearspend.capital.common.error.CurrencyMismatchException;
 import com.clearspend.capital.common.error.DataAccessViolationException;
-import com.clearspend.capital.common.error.ForbiddenException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.InvalidRequestException;
@@ -105,11 +104,7 @@ public class GlobalControllerExceptionHandler {
   }
 
   @ResponseStatus(HttpStatus.FORBIDDEN)
-  @ExceptionHandler({
-    DataAccessViolationException.class,
-    ForbiddenException.class,
-    AccessDeniedException.class
-  })
+  @ExceptionHandler({DataAccessViolationException.class, AccessDeniedException.class})
   public @ResponseBody ControllerError handleForbiddenException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError("");

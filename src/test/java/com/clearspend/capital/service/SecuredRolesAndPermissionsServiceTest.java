@@ -13,10 +13,10 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
-import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
@@ -92,41 +92,28 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .<List<UserRolesAndPermissions>>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN, records -> assertThat(records).hasSize(1))
+        .<List<UserRolesAndPermissions>>allowRolesOnAllocationWithResult(
+            Set.of(
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            records -> assertThat(records).isEmpty())
+        .<List<UserRolesAndPermissions>>allowUserWithResult(
+            user, records -> assertThat(records).hasSize(1))
+        .<List<UserRolesAndPermissions>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER),
+            records -> assertThat(records).hasSize(1))
+        .<List<UserRolesAndPermissions>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_VIEWER,
+                DefaultRoles.GLOBAL_BOOKKEEPER,
+                DefaultRoles.GLOBAL_RESELLER,
+                DefaultRoles.GLOBAL_PROCESSOR),
+            records -> assertThat(records).isEmpty())
         .build()
-        .validateServiceMethod(action::get);
-
-    final User employee =
-        testHelper
-            .createUserWithRole(
-                createBusinessRecord.allocationRecord().allocation(),
-                DefaultRoles.ALLOCATION_EMPLOYEE)
-            .user();
-    testHelper.setCurrentUser(employee);
-    final List<UserRolesAndPermissions> employeeResults = action.get();
-    assertThat(employeeResults).isEmpty();
-
-    final User admin =
-        testHelper
-            .createUserWithRole(
-                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
-            .user();
-    testHelper.setCurrentUser(admin);
-    final List<UserRolesAndPermissions> adminResults = action.get();
-    assertThat(adminResults).hasSize(1);
-
-    // Owner should still see their permissions
-    testHelper.setCurrentUser(user);
-    final List<UserRolesAndPermissions> ownerResults = action.get();
-    assertThat(ownerResults).hasSize(1);
-
-    testHelper.setUserAsMaster(createBusinessRecord.user());
-    final User customerServiceUser = testHelper.createUser(createBusinessRecord.business()).user();
-    fusionAuthService.changeUserRole(
-        RoleChange.GRANT,
-        customerServiceUser.getSubjectRef(),
-        DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
-    testHelper.setCurrentUser(customerServiceUser);
-    final List<UserRolesAndPermissions> customerServiceResults = action.get();
-    assertThat(customerServiceResults).hasSize(1);
+        .validateServiceMethod(action);
   }
 }

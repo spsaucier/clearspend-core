@@ -1,149 +1,223 @@
 package com.clearspend.capital.testutils.permission;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import javax.servlet.http.Cookie;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.function.ThrowingConsumer;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.testcontainers.utility.ThrowingFunction;
 
 /**
- * The actual validator that does all the testing of method permissions. Please see
- * PermissionValidatorBuilder for a detailed breakdown of the different options for validation.
+ * Documentation:
+ * https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2105376815/Testing+Permissions+With+PermissionValidationHelper
  */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class PermissionValidator {
+
   private final TestHelper testHelper;
   private final TestHelper.CreateBusinessRecord createBusinessRecord;
-  private final Set<String> rootAllocationFailingRoles;
-  private final Set<String> childAllocationFailingRoles;
-  private final Set<CustomUser> rootAllocationCustomUsers;
-  private final Set<CustomUser> childAllocationCustomUsers;
-  private final Allocation childAllocation;
+  private final Allocation allocation;
+  private final Map<String, ThrowingConsumer<Object>> allowedGlobalRoles;
+  private final Map<String, AllocationRole> allowedAllocationRoles;
+  private final Set<CustomUser> customUsers;
 
-  /**
-   * Validate a service method and its permissions.
-   *
-   * @param action a runnable that can throw an exception that wraps around the service method to
-   *     test.
-   */
+  public void validateServiceMethod(final ThrowingSupplier<?> action) {
+    final ThrowingConsumer<User> deniedAssertion =
+        user -> {
+          testHelper.setCurrentUser(user);
+          assertThrows(AccessDeniedException.class, action::get);
+        };
+    final ThrowingFunction<User, ?> allowedAssertion =
+        user -> {
+          testHelper.setCurrentUser(user);
+          return assertDoesNotThrow(action);
+        };
+    testAllocationRoles(deniedAssertion, allowedAssertion);
+    testCustomUsers(deniedAssertion, allowedAssertion);
+    testGlobalRoles(deniedAssertion, allowedAssertion);
+  }
+
   public void validateServiceMethod(final ThrowingRunnable action) {
-    final ThrowingConsumer<User> failAssertion =
-        user -> {
-          testHelper.setCurrentUser(user);
-          assertThrows(AccessDeniedException.class, action::run);
-        };
-    final ThrowingConsumer<User> passAssertion =
-        user -> {
-          testHelper.setCurrentUser(user);
-          assertDoesNotThrow(action::run);
-        };
-    testRootAllocationRoles(failAssertion, passAssertion);
-    testChildAllocationRoles(failAssertion, passAssertion);
-    testRootAllocationCustomUsers(failAssertion, passAssertion);
-    testChildAllocationCustomUsers(failAssertion, passAssertion);
-  }
-
-  private void testChildAllocationCustomUsers(
-      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
-    childAllocationCustomUsers.forEach(
-        customUser -> {
-          final String failureMessage = "Child Allocation. User: %s".formatted(customUser.user());
-          if (customUser.isPassResult()) {
-            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(customUser.user()));
-          } else {
-            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(customUser.user()));
-          }
+    validateServiceMethod(
+        () -> {
+          action.run();
+          return null;
         });
   }
 
-  private void testRootAllocationCustomUsers(
-      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
-    rootAllocationCustomUsers.forEach(
-        customUser -> {
-          final String failureMessage = "Root Allocation. User: %s".formatted(customUser.user());
-          if (customUser.isPassResult()) {
-            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(customUser.user()));
-          } else {
-            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(customUser.user()));
-          }
-        });
-  }
-
-  private void testChildAllocationRoles(
-      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
-    Optional.ofNullable(childAllocation)
-        .ifPresent(
-            allocation -> {
-              DefaultRoles.ALL_ALLOCATION.forEach(
-                  role -> {
-                    final String failureMessage = "Target Allocation. Role: %s".formatted(role);
-                    final User user = prepareUser(allocation, role);
-                    if (childAllocationFailingRoles.contains(role)) {
-                      assertWithFailureMessage(failureMessage, () -> failAssertion.accept(user));
-                    } else {
-                      assertWithFailureMessage(failureMessage, () -> passAssertion.accept(user));
-                    }
-                  });
-            });
-  }
-
-  private void testRootAllocationRoles(
-      final ThrowingConsumer<User> failAssertion, final ThrowingConsumer<User> passAssertion) {
+  private void testAllocationRoles(
+      final ThrowingConsumer<User> deniedAssertion,
+      final ThrowingFunction<User, ?> allowedAssertion) {
     DefaultRoles.ALL_ALLOCATION.forEach(
         role -> {
-          final String failureMessage = "Root Allocation. Role: %s".formatted(role);
-          final User user = prepareUser(createBusinessRecord.allocationRecord().allocation(), role);
-          if (rootAllocationFailingRoles.contains(role)) {
-            assertWithFailureMessage(failureMessage, () -> failAssertion.accept(user));
-          } else {
-            assertWithFailureMessage(failureMessage, () -> passAssertion.accept(user));
+          Optional.ofNullable(allowedAllocationRoles.get(role))
+              .map(createAllocationTypeAssertion(allowedAssertion, deniedAssertion))
+              .orElse(
+                  () -> {
+                    final User user = prepareUser(getDefaultAllocation(), role);
+                    final String failureMessage =
+                        "Allocation Role should not be allowed on any allocation. Role: %s"
+                            .formatted(role);
+                    assertWithFailureMessage(failureMessage, () -> deniedAssertion.accept(user));
+                  })
+              .run();
+        });
+  }
+
+  private Allocation getDefaultAllocation() {
+    return Optional.ofNullable(allocation)
+        .orElse(createBusinessRecord.allocationRecord().allocation());
+  }
+
+  private Function<AllocationRole, Runnable> createAllocationTypeAssertion(
+      final ThrowingFunction<User, ?> allowedAssertion,
+      final ThrowingConsumer<User> deniedAssertion) {
+    return allocationRole ->
+        () -> {
+          switch (allocationRole.allocationType()) {
+            case ANY -> {
+              final User user = prepareUser(getDefaultAllocation(), allocationRole.role());
+              final String accessFailureMessage =
+                  "Allocation role should be allowed on any allocation. Role: %s"
+                      .formatted(allocationRole.role());
+              final Object result =
+                  assertWithFailureMessage(
+                      accessFailureMessage, () -> allowedAssertion.apply(user));
+              final String resultValidationFailureMessage =
+                  "Allocation role result validation failed. Role: %s"
+                      .formatted(allocationRole.role());
+              assertWithFailureMessage(
+                  resultValidationFailureMessage,
+                  () -> allocationRole.resultValidator().accept(result));
+            }
+            case ROOT_ONLY -> {
+              final User rootUser =
+                  prepareUser(
+                      createBusinessRecord.allocationRecord().allocation(), allocationRole.role());
+              final String rootAccessFailureMessage =
+                  "Allocation role should be allowed on the root allocation. Role: %s"
+                      .formatted(allocationRole.role());
+              final Object result =
+                  assertWithFailureMessage(
+                      rootAccessFailureMessage, () -> allowedAssertion.apply(rootUser));
+              final String rootResultValidationFailureMessage =
+                  "Root allocation role result validation failed. Role: %s"
+                      .formatted(allocationRole.role());
+              assertWithFailureMessage(
+                  rootResultValidationFailureMessage,
+                  () -> allocationRole.resultValidator().accept(result));
+
+              assertNotNull(
+                  allocation,
+                  "Cannot validate root-only role access without setting an additional allocation");
+              final User childUser = prepareUser(allocation, allocationRole.role());
+              final String childFailureMessage =
+                  "Allocation role should not be allowed on non-root allocations. Role: %s"
+                      .formatted(allocationRole.role());
+              assertWithFailureMessage(
+                  childFailureMessage, () -> deniedAssertion.accept(childUser));
+            }
+          }
+        };
+  }
+
+  private void validateAllowedGlobalRole(
+      final String role,
+      final ThrowingFunction<User, ?> allowedAssertion,
+      final ThrowingConsumer<Object> resultValidator) {
+    final User user = prepareGlobalUser(role);
+    final String accessFailureMessage =
+        "Global role should be allowed access. Role: %s".formatted(role);
+    final Object result =
+        assertWithFailureMessage(accessFailureMessage, () -> allowedAssertion.apply(user));
+    final String resultFailureMessage =
+        "Global role result validation failed. Role: %s".formatted(role);
+    assertWithFailureMessage(resultFailureMessage, () -> resultValidator.accept(result));
+  }
+
+  private void validateDeniedGlobalRole(
+      final String role, final ThrowingConsumer<User> deniedAssertion) {
+    final User user = prepareGlobalUser(role);
+    final String failureMessage =
+        "Global role should not be allowed access. Role: %s".formatted(role);
+    assertWithFailureMessage(failureMessage, () -> deniedAssertion.accept(user));
+  }
+
+  private void testGlobalRoles(
+      final ThrowingConsumer<User> deniedAssertion,
+      final ThrowingFunction<User, ?> allowedAssertion) {
+    DefaultRoles.ALL_GLOBAL.forEach(
+        role ->
+            Optional.ofNullable(allowedGlobalRoles.get(role))
+                .ifPresentOrElse(
+                    resultValidator ->
+                        validateAllowedGlobalRole(role, allowedAssertion, resultValidator),
+                    () -> validateDeniedGlobalRole(role, deniedAssertion)));
+  }
+
+  private void testCustomUsers(
+      final ThrowingConsumer<User> deniedAssertion,
+      final ThrowingFunction<User, ?> allowedAssertion) {
+    customUsers.forEach(
+        customUser -> {
+          switch (customUser.accessType()) {
+            case ALLOWED -> {
+              final String failureMessage =
+                  "Custom User should be allowed access. User: %s".formatted(customUser.user());
+              assertWithFailureMessage(
+                  failureMessage,
+                  () -> {
+                    final Object result = allowedAssertion.apply(customUser.user());
+                    customUser.resultValidator().accept(result);
+                  });
+            }
+            case DENIED -> {
+              final String failureMessage = "Custom User should not be allowed access. User: %s";
+              assertWithFailureMessage(
+                  failureMessage, () -> deniedAssertion.accept(customUser.user()));
+            }
           }
         });
   }
 
-  /**
-   * Validate a MockMvc call. This is done by taking in a function that is passed a cookie. That
-   * cookie represents the user being tested and should be passed into the MockMvc request. The
-   * function should return the ResultActions so that the status code can be evaluated.
-   *
-   * @param action the function wrapping the MockMvc call.
-   */
   public void validateMockMvcCall(final ThrowingFunction<Cookie, ResultActions> action) {
-    final ThrowingConsumer<User> failAssertion =
+    final ThrowingConsumer<User> deniedAssertion =
         user -> {
           final Cookie cookie = testHelper.login(user);
           final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
           resultActions.andExpect(MockMvcResultMatchers.status().isForbidden());
         };
-    final ThrowingConsumer<User> passAssertion =
+    final ThrowingFunction<User, ResultActions> allowedAssertion =
         user -> {
           final Cookie cookie = testHelper.login(user);
           final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
-          resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+          return resultActions.andExpect(MockMvcResultMatchers.status().isOk());
         };
-    testRootAllocationRoles(failAssertion, passAssertion);
-    testChildAllocationRoles(failAssertion, passAssertion);
-    testRootAllocationCustomUsers(failAssertion, passAssertion);
-    testChildAllocationCustomUsers(failAssertion, passAssertion);
+    testAllocationRoles(deniedAssertion, allowedAssertion);
+    testCustomUsers(deniedAssertion, allowedAssertion);
+    testGlobalRoles(deniedAssertion, allowedAssertion);
   }
 
-  private void assertWithFailureMessage(
-      final String failureMessage, final ThrowingRunnable assertion) {
+  private Object assertWithFailureMessage(
+      final String failureMessage, final ThrowingSupplier<?> assertion) {
     try {
-      assertion.run();
+      return assertion.get();
     } catch (AssertionError ex) {
       throw new AssertionError("Permission validation failure. %s".formatted(failureMessage), ex);
     } catch (Throwable ex) {
@@ -151,8 +225,23 @@ public class PermissionValidator {
     }
   }
 
+  private void assertWithFailureMessage(
+      final String failureMessage, final ThrowingRunnable assertion) {
+    assertWithFailureMessage(
+        failureMessage,
+        () -> {
+          assertion.run();
+          return null;
+        });
+  }
+
   private User prepareUser(final Allocation allocation, final String role) {
-    testHelper.setCurrentUser(createBusinessRecord.user());
+    testHelper.setUserAsMaster(createBusinessRecord.user());
     return testHelper.createUserWithRole(allocation, role).user();
+  }
+
+  private User prepareGlobalUser(final String role) {
+    testHelper.setUserAsMaster(createBusinessRecord.user());
+    return testHelper.createUserWithGlobalRole(createBusinessRecord.business(), role).user();
   }
 }

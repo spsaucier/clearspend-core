@@ -294,7 +294,7 @@ public class BusinessService {
   }
 
   @PostAuthorize(
-      "hasRootPermission(returnObject.businessId, 'READ|CUSTOMER_SERVICE|GLOBAL_READ') or isUserInBusiness(returnObject.businessId)")
+      "hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ') or isUserInBusiness(returnObject.businessId)")
   public Business getBusiness(final TypedId<BusinessId> businessId, final boolean mustExist) {
     return retrieveBusiness(businessId, mustExist);
   }

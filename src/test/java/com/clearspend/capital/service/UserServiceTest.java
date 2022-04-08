@@ -21,7 +21,6 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
-import com.clearspend.capital.testutils.permission.CustomUser;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Person;
@@ -318,11 +317,7 @@ class UserServiceTest extends BaseCapitalTest {
                 "123456789");
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -351,12 +346,8 @@ class UserServiceTest extends BaseCapitalTest {
                     false));
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
-        .addRootAllocationCustomUser(CustomUser.pass(existing))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .allowUser(existing)
         .build()
         .validateServiceMethod(action);
   }
@@ -374,14 +365,42 @@ class UserServiceTest extends BaseCapitalTest {
             .user();
     final ThrowingSupplier<List<User>> action =
         () -> userService.retrieveUsersForBusiness(createBusinessRecord.business().getId());
-
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final List<User> adminResults = action.get();
-    assertThat(adminResults).hasSize(2).contains(createBusinessRecord.user(), employee);
-
-    testHelper.setCurrentUser(employee);
-    final List<User> employeeResults = action.get();
-    assertThat(employeeResults).hasSize(1).contains(employee);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .<List<User>>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_ADMIN,
+            records ->
+                // Will contain all users created for the test, so using these two to ensure it's
+                // working
+                assertThat(records).contains(createBusinessRecord.user(), employee))
+        .<List<User>>allowRolesOnAllocationWithResult(
+            Set.of(
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_EMPLOYEE,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            records ->
+                // Should only contain the user created with the role, but we don't have that
+                // reference here
+                assertThat(records)
+                    .hasSize(1)
+                    .doesNotContain(createBusinessRecord.user(), employee))
+        .<List<User>>allowUserWithResult(
+            employee, records -> assertThat(records).hasSize(1).contains(employee))
+        .<List<User>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER),
+            records -> assertThat(records).hasSizeGreaterThan(1))
+        .<List<User>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_VIEWER,
+                DefaultRoles.GLOBAL_BOOKKEEPER,
+                DefaultRoles.GLOBAL_PROCESSOR,
+                DefaultRoles.GLOBAL_RESELLER),
+            records ->
+                // Do not have VIEW_OWN permission so can't see anything
+                assertThat(records).isEmpty())
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test
@@ -396,6 +415,8 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.retrieveUserPage(createBusinessRecord.business().getId(), criteria);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .allowAllRolesOnAllocation()
+        .allowAllGlobalRoles()
         .build()
         .validateServiceMethod(action);
   }
@@ -409,11 +430,7 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.archiveUser(createBusinessRecord.business().getId(), archive.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
   }
@@ -430,6 +447,8 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.createCSVFile(createBusinessRecord.business().getId(), criteria);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .allowAllRolesOnAllocation()
+        .allowAllGlobalRoles()
         .build()
         .validateServiceMethod(action);
   }
@@ -447,12 +466,8 @@ class UserServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action = () -> userService.retrieveUser(owner.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .addAllRootAllocationFailingRoles(
-            Set.of(
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_VIEW_ONLY,
-                DefaultRoles.ALLOCATION_MANAGER))
-        .addRootAllocationCustomUser(CustomUser.pass(owner))
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .allowUser(owner)
         .build()
         .validateServiceMethod(action);
   }

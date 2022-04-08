@@ -98,7 +98,7 @@ public class CardStatementService {
   }
 
   @PreAuthorize(
-      "hasAllocationPermission(#card.allocation().getId(), 'READ') or hasGlobalPermission('GLOBAL_READ')")
+      "hasAllocationPermission(#card.allocation().getId(), 'READ') or hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
   public CardStatementRecord generatePdf(
       final CardStatementRequest request, final CardDetailsRecord card) throws IOException {
 
