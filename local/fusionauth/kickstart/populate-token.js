@@ -21,7 +21,7 @@ function populate(jwt, user, registration) {
     if ((!jwt.userType) && user.data.userType) {
       jwt.userType = user.data.userType;
     }
-    if ((jwt.roles === undefined || jwt.roles.length == 0) && user.data.roles) {
+    if ((!jwt.roles || jwt.roles.length === 0) && user.data.roles) {
       jwt.roles = user.data.roles;
     }
   }
