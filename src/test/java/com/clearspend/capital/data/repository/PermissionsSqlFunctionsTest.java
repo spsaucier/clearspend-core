@@ -965,7 +965,11 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 1,
                 DefaultRoles.ALLOCATION_VIEW_ONLY,
                 false,
-                EnumSet.of(AllocationPermission.READ, AllocationPermission.VIEW_OWN),
+                EnumSet.of(
+                    AllocationPermission.READ,
+                    AllocationPermission.VIEW_OWN,
+                    AllocationPermission.CATEGORIZE,
+                    AllocationPermission.LINK_RECEIPTS),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)),
             new AllAllocationPermissions(
                 bookkeeper.getId(),
@@ -974,7 +978,11 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 2,
                 DefaultRoles.ALLOCATION_VIEW_ONLY,
                 true,
-                EnumSet.of(AllocationPermission.READ, AllocationPermission.VIEW_OWN),
+                EnumSet.of(
+                    AllocationPermission.READ,
+                    AllocationPermission.VIEW_OWN,
+                    AllocationPermission.CATEGORIZE,
+                    AllocationPermission.LINK_RECEIPTS),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)));
   }
 
