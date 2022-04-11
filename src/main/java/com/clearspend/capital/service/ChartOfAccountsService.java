@@ -1,6 +1,8 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
+import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
+import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -24,7 +26,6 @@ public class ChartOfAccountsService {
   private final CodatService codatService;
   private final BusinessRepository businessRepository;
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public ChartOfAccounts updateChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
     Optional<ChartOfAccounts> chartOfAccounts =
@@ -53,7 +54,13 @@ public class ChartOfAccountsService {
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public ChartOfAccounts updateChartOfAccountsFromCodat(TypedId<BusinessId> businessId) {
     return updateChartOfAccountsForBusiness(
-        businessId, codatService.getChartOfAccountsForBusiness(businessId).getResults());
+        businessId,
+        codatService
+            .getCodatChartOfAccountsForBusiness(
+                businessId,
+                CodatAccountType.EXPENSE,
+                List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET))
+            .getResults());
   }
 
   public void updateChartOfAccountsFromCodatWebhook(String codatCompanyRef) {
@@ -64,7 +71,11 @@ public class ChartOfAccountsService {
                 updateChartOfAccountsForBusiness(
                     business.getBusinessId(),
                     codatService
-                        .getChartOfAccountsForBusiness(business.getBusinessId())
+                        .getCodatChartOfAccountsForBusiness(
+                            business.getBusinessId(),
+                            CodatAccountType.EXPENSE,
+                            List.of(
+                                CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET))
                         .getResults()));
   }
 

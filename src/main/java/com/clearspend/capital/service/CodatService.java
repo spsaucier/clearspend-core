@@ -225,7 +225,6 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(chartOfAccounts.getResults()));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId,
       CodatAccountType type,
