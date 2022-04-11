@@ -21,8 +21,10 @@ import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -31,6 +33,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessBankAccountService;
@@ -71,6 +74,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
   private final ReceiptService receiptService;
   private final EntityManager entityManager;
   private final ServiceHelper serviceHelper;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   @SneakyThrows
   @Test
@@ -550,6 +554,61 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     accountActivityRequest.setTo(OffsetDateTime.now().plusDays(1));
     accountActivityRequest.setFilterAmount(
         new FilterAmount(BigDecimal.valueOf(20), BigDecimal.valueOf(150)));
+
+    String body = objectMapper.writeValueAsString(accountActivityRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    PagedData<AccountActivityResponse> pagedData =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
+    assertEquals(2, pagedData.getContent().size());
+    assertEquals(pagedData.getTotalElements(), 2);
+    log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void getFilteredAccountActivityPageDataForCategoriesAsset() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    ExpenseCategory assets = expenseCategoryRepository.findFirstCategoryByName("Assets").get();
+    ExpenseDetails expenseDetails =
+        new ExpenseDetails(assets.getIconRef(), assets.getId(), assets.getCategoryName());
+
+    ExpenseCategory fuel = expenseCategoryRepository.findFirstCategoryByName("Fuel").get();
+    ExpenseDetails expenseDetailsFuel =
+        new ExpenseDetails(fuel.getIconRef(), fuel.getId(), fuel.getCategoryName());
+
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .expenseDetails(expenseDetails)
+            .build());
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .receipt(new ReceiptDetails())
+            .expenseDetails(expenseDetailsFuel)
+            .build());
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .receipt(new ReceiptDetails(Set.of(new TypedId<>())))
+            .build());
+
+    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
+    accountActivityRequest.setPageRequest(new PageRequest(0, 10));
+    accountActivityRequest.setCategories(List.of("Assets", "Fuel", "Mandarina"));
 
     String body = objectMapper.writeValueAsString(accountActivityRequest);
 

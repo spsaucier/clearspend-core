@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
+import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.embedded.UserDetails;
@@ -186,6 +187,7 @@ public class TestDataHelper {
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setNotes("");
+    accountActivity.setExpenseDetails(config.getExpenseDetails());
 
     final ReceiptDetails receiptDetails = config.getReceipt().orElse(createReceipt());
     accountActivity.setReceipt(receiptDetails);
@@ -280,6 +282,7 @@ public class TestDataHelper {
     @Nullable private final OffsetDateTime activityTime;
     @Nullable private final MerchantDetails merchant;
     @Nullable private final ReceiptDetails receipt;
+    @Nullable private final ExpenseDetails expenseDetails;
 
     public static AccountActivityConfigBuilder fromCreateBusinessRecord(
         final TestHelper.CreateBusinessRecord createBusinessRecord) {
