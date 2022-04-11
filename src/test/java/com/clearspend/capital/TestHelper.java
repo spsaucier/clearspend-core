@@ -88,6 +88,7 @@ import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
+import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.ServiceHelper;
@@ -431,7 +432,8 @@ public class TestHelper {
   public CreateUpdateUserRecord createUserWithGlobalRole(
       final Business business, final String role) {
     final CreateUpdateUserRecord user = createUser(business);
-    rolesAndPermissionsService.grantGlobalRole(user.user(), role);
+    // Bypassing RolesAndPermissionsService because this can't pass the permission check
+    fusionAuthService.changeUserRole(RoleChange.GRANT, user.user().getSubjectRef(), role);
     return user;
   }
 

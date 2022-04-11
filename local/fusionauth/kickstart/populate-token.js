@@ -1,5 +1,5 @@
 function populate(jwt, user, registration) {
-  // Conditionals support migration from not having a registraton to having one
+  // Conditionals support migration from not having a registration to having one
   if (registration && registration.data) {
     if (registration.data.businessId) {
       jwt.businessId = registration.data.businessId;
@@ -20,6 +20,9 @@ function populate(jwt, user, registration) {
     }
     if ((!jwt.userType) && user.data.userType) {
       jwt.userType = user.data.userType;
+    }
+    if ((jwt.roles === undefined || jwt.roles.length == 0) && user.data.roles) {
+      jwt.roles = user.data.roles;
     }
   }
   if (registration && registration.id) {

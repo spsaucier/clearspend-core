@@ -467,6 +467,9 @@ class UserServiceTest extends BaseCapitalTest {
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
         .allowUser(owner)
         .build()
         .validateServiceMethod(action);

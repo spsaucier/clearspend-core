@@ -292,7 +292,8 @@ public class UserService {
     return StringUtils.isNotEmpty(newValue) && !oldValue.getEncrypted().equals(newValue);
   }
 
-  @PostAuthorize("isSelfOwned(returnObject) or hasRootPermission(returnObject, 'MANAGE_USERS')")
+  @PostAuthorize(
+      "isSelfOwned(returnObject) or hasRootPermission(returnObject, 'MANAGE_USERS') or hasGlobalPermission('CUSTOMER_SERVICE')")
   public User retrieveUser(TypedId<UserId> userId) {
     return retrieveUserForService(userId);
   }

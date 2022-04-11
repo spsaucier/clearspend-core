@@ -52,6 +52,7 @@ import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
+import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -90,6 +91,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final UserService userService;
   private final CardRepository cardRepository;
   private final ExpenseCategoryRepository expenseCategoryRepository;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
 
   private final Faker faker = new Faker();
 
@@ -375,6 +377,39 @@ class UserControllerTest extends BaseCapitalTest {
     Assertions.assertTrue(
         objectMapper.readValue(response.getContentAsString(), List.class).size() > 0);
     log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void customerServiceCanGetUser() {
+
+    CreateBusinessRecord supportOrg = testHelper.createBusiness();
+    CreateUpdateUserRecord customerServiceUserCreateRecord =
+        testHelper.createUserWithGlobalRole(
+            supportOrg.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
+    Cookie authCookie = testHelper.login(customerServiceUserCreateRecord.user());
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                get("/users/{userId}", createBusinessRecord.user().getId())
+                    .contentType("application/json")
+                    .cookie(authCookie))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    com.clearspend.capital.data.model.User user = createBusinessRecord.user();
+    User foundUser = objectMapper.readValue(response.getContentAsString(), User.class);
+    assertThat(foundUser.getFirstName()).isEqualTo(user.getFirstName().getEncrypted());
+    assertThat(foundUser.getLastName()).isEqualTo(user.getLastName().getEncrypted());
+    assertThat(foundUser.getAddress().getStreetLine1())
+        .isEqualTo(user.getAddress().getStreetLine1().getEncrypted());
+    assertThat(foundUser.getAddress().getStreetLine2())
+        .isEqualTo(user.getAddress().getStreetLine2().getEncrypted());
+    assertThat(foundUser.getAddress().getLocality()).isEqualTo(user.getAddress().getLocality());
+    assertThat(foundUser.getAddress().getRegion()).isEqualTo(user.getAddress().getRegion());
+    assertThat(foundUser.getEmail()).isEqualTo(user.getEmail().getEncrypted());
+    assertThat(foundUser.getPhone()).isEqualTo(user.getPhone().getEncrypted());
   }
 
   void currentUser() {}
