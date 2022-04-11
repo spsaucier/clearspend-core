@@ -531,10 +531,14 @@ public class StripeMockClient extends StripeClient {
 
     BankAccount bankAccount = new BankAccount();
     bankAccount.setId(faker.letterify("????????????????"));
+    bankAccount.setDefaultForCurrency(true);
     externalAccounts.setData(List.of(bankAccount));
 
     return account;
   }
+
+  @Override
+  public void deleteExternalAccount(String accountId, String externalAccountId) {}
 
   @Override
   public FinancialAccount getFinancialAccount(

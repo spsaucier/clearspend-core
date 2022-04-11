@@ -115,7 +115,7 @@ public class StripeWebhookController {
 
       default -> {
         String errorMessage = "unhandled eventType: " + parseRecord.stripeWebhookLog.getEventType();
-        log.error(errorMessage);
+        log.warn(errorMessage);
         parseRecord.stripeWebhookLog.setError(errorMessage);
       }
     }

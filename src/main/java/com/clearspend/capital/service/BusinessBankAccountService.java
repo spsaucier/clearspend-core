@@ -50,6 +50,7 @@ import com.plaid.client.model.AccountIdentity;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Owner;
 import com.stripe.model.Account;
+import com.stripe.model.BankAccount;
 import com.stripe.model.ExternalAccount;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -264,6 +265,8 @@ public class BusinessBankAccountService {
                   plaidAccountNames.getOrDefault(
                       account.getPlaidAccountRef().getEncrypted(), account.getName()));
               account.setDeleted(false);
+              account.setAccessToken(
+                  new RequiredEncryptedStringWithHash(accountsResponse.accessToken()));
 
               result.add(account);
             });
@@ -707,16 +710,20 @@ public class BusinessBankAccountService {
                 businessBankAccount.getPlaidAccountRef().getEncrypted(),
                 businessId));
 
-    // Assuming we are expecting strictly 1 verified bank account;
-    // future obtained knowledge may challenge this early assumption
-    List<ExternalAccount> extAccountsData = account.getExternalAccounts().getData();
-    if (extAccountsData.size() != 1) {
-      throw new RuntimeException(
-          "Unexpected number of elements in external accounts list for bank account id "
-              + businessBankAccountId);
+    String stripeBankAccountRef = null;
+    for (ExternalAccount externalAccount : account.getExternalAccounts().getData()) {
+      if (externalAccount instanceof BankAccount bankAccount) {
+        if (bankAccount.getDefaultForCurrency()) {
+          stripeBankAccountRef = bankAccount.getId();
+        } else {
+          stripeClient.deleteExternalAccount(stripeAccountId, bankAccount.getId());
+        }
+      }
     }
 
-    String stripeBankAccountRef = extAccountsData.get(0).getId();
+    if (stripeBankAccountRef == null) {
+      throw new RuntimeException("Failed to find default external stripe account");
+    }
 
     // Create setup intent, which will activate bank account as a successful payment method
     String ip = business.getStripeData().getTosAcceptance().getIp();

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
+import com.stripe.model.BankAccount;
 import com.stripe.model.EphemeralKey;
 import com.stripe.model.File;
 import com.stripe.model.Person;
@@ -976,6 +977,17 @@ public class StripeClient {
         () ->
             account.update(
                 params, RequestOptions.builder().setIdempotencyKey(accountId + btok).build()));
+  }
+
+  public void deleteExternalAccount(String accountId, String externalAccountId) {
+    BankAccount bankAccount = new BankAccount();
+    bankAccount.setId(externalAccountId);
+    bankAccount.setAccount(accountId);
+
+    callStripe(
+        "deleteExternalAccount",
+        null,
+        () -> bankAccount.delete(getRequestOptions(new TypedId<>(), 0L, accountId)));
   }
 
   public SetupIntent createSetupIntent(
