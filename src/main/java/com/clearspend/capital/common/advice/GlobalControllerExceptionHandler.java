@@ -6,6 +6,7 @@ import com.clearspend.capital.common.error.CurrencyMismatchException;
 import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.IdMismatchException;
+import com.clearspend.capital.common.error.InvalidKycDataException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.OperationDeclinedException;
@@ -132,4 +133,11 @@ public class GlobalControllerExceptionHandler {
   @ResponseStatus(HttpStatus.PRECONDITION_REQUIRED)
   @ExceptionHandler(ReLinkException.class)
   public void handleReLink() {}
+
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ExceptionHandler(InvalidKycDataException.class)
+  public @ResponseBody ControllerError handleKycErrors(InvalidKycDataException exception) {
+    log.error(String.format("%s exception processing request", exception.getClass()), exception);
+    return new ControllerError(exception.getMessage(), exception.getParam());
+  }
 }

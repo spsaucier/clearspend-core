@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.error.InvalidKycDataException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
@@ -27,6 +28,7 @@ import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
+import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.time.OffsetDateTime;
@@ -333,7 +335,9 @@ public class BusinessProspectService {
     if (businessService.retrieveBusinessByEmployerIdentificationNumber(
             convertBusinessProspect.getEmployerIdentificationNumber())
         != null) {
-      throw new InvalidRequestException("Duplicate employer identification number.");
+      throw new InvalidKycDataException(
+          StripeAccountFieldsToClearspendBusinessFields.employerIdentificationNumber.name(),
+          "Duplicate employer identification number.");
     }
 
     // When a business is created, a corespondent into stripe will be created too
