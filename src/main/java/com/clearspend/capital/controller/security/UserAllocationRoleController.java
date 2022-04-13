@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,28 +48,6 @@ public class UserAllocationRoleController {
             .collect(Collectors.toList()));
   }
 
-  @PostMapping("/allocation/{allocationId}/user/{granteeId}")
-  @ResponseStatus(value = HttpStatus.NO_CONTENT)
-  void createUserAllocationPermission(
-      @PathVariable(value = "allocationId")
-          @Parameter(
-              required = true,
-              name = "allocationId",
-              description = "ID of the allocation record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<AllocationId> allocationId,
-      @PathVariable("granteeId")
-          @Parameter(
-              required = true,
-              name = "granteeId",
-              description = "UserId of the grantee.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<UserId> granteeId,
-      @RequestBody String newRole) {
-
-    rolesAndPermissionsService.createUserAllocationRole(granteeId, allocationId, newRole);
-  }
-
   @PutMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
   void updateUserAllocationPermission(
@@ -89,7 +66,7 @@ public class UserAllocationRoleController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> granteeId,
       @RequestBody String newRole) {
-    rolesAndPermissionsService.updateUserAllocationRole(granteeId, allocationId, newRole);
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(granteeId, allocationId, newRole);
   }
 
   @DeleteMapping("/allocation/{allocationId}/user/{granteeId}")

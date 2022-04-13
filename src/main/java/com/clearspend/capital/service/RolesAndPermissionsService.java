@@ -104,19 +104,46 @@ public class RolesAndPermissionsService {
 
   UserAllocationRole createUserAllocationRole(
       @NonNull User grantee, Allocation allocation, @NonNull String newRole) {
-
     prepareUserAllocationRoleChange(grantee, allocation, newRole)
         .ifPresent(
             r -> {
-              throw new InvalidRequestException("Already created");
+              throw new InvalidRequestException(
+                  "User already has a role at the allocation and one cannot be created.");
             });
+    return userAllocationRoleRepository.saveAndFlush(
+        new UserAllocationRole(allocation.getId(), grantee.getId(), newRole));
+  }
 
-    UserAllocationRole role =
-        userAllocationRoleRepository.save(
-            new UserAllocationRole(allocation.getId(), grantee.getId(), newRole));
-    entityManager.flush(); // this needs to take effect immediately
+  /**
+   * Creates or updates a user's role, adding the given permission to any existing
+   * UserAllocationRole
+   *
+   * @param granteeId The ID of the user whose permission is to change
+   * @param allocationId The allocation ID
+   * @param newRole The new role to set
+   * @throws AccessDeniedException when the current user's permissions are insufficient
+   */
+  public UserAllocationRole createOrUpdateUserAllocationRole(
+      @NonNull TypedId<UserId> granteeId,
+      TypedId<AllocationId> allocationId,
+      @NonNull String newRole) {
+    return createOrUpdateUserAllocationRole(
+        userRepository.getById(granteeId),
+        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        newRole);
+  }
 
-    return role;
+  UserAllocationRole createOrUpdateUserAllocationRole(
+      @NonNull User grantee, @NonNull Allocation allocation, @NonNull String newRole) {
+    final UserAllocationRole userAllocationRole =
+        prepareUserAllocationRoleChange(grantee, allocation, newRole)
+            .map(
+                userRole -> {
+                  userRole.setRole(newRole);
+                  return userRole;
+                })
+            .orElse(new UserAllocationRole(allocation.getId(), grantee.getId(), newRole));
+    return userAllocationRoleRepository.saveAndFlush(userAllocationRole);
   }
 
   /**
@@ -143,12 +170,12 @@ public class RolesAndPermissionsService {
         .map(
             r -> {
               r.setRole(newRole);
-              com.clearspend.capital.data.model.security.UserAllocationRole role =
-                  userAllocationRoleRepository.save(r);
-              entityManager.flush(); // this needs to take effect immediately
-              return role;
+              return userAllocationRoleRepository.saveAndFlush(r);
             })
-        .orElseThrow(() -> new InvalidRequestException("Does not exist."));
+        .orElseThrow(
+            () ->
+                new InvalidRequestException(
+                    "User does not have any role to update at allocation."));
   }
 
   public List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(

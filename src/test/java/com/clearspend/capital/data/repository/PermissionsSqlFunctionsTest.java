@@ -335,9 +335,9 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 createBusinessRecord.user())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser.getId(), newChild1.getId(), DefaultRoles.ALLOCATION_EMPLOYEE);
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser.getId(), newChild3.getId(), DefaultRoles.ALLOCATION_MANAGER);
 
     final SqlParameterSource params =
@@ -481,7 +481,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 createBusinessRecord.user())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser.getId(), newChild2.getId(), DefaultRoles.ALLOCATION_MANAGER);
 
     final SqlParameterSource params =
@@ -562,7 +562,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                 createBusinessRecord.user())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser.getId(), newChild1.getId(), DefaultRoles.ALLOCATION_MANAGER);
 
     final SqlParameterSource params =
@@ -942,7 +942,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createUserWithGlobalRole(otherBusiness.business(), DefaultRoles.GLOBAL_BOOKKEEPER)
             .user();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         bookkeeper.getId(), rootAllocation.getId(), DefaultRoles.ALLOCATION_VIEW_ONLY);
     entityManager.flush();
     final SqlParameterSource params =
@@ -1059,7 +1059,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createUserWithGlobalRole(otherBusiness.business(), DefaultRoles.GLOBAL_BOOKKEEPER)
             .user();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         bookkeeper.getId(), rootAllocation.getId(), DefaultRoles.ALLOCATION_VIEW_ONLY);
     createBusinessRecord.business().setStatus(BusinessStatus.SUSPENDED);
     entityManager.flush();
@@ -1097,7 +1097,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createUserWithGlobalRole(otherBusiness.business(), DefaultRoles.GLOBAL_BOOKKEEPER)
             .user();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         bookkeeper.getId(), rootAllocation.getId(), DefaultRoles.ALLOCATION_VIEW_ONLY);
     createBusinessRecord.business().setStatus(BusinessStatus.CLOSED);
     entityManager.flush();
@@ -1178,7 +1178,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createUserWithGlobalRole(otherBusiness.business(), DefaultRoles.GLOBAL_BOOKKEEPER)
             .user();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         bookkeeper.getId(), rootAllocation.getId(), DefaultRoles.ALLOCATION_VIEW_ONLY);
     otherBusiness.business().setStatus(BusinessStatus.SUSPENDED);
     entityManager.flush();
@@ -1205,7 +1205,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createUserWithGlobalRole(otherBusiness.business(), DefaultRoles.GLOBAL_BOOKKEEPER)
             .user();
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         bookkeeper.getId(), rootAllocation.getId(), DefaultRoles.ALLOCATION_VIEW_ONLY);
     otherBusiness.business().setStatus(BusinessStatus.CLOSED);
     entityManager.flush();

@@ -225,7 +225,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     User otherUser = newUser.user();
     setCurrentUser(rootAllocationOwner);
     UserAllocationRole userAllocationRole =
-        rolesAndPermissionsService.createUserAllocationRole(
+        rolesAndPermissionsService.createOrUpdateUserAllocationRole(
             otherUser, rootAllocation, ALLOCATION_MANAGER);
 
     assertThat(
@@ -316,7 +316,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     // Make OtherUser an admin at root
     setCurrentUser(rootAllocationOwner);
-    rolesAndPermissionsService.updateUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser, rootAllocation, DefaultRoles.ALLOCATION_ADMIN);
 
     // Admin permission propagates down (lambda because it happens again in a moment)
@@ -338,14 +338,14 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     // Switch otherUser Owner permission back to Manager, and it goes everywhere
     setCurrentUser(rootAllocationOwner);
-    rolesAndPermissionsService.updateUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser, rootAllocation, ALLOCATION_MANAGER);
 
     assertAllocationOwnerRole.accept(ALLOCATION_MANAGER);
 
     // Switch back to admin for secondUser
     setCurrentUser(rootAllocationOwner);
-    rolesAndPermissionsService.updateUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         otherUser, rootAllocation, DefaultRoles.ALLOCATION_ADMIN);
 
     // Root Allocation owner makes a fourthAllocation under thirdAllocation
@@ -387,7 +387,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     assertThrows(
         InvalidRequestException.class,
         () ->
-            rolesAndPermissionsService.updateUserAllocationRole(
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
                 grantee, allocation, ALLOCATION_VIEW_ONLY),
         msg);
   }
@@ -522,7 +522,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     assertThrows(
         InvalidRequestException.class,
         () ->
-            rolesAndPermissionsService.createUserAllocationRole(
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
                 bookkeeper, rootAllocation, ALLOCATION_VIEW_ONLY));
 
     // Now grant the role and permit crossing businesses
@@ -535,7 +535,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     assertDoesNotThrow(
         () ->
-            rolesAndPermissionsService.createUserAllocationRole(
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
                 bookkeeper, rootAllocation, ALLOCATION_VIEW_ONLY));
     entityManager.flush();
     Runnable makeBookkeeperBusinessUser =
@@ -612,7 +612,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     // The allocation owner gives someone else some permissions
     User otherUser = newUser.user();
     setCurrentUser(allocationOwner);
-    rolesAndPermissionsService.createUserAllocationRole(otherUser, rootAllocation, "Manager");
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+        otherUser, rootAllocation, "Manager");
     entityManager.flush();
 
     // Check what permissions the user has
@@ -688,7 +689,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     // Also admin on a child allocation created by someone else
     User manager = testHelper.createUser(createBusinessRecord.business()).user();
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         manager, rootAllocation, ALLOCATION_MANAGER);
 
     // Manager makes a child allocation

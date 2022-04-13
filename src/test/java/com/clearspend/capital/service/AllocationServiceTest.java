@@ -163,7 +163,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 Collections.emptySet()));
 
     testHelper.setCurrentUser(createBusinessRecord.user());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         peon.user(), createBusinessRecord.allocationRecord().allocation(), "View only");
     entityManager.flush();
 

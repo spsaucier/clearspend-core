@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,7 +40,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
   @SneakyThrows
   @Test
-  void createAllocationPostPermissionPutChangeDelete() {
+  void createOrUpdateRole_ThenDelete() {
     CreateBusinessRecord createBusinessRecord = testHelper.init();
     final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
     final User rootAllocationOwner = createBusinessRecord.user();
@@ -52,7 +51,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     testHelper.login(rootAllocationOwner); // Has Admin permissions by default
     // Set a permission on the manager
     mvc.perform(
-            post("/user-allocation-roles/allocation/%s/user/%s"
+            put("/user-allocation-roles/allocation/%s/user/%s"
                     .formatted(
                         rootAllocation.getId().toUuid().toString(),
                         manager.getId().toUuid().toString()))

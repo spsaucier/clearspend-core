@@ -942,7 +942,7 @@ public class TestHelper {
     CreateUpdateUserRecord result =
         createUser(
             serviceHelper.businessService().getBusiness(allocation.getBusinessId()).business());
-    rolesAndPermissionsService.createUserAllocationRole(
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
         result.user().getId(), allocation.getId(), role);
     return result;
   }
