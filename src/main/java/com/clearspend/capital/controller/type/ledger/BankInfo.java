@@ -15,7 +15,6 @@ public class BankInfo {
   @JsonProperty("name")
   private String name;
 
-  @NonNull
   @JsonProperty("accountNumberLastFour")
   private String accountNumberLastFour;
 }

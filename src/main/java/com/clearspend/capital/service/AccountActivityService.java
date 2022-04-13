@@ -101,13 +101,10 @@ public class AccountActivityService {
       Hold hold,
       String bankName,
       String accountNumberLastFour) {
-    recordBankAccountAccountActivity(
-        allocation,
-        type,
-        adjustment,
-        hold,
-        new BankAccountDetails(bankName, accountNumberLastFour),
-        null);
+    BankAccountDetails bankAccountDetails = new BankAccountDetails(bankName);
+    bankAccountDetails.setLastFour(accountNumberLastFour);
+
+    recordBankAccountAccountActivity(allocation, type, adjustment, hold, bankAccountDetails, null);
   }
 
   private void recordBankAccountAccountActivity(

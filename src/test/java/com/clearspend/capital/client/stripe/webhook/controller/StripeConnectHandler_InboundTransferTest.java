@@ -235,6 +235,10 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
 
+    externalAch_creditsReceived(receivedCredit);
+  }
+
+  private void externalAch_creditsReceived(ReceivedCredit receivedCredit) {
     // when
     stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.ACH);
 
@@ -253,9 +257,27 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     assertThat(adjustmentAccountActivity.getBankAccount().getId()).isNull();
     assertThat(adjustmentAccountActivity.getBankAccount().getName())
-        .isEqualTo(paymentMethodDetails.getUsBankAccount().getBankName());
+        .isEqualTo(
+            receivedCredit.getReceivedPaymentMethodDetails().getUsBankAccount().getBankName());
     assertThat(adjustmentAccountActivity.getBankAccount().getLastFour())
-        .isEqualTo(paymentMethodDetails.getUsBankAccount().getLastFour());
+        .isEqualTo(
+            receivedCredit.getReceivedPaymentMethodDetails().getUsBankAccount().getLastFour());
+  }
+
+  @Test
+  public void externalAch_creditsReceived_emptyLastFour() {
+    // given
+    ReceivedCredit receivedCredit = new ReceivedCredit();
+    receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());
+    receivedCredit.setAmount(100L);
+    receivedCredit.setCurrency("usd");
+
+    ReceivedPaymentMethodDetails paymentMethodDetails = new ReceivedPaymentMethodDetails();
+    paymentMethodDetails.setUsBankAccount(new UsBankAccount("Test Bank", null, "1234567890"));
+
+    receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
+
+    externalAch_creditsReceived(receivedCredit);
   }
 
   @Test

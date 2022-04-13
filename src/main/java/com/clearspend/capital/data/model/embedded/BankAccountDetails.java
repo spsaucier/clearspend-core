@@ -29,7 +29,7 @@ public class BankAccountDetails {
 
   @NonNull private String name;
 
-  @NonNull private String lastFour;
+  private String lastFour;
 
   public static BankAccountDetails of(BusinessBankAccount businessBankAccount) {
     String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
