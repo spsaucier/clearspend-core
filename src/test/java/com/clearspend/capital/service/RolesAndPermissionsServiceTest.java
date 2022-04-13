@@ -41,6 +41,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -369,6 +370,68 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         rolesAndPermissionsService
             .getUserRolesAndPermissionsForAllocation(fourthAllocation.getId())
             .allocationRole());
+  }
+
+  @Test
+  void createAndThenUpdatePermissions() {
+    final User newUser = testHelper.createUser(createBusinessRecord.business()).user();
+    final Optional<UserAllocationRole> noRoleResult =
+        userAllocationRoleRepository.findByUserIdAndAllocationId(
+            newUser.getId(), createBusinessRecord.allocationRecord().allocation().getId());
+    assertTrue(noRoleResult.isEmpty());
+
+    // Cannot update before create
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            rolesAndPermissionsService.updateUserAllocationRole(
+                newUser,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE));
+
+    assertDoesNotThrow(
+        () ->
+            rolesAndPermissionsService.createUserAllocationRole(
+                newUser,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE));
+    final Optional<UserAllocationRole> employeeRoleResult =
+        userAllocationRoleRepository.findByUserIdAndAllocationId(
+            newUser.getId(), createBusinessRecord.allocationRecord().allocation().getId());
+    assertThat(employeeRoleResult)
+        .isPresent()
+        .get()
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue("userId", newUser.getId())
+        .hasFieldOrPropertyWithValue("role", DefaultRoles.ALLOCATION_EMPLOYEE);
+
+    // Cannot run create again
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            rolesAndPermissionsService.createUserAllocationRole(
+                newUser,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER));
+
+    assertDoesNotThrow(
+        () ->
+            rolesAndPermissionsService.updateUserAllocationRole(
+                newUser,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER));
+
+    final Optional<UserAllocationRole> managerRoleResult =
+        userAllocationRoleRepository.findByUserIdAndAllocationId(
+            newUser.getId(), createBusinessRecord.allocationRecord().allocation().getId());
+    assertThat(managerRoleResult)
+        .isPresent()
+        .get()
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue("userId", newUser.getId())
+        .hasFieldOrPropertyWithValue("role", DefaultRoles.ALLOCATION_MANAGER);
   }
 
   private void tryToDemoteExpectingExceptions(User actor, User grantee, Allocation allocation) {
