@@ -30,6 +30,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
   @Autowired private ChartOfAccountsService chartOfAccountsService;
   @Autowired private CodatService codatService;
   @Autowired private BusinessNotificationRepository businessNotificationRepository;
+  @Autowired private BusinessNotificationService businessNotificationService;
 
   private TestHelper.CreateBusinessRecord createBusinessRecord;
   private Faker faker = new Faker();
@@ -80,6 +81,8 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
 
   @Test
   public void canGenerateChartOfAccountsDiff() {
+    businessNotificationService.acceptChartOfAccountChangesForUser(
+        business.getId(), user.getUserId());
     List<CodatAccount> accounts =
         CodatServiceTest.getQualifiedNames().stream()
             .map(
@@ -120,6 +123,18 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     chartOfAccountsService.updateChartOfAccountsForBusiness(business.getId(), newNestedAccount);
     assertThat(chartOfAccountsService.getTotalChangesForBusiness(business.getId())).isEqualTo(6);
     assertThat(businessNotificationRepository.findAllByBusinessId(business.getId()).size())
+        .isEqualTo(7);
+    assertThat(
+            businessNotificationService
+                .getUnseenNotificationsForUser(business.getId(), user.getUserId())
+                .size())
         .isEqualTo(6);
+    businessNotificationService.acceptChartOfAccountChangesForUser(
+        business.getId(), user.getUserId());
+    assertThat(
+            businessNotificationService
+                .getUnseenNotificationsForUser(business.getId(), user.getUserId())
+                .size())
+        .isEqualTo(0);
   }
 }

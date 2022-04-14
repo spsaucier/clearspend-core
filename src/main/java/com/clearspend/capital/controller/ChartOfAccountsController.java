@@ -4,6 +4,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.controller.type.chartOfAccounts.GetChartOfAccountsMappingResponse;
 import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.service.BusinessNotificationService;
 import com.clearspend.capital.service.ChartOfAccountsMappingService;
 import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChartOfAccountsController {
   private final ChartOfAccountsService chartOfAccountsService;
   private final ChartOfAccountsMappingService mappingService;
+  private final BusinessNotificationService businessNotificationService;
 
   @GetMapping("/stored")
   CodatAccountNestedResponse getChartOfAccountsForBusiness() {
