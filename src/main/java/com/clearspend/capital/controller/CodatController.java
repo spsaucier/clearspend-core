@@ -6,6 +6,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
+import com.clearspend.capital.client.codat.types.SetCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncCountResponse;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
@@ -15,7 +16,9 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.TransactionSyncLog;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
+import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class CodatController {
   private final CodatService codatService;
+  private final BusinessService businessService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
 
   @PostMapping("/quickbooks-online")
@@ -94,6 +99,12 @@ public class CodatController {
   CodatCreateBankAccountResponse createBankAccountForBusiness(
       @Validated @RequestBody CreateCreditCardRequest request) {
     return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
+  }
+
+  @PutMapping("/bank-accounts")
+  Business setBankAccountForBusiness(@Validated @RequestBody SetCreditCardRequest request) {
+    return businessService.updateCodatCreditCardForBusiness(
+        CurrentUser.getBusinessId(), request.getAccountId());
   }
 
   @GetMapping("/chart-of-accounts")

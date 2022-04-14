@@ -165,7 +165,7 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
-  Business updateCodatCreditCardForBusiness(
+  public Business updateCodatCreditCardForBusiness(
       TypedId<BusinessId> businessId, String codatCreditCardId) {
     Business business = retrieveBusiness(businessId, true);
 
