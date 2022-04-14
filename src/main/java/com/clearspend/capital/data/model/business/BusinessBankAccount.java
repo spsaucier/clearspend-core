@@ -52,4 +52,6 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
   private String stripeSetupIntentRef;
 
   @NonNull private Boolean deleted;
+
+  @Sensitive private String bankName;
 }

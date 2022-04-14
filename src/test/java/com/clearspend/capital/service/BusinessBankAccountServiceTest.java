@@ -214,6 +214,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final String accountName = "Account";
     final String accessToken = "Token";
     final String accountRef = "Ref";
+    final String bankName = "Bank";
+    final String ownerName = "Owner";
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     final BusinessBankAccount businessBankAccount =
@@ -223,6 +225,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             accountName,
             accessToken,
             accountRef,
+            bankName,
             createBusinessRecord.business().getId());
     assertThat(
         businessBankAccount,
@@ -245,6 +248,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final String accountName = "Account";
     final String accessToken = "Token";
     final String accountRef = "Ref";
+    final String bankName = "Bank";
+    final String ownerName = "Owner";
     final ThrowingSupplier<BusinessBankAccount> action =
         () ->
             bankAccountService.createBusinessBankAccount(
@@ -253,6 +258,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 accountName,
                 accessToken,
                 accountRef,
+                bankName,
                 createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)

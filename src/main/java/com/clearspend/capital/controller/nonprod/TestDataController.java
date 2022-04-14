@@ -8,7 +8,6 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.HttpReqRespUtils;
-import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -236,6 +235,7 @@ public class TestDataController {
             faker.funnyName().name(),
             UUID.randomUUID().toString(),
             UUID.randomUUID().toString(),
+            faker.funnyName().name(),
             business.getId());
     businessBankAccountService.transactBankAccount(
         business.getId(),
@@ -431,7 +431,6 @@ public class TestDataController {
         List.of(
             new TestBusiness(
                 business,
-                Collections.emptyList(),
                 List.of(
                     businessRecord.allocation(),
                     childAllocation.allocation(),
@@ -592,9 +591,7 @@ public class TestDataController {
             true,
             unsuccessEIN ? einUnsuccess : generateEmployerIdentificationNumber(),
             faker.number().digits(9),
-            LocalDate.of(1970, 1, 1),
-            false,
-            false));
+            LocalDate.of(1970, 1, 1)));
 
     return businessRecords;
   }
@@ -611,9 +608,7 @@ public class TestDataController {
       Boolean prospectExecutive,
       String ein,
       String ssn,
-      LocalDate dob,
-      Boolean owner,
-      Boolean executive) {
+      LocalDate dob) {
 
     List<BusinessOwner> businessOwners = new ArrayList<>();
 
@@ -752,22 +747,6 @@ public class TestDataController {
     return Integer.toString(faker.number().numberBetween(100_000_000, 999_999_999));
   }
 
-  public AllocationRecord createAllocation(
-      TypedId<BusinessId> businessId,
-      String name,
-      TypedId<AllocationId> parentAllocationId,
-      User user) {
-    return allocationService.createAllocation(
-        businessId,
-        parentAllocationId,
-        name,
-        user,
-        Amount.of(Currency.USD),
-        DEFAULT_TRANSACTION_LIMITS,
-        Collections.emptySet(),
-        Collections.emptySet());
-  }
-
   @TestDataUserOp(
       reviewer = "Craig Miller",
       explanation = "The method being called is to create users for the test data")
@@ -797,7 +776,6 @@ public class TestDataController {
                 business ->
                     new CreateTestDataResponse.TestBusiness(
                         business,
-                        userService.retrieveUsersForBusiness(business.getId()),
                         allocations.stream()
                             .filter(
                                 allocation -> allocation.getBusinessId().equals(business.getId()))

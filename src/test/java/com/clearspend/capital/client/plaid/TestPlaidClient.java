@@ -4,9 +4,11 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountsGetResponse;
+import com.plaid.client.model.InstitutionsGetByIdResponse;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Products;
 import com.plaid.client.model.SandboxPublicTokenCreateRequest;
@@ -33,6 +35,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
 
   private final ObjectMapper objectMapper;
   private final Resource mockAccountsResponse;
+  private final Resource mockInstitutionResponse;
   private final Resource mockBalancesResponse;
   private final Resource mockOwnersResponse;
 
@@ -42,12 +45,14 @@ public class TestPlaidClient extends SandboxPlaidClient {
       @NonNull ObjectMapper mapper,
       @NonNull PlaidLogEntryRepository plaidLogEntryRepository,
       @Value("classpath:plaidResponses/accounts.json") @NonNull Resource mockAccountsResponse,
+      @Value("classpath:plaidResponses/institution.json") @NonNull Resource mockInstitutionResponse,
       @Value("classpath:plaidResponses/balances.json") @NonNull Resource mockBalancesResponse,
       @Value("classpath:plaidResponses/owners.json") @NonNull Resource mockOwnersResponse) {
     super(plaidProperties, plaidApi, mapper, plaidLogEntryRepository);
     this.objectMapper = mapper;
     this.mockOwnersResponse = mockOwnersResponse;
     this.mockAccountsResponse = mockAccountsResponse;
+    this.mockInstitutionResponse = mockInstitutionResponse;
     this.mockBalancesResponse = mockBalancesResponse;
   }
 
@@ -170,7 +175,15 @@ public class TestPlaidClient extends SandboxPlaidClient {
     if (isMockAccessToken(accessToken)) {
       PlaidAccountResponse response =
           objectMapper.readValue(mockAccountsResponse.getFile(), PlaidAccountResponse.class);
-      return new AccountsResponse(accessToken, response.accounts(), response.numbers().ach());
+      String institutionName =
+          objectMapper
+              .configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, true)
+              .readValue(mockInstitutionResponse.getFile(), InstitutionsGetByIdResponse.class)
+              .getInstitution()
+              .getName();
+      objectMapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, false);
+      return new AccountsResponse(
+          accessToken, response.accounts(), response.numbers().ach(), institutionName);
     }
 
     return super.getAccounts(accessToken, businessId);

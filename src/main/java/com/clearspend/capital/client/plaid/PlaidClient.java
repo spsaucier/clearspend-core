@@ -16,6 +16,8 @@ import com.plaid.client.model.AuthGetResponse;
 import com.plaid.client.model.CountryCode;
 import com.plaid.client.model.IdentityGetRequest;
 import com.plaid.client.model.IdentityGetResponse;
+import com.plaid.client.model.InstitutionsGetByIdRequest;
+import com.plaid.client.model.InstitutionsGetByIdResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeRequest;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LinkTokenCreateRequest;
@@ -82,7 +84,10 @@ public class PlaidClient {
   public record OwnersResponse(String accessToken, List<AccountIdentity> accounts) {}
 
   public record AccountsResponse(
-      String accessToken, List<AccountBase> accounts, List<NumbersACH> achList) {}
+      String accessToken,
+      List<AccountBase> accounts,
+      List<NumbersACH> achList,
+      String institutionName) {}
 
   @SuppressWarnings("MissingCasesInEnumSwitch")
   public String createLinkToken(TypedId<BusinessId> businessId) throws IOException {
@@ -150,8 +155,23 @@ public class PlaidClient {
     Response<AuthGetResponse> authGetResponse = plaidApi.authGet(authGetRequest).execute();
 
     AuthGetResponse body = validBody(businessId, authGetResponse);
+    String institutionName = getInstitutionName(body.getItem().getInstitutionId());
 
-    return new AccountsResponse(accessToken, body.getAccounts(), body.getNumbers().getAch());
+    return new AccountsResponse(
+        accessToken, body.getAccounts(), body.getNumbers().getAch(), institutionName);
+  }
+
+  private String getInstitutionName(String institutionId) throws IOException {
+
+    Response<InstitutionsGetByIdResponse> institution =
+        plaidApi
+            .institutionsGetById(
+                new InstitutionsGetByIdRequest()
+                    .institutionId(institutionId)
+                    .countryCodes(List.of(CountryCode.US)))
+            .execute();
+
+    return institution.body() != null ? institution.body().getInstitution().getName() : "";
   }
 
   public List<AccountBase> getBalances(@NonNull TypedId<BusinessId> businessId, String accessToken)

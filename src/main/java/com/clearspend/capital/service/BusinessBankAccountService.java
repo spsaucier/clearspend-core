@@ -118,6 +118,7 @@ public class BusinessBankAccountService {
       String accountName,
       String accessToken,
       String accountRef,
+      String bankName,
       TypedId<BusinessId> businessId) {
     BusinessBankAccount businessBankAccount =
         new BusinessBankAccount(
@@ -128,6 +129,7 @@ public class BusinessBankAccountService {
             new RequiredEncryptedStringWithHash(accountRef),
             false);
     businessBankAccount.setName(accountName);
+    businessBankAccount.setBankName(bankName);
 
     log.debug(
         "Created business bank account {} for businessID {}",
@@ -159,9 +161,6 @@ public class BusinessBankAccountService {
     String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
     PlaidClient.AccountsResponse accountsResponse =
         plaidClient.getAccounts(accessToken, businessId);
-    Map<String, String> accountNames =
-        accountsResponse.accounts().stream()
-            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
 
     try {
       PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken, businessId);
@@ -240,6 +239,7 @@ public class BusinessBankAccountService {
         .map(Entry::getValue)
         .forEach(
             plaidAccount -> {
+              String bankName = accountsResponse.institutionName();
               BusinessBankAccount businessBankAccount =
                   createBusinessBankAccount(
                       plaidAccount.getRouting(),
@@ -247,6 +247,7 @@ public class BusinessBankAccountService {
                       plaidAccountNames.get(plaidAccount.getAccountId()),
                       accountsResponse.accessToken(),
                       plaidAccount.getAccountId(),
+                      bankName,
                       businessId);
 
               businessBankAccountBalanceService.createBusinessBankAccountBalance(
@@ -267,6 +268,7 @@ public class BusinessBankAccountService {
               account.setDeleted(false);
               account.setAccessToken(
                   new RequiredEncryptedStringWithHash(accountsResponse.accessToken()));
+              account.setBankName(accountsResponse.institutionName());
 
               result.add(account);
             });
@@ -486,8 +488,19 @@ public class BusinessBankAccountService {
               "clearspend.com");
         }
 
+        String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
+        User currentUser = userService.retrieveUser(CurrentUser.get().userId());
         twilioService.sendBankFundsDepositRequestEmail(
-            business.getBusinessEmail().getEncrypted(), business.getLegalName(), amount.toString());
+            currentUser.getEmail().getEncrypted(),
+            currentUser.getFirstName().getEncrypted(),
+            businessBankAccount.getBankName(),
+            amount.toString(),
+            String.format(
+                "%s %s",
+                currentUser.getFirstName().getEncrypted(),
+                currentUser.getLastName().getEncrypted()),
+            businessBankAccount.getName(),
+            accountNumber.substring(accountNumber.length() - 4));
       }
 
       case WITHDRAW -> {
@@ -498,8 +511,20 @@ public class BusinessBankAccountService {
             amount,
             "Company [%s] ACH push funds relocation".formatted(business.getLegalName()),
             "Company [%s] ACH push funds relocation".formatted(business.getLegalName()));
+
+        String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
+        User currentUser = userService.retrieveUser(CurrentUser.get().userId());
         twilioService.sendBankFundsWithdrawalEmail(
-            business.getBusinessEmail().getEncrypted(), business.getLegalName(), amount.toString());
+            currentUser.getEmail().getEncrypted(),
+            currentUser.getFirstName().getEncrypted(),
+            businessBankAccount.getBankName(),
+            amount.toString(),
+            String.format(
+                "%s %s",
+                currentUser.getFirstName().getEncrypted(),
+                currentUser.getLastName().getEncrypted()),
+            businessBankAccount.getName(),
+            accountNumber.substring(accountNumber.length() - 4));
       }
     }
 
@@ -753,7 +778,10 @@ public class BusinessBankAccountService {
     twilioService.sendBankDetailsAddedEmail(
         currentUser.getEmail().getEncrypted(),
         currentUser.getFirstName().getEncrypted(),
-        getBankAccountOwnersString(businessBankAccount, businessId),
+        businessBankAccount.getBankName(),
+        String.format(
+            "%s %s",
+            currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
         businessBankAccount.getName(),
         accountNumber.substring(accountNumber.length() - 4));
   }
@@ -768,7 +796,6 @@ public class BusinessBankAccountService {
                 () ->
                     new RecordNotFoundException(
                         Table.BUSINESS_BANK_ACCOUNT, businessBankaccountId, businessId));
-
     if (pendingStripeTransferService.retrievePendingTransfers(businessId).size() > 0) {
       throw new RuntimeException(
           "Cannot unregister bank account %s due to pending ach transfers"
@@ -781,25 +808,18 @@ public class BusinessBankAccountService {
     // accounts returns 1 record). Setup intent also cannot be deleted/updated once verified. So
     // just marking business bank account as deleted
     businessBankAccount.setDeleted(true);
-  }
 
-  private String getBankAccountOwnersString(
-      BusinessBankAccount businessBankAccount, TypedId<BusinessId> businessId) {
-    try {
-      PlaidClient.OwnersResponse ownersResponse =
-          plaidClient.getOwners(businessBankAccount.getAccessToken().getEncrypted(), businessId);
-      Map<String, List<Owner>> accountOwners =
-          ownersResponse.accounts().stream()
-              .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
-      List<Owner> owners =
-          accountOwners.get(businessBankAccount.getPlaidAccountRef().getEncrypted());
-      Owner firstOwner = owners.get(0);
-      List<String> ownerNamesList = firstOwner.getNames();
-      return String.join(",", ownerNamesList);
-    } catch (IOException ex) {
-      log.debug("Unable to obtain bank account owner names from plaid: {}", ex.toString());
-      return "";
-    }
+    String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
+    User currentUser = userService.retrieveUser(CurrentUser.get().userId());
+    twilioService.sendBankDetailsRemovedEmail(
+        currentUser.getEmail().getEncrypted(),
+        currentUser.getFirstName().getEncrypted(),
+        businessBankAccount.getBankName(),
+        String.format(
+            "%s %s",
+            currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
+        businessBankAccount.getName(),
+        accountNumber.substring(accountNumber.length() - 4));
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")

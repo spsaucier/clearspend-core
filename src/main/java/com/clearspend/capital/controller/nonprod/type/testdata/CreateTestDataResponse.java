@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.nonprod.type.testdata;
 
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,9 +22,6 @@ public class CreateTestDataResponse {
   public static class TestBusiness {
     @JsonProperty("business")
     Business business;
-
-    @JsonProperty("users")
-    List<User> users;
 
     @JsonProperty("allocations")
     List<Allocation> allocations;

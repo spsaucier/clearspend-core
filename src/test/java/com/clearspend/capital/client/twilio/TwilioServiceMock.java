@@ -91,6 +91,7 @@ public class TwilioServiceMock extends TwilioService {
   public void sendBankDetailsAddedEmail(
       String to,
       String firstName,
+      String bankName,
       String accountOwnerName,
       String accountName,
       String accountLastFour) {}
@@ -99,10 +100,26 @@ public class TwilioServiceMock extends TwilioService {
   public void sendBankFundsAvailableEmail(String to, String firstName) {}
 
   @Override
+  public void sendBankDetailsRemovedEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {}
+
+  @Override
   public void sendBankFundsReturnEmail(String to, String firstName) {}
 
   @Override
-  public void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {}
+  public void sendBankFundsWithdrawalEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String amount,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {}
 
   @Override
   public void sendCardIssuedNotifyOwnerEmail(String to, String ownerName, String employeeName) {}
@@ -137,7 +154,14 @@ public class TwilioServiceMock extends TwilioService {
   }
 
   @Override
-  public void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {}
+  public void sendBankFundsDepositRequestEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String amount,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {}
 
   @Override
   public void sendFinancialAccountReadyEmail(String to, String firstName) {}

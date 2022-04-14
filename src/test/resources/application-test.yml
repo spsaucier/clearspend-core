@@ -46,3 +46,4 @@ clearspend:
       issuance:
         card:
           physical: 100000
+  onboarding-validation: ${ONBOARD_EMAIL_PHONE_VALIDATION:true}

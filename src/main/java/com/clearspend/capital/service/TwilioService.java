@@ -54,6 +54,7 @@ public class TwilioService {
   private final String BANK_ACCOUNT_LAST_FOUR_KEY = "bank_account_last_four";
   private final String BANK_ACCOUNT_OWNER_NAME_KEY = "bank_account_owner_name";
   private final String DATE_KEY = "date";
+  private final String BANK_NAME_KEY = "bank_name";
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -306,11 +307,13 @@ public class TwilioService {
   protected void sendBankDetailsAddedEmail(
       String to,
       String firstName,
+      String bankName,
       String accountOwnerName,
       String accountName,
       String accountLastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(BANK_NAME_KEY, bankName);
     personalization.addDynamicTemplateData(BANK_ACCOUNT_OWNER_NAME_KEY, accountOwnerName);
     personalization.addDynamicTemplateData(BANK_ACCOUNT_NAME_KEY, accountName);
     personalization.addDynamicTemplateData(BANK_ACCOUNT_LAST_FOUR_KEY, accountLastFour);
@@ -335,13 +338,50 @@ public class TwilioService {
   }
 
   /* Bank Funds Deposit Request */
-  protected void sendBankFundsDepositRequestEmail(String to, String firstName, String amount) {
+  protected void sendBankFundsDepositRequestEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String amount,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(BANK_NAME_KEY, bankName);
     personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_OWNER_NAME_KEY, accountOwnerName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_NAME_KEY, accountName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_LAST_FOUR_KEY, accountLastFour);
+    personalization.addDynamicTemplateData(
+        DATE_KEY,
+        Instant.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getBankFundsDepositRequestTemplateId(), to, personalization);
+    send(mail);
+  }
+
+  /* Bank Details Removed */
+  public void sendBankDetailsRemovedEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {
+    Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(BANK_NAME_KEY, bankName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_OWNER_NAME_KEY, accountOwnerName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_NAME_KEY, accountName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_LAST_FOUR_KEY, accountLastFour);
+    personalization.addDynamicTemplateData(
+        DATE_KEY,
+        Instant.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+    Mail mail =
+        initMailWithTemplate(
+            sendGridProperties.getBankDetailsRemovedTemplateId(), to, personalization);
     send(mail);
   }
 
@@ -356,10 +396,24 @@ public class TwilioService {
   }
 
   /* Bank Funds Withdrawal */
-  protected void sendBankFundsWithdrawalEmail(String to, String firstName, String amount) {
+  protected void sendBankFundsWithdrawalEmail(
+      String to,
+      String firstName,
+      String bankName,
+      String amount,
+      String accountOwnerName,
+      String accountName,
+      String accountLastFour) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(BANK_NAME_KEY, bankName);
     personalization.addDynamicTemplateData(AMOUNT_KEY, amount);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_OWNER_NAME_KEY, accountOwnerName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_NAME_KEY, accountName);
+    personalization.addDynamicTemplateData(BANK_ACCOUNT_LAST_FOUR_KEY, accountLastFour);
+    personalization.addDynamicTemplateData(
+        DATE_KEY,
+        Instant.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
     Mail mail =
         initMailWithTemplate(
             sendGridProperties.getBankFundsWithdrawalTemplateId(), to, personalization);
