@@ -86,6 +86,9 @@ public class Business {
   @JsonProperty("url")
   private String url;
 
+  @JsonProperty("codatCreditCardId")
+  private String codatCreditCardId;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -103,6 +106,7 @@ public class Business {
     this.businessName = business.getBusinessName();
     this.description = business.getDescription();
     this.url = business.getUrl();
+    this.codatCreditCardId = business.getCodatCreditCardId();
 
     if (business.getStripeData().getBankAccountNumber() != null) {
       this.accountNumber = business.getStripeData().getBankAccountNumber().getEncrypted();
