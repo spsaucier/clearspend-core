@@ -7,8 +7,12 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.BusinessNotification;
 import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.data.model.enums.BusinessNotificationType;
 import com.clearspend.capital.data.model.enums.ChartOfAccountsUpdateStatus;
+import com.clearspend.capital.data.model.notifications.BusinessNotificationData;
+import com.clearspend.capital.data.repository.BusinessNotificationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import java.util.List;
@@ -26,6 +30,8 @@ public class ChartOfAccountsService {
   private final CodatService codatService;
   private final BusinessRepository businessRepository;
 
+  private final BusinessNotificationRepository businessNotificationRepository;
+
   public ChartOfAccounts updateChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
     Optional<ChartOfAccounts> chartOfAccounts =
@@ -36,7 +42,7 @@ public class ChartOfAccountsService {
       ChartOfAccounts newChartOfAccounts = new ChartOfAccounts();
       newChartOfAccounts.setNestedAccounts(accountNested);
 
-      updateStatusesForChartOfAccounts(oldChartOfAccounts, newChartOfAccounts);
+      updateStatusesForChartOfAccounts(oldChartOfAccounts, newChartOfAccounts, businessId);
       oldChartOfAccounts.setNestedAccounts(newChartOfAccounts.getNestedAccounts());
       return chartOfAccountsRepository.save(oldChartOfAccounts);
     } else {
@@ -80,18 +86,22 @@ public class ChartOfAccountsService {
   }
 
   public ChartOfAccounts updateStatusesForChartOfAccounts(
-      ChartOfAccounts oldChartOfAccounts, ChartOfAccounts newChartOfAccounts) {
+      ChartOfAccounts oldChartOfAccounts,
+      ChartOfAccounts newChartOfAccounts,
+      TypedId<BusinessId> businessId) {
     CodatAccountNested oldRootAccount = new CodatAccountNested("-1", "oldParent");
     oldRootAccount.setChildren(oldChartOfAccounts.getNestedAccounts());
 
     CodatAccountNested newRootAccount = new CodatAccountNested("-1", "newParent");
     newRootAccount.setChildren(newChartOfAccounts.getNestedAccounts());
-    updateStatusesForCodatAccountNested(oldRootAccount, newRootAccount);
+    updateStatusesForCodatAccountNested(oldRootAccount, newRootAccount, businessId);
     return newChartOfAccounts;
   }
 
   public void updateStatusesForCodatAccountNested(
-      CodatAccountNested oldAccountNested, CodatAccountNested newAccountNested) {
+      CodatAccountNested oldAccountNested,
+      CodatAccountNested newAccountNested,
+      TypedId<BusinessId> businessId) {
     // Look for new categories and mark them as such
     for (CodatAccountNested codatAccountNested : newAccountNested.getChildren()) {
       Optional<CodatAccountNested> match =
@@ -103,9 +113,10 @@ public class ChartOfAccountsService {
       if (match.isPresent()
           && match.get().getUpdateStatus() != ChartOfAccountsUpdateStatus.DELETED) {
         // category exists in both new and old, keep iterating through
-        updateStatusesForCodatAccountNested(match.get(), codatAccountNested);
+        updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
       } else {
         setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.NEW);
+        notifyNewAccountRecursively(codatAccountNested, businessId);
       }
     }
     // look for old categories that no longer exist and mark them as such
@@ -118,6 +129,7 @@ public class ChartOfAccountsService {
               .findFirst();
       if (match.isEmpty()) {
         setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.DELETED);
+        notifyAccountDeletedRecursively(codatAccountNested, businessId);
         newAccountNested.getChildren().add(codatAccountNested);
       }
     }
@@ -129,6 +141,35 @@ public class ChartOfAccountsService {
     for (CodatAccountNested codatAccount : codatAccountNested.getChildren()) {
       setUpdateStatusRecursively(codatAccount, status);
     }
+  }
+
+  public void notifyAccountDeletedRecursively(
+      CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
+
+    BusinessNotificationData data = new BusinessNotificationData();
+    data.setNewValue(codatAccountNested.getQualifiedName());
+    BusinessNotification newAccountNotification =
+        new BusinessNotification(
+            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, data);
+    businessNotificationRepository.save(newAccountNotification);
+
+    codatAccountNested
+        .getChildren()
+        .forEach(codatAccount -> notifyAccountDeletedRecursively(codatAccount, businessId));
+  }
+
+  public void notifyNewAccountRecursively(
+      CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
+    BusinessNotificationData data = new BusinessNotificationData();
+    data.setOldValue(codatAccountNested.getQualifiedName());
+    BusinessNotification newAccountNotification =
+        new BusinessNotification(
+            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_DELETED, data);
+    businessNotificationRepository.save(newAccountNotification);
+
+    codatAccountNested
+        .getChildren()
+        .forEach(codatAccount -> notifyNewAccountRecursively(codatAccount, businessId));
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")

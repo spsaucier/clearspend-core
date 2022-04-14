@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccounts;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.repository.BusinessNotificationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsRepository;
 import com.github.javafaker.Faker;
 import java.util.List;
@@ -28,6 +29,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
   @Autowired private ChartOfAccountsService chartOfAccountsService;
   @Autowired private CodatService codatService;
+  @Autowired private BusinessNotificationRepository businessNotificationRepository;
 
   private TestHelper.CreateBusinessRecord createBusinessRecord;
   private Faker faker = new Faker();
@@ -112,9 +114,12 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
 
     chartOfAccountsService.updateStatusesForChartOfAccounts(
         new ChartOfAccounts(business.getId(), oldNestedAccount),
-        new ChartOfAccounts(business.getId(), newNestedAccount));
+        new ChartOfAccounts(business.getId(), newNestedAccount),
+        business.getId());
     assertThat(newNestedAccount.size()).isGreaterThan(0);
     chartOfAccountsService.updateChartOfAccountsForBusiness(business.getId(), newNestedAccount);
     assertThat(chartOfAccountsService.getTotalChangesForBusiness(business.getId())).isEqualTo(6);
+    assertThat(businessNotificationRepository.findAllByBusinessId(business.getId()).size())
+        .isEqualTo(6);
   }
 }
