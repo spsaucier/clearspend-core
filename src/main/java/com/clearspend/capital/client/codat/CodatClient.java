@@ -208,7 +208,8 @@ public class CodatClient {
             -transaction.getAmount().getAmount().doubleValue(),
             1,
             new CodatAccountRef(expenseCategoryRef),
-            new CodatTaxRateRef("NON")));
+            new CodatTaxRateRef("NON"),
+            transaction.getNotes()));
 
     CodatContactRef contactRef = new CodatContactRef(supplier.getId(), "suppliers");
 

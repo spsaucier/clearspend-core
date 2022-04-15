@@ -21,4 +21,7 @@ public class CodatLineItem {
   @JsonProperty("taxRateRef")
   @NonNull
   private CodatTaxRateRef taxRateRef;
+
+  @JsonProperty("description")
+  private String description;
 }
