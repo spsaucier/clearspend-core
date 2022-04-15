@@ -14,9 +14,9 @@ import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.TransactionSyncLog;
-import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CodatService;
@@ -103,8 +103,9 @@ public class CodatController {
 
   @PutMapping("/bank-accounts")
   Business setBankAccountForBusiness(@Validated @RequestBody SetCreditCardRequest request) {
-    return businessService.updateCodatCreditCardForBusiness(
-        CurrentUser.getBusinessId(), request.getAccountId());
+    return new Business(
+        businessService.updateCodatCreditCardForBusiness(
+            CurrentUser.getBusinessId(), request.getAccountId()));
   }
 
   @GetMapping("/chart-of-accounts")
