@@ -150,7 +150,7 @@ public class ChartOfAccountsService {
     data.setNewValue(codatAccountNested.getQualifiedName());
     BusinessNotification newAccountNotification =
         new BusinessNotification(
-            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, data);
+            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_DELETED, data);
     businessNotificationRepository.save(newAccountNotification);
 
     codatAccountNested
@@ -164,7 +164,7 @@ public class ChartOfAccountsService {
     data.setOldValue(codatAccountNested.getQualifiedName());
     BusinessNotification newAccountNotification =
         new BusinessNotification(
-            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_DELETED, data);
+            businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, data);
     businessNotificationRepository.save(newAccountNotification);
 
     codatAccountNested
