@@ -13,5 +13,11 @@ public enum AccountActivityType {
   NETWORK_REFUND,
   REALLOCATE,
   FEE,
-  CARD_FUND_RETURN // unsolicited card credit (where the original auth is not referenced)
+  CARD_FUND_RETURN; // unsolicited card credit (where the original auth is not referenced)
+
+  public static AccountActivityType from(BankAccountTransactType bankAccountTransactType) {
+    return bankAccountTransactType == BankAccountTransactType.DEPOSIT
+        ? AccountActivityType.BANK_DEPOSIT_STRIPE
+        : AccountActivityType.BANK_WITHDRAWAL;
+  }
 }

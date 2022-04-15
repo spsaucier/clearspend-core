@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.BankAccountDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
@@ -80,6 +81,33 @@ public class AccountActivityService {
   private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
   private final ExpenseCategoryService expenseCategoryService;
   private final UserRepository userRepository;
+
+  @Transactional(TxType.REQUIRES_NEW)
+  void recordBankAccountAccountActivityDecline(
+      Allocation allocation,
+      AccountActivityType type,
+      BusinessBankAccount businessBankAccount,
+      Amount amount,
+      User user,
+      DeclineDetails declineDetails) {
+    AccountActivity accountActivity =
+        new AccountActivity(
+            allocation.getBusinessId(),
+            allocation.getAccountId(),
+            type,
+            AccountActivityStatus.DECLINED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(Clock.systemUTC()),
+            amount,
+            amount,
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+
+    accountActivity.setBankAccount(BankAccountDetails.of(businessBankAccount));
+    accountActivity.setUser(UserDetails.of(user));
+    accountActivity.setDeclineDetails(List.of(declineDetails));
+
+    accountActivityRepository.save(accountActivity);
+  }
 
   @Transactional(TxType.REQUIRED)
   void recordBankAccountAccountActivity(

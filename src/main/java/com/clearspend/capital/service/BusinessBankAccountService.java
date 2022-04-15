@@ -9,6 +9,8 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidStateException;
+import com.clearspend.capital.common.error.LimitViolationException;
+import com.clearspend.capital.common.error.OperationLimitViolationException;
 import com.clearspend.capital.common.error.ReLinkException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
@@ -30,6 +32,8 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.decline.LimitExceeded;
+import com.clearspend.capital.data.model.decline.OperationLimitExceeded;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
@@ -433,7 +437,53 @@ public class BusinessBankAccountService {
           IdType.BUSINESS_ID, businessId, businessBankAccount.getBusinessId());
     }
 
-    final AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+    User user = retrievalService.retrieveUser(businessId, userId);
+    AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+
+    try {
+      return transactBankAccount(
+          business,
+          businessBankAccount,
+          allocationRecord,
+          user,
+          bankAccountTransactType,
+          amount,
+          standardHold);
+    } catch (InsufficientFundsException
+        | LimitViolationException
+        | OperationLimitViolationException e) {
+      DeclineDetails declineDetails;
+      if (e instanceof InsufficientFundsException) {
+        declineDetails = new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS);
+      } else if (e instanceof LimitViolationException limitViolationException) {
+        declineDetails = LimitExceeded.from(limitViolationException);
+      } else {
+        declineDetails = OperationLimitExceeded.from((OperationLimitViolationException) e);
+      }
+      accountActivityService.recordBankAccountAccountActivityDecline(
+          allocationRecord.allocation(),
+          AccountActivityType.from(bankAccountTransactType),
+          businessBankAccount,
+          amount,
+          user,
+          declineDetails);
+
+      throw e;
+    }
+  }
+
+  private AdjustmentAndHoldRecord transactBankAccount(
+      Business business,
+      BusinessBankAccount businessBankAccount,
+      AllocationRecord allocationRecord,
+      User user,
+      BankAccountTransactType bankAccountTransactType,
+      Amount amount,
+      boolean standardHold) {
+
+    TypedId<BusinessId> businessId = business.getId();
+    TypedId<BusinessBankAccountId> businessBankAccountId = businessBankAccount.getId();
+
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         switch (bankAccountTransactType) {
           case DEPOSIT -> {
@@ -445,17 +495,13 @@ public class BusinessBankAccountService {
               businessId, allocationRecord.account(), amount);
         };
 
-    AccountActivityType type =
-        bankAccountTransactType == BankAccountTransactType.DEPOSIT
-            ? AccountActivityType.BANK_DEPOSIT_STRIPE
-            : AccountActivityType.BANK_WITHDRAWAL;
     accountActivityService.recordBankAccountAccountActivity(
         allocationRecord.allocation(),
-        type,
+        AccountActivityType.from(bankAccountTransactType),
         adjustmentAndHoldRecord.adjustment(),
         adjustmentAndHoldRecord.hold(),
         businessBankAccount,
-        retrievalService.retrieveUser(businessId, userId));
+        user);
 
     businessBankAccountRepository.flush();
 

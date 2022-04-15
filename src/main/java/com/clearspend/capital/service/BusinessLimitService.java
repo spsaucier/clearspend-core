@@ -1,8 +1,8 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.LimitViolationException;
+import com.clearspend.capital.common.error.OperationLimitViolationException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -368,9 +368,12 @@ public class BusinessLimitService {
                                     .minus(limit.getKey().getDuration())))
                 .count();
         if (operationAmount >= limit.getValue()) {
-          throw new InvalidRequestException(
-              "Business %s exceeded allowed operation amount of limitType %s for period %s"
-                  .formatted(businessId, limitType, limit.getKey()));
+          throw new OperationLimitViolationException(
+              businessId,
+              TransactionLimitType.BUSINESS,
+              limitType,
+              limit.getKey(),
+              limit.getValue());
         }
       }
     }

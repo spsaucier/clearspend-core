@@ -25,6 +25,7 @@ import lombok.Setter;
     defaultImpl = DeclineDetails.class)
 @JsonSubTypes({
   @Type(value = LimitExceeded.class, name = "LIMIT_EXCEEDED"),
+  @Type(value = OperationLimitExceeded.class, name = "OPERATION_LIMIT_EXCEEDED"),
   @Type(value = SpendControlViolated.class, name = "SPEND_CONTROL_VIOLATED"),
   @Type(value = AddressPostalCodeMismatch.class, name = "ADDRESS_POSTAL_CODE_MISMATCH")
 })

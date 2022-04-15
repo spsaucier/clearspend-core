@@ -19,20 +19,27 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InsufficientFundsException;
+import com.clearspend.capital.common.error.LimitViolationException;
+import com.clearspend.capital.common.error.OperationLimitViolationException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.decline.LimitExceeded;
+import com.clearspend.capital.data.model.decline.OperationLimitExceeded;
+import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
-import com.clearspend.capital.testutils.data.TestDataHelper;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
 import java.util.List;
@@ -56,7 +63,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Autowired private PlaidClient plaidClient;
   @Autowired private BusinessBankAccountBalanceRepository businessBankAccountBalanceRepository;
   @Autowired private PermissionValidationHelper permissionValidationHelper;
-  @Autowired private TestDataHelper testDataHelper;
+  @Autowired private AccountActivityRepository accountActivityRepository;
+
   private CreateBusinessRecord createBusinessRecord;
   private Allocation childAllocation;
 
@@ -135,6 +143,94 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                     BankAccountTransactType.WITHDRAW,
                     Amount.of(Currency.USD, new BigDecimal("1.85")),
                     true));
+
+    AccountActivity declinedActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
+            .findFirst()
+            .orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+        .containsOnly(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
+  }
+
+  @Test
+  void withdrawFunds_operationLimitViolation() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+
+    bankAccountService.transactBankAccount(
+        createBusinessRecord.business().getId(),
+        businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("10000")),
+        false);
+
+    for (int i = 0; i < 2; i++) {
+      bankAccountService.transactBankAccount(
+          createBusinessRecord.business().getId(),
+          businessBankAccount.getId(),
+          createBusinessRecord.user().getId(),
+          BankAccountTransactType.WITHDRAW,
+          Amount.of(Currency.USD, new BigDecimal("1.85")),
+          true);
+    }
+
+    OperationLimitViolationException operationLimitViolationException =
+        assertThrows(
+            OperationLimitViolationException.class,
+            () ->
+                bankAccountService.transactBankAccount(
+                    createBusinessRecord.business().getId(),
+                    businessBankAccount.getId(),
+                    createBusinessRecord.user().getId(),
+                    BankAccountTransactType.WITHDRAW,
+                    Amount.of(Currency.USD, new BigDecimal("1.85")),
+                    true));
+
+    AccountActivity declinedActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
+            .findFirst()
+            .orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+        .containsOnly(OperationLimitExceeded.from(operationLimitViolationException));
+  }
+
+  @Test
+  void withdrawFunds_limitViolation() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+
+    bankAccountService.transactBankAccount(
+        createBusinessRecord.business().getId(),
+        businessBankAccount.getId(),
+        createBusinessRecord.user().getId(),
+        BankAccountTransactType.DEPOSIT,
+        Amount.of(Currency.USD, new BigDecimal("10000")),
+        false);
+
+    LimitViolationException limitViolationException =
+        assertThrows(
+            LimitViolationException.class,
+            () ->
+                bankAccountService.transactBankAccount(
+                    createBusinessRecord.business().getId(),
+                    businessBankAccount.getId(),
+                    createBusinessRecord.user().getId(),
+                    BankAccountTransactType.DEPOSIT,
+                    Amount.of(Currency.USD, new BigDecimal("100")),
+                    false));
+
+    AccountActivity declinedActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
+            .findFirst()
+            .orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+        .containsOnly(LimitExceeded.from(limitViolationException));
   }
 
   @Test
@@ -155,6 +251,14 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                     BankAccountTransactType.DEPOSIT,
                     Amount.of(Currency.USD, new BigDecimal("15000.00")),
                     true));
+
+    AccountActivity declinedActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
+            .findFirst()
+            .orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+        .containsOnly(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
   }
 
   @Test
