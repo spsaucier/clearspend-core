@@ -49,31 +49,36 @@ public class PermissionEnrichmentService {
     return getPermissions(cache, permissionEvaluationIds)
         .map(
             userPermissions ->
-                doEvaluatePermissions(
-                    permissionEvaluationIds.userId(), userPermissions, permissions))
-        .orElse(false);
+                doEvaluatePermissions(permissionEvaluationIds, cache, userPermissions, permissions))
+        .orElseGet(
+            () -> {
+              cache.storeFailedPermissions(permissionEvaluationIds, permissions);
+              return false;
+            });
   }
 
   private record LastCall(String className, String methodName) {}
 
   private boolean doEvaluatePermissions(
-      @Nullable final TypedId<UserId> userId,
+      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
+      @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final UserRolesAndPermissions userPermissions,
       @NonNull final String permissions) {
+    final TypedId<UserId> userId = permissionEvaluationIds.userId();
     log.trace("User Permissions: {}", userPermissions);
-    final RequiredPermissions overlapPermissions = resolvePermission(String.valueOf(permissions));
+    final OverlapPermissions overlapPermissions = resolvePermission(permissions);
     log.trace("Overlap permissions: {}", overlapPermissions);
-    overlapPermissions.allocationPermissions.retainAll(userPermissions.allocationPermissions());
-    overlapPermissions.globalUserPermissions.retainAll(userPermissions.globalUserPermissions());
+    overlapPermissions.allocationPermissions().retainAll(userPermissions.allocationPermissions());
+    overlapPermissions.globalUserPermissions().retainAll(userPermissions.globalUserPermissions());
 
     if (log.isInfoEnabled()) {
       final EnumSet<GlobalUserPermission> customerServiceUsed =
           GlobalUserPermission.ALL_CUSTOMER_SERVICE.clone();
 
-      customerServiceUsed.retainAll(overlapPermissions.globalUserPermissions);
+      customerServiceUsed.retainAll(overlapPermissions.globalUserPermissions());
       log.trace("Customer service permissions: {}", customerServiceUsed);
 
-      if (overlapPermissions.allocationPermissions.isEmpty() && !customerServiceUsed.isEmpty()) {
+      if (overlapPermissions.allocationPermissions().isEmpty() && !customerServiceUsed.isEmpty()) {
         final LastCall lastCall =
             Arrays.stream(Thread.currentThread().getStackTrace())
                 .filter(
@@ -98,19 +103,25 @@ public class PermissionEnrichmentService {
     // the CurrentUser.userId().
     // This is because the User ID passed to this method is the User ID of the resource being
     // retrieved and it determines ownership
-    return (hasPermissions(overlapPermissions) && !isOnlyPermissionViewOwn(overlapPermissions))
-        || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId));
+    final boolean result =
+        (hasPermissions(overlapPermissions) && !isOnlyPermissionViewOwn(overlapPermissions))
+            || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId));
+    if (!result) {
+      cache.storeFailedPermissions(
+          permissionEvaluationIds, permissions, userPermissions, overlapPermissions);
+    }
+    return result;
   }
 
-  private boolean hasPermissions(@NonNull final RequiredPermissions overlapPermissions) {
-    return !(overlapPermissions.allocationPermissions.isEmpty()
-        && overlapPermissions.globalUserPermissions.isEmpty());
+  private boolean hasPermissions(@NonNull final OverlapPermissions overlapPermissions) {
+    return !(overlapPermissions.allocationPermissions().isEmpty()
+        && overlapPermissions.globalUserPermissions().isEmpty());
   }
 
-  private boolean isOnlyPermissionViewOwn(@NonNull final RequiredPermissions overlapPermissions) {
-    return overlapPermissions.globalUserPermissions.isEmpty()
+  private boolean isOnlyPermissionViewOwn(@NonNull final OverlapPermissions overlapPermissions) {
+    return overlapPermissions.globalUserPermissions().isEmpty()
         && overlapPermissions.allocationPermissions().size() == 1
-        && overlapPermissions.allocationPermissions.contains(AllocationPermission.VIEW_OWN);
+        && overlapPermissions.allocationPermissions().contains(AllocationPermission.VIEW_OWN);
   }
 
   private boolean isAllowedViewOwn(@Nullable final TypedId<UserId> userId) {
@@ -235,10 +246,6 @@ public class PermissionEnrichmentService {
             });
   }
 
-  private record RequiredPermissions(
-      EnumSet<AllocationPermission> allocationPermissions,
-      EnumSet<GlobalUserPermission> globalUserPermissions) {}
-
   private static final Map<String, AllocationPermission> allocationPermissions =
       EnumSet.allOf(AllocationPermission.class).stream()
           .collect(Collectors.toMap(AllocationPermission::name, e -> e));
@@ -247,10 +254,10 @@ public class PermissionEnrichmentService {
       EnumSet.allOf(GlobalUserPermission.class).stream()
           .collect(Collectors.toMap(GlobalUserPermission::name, e -> e));
 
-  private RequiredPermissions resolvePermission(String permission) {
+  private OverlapPermissions resolvePermission(String permission) {
 
     List<String> permissionStrings = Arrays.asList(permission.split("\\s*\\|\\s*"));
-    return new RequiredPermissions(
+    return new OverlapPermissions(
         enumSet(
             AllocationPermission.class,
             permissionStrings.stream()

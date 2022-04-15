@@ -13,13 +13,14 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.UserType;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.SneakyThrows;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public record CurrentUser(
@@ -32,7 +33,7 @@ public record CurrentUser(
     // From the JWT example
     // https://fusionauth.io/docs/v1/tech/core-concepts/authentication-authorization/ it looks right
 
-    return get(getClaims());
+    return getClaims().map(CurrentUser::get).orElse(null);
   }
 
   public static CurrentUser get(Map<String, Object> claims) {
@@ -65,20 +66,26 @@ public record CurrentUser(
   }
 
   private static Object getClaim(String name) {
-    return getClaims().get(name);
+    return getClaims().map(claims -> claims.get(name)).orElse(null);
   }
 
-  private static Map<String, Object> getClaims() {
+  private static Optional<Map<String, Object>> getClaims() {
     // TODO https://github.com/fusionauth/fusionauth-jwt#verify-and-decode-a-jwt-using-hmac
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    return ((JwtAuthenticationToken) authentication).getToken().getClaims();
+    return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+        .map(auth -> (JwtAuthenticationToken) auth)
+        .map(JwtAuthenticationToken::getToken)
+        .map(Jwt::getClaims);
   }
 
   public static UUID getFusionAuthUserId() {
-    return UUID.fromString(String.valueOf(getClaims().get(USER_ID)));
+    return getClaims()
+        .map(claims -> claims.get(USER_ID))
+        .map(String::valueOf)
+        .map(UUID::fromString)
+        .orElse(null);
   }
 
   public static String getEmail() {
-    return String.valueOf(getClaims().get(EMAIL));
+    return getClaims().map(claims -> claims.get(EMAIL)).map(String::valueOf).orElse(null);
   }
 }

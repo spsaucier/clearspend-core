@@ -10,13 +10,17 @@ import com.clearspend.capital.common.error.InvalidKycDataException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
 import com.clearspend.capital.common.error.OperationDeclinedException;
+import com.clearspend.capital.common.error.PermissionFailureException;
 import com.clearspend.capital.common.error.ReLinkException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.service.security.FailedPermissions;
+import com.clearspend.capital.service.security.UserRolesAndPermissionsCache;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
 import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.inversoft.error.Errors;
 import com.stripe.exception.StripeException;
 import com.stripe.model.StripeError;
+import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -24,6 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -105,10 +110,34 @@ public class GlobalControllerExceptionHandler {
   }
 
   @ResponseStatus(HttpStatus.FORBIDDEN)
-  @ExceptionHandler({DataAccessViolationException.class, AccessDeniedException.class})
-  public @ResponseBody ControllerError handleForbiddenException(Exception exception) {
+  @ExceptionHandler(DataAccessViolationException.class)
+  public @ResponseBody ControllerError dataAccessViolationException(
+      final DataAccessViolationException exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError("");
+  }
+
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  @ExceptionHandler(AccessDeniedException.class)
+  public @ResponseBody ControllerError handleAccessDeniedException(
+      final AccessDeniedException exception) {
+    try {
+      final PermissionFailureException ex =
+          new PermissionFailureException(getFailedPermissions(), exception);
+      log.error("%s exception processing request".formatted(ex.getClass().getName()), ex);
+    } catch (Exception ex) {
+      throw new RuntimeException("Error handling permission failure", ex);
+    }
+    return new ControllerError("");
+  }
+
+  private List<FailedPermissions> getFailedPermissions() {
+    return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+        .flatMap(auth -> Optional.ofNullable(auth.getDetails()))
+        .filter(details -> details instanceof UserRolesAndPermissionsCache)
+        .map(details -> (UserRolesAndPermissionsCache) details)
+        .map(UserRolesAndPermissionsCache::getFailedPermissions)
+        .orElse(List.of());
   }
 
   @ResponseStatus(HttpStatus.NOT_FOUND)

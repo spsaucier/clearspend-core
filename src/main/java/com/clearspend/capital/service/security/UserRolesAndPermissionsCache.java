@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,7 @@ import javax.annotation.Nullable;
 import lombok.NonNull;
 
 public class UserRolesAndPermissionsCache {
+
   /**
    * If no permissions are found during the query, this placeholder is stored in the cache to
    * short-circuit any future lookups for that same allocation/business/etc during the operation.
@@ -39,6 +41,27 @@ public class UserRolesAndPermissionsCache {
       new HashMap<>();
   private final Map<TypedId<AllocationId>, UserRolesAndPermissions> allocationPermissionsMap =
       new HashMap<>();
+  private final List<FailedPermissions> failedPermissions = new ArrayList<>();
+
+  public void storeFailedPermissions(
+      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
+      @NonNull final String requiredPermissions,
+      @Nullable final UserRolesAndPermissions userRolesAndPermissions,
+      @Nullable final OverlapPermissions overlapPermissions) {
+    failedPermissions.add(
+        new FailedPermissions(
+            permissionEvaluationIds, requiredPermissions, userRolesAndPermissions));
+  }
+
+  public void storeFailedPermissions(
+      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
+      @NonNull final String requiredPermissions) {
+    storeFailedPermissions(permissionEvaluationIds, requiredPermissions, null, null);
+  }
+
+  public List<FailedPermissions> getFailedPermissions() {
+    return failedPermissions;
+  }
 
   /**
    * Get cached permissions by Business ID, if any exist. All permissions for all allocations the
