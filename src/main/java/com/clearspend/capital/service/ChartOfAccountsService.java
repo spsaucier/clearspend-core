@@ -147,7 +147,7 @@ public class ChartOfAccountsService {
       CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
 
     BusinessNotificationData data = new BusinessNotificationData();
-    data.setNewValue(codatAccountNested.getQualifiedName());
+    data.setOldValue(codatAccountNested.getQualifiedName());
     BusinessNotification newAccountNotification =
         new BusinessNotification(
             businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_DELETED, data);
@@ -161,7 +161,7 @@ public class ChartOfAccountsService {
   public void notifyNewAccountRecursively(
       CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
     BusinessNotificationData data = new BusinessNotificationData();
-    data.setOldValue(codatAccountNested.getQualifiedName());
+    data.setNewValue(codatAccountNested.getQualifiedName());
     BusinessNotification newAccountNotification =
         new BusinessNotification(
             businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, data);
