@@ -51,6 +51,7 @@ class UserServiceTest extends BaseCapitalTest {
   @Autowired private StripeMockClient stripeMockClient;
 
   @Autowired private CardService cardService;
+  @Autowired private FusionAuthService fusionAuthService;
 
   private CreateBusinessRecord createBusinessRecord;
 
@@ -342,6 +343,78 @@ class UserServiceTest extends BaseCapitalTest {
                     "Saget",
                     null,
                     "bs@clearspend.com",
+                    "123456789",
+                    false));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  void updateUser_getsDistributed_CAP_908() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    User existing =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    testHelper.issueCard(
+        createBusinessRecord.business(),
+        createBusinessRecord.allocationRecord().allocation(),
+        existing,
+        Currency.USD,
+        FundingType.POOLED,
+        CardType.VIRTUAL,
+        false);
+
+    assertThat(fusionAuthService.getUser(existing).email)
+        .isEqualTo(existing.getEmail().getEncrypted());
+    long cardholderObjs = stripeMockClient.countCreatedObjectsByType(Cardholder.class);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    existing =
+        userService
+            .updateUser(
+                new UpdateUserRequest(
+                    existing.getId(),
+                    createBusinessRecord.business().getId(),
+                    "Bob",
+                    "Saget",
+                    null,
+                    "bs+1234@clearspend.com",
+                    "123456789",
+                    false))
+            .user();
+
+    assertThat(fusionAuthService.getUser(existing).email)
+        .isEqualTo(existing.getEmail().getEncrypted());
+    assertThat(stripeMockClient.countCreatedObjectsByType(Cardholder.class))
+        .isEqualTo(cardholderObjs + 1);
+  }
+
+  @Test
+  void updateUser_UserPermissions_existingUser() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User existing =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final ThrowingRunnable action =
+        () ->
+            userService.updateUser(
+                new UpdateUserRequest(
+                    existing.getId(),
+                    createBusinessRecord.business().getId(),
+                    null,
+                    null,
+                    null,
+                    null,
                     "123456789",
                     false));
     permissionValidationHelper

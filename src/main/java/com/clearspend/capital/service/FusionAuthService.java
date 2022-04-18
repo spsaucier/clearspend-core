@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NonNull;
@@ -355,6 +356,17 @@ public class FusionAuthService {
     return true;
   }
 
+  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Delegation")
+  UUID updateUser(com.clearspend.capital.data.model.User user, @Nullable String password) {
+    return updateUser(
+        user.getBusinessId(),
+        user.getUserId(),
+        user.getEmail().getEncrypted(),
+        password,
+        user.getType(),
+        user.getSubjectRef());
+  }
+
   /**
    * @param businessId the user's business
    * @param userId capital's number
@@ -377,11 +389,11 @@ public class FusionAuthService {
       @Sensitive String email,
       @Sensitive String password,
       UserType userType,
-      String fusionAuthUserIdStr) {
+      @NonNull String fusionAuthUserIdStr) {
     UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
 
     User user = userFactory(email, password, fusionAuthUserId);
-    if (email != null && password != null) {
+    if (email != null || password != null) {
 
       final ClientResponse<UserResponse, Errors> response =
           client.updateUser(fusionAuthUserId, new UserRequest(user));
@@ -423,6 +435,14 @@ public class FusionAuthService {
     ClientResponse<UserResponse, Errors> userResponseErrorsClientResponse =
         client.retrieveUserByEmail(email);
     return validateResponse(userResponseErrorsClientResponse).user;
+  }
+
+  /**
+   * @param user the ClearSpend user of interest
+   * @return the FusionAuth user record
+   */
+  User getUser(com.clearspend.capital.data.model.User user) {
+    return getUser(UUID.fromString(user.getSubjectRef()));
   }
 
   private User getUser(UUID fusionAuthUserId) {
@@ -549,4 +569,6 @@ public class FusionAuthService {
     }
     throw new InvalidRequestException(String.valueOf(response.status), response.exception);
   }
+
+  public void updateEmail(com.clearspend.capital.data.model.User user, String oldEmail) {}
 }

@@ -217,7 +217,12 @@ public class UserService {
       explanation = "Keeping User and FusionAuth records in sync by way of UserService")
   @Transactional
   @PreAuthorize(
-      "isSelfOwned(#updateUserRequest) or hasRootPermission(#updateUserRequest, 'MANAGE_USERS')")
+      "(isSelfOwned(#updateUserRequest)"
+          + " and #updateUserRequest.email == null"
+          + " and #updateUserRequest.firstName == null"
+          + " and #updateUserRequest.lastName == null"
+          + ")"
+          + " or hasRootPermission(#updateUserRequest, 'MANAGE_USERS')")
   public CreateUpdateUserRecord updateUser(@NonNull final UpdateUserRequest updateUserRequest) {
 
     User user = retrieveUser(updateUserRequest.getUserId());
@@ -230,17 +235,18 @@ public class UserService {
     if (isChanged(updateUserRequest.getLastName(), user.getLastName())) {
       user.setLastName(new RequiredEncryptedStringWithHash(updateUserRequest.getLastName()));
     }
-    // TODO CAP-727 forbid changing email
+
+    String oldEmail = null;
     if (isChanged(updateUserRequest.getEmail(), user.getEmail())) {
       // Ensure that this email address does NOT already exist within the database.
-      RequiredEncryptedStringWithHash newHash =
+      RequiredEncryptedStringWithHash newEmail =
           new RequiredEncryptedStringWithHash(updateUserRequest.getEmail());
-      Optional<User> duplicate =
-          userRepository.findByEmailHash(HashUtil.calculateHash(updateUserRequest.getEmail()));
+      Optional<User> duplicate = userRepository.findByEmailHash(newEmail.getHash());
       if (duplicate.isPresent() && !duplicate.get().getId().equals(updateUserRequest.getUserId())) {
         throw new InvalidRequestException("A user with that email address already exists");
       }
-      user.setEmail(newHash);
+      oldEmail = user.getEmail().getEncrypted();
+      user.setEmail(newEmail);
     }
     if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
       user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
@@ -251,6 +257,12 @@ public class UserService {
             .orElse(null);
     if (isChanged(updatedAddress, user.getAddress())) {
       user.setAddress(updatedAddress);
+    }
+
+    // The only things that can change for FusionAuth are email, password, and type.
+    // The other two don't change with this call
+    if (oldEmail != null && user.getSubjectRef() != null) {
+      fusionAuthService.updateUser(user, null);
     }
 
     String password = null;
@@ -279,6 +291,14 @@ public class UserService {
 
     CreateUpdateUserRecord response =
         new CreateUpdateUserRecord(userRepository.save(user), password);
+
+    // Tell the user at the old address that something changed (so they might fix it if necessary)
+    Optional.ofNullable(oldEmail)
+        .ifPresent(
+            e ->
+                twilioService.sendUserDetailsUpdatedEmail(
+                    user.getEmail().getEncrypted(), user.getFirstName().getEncrypted()));
+
     twilioService.sendUserDetailsUpdatedEmail(
         user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
     return response;
