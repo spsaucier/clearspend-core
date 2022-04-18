@@ -47,7 +47,6 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ContactValidator.ValidationResult;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
-import com.google.errorprone.annotations.RestrictedApi;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountIdentity;
@@ -86,14 +85,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BusinessBankAccountService {
-
-  public @interface StripeBankAccountOp {
-
-    String reviewer();
-
-    String explanation();
-  }
-
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
   private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
@@ -297,23 +288,8 @@ public class BusinessBankAccountService {
         .collect(Collectors.toList());
   }
 
-  @RestrictedApi(
-      explanation =
-          "This method is used on Stripe operations, where permissions are not available.",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public List<BusinessBankAccount> getBusinessBankAccountsForStripe(
-      final TypedId<BusinessId> businessId, final boolean stripeRegisteredOnly) {
-    return doGetBusinessBankAccounts(businessId, stripeRegisteredOnly);
-  }
-
   @Transactional
-  @RestrictedApi(
-      explanation = "This method is used by Stripe operations, where permissions are not available",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public AdjustmentAndHoldRecord processExternalAchTransfer(
       TypedId<BusinessId> businessId,
       Amount amount,
@@ -332,11 +308,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation = "This method is used by Stripe operations, where permissions are not available",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public AdjustmentAndHoldRecord processExternalWireTransfer(
       TypedId<BusinessId> businessId,
       Amount amount,
@@ -355,11 +327,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation = "This method is used by Stripe operations, where permissions are not available",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public AdjustmentAndHoldRecord processExternalCardReturn(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
@@ -578,7 +546,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS|APPLICATION')")
   public void processBankAccountWithdrawFailure(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
@@ -631,11 +599,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation = "This method is used by Stripe operations, where permissions are not available",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processBankAccountDeposit(
       TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId, Amount amount) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
@@ -651,11 +615,7 @@ public class BusinessBankAccountService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation = "This method is used by Stripe operations, where permissions are not available",
-      allowlistAnnotations = {StripeBankAccountOp.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processBankAccountDepositFailure(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,

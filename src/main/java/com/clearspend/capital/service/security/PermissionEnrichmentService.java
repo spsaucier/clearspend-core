@@ -105,12 +105,22 @@ public class PermissionEnrichmentService {
     // retrieved and it determines ownership
     final boolean result =
         (hasPermissions(overlapPermissions) && !isOnlyPermissionViewOwn(overlapPermissions))
-            || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId));
+            || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId))
+            || hasApplicationPermission(userPermissions);
     if (!result) {
       cache.storeFailedPermissions(
           permissionEvaluationIds, permissions, userPermissions, overlapPermissions);
     }
     return result;
+  }
+
+  /**
+   * If the user has APPLICATION permission, even if the security annotation didn't specify it,
+   * allow them through. This is a temporary measure because we don't have good enough test coverage
+   * around our Webhooks and we cannot risk accidentally breaking them due to a permissions issue.
+   */
+  private boolean hasApplicationPermission(final UserRolesAndPermissions userPermissions) {
+    return userPermissions.globalUserPermissions().contains(GlobalUserPermission.APPLICATION);
   }
 
   private boolean hasPermissions(@NonNull final OverlapPermissions overlapPermissions) {

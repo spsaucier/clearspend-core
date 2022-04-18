@@ -41,6 +41,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -60,7 +61,6 @@ import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.UserService.TestDataUserOp;
@@ -100,6 +100,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
@@ -200,10 +201,6 @@ public class TestDataController {
             .toList());
   }
 
-  @NetworkMessageProvider(
-      reviewer = "Craig Miller",
-      explanation =
-          "This controller exists to create test data in non-prod environments. It needs to generate Stripe messages to do so.")
   @SwitchesCurrentUser(reviewer = "jscarbor", explanation = "This class is for testing only")
   @GetMapping(value = "/create-all-demo", produces = MediaType.APPLICATION_JSON_VALUE)
   CreateTestDataResponse createTestData(
@@ -225,7 +222,7 @@ public class TestDataController {
     business = businessRepository.save(business);
 
     createUser(business);
-    setCurrentUser(businessRecord.user());
+    setCurrentUser(businessRecord.user(), Set.of(DefaultRoles.GLOBAL_APPLICATION_WEBHOOK));
 
     // create bankAccount, deposit $10,000 and withdraw $267.34
     BusinessBankAccount businessBankAccount =

@@ -36,7 +36,6 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -513,18 +512,7 @@ public class CardService {
     return csvFile.toByteArray();
   }
 
-  @RestrictedApi(
-      explanation =
-          "This unsecured service method must be called by the Stripe Webhook"
-              + "handler. If we can formalize a SYSTEM user we should be able to use standard"
-              + "@Pre / @Post Authorize annotations",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {StripeCardOp.class})
-  @StripeCardOp(
-      reviewer = "patrick.morton",
-      explanation = "Card Network events have no Security Context")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processCardShippingEvents(com.stripe.model.issuing.Card stripeCard) {
     cardRepository.flush();
     Card card;
@@ -562,15 +550,7 @@ public class CardService {
     }
   }
 
-  @RestrictedApi(
-      explanation =
-          "This unsecured service method must be called by the Stripe Webhook"
-              + "handler. If we can formalize a SYSTEM user we should be able to use standard"
-              + "@Pre / @Post Authorize annotations",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {StripeCardOp.class})
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public CardRecord getCardByExternalRef(@NonNull String externalRef) {
     Card card =
         cardRepository
@@ -578,12 +558,5 @@ public class CardService {
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, externalRef));
 
     return new CardRecord(card, accountService.retrieveAccountById(card.getAccountId(), true));
-  }
-
-  public @interface StripeCardOp {
-
-    public String reviewer();
-
-    public String explanation();
   }
 }

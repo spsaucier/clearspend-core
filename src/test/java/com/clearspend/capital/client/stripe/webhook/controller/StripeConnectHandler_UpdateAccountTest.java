@@ -5,6 +5,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
@@ -151,6 +152,11 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             onboardBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    final User user =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow(() -> new RuntimeException("Could not find user"));
+    testHelper.setCurrentUserAsWebhook(user);
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -182,6 +188,11 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             onboardBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    final User user =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow(() -> new RuntimeException("Could not find user"));
+    testHelper.setCurrentUserAsWebhook(user);
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -211,6 +222,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -245,6 +257,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -274,6 +287,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -305,6 +319,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -337,6 +352,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -369,6 +385,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -400,6 +417,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -429,6 +447,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -459,6 +478,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -488,6 +508,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -522,6 +543,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
                             event.getAccount(),
                             createBusinessRecord.business().getStripeData().getAccountRef()))
                 .getAsJsonObject());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 

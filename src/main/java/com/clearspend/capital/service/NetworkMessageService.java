@@ -28,10 +28,8 @@ import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
-import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -43,6 +41,7 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -50,14 +49,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @RequiredArgsConstructor
 @Slf4j
 public class NetworkMessageService {
-
-  public @interface NetworkMessageProvider {
-
-    String reviewer();
-
-    String explanation();
-  }
-
   private final NetworkMessageRepository networkMessageRepository;
   private final NetworkMerchantRepository networkMerchantRepository;
 
@@ -70,9 +61,6 @@ public class NetworkMessageService {
 
   private final ClearbitClient clearbitClient;
 
-  @StripeCardOp(
-      reviewer = "patrick.morton",
-      explanation = "Card Network events have no Security Context")
   private void retrieveCardAndNetworkMessages(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord;
@@ -152,13 +140,7 @@ public class NetworkMessageService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe handlers across package boundaries. These handler callbacks are not user-driven events and therefore cannot have user permissions enforced on them",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {NetworkMessageProvider.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processNetworkMessage(NetworkCommon common) {
     retrieveCardAndNetworkMessages(common);
 

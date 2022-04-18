@@ -170,13 +170,17 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     BusinessBankAccount businessBankAccount =
         testHelper.createBusinessBankAccount(business.business().getId());
 
-    businessService.updateBusinessStripeData(
-        business.business().getId(),
-        "stripeAccountRed",
-        "stripeFinancialAccountRef",
-        FinancialAccountState.READY,
-        "stripeAccountNumber",
-        "stripeRoutingNUmber");
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          businessService.updateBusinessStripeData(
+              business.business().getId(),
+              "stripeAccountRed",
+              "stripeFinancialAccountRef",
+              FinancialAccountState.READY,
+              "stripeAccountNumber",
+              "stripeRoutingNUmber");
+        });
 
     assertThat(business.business().getStripeData().getFinancialAccountState())
         .isEqualTo(FinancialAccountState.READY);

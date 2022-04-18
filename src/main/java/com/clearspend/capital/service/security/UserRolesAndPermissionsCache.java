@@ -102,7 +102,7 @@ public class UserRolesAndPermissionsCache {
       return Optional.empty();
     }
     return allocationPermissionsMap.values().stream()
-        .filter(userPermissions -> userPermissions.userId() != null)
+        .filter(userPermissions -> !EMPTY_PERMISSIONS.equals(userPermissions))
         .findFirst()
         // If we are trying to only return global permissions, we should suppress the allocation
         // permissions here to avoid accidentally giving too much back
@@ -120,7 +120,7 @@ public class UserRolesAndPermissionsCache {
    * @return the permissions argument.
    */
   public UserRolesAndPermissions cachePermissionsForAllocation(
-      @NonNull final TypedId<AllocationId> allocationId,
+      @Nullable final TypedId<AllocationId> allocationId,
       @Nullable final UserRolesAndPermissions permissions) {
     if (permissions == null) {
       allocationPermissionsMap.put(allocationId, EMPTY_PERMISSIONS);
@@ -140,15 +140,14 @@ public class UserRolesAndPermissionsCache {
    * @return the permissions argument.
    */
   public List<UserRolesAndPermissions> cachePermissionsForBusiness(
-      @NonNull final TypedId<BusinessId> businessId,
+      @Nullable final TypedId<BusinessId> businessId,
       @Nullable final List<UserRolesAndPermissions> permissions) {
     if (permissions == null || permissions.isEmpty()) {
       businessPermissionsMap.put(businessId, List.of(EMPTY_PERMISSIONS));
       return permissions;
     }
 
-    // The permissions should all be for the same business
-    businessPermissionsMap.put(permissions.get(0).businessId(), permissions);
+    businessPermissionsMap.put(businessId, permissions);
 
     // Organize the permissions by allocation ID and store them for easy retrieval
     final Map<TypedId<AllocationId>, UserRolesAndPermissions> permissionsByAllocation =

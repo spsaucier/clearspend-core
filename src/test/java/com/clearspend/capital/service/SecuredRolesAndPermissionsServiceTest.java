@@ -110,8 +110,7 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
             Set.of(
                 DefaultRoles.GLOBAL_VIEWER,
                 DefaultRoles.GLOBAL_BOOKKEEPER,
-                DefaultRoles.GLOBAL_RESELLER,
-                DefaultRoles.GLOBAL_PROCESSOR),
+                DefaultRoles.GLOBAL_RESELLER),
             records -> assertThat(records).isEmpty())
         .build()
         .validateServiceMethod(action);

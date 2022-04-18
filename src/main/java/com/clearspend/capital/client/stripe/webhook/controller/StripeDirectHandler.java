@@ -4,9 +4,7 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.service.CardService;
-import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.stripe.exception.StripeException;
 import com.stripe.model.StripeObject;
@@ -26,10 +24,6 @@ public class StripeDirectHandler {
   private final CardService cardService;
   private final StripeClient stripeClient;
 
-  @NetworkMessageProvider(
-      reviewer = "Craig Miller",
-      explanation =
-          "This is where we process Stripe authorizations, so it must have access to the NetworkMessageService")
   NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
       throws StripeException {
     StripeEventType stripeEventType = parseRecord.stripeEventType();
@@ -77,10 +71,6 @@ public class StripeDirectHandler {
     return common;
   }
 
-  @NetworkMessageProvider(
-      reviewer = "Craig Miller",
-      explanation =
-          "This is where we process Stripe authorizations, so it must have access to the NetworkMessageService")
   NetworkCommon processCapture(ParseRecord parseRecord) {
     Transaction transaction = (Transaction) parseRecord.stripeObject();
     NetworkCommon common = new NetworkCommon(transaction, parseRecord.stripeWebhookLog());
@@ -93,9 +83,6 @@ public class StripeDirectHandler {
     return common;
   }
 
-  @StripeCardOp(
-      reviewer = "patrick.morton",
-      explanation = "Card Network events have no Security Context")
   void processCard(StripeEventType stripeEventType, ParseRecord parseRecord) {
     if (stripeEventType == StripeEventType.ISSUING_CARD_UPDATED) {
       Card card = (Card) parseRecord.stripeObject();

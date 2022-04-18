@@ -34,7 +34,9 @@ where
     {{/searchText}}
     {{#syncStatuses.0}} AND account_activity.integration_sync_status in :syncStatuses {{/syncStatuses.0}}
     {{#missingExpenseCategory}} AND account_activity.expense_details_expense_category_id IS NULL {{/missingExpenseCategory}}
-    and (Self_Permission.Allocation_Id IS NOT NULL OR Manage_Funds_Permission.Allocation_Id IS NOT NULL)
+    AND (Self_Permission.Allocation_Id IS NOT NULL
+        OR Manage_Funds_Permission.Allocation_Id IS NOT NULL
+        OR has_global_permission(:invokingUser, CAST(:globalRoles AS VARCHAR[]), CAST('APPLICATION' AS globaluserpermission)) )
 {{^count}}
     order by
         account_activity.activity_time desc nulls last,

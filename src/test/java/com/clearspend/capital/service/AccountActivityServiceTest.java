@@ -214,7 +214,11 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             user.user(), card, createBusinessRecord.allocationRecord().account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();

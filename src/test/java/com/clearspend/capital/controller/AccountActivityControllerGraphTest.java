@@ -72,21 +72,30 @@ public class AccountActivityControllerGraphTest extends BaseCapitalTest {
               card,
               createBusinessRecord.allocationRecord().account(),
               Amount.of(Currency.USD, BigDecimal.valueOf(amount)));
-      NetworkCommon common = networkCommonAuthorization.networkCommon();
-      networkMessageService.processNetworkMessage(common);
+
+      final NetworkCommon common = networkCommonAuthorization.networkCommon();
+      testHelper.runWithWebhookUser(
+          createBusinessRecord.user(),
+          () -> {
+            networkMessageService.processNetworkMessage(common);
+          });
       assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
       assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
       assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
       assertThat(common.getNetworkMessage().getHoldId()).isNotNull();
 
-      common =
+      final NetworkCommon common2 =
           TestDataController.generateCaptureNetworkCommon(
               business, networkCommonAuthorization.authorization());
-      networkMessageService.processNetworkMessage(common);
-      assertThat(common.isPostAdjustment()).isTrue();
-      assertThat(common.isPostDecline()).isFalse();
-      assertThat(common.isPostHold()).isFalse();
-      assertThat(common.getNetworkMessage().getAdjustmentId()).isNotNull();
+      testHelper.runWithWebhookUser(
+          createBusinessRecord.user(),
+          () -> {
+            networkMessageService.processNetworkMessage(common2);
+          });
+      assertThat(common2.isPostAdjustment()).isTrue();
+      assertThat(common2.isPostDecline()).isFalse();
+      assertThat(common2.isPostHold()).isFalse();
+      assertThat(common2.getNetworkMessage().getAdjustmentId()).isNotNull();
     }
 
     entityManager.flush();

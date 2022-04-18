@@ -51,13 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessService {
 
-  public @interface StripeBusinessOp {
-
-    String reviewer();
-
-    String explanation();
-  }
-
   public @interface OnboardingBusinessOp {
 
     String reviewer();
@@ -236,12 +229,7 @@ public class BusinessService {
   }
 
   @Transactional
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe operations for which user permissions are not available.",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {StripeBusinessOp.class})
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public Business updateBusinessStripeData(
       TypedId<BusinessId> businessId,
       String stripeAccountRef,
@@ -282,17 +270,6 @@ public class BusinessService {
     return retrieveBusiness(businessId, mustExist);
   }
 
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe operations for which user permissions are not available.",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {StripeBusinessOp.class})
-  public Business retrieveBusinessForStripe(
-      final TypedId<BusinessId> businessIdTypedId, final boolean mustExist) {
-    return retrieveBusiness(businessIdTypedId, mustExist);
-  }
-
   @PostAuthorize(
       "hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ') or isUserInBusiness(returnObject.businessId)")
   public Business getBusiness(final TypedId<BusinessId> businessId, final boolean mustExist) {
@@ -305,24 +282,14 @@ public class BusinessService {
         .orElse(null);
   }
 
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe operations for which user permissions are not available.",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {StripeBusinessOp.class})
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public Business retrieveBusinessByStripeFinancialAccount(String stripeFinancialAccountRef) {
     return businessRepository
         .findByStripeFinancialAccountRef(stripeFinancialAccountRef)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, stripeFinancialAccountRef));
   }
 
-  @RestrictedApi(
-      explanation =
-          "This method is used by Stripe operations for which user permissions are not available.",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {StripeBusinessOp.class})
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public Business retrieveBusinessByStripeAccountReference(String stripeAccountReference) {
     return businessRepository
         .findByStripeAccountRef(stripeAccountReference)

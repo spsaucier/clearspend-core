@@ -11,13 +11,14 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.UserType;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import javax.annotation.Nullable;
 import lombok.SneakyThrows;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,44 +28,70 @@ public record CurrentUser(
     UserType userType, TypedId<UserId> userId, TypedId<BusinessId> businessId, Set<String> roles) {
 
   @SneakyThrows
-  @SuppressWarnings("unchecked")
+  @Nullable
   public static CurrentUser get() {
-    // TODO verify CurrentUser.globalUserPermissions works.
-    // From the JWT example
-    // https://fusionauth.io/docs/v1/tech/core-concepts/authentication-authorization/ it looks right
-
     return getClaims().map(CurrentUser::get).orElse(null);
   }
 
   public static CurrentUser get(Map<String, Object> claims) {
-    return new CurrentUser(
-        UserType.valueOf(claims.get(USER_TYPE).toString()),
-        new TypedId<>(claims.get(CAPITAL_USER_ID).toString()),
-        new TypedId<>(claims.get(BUSINESS_ID).toString()),
-        StreamSupport.stream(
-                ((Iterable<Object>) claims.getOrDefault(ROLES, Collections.emptyList()))
-                    .spliterator(),
-                false)
+    final UserType userType =
+        Optional.ofNullable(claims.get(USER_TYPE))
             .map(Object::toString)
-            .collect(Collectors.toUnmodifiableSet()));
+            .map(UserType::valueOf)
+            .orElse(null);
+    final TypedId<UserId> userId =
+        Optional.ofNullable(claims.get(CAPITAL_USER_ID))
+            .map(Object::toString)
+            .map(value -> new TypedId<UserId>(value))
+            .orElse(null);
+    final TypedId<BusinessId> businessId =
+        Optional.ofNullable(claims.get(BUSINESS_ID))
+            .map(Object::toString)
+            .map(value -> new TypedId<BusinessId>(value))
+            .orElse(null);
+    final Set<String> globalRoles =
+        Optional.ofNullable(claims.get(ROLES))
+            .map(roles -> (Iterable<Object>) roles)
+            .map(Iterable::spliterator)
+            .map(spliterator -> StreamSupport.stream(spliterator, false))
+            .stream()
+            .flatMap(Function.identity())
+            .map(Object::toString)
+            .collect(Collectors.toUnmodifiableSet());
+
+    return new CurrentUser(userType, userId, businessId, globalRoles);
   }
 
+  @Nullable
   public static TypedId<BusinessId> getBusinessId() {
-    return new TypedId<>(getClaim(BUSINESS_ID).toString());
+    return Optional.ofNullable(getClaim(BUSINESS_ID))
+        .map(Object::toString)
+        .map(value -> new TypedId<BusinessId>(value))
+        .orElse(null);
   }
 
+  @Nullable
   public static TypedId<UserId> getUserId() {
-    return new TypedId<>(getClaim(CAPITAL_USER_ID).toString());
+    return Optional.ofNullable(getClaim(CAPITAL_USER_ID))
+        .map(Object::toString)
+        .map(value -> new TypedId<UserId>(value))
+        .orElse(null);
   }
 
+  @Nullable
   public static Set<String> getRoles() {
-    return get().roles();
+    return Optional.ofNullable(get()).map(CurrentUser::roles).orElse(null);
   }
 
+  @Nullable
   public static UserType getUserType() {
-    return UserType.valueOf(getClaim(USER_TYPE).toString());
+    return Optional.ofNullable(getClaim(USER_TYPE))
+        .map(Object::toString)
+        .map(UserType::valueOf)
+        .orElse(null);
   }
 
+  @Nullable
   private static Object getClaim(String name) {
     return getClaims().map(claims -> claims.get(name)).orElse(null);
   }
@@ -77,6 +104,7 @@ public record CurrentUser(
         .map(Jwt::getClaims);
   }
 
+  @Nullable
   public static UUID getFusionAuthUserId() {
     return getClaims()
         .map(claims -> claims.get(USER_ID))
@@ -85,6 +113,7 @@ public record CurrentUser(
         .orElse(null);
   }
 
+  @Nullable
   public static String getEmail() {
     return getClaims().map(claims -> claims.get(EMAIL)).map(String::valueOf).orElse(null);
   }

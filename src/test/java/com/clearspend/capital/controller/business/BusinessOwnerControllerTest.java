@@ -12,18 +12,21 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeConnectHandler;
 import com.clearspend.capital.common.data.model.Address;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.business.owner.BusinessOwnerInfo;
 import com.clearspend.capital.controller.type.business.owner.CreateBusinessOwnerResponse;
 import com.clearspend.capital.controller.type.business.owner.CreateOrUpdateBusinessOwnerRequest;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedResponse;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Country;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.ServiceHelper;
@@ -59,6 +62,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
   private final StripeConnectHandler stripeConnectHandler;
   private final ServiceHelper serviceHelper;
   private final BusinessOwnerRepository businessOwnerRepository;
+  private final UserRepository userRepository;
 
   private final Resource createAccount;
   private final Resource requiredDocumentsForPersonAndSSNLast4;
@@ -82,6 +86,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
       StripeConnectHandler stripeConnectHandler,
       ServiceHelper serviceHelper,
       BusinessOwnerRepository businessOwnerRepository,
+      UserRepository userRepository,
       @Value("classpath:stripeResponses/createAccount.json") Resource createAccount,
       @Value("classpath:stripeResponses/requiredDocumentsForPersonAndSSNLast4.json") @NonNull
           Resource requiredDocumentsForPersonAndSSNLast4) {
@@ -93,6 +98,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
     this.createAccount = createAccount;
     this.requiredDocumentsForPersonAndSSNLast4 = requiredDocumentsForPersonAndSSNLast4;
     this.serviceHelper = serviceHelper;
+    this.userRepository = userRepository;
   }
 
   @BeforeEach
@@ -238,6 +244,11 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                             "\"disabled_reason\":\"rejected.fraud\""))
                 .getAsJsonObject());
 
+    final User user =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow(() -> new RuntimeException("Can't find user"));
+    testHelper.setCurrentUserAsWebhook(user);
     stripeConnectHandler.accountUpdated(
         event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
 
@@ -297,8 +308,16 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                         .replace(event.getAccount(), business.getStripeData().getAccountRef()))
                 .getAsJsonObject());
 
-    stripeConnectHandler.accountUpdated(
-        event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
+    final User user =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow(() -> new RuntimeException("Can't find user"));
+    testHelper.runWithWebhookUser(
+        user,
+        () -> {
+          stripeConnectHandler.accountUpdated(
+              event, (Account) event.getDataObjectDeserializer().deserializeUnsafe());
+        });
 
     Business businessResponse =
         serviceHelper.businessService().getBusiness(business.getId()).business();

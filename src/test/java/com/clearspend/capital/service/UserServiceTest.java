@@ -467,7 +467,6 @@ class UserServiceTest extends BaseCapitalTest {
             Set.of(
                 DefaultRoles.GLOBAL_VIEWER,
                 DefaultRoles.GLOBAL_BOOKKEEPER,
-                DefaultRoles.GLOBAL_PROCESSOR,
                 DefaultRoles.GLOBAL_RESELLER),
             records ->
                 // Do not have VIEW_OWN permission so can't see anything

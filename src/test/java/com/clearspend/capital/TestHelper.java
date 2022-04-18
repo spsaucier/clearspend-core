@@ -96,6 +96,7 @@ import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.clearspend.capital.util.PhoneUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -429,6 +430,13 @@ public class TestHelper {
     CurrentUserSwitcher.setCurrentUser(user, DefaultRoles.ALL_GLOBAL);
   }
 
+  @FusionAuthUserAccessor(
+      reviewer = "Craig Miller",
+      explanation = "to create master user for testing purposes")
+  public void setCurrentUserAsWebhook(@NonNull final User user) {
+    CurrentUserSwitcher.setCurrentUser(user, Set.of(DefaultRoles.GLOBAL_APPLICATION_WEBHOOK));
+  }
+
   public CreateUpdateUserRecord createUserWithGlobalRole(
       final Business business, final String role) {
     final CreateUpdateUserRecord user = createUser(business);
@@ -451,6 +459,14 @@ public class TestHelper {
         user, fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef())));
   }
 
+  @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "For testing")
+  public void setCurrentUser(final CurrentUser currentUser) {
+    Optional.ofNullable(currentUser)
+        .ifPresentOrElse(
+            theCurrentUser -> CurrentUserSwitcher.setCurrentUser(theCurrentUser),
+            () -> CurrentUserSwitcher.clearCurrentUser());
+  }
+
   /**
    * If there is test logic that should be run with a particular user, and then that user should be
    * removed prior to any other code being executed, this helper is intended to support this.
@@ -460,9 +476,18 @@ public class TestHelper {
    */
   @SneakyThrows
   public void runWithCurrentUser(@NonNull final User user, final ThrowingRunnable action) {
+    final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUser(user);
     action.run();
-    clearCurrentUser();
+    setCurrentUser(oldCurrentUser);
+  }
+
+  @SneakyThrows
+  public void runWithWebhookUser(@NonNull final User user, final ThrowingRunnable action) {
+    final CurrentUser oldCurrentUser = CurrentUser.get();
+    setCurrentUserAsWebhook(user);
+    action.run();
+    setCurrentUser(oldCurrentUser);
   }
 
   @SneakyThrows
@@ -1120,13 +1145,21 @@ public class TestHelper {
       Business business, Account account, User user, Card card, Amount amount) {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(user, card, account, amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    runWithWebhookUser(
+        user,
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertPost(networkCommonAuthorization.networkCommon(), false, false, true);
 
     NetworkCommon common =
         TestDataController.generateCaptureNetworkCommon(
             business, networkCommonAuthorization.authorization());
-    networkMessageService.processNetworkMessage(common);
+    runWithWebhookUser(
+        user,
+        () -> {
+          networkMessageService.processNetworkMessage(common);
+        });
     assertPost(common, true, false, false);
   }
 

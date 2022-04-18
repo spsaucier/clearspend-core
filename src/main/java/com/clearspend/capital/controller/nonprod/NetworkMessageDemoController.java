@@ -1,20 +1,24 @@
 package com.clearspend.capital.controller.nonprod;
 
+import static com.clearspend.capital.crypto.utils.CurrentUserSwitcher.setCurrentUser;
+
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageRequest;
 import com.clearspend.capital.controller.nonprod.type.networkmessage.NetworkMessageResponse;
+import com.clearspend.capital.crypto.utils.CurrentUserSwitcher.SwitchesCurrentUser;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.NetworkMessageService;
-import com.clearspend.capital.service.NetworkMessageService.NetworkMessageProvider;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -43,11 +47,8 @@ public class NetworkMessageDemoController {
 
   private final NetworkMessageService networkMessageService;
 
-  @NetworkMessageProvider(
-      reviewer = "Craig Miller",
-      explanation =
-          "This controller exists to create demo data in non-prod environments. It needs to generate Stripe messages to do so.")
   @PostMapping(value = "/network-messages", produces = MediaType.APPLICATION_JSON_VALUE)
+  @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "This is a demo controller only")
   NetworkMessageResponse processNetworkMessage(
       @RequestBody @Validated NetworkMessageRequest request) throws JsonProcessingException {
 
@@ -68,6 +69,7 @@ public class NetworkMessageDemoController {
           default -> throw new InvalidRequestException(
               request.getNetworkMessageType().name() + " not supported");
         };
+    setCurrentUser(user, Set.of(DefaultRoles.GLOBAL_APPLICATION_WEBHOOK));
     networkMessageService.processNetworkMessage(common);
 
     log.info("networkMessage " + common.getNetworkMessage());

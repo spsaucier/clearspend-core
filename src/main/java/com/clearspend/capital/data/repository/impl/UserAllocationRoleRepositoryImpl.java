@@ -29,8 +29,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,14 +111,14 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
   @Override
   public List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
-      @NonNull final TypedId<UserId> userId,
-      @NonNull final TypedId<BusinessId> businessId,
+      @Nullable final TypedId<UserId> userId,
+      @Nullable final TypedId<BusinessId> businessId,
       // globalRoles should be for provided userId
       @Nullable final Set<String> globalRoles) {
     final SqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("userId", userId.toUuid())
-            .addValue("businessId", businessId.toUuid())
+            .addValue("userId", TypeFunctions.nullableTypedIdToUUID(userId))
+            .addValue("businessId", TypeFunctions.nullableTypedIdToUUID(businessId))
             .addValue(
                 "globalRoles",
                 TypeFunctions.nullableCollectionToNonNullArray(globalRoles, String[]::new),
@@ -134,13 +132,13 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
   @Override
   public Optional<UserRolesAndPermissions> findAllByUserIdAndBusinessIdAndAllocationId(
-      @NonNull TypedId<UserId> userId,
+      @Nullable TypedId<UserId> userId,
       @Nullable TypedId<BusinessId> businessId,
       @Nullable TypedId<AllocationId> allocationId,
       @Nullable Set<String> globalRoles) {
     final SqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("userId", userId.toUuid())
+            .addValue("userId", TypeFunctions.nullableTypedIdToUUID(userId))
             .addValue("allocationId", TypeFunctions.nullableTypedIdToUUID(allocationId))
             .addValue("businessId", TypeFunctions.nullableTypedIdToUUID(businessId))
             .addValue(
@@ -172,7 +170,7 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   public boolean userHasPermission(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
-      @NonNull TypedId<UserId> userId,
+      @Nullable TypedId<UserId> userId,
       Set<String> userGlobalRoles,
       EnumSet<AllocationPermission> allocationPermissions,
       EnumSet<GlobalUserPermission> globalUserPermissions) {
@@ -209,13 +207,13 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
 
   @Override
   public Optional<UserRolesAndPermissions> findAllByUserIdAndAllocationId(
-      @NonNull TypedId<UserId> userId,
-      @NonNull TypedId<AllocationId> allocationId,
+      @Nullable TypedId<UserId> userId,
+      @Nullable TypedId<AllocationId> allocationId,
       @Nullable Set<String> globalRoles) {
     final SqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("userId", userId.toUuid())
-            .addValue("allocationId", allocationId.toUuid())
+            .addValue("userId", TypeFunctions.nullableTypedIdToUUID(userId))
+            .addValue("allocationId", TypeFunctions.nullableTypedIdToUUID(allocationId))
             .addValue(
                 "globalRoles",
                 TypeFunctions.nullableCollectionToNonNullArray(globalRoles, String[]::new),
@@ -254,7 +252,7 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
   public Optional<UserRolesAndPermissions> getUserPermissionAtAllocation(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,
-      @NonNull TypedId<UserId> userId,
+      @Nullable TypedId<UserId> userId,
       // Global Roles should be for the userId provided
       Set<String> userGlobalRoles) {
     return findAllByUserIdAndBusinessIdAndAllocationId(
@@ -273,15 +271,5 @@ public class UserAllocationRoleRepositoryImpl implements UserAllocationRoleRepos
         .addValue("referenceRole", referenceRole);
     JDBCUtils.execute(
         entityManager, deleteLesserAndEqualRolesBelow, params, PreparedStatement::executeUpdate);
-  }
-
-  @Getter
-  @Builder
-  private static class GetAllPermissionsContext {
-    @Nullable private final UUID allocationId;
-    @NonNull private final UUID businessId;
-    @Nullable private final UUID userId;
-    @NonNull private final String[] globalRoles;
-    @Builder.Default private final boolean isRootAllocationOnly = false;
   }
 }

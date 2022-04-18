@@ -67,7 +67,11 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, 100));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();

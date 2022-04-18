@@ -162,13 +162,16 @@ public class PermissionValidator {
   private void testGlobalRoles(
       final ThrowingConsumer<User> deniedAssertion,
       final ThrowingFunction<User, ?> allowedAssertion) {
-    DefaultRoles.ALL_GLOBAL.forEach(
-        role ->
-            Optional.ofNullable(allowedGlobalRoles.get(role))
-                .ifPresentOrElse(
-                    resultValidator ->
-                        validateAllowedGlobalRole(role, allowedAssertion, resultValidator),
-                    () -> validateDeniedGlobalRole(role, deniedAssertion)));
+    DefaultRoles.ALL_GLOBAL.stream()
+        // As long as this role is always allowed through, it shouldn't be included in the validator
+        .filter(role -> !DefaultRoles.GLOBAL_APPLICATION_WEBHOOK.equals(role))
+        .forEach(
+            role ->
+                Optional.ofNullable(allowedGlobalRoles.get(role))
+                    .ifPresentOrElse(
+                        resultValidator ->
+                            validateAllowedGlobalRole(role, allowedAssertion, resultValidator),
+                        () -> validateDeniedGlobalRole(role, deniedAssertion)));
   }
 
   private void testCustomUsers(

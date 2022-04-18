@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class StatementHelper {
 
+  private final TestHelper testHelper;
   private final NetworkMessageService networkMessageService;
 
   public void setupStatementData(
@@ -34,7 +35,11 @@ public class StatementHelper {
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, new BigDecimal(900)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization1.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization1.networkCommon());
+        });
     assertThat(networkCommonAuthorization1.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization1.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization1.networkCommon().isPostHold()).isTrue();
@@ -43,7 +48,11 @@ public class StatementHelper {
     NetworkCommon common1 =
         TestDataController.generateCaptureNetworkCommon(
             createBusinessRecord.business(), networkCommonAuthorization1.authorization());
-    networkMessageService.processNetworkMessage(common1);
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(common1);
+        });
 
     // generate auth 2
     TestDataController.NetworkCommonAuthorization networkCommonAuthorization2 =
@@ -52,7 +61,11 @@ public class StatementHelper {
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, new BigDecimal(9)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization2.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization2.networkCommon());
+        });
 
     assertThat(networkCommonAuthorization2.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization2.networkCommon().isPostDecline()).isFalse();
@@ -62,7 +75,11 @@ public class StatementHelper {
     NetworkCommon common2 =
         TestDataController.generateCaptureNetworkCommon(
             createBusinessRecord.business(), networkCommonAuthorization2.authorization());
-    networkMessageService.processNetworkMessage(common2);
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(common2);
+        });
 
     // generate auth 3 without capture, should not be found in PDF below
     TestDataController.NetworkCommonAuthorization networkCommonAuthorization3 =
@@ -71,7 +88,11 @@ public class StatementHelper {
             card,
             createBusinessRecord.allocationRecord().account(),
             Amount.of(Currency.USD, new BigDecimal(13)));
-    networkMessageService.processNetworkMessage(networkCommonAuthorization3.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization3.networkCommon());
+        });
 
     assertThat(networkCommonAuthorization3.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization3.networkCommon().isPostDecline()).isFalse();

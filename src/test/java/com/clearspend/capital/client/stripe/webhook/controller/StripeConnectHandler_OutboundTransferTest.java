@@ -65,6 +65,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
     business = createBusinessRecord.business();
     businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
 
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     businessService.updateBusinessStripeData(
         business.getId(),
         "stripeAccountRed",
@@ -150,7 +151,7 @@ class StripeConnectHandler_OutboundTransferTest extends BaseCapitalTest {
 
     outboundTransfer.setAmount(amount.toAmount().toStripeAmount());
 
-    testHelper.setCurrentUser(createBusinessRecord.user());
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
 
     // when
     stripeConnectHandler.processOutboundTransferResult(outboundTransfer);

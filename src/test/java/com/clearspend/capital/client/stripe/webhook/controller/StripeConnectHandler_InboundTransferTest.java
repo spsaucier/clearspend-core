@@ -91,12 +91,15 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   @BeforeEach
   public void setup() {
     createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
     testHelper.runWithCurrentUser(
         createBusinessRecord.user(),
         () -> {
-          business = createBusinessRecord.business();
           businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
-
+        });
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
           businessService.updateBusinessStripeData(
               business.getId(),
               "stripeAccountRed",
@@ -107,7 +110,10 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
           assertThat(business.getStripeData().getFinancialAccountState())
               .isEqualTo(FinancialAccountState.READY);
-
+        });
+    testHelper.runWithCurrentUser(
+        createBusinessRecord.user(),
+        () -> {
           card =
               testHelper.issueCard(
                   business,
@@ -144,6 +150,8 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
             businessBankAccount.getId().toString()));
     inboundTransfer.setCurrency("usd");
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
 
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 
@@ -187,6 +195,8 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
     inboundTransfer.setCurrency("usd");
     inboundTransfer.setAmount(amount.toAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
 
     // when
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
@@ -239,6 +249,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   }
 
   private void externalAch_creditsReceived(ReceivedCredit receivedCredit) {
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     // when
     stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.ACH);
 
@@ -294,6 +305,8 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     receivedCredit.setReceivedPaymentMethodDetails(paymentMethodDetails);
 
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
     // when
     for (int i = 0; i < 30; i++) {
       stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.ACH);
@@ -322,6 +335,7 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
   @Test
   public void cardReturnFunds() {
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     // given
     ReceivedCredit receivedCredit = new ReceivedCredit();
     receivedCredit.setFinancialAccount(business.getStripeData().getFinancialAccountRef());

@@ -27,6 +27,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -519,12 +520,7 @@ public class TwilioService {
   }
 
   /* Financial Account Ready */
-  @RestrictedApi(
-      explanation =
-          "This service is needed for KYC/KYB operations where an authenticated user is not available",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {TwilioKycKybOp.class})
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void sendFinancialAccountReadyEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);

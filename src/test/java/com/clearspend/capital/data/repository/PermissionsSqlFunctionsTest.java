@@ -1,6 +1,9 @@
 package com.clearspend.capital.data.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
@@ -76,6 +79,10 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
       """
           SELECT *
           FROM get_all_allocation_permissions_for_all_users(:businessId, null);
+          """;
+  private static final String HAS_GLOBAL_PERMISSION_SQL =
+      """
+          SELECT has_global_permission(:userId, :roles::VARCHAR[], :permission::globaluserpermission);
           """;
   private static final RowMapper<TypedId<AllocationId>> GET_ALLOCATION_PERMISSIONS_ROW_MAPPER =
       (resultSet, rowNum) ->
@@ -1278,6 +1285,28 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
   }
 
   @Test
+  void getGlobalPermissions_HasApplicationRole() {
+    final SqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", createBusinessRecord.user().getId().toUuid())
+            .addValue(
+                "roles",
+                new String[] {
+                  DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_APPLICATION_WEBHOOK
+                },
+                Types.ARRAY);
+    final List<EnumSet<GlobalUserPermission>> result =
+        jdbcTemplate.query(GET_GLOBAL_PERMISSIONS_SQL, params, GET_GLOBAL_PERMISSIONS_ROW_MAPPER);
+    assertThat(result)
+        .hasSize(1)
+        .contains(
+            EnumSet.of(
+                GlobalUserPermission.CUSTOMER_SERVICE,
+                GlobalUserPermission.APPLICATION,
+                GlobalUserPermission.GLOBAL_READ));
+  }
+
+  @Test
   void getGlobalPermissions() {
     final SqlParameterSource params =
         new MapSqlParameterSource()
@@ -1339,6 +1368,31 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
     final List<EnumSet<GlobalUserPermission>> result =
         jdbcTemplate.query(GET_GLOBAL_PERMISSIONS_SQL, params, GET_GLOBAL_PERMISSIONS_ROW_MAPPER);
     assertThat(result).hasSize(1).contains(EnumSet.noneOf(GlobalUserPermission.class));
+  }
+
+  @Test
+  void hasGlobalPermission() {
+    final RowMapper<Boolean> rowMapper = (resultSet, rowNum) -> resultSet.getBoolean(1);
+
+    final SqlParameterSource existsParams =
+        new MapSqlParameterSource()
+            .addValue("userId", createBusinessRecord.user().getId().toUuid())
+            .addValue("roles", new String[] {DefaultRoles.GLOBAL_CUSTOMER_SERVICE})
+            .addValue("permission", GlobalUserPermission.CUSTOMER_SERVICE.name());
+    final Boolean existsResult =
+        jdbcTemplate.queryForObject(HAS_GLOBAL_PERMISSION_SQL, existsParams, rowMapper);
+    assertNotNull(existsResult);
+    assertTrue(existsResult);
+
+    final SqlParameterSource notExistsParams =
+        new MapSqlParameterSource()
+            .addValue("userId", createBusinessRecord.user().getId().toUuid())
+            .addValue("roles", new String[] {DefaultRoles.GLOBAL_CUSTOMER_SERVICE})
+            .addValue("permission", GlobalUserPermission.CROSS_BUSINESS_BOUNDARY.name());
+    final Boolean notExistsResult =
+        jdbcTemplate.queryForObject(HAS_GLOBAL_PERMISSION_SQL, notExistsParams, rowMapper);
+    assertNotNull(notExistsResult);
+    assertFalse(notExistsResult);
   }
 
   record AllAllocationPermissions(

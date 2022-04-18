@@ -46,6 +46,7 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
     return hasPermission(permissionsObject, AllocationPermission.VIEW_OWN.name());
   }
 
+  @SuppressWarnings("unused")
   public boolean isUserInBusiness(@Nullable final Object businessTarget) {
     final TypedId<BusinessId> businessId;
     if (businessTarget == null) {

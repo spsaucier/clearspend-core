@@ -15,7 +15,7 @@ public interface DefaultRoles {
   String GLOBAL_VIEWER = "global_viewer";
   String GLOBAL_BOOKKEEPER = "bookkeeper";
   String GLOBAL_RESELLER = "reseller";
-  String GLOBAL_PROCESSOR = "processor";
+  String GLOBAL_APPLICATION_WEBHOOK = "application_webhook";
 
   String ALLOCATION_ADMIN = "Admin";
   String ALLOCATION_MANAGER = "Manager";
@@ -31,5 +31,5 @@ public interface DefaultRoles {
           GLOBAL_BOOKKEEPER,
           GLOBAL_VIEWER,
           GLOBAL_CUSTOMER_SERVICE_MANAGER,
-          GLOBAL_PROCESSOR);
+          GLOBAL_APPLICATION_WEBHOOK);
 }

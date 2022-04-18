@@ -1063,6 +1063,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertThat(pendingStripeTransfers.get(0).getState())
         .isEqualTo(PendingStripeTransferState.PENDING);
 
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
     // when
     stripeConnectHandler.financialAccountFeaturesUpdated(business.getId(), financialAccount);
 

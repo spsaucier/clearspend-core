@@ -25,15 +25,11 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.service.BusinessBankAccountService;
-import com.clearspend.capital.service.BusinessBankAccountService.StripeBankAccountOp;
 import com.clearspend.capital.service.BusinessService;
-import com.clearspend.capital.service.BusinessService.StripeBusinessOp;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
-import com.clearspend.capital.service.CardService.StripeCardOp;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.TwilioService;
-import com.clearspend.capital.service.TwilioService.TwilioKycKybOp;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.FieldNamingPolicy;
@@ -70,9 +66,6 @@ public class StripeConnectHandler {
   private final StripeProperties stripeProperties;
   private final BusinessKycStepHandler stepHandler;
 
-  @StripeBusinessOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessService")
   public void accountUpdated(StripeObject stripeObject, com.stripe.model.Account stripeAccount) {
     try {
       Account account =
@@ -110,9 +103,6 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
-  @StripeBankAccountOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a Stripe operation that needs to work with bank accounts")
   void processInboundTransferResult(InboundTransfer inboundTransfer) {
     Map<String, String> metadata = inboundTransfer.getMetadata();
 
@@ -126,10 +116,7 @@ public class StripeConnectHandler {
     // be safely removed after 7 days after deployment to prod
     if (businessBankAccountId == null) {
       businessBankAccountId =
-          businessBankAccountService
-              .getBusinessBankAccountsForStripe(businessId, true)
-              .get(0)
-              .getId();
+          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
     }
 
     Amount amount =
@@ -172,9 +159,6 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
-  @StripeBankAccountOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
   void processOutboundTransferResult(OutboundTransfer outboundTransfer) {
     TypedId<BusinessId> businessId =
         StripeMetadataEntry.extractId(
@@ -188,10 +172,7 @@ public class StripeConnectHandler {
     // be safely removed after 7 days after deployment to prod
     if (businessBankAccountId == null) {
       businessBankAccountId =
-          businessBankAccountService
-              .getBusinessBankAccountsForStripe(businessId, true)
-              .get(0)
-              .getId();
+          businessBankAccountService.getBusinessBankAccounts(businessId, true).get(0).getId();
     }
 
     Amount amount =
@@ -222,12 +203,6 @@ public class StripeConnectHandler {
    *
    * @param receivedCredit Received credit event object from Stripe
    */
-  @StripeBusinessOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessService")
-  @StripeBankAccountOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
   private void onStripeCreditsReceived(ReceivedCredit receivedCredit) {
     if (StringUtils.equals(
         stripeProperties.getClearspendFinancialAccountId(), receivedCredit.getFinancialAccount())) {
@@ -239,9 +214,7 @@ public class StripeConnectHandler {
           businessService.retrieveBusinessByStripeFinancialAccount(
               receivedCredit.getFinancialAccount());
       BusinessBankAccount businessBankAccount =
-          businessBankAccountService
-              .getBusinessBankAccountsForStripe(business.getId(), true)
-              .get(0);
+          businessBankAccountService.getBusinessBankAccounts(business.getId(), true).get(0);
 
       stripeClient.executeOutboundTransfer(
           business.getId(),
@@ -263,12 +236,6 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
-  @StripeBusinessOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessService")
-  @StripeBankAccountOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a Stripe operation that needs to work with bank accounts")
   void onAchCreditsReceived(ReceivedCredit receivedCredit, StripeNetwork stripeNetwork) {
     try {
       UsBankAccount usBankAccount =
@@ -304,12 +271,6 @@ public class StripeConnectHandler {
   }
 
   @VisibleForTesting
-  @StripeBankAccountOp(
-      reviewer = "Slava Akimov",
-      explanation = "This is a method where Stripe messages flow to the bank account service")
-  @StripeCardOp(
-      reviewer = "Slava Akimov",
-      explanation = "This is a Stripe operation that needs to work with card")
   void onCardCreditsReceived(ReceivedCredit receivedCredit) {
     if (receivedCredit.getNetworkDetails() != null) {
       String issuingCard = receivedCredit.getNetworkDetails().getIssuingCard();
@@ -344,15 +305,6 @@ public class StripeConnectHandler {
             event -> financialAccountFeaturesUpdated(event.getBusinessId(), event.getEvent()));
   }
 
-  @StripeBusinessOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessService")
-  @StripeBankAccountOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a method where Stripe messages flow to the BusinessBankAccountService")
-  @TwilioKycKybOp(
-      reviewer = "Craig Miller",
-      explanation = "Stripe operations cannot enforce user permissions")
   public void financialAccountFeaturesUpdated(
       TypedId<BusinessId> businessId, FinancialAccount financialAccount) {
     if (financialAccount.getPendingFeatures().isEmpty()
@@ -390,9 +342,7 @@ public class StripeConnectHandler {
 
       // send notification only to onboarded customers who haven't selected plaid route
       if (business.getStatus() == BusinessStatus.ACTIVE
-          && businessBankAccountService
-              .getBusinessBankAccountsForStripe(businessId, true)
-              .isEmpty()) {
+          && businessBankAccountService.getBusinessBankAccounts(businessId, true).isEmpty()) {
         twilioService.sendFinancialAccountReadyEmail(
             business.getBusinessEmail().getEncrypted(), business.getLegalName());
       }
@@ -440,9 +390,6 @@ public class StripeConnectHandler {
 
   public void outboundPaymentReturned(StripeObject stripeObject) {}
 
-  @StripeBusinessOp(
-      reviewer = "Craig Miller",
-      explanation = "This is a Stripe action that needs business information")
   private <T extends StripeWebhookEventWrapper<?>> Optional<T> parseBetaApiEvent(
       StripeObject stripeObject, Class<T> clazz) {
     T event = null;
@@ -455,7 +402,7 @@ public class StripeConnectHandler {
       TypedId<BusinessId> businessId = event.getBusinessId();
       if (businessId != null) {
         try {
-          businessService.retrieveBusinessForStripe(businessId, true);
+          businessService.getBusiness(businessId, true);
         } catch (RecordNotFoundException e) {
           log.info("Skipping event for business id {} since it is not found in the db", businessId);
           return Optional.empty();

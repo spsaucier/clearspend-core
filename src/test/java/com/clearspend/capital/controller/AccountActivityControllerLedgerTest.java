@@ -306,6 +306,7 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     inboundTransfer.setAmount(adjustmentAndHoldRecord.adjustment().getAmount().toStripeAmount());
     inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
 
+    testHelper.setCurrentUserAsWebhook(businessRecord.user());
     stripeConnectHandler.processInboundTransferResult(inboundTransfer);
 
     // when
@@ -436,6 +437,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     receivedPaymentMethodDetails.setUsBankAccount(usBankAccount);
     receivedCredit.setReceivedPaymentMethodDetails(receivedPaymentMethodDetails);
 
+    testHelper.setCurrentUserAsWebhook(businessRecord.user());
+
     stripeConnectHandler.onAchCreditsReceived(receivedCredit, StripeNetwork.from(stripeNetwork));
 
     // when
@@ -487,6 +490,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     receivedCredit.setCurrency("usd");
     receivedCredit.setNetwork("card");
     receivedCredit.setNetworkDetails(new NetworkDetails(card.getExternalRef()));
+
+    testHelper.setCurrentUserAsWebhook(businessRecord.user());
 
     stripeConnectHandler.onCardCreditsReceived(receivedCredit);
 

@@ -686,7 +686,11 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -738,7 +742,11 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -795,7 +803,12 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
+
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -849,7 +862,11 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -922,7 +939,11 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
@@ -1017,7 +1038,11 @@ class UserControllerTest extends BaseCapitalTest {
     NetworkCommonAuthorization networkCommonAuthorization =
         TestDataController.generateAuthorizationNetworkCommon(
             userRecord.user(), cardRecord.card(), cardRecord.account(), amount);
-    networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
     assertThat(networkCommonAuthorization.networkCommon().isPostAdjustment()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostDecline()).isFalse();
     assertThat(networkCommonAuthorization.networkCommon().isPostHold()).isTrue();
