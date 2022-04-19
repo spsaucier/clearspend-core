@@ -35,6 +35,7 @@ public class ChartOfAccountsService {
   private final BusinessRepository businessRepository;
 
   private final BusinessNotificationRepository businessNotificationRepository;
+  private final ChartOfAccountsMappingService chartOfAccountsMappingService;
 
   @VisibleForTesting
   public ChartOfAccounts updateChartOfAccountsForBusiness(
@@ -135,31 +136,39 @@ public class ChartOfAccountsService {
     for (CodatAccountNested codatAccountNested : newAccountNested.getChildren()) {
       Optional<CodatAccountNested> match =
           oldAccountNested.getChildren().stream()
-              .filter(
-                  oldAccount ->
-                      oldAccount.getQualifiedName().equals(codatAccountNested.getQualifiedName()))
+              .filter(oldAccount -> oldAccount.getId().equals(codatAccountNested.getId()))
               .findFirst();
       if (match.isPresent()
           && match.get().getUpdateStatus() != ChartOfAccountsUpdateStatus.DELETED) {
-        // category exists in both new and old, keep iterating through
-        updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
+        // category exists in both new and old. Has the name changed?
+        if (!match.get().getQualifiedName().equals(codatAccountNested.getQualifiedName())) {
+          // The name has changed--does it end with "(deleted)"? This is how QBO denotes deleted
+          // categories.
+          if (match.get().getQualifiedName().endsWith("(deleted)")) {
+            setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.DELETED);
+            notifyAccountDeletedRecursively(codatAccountNested, businessId);
+          } else {
+            setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.RENAMED);
+
+            BusinessNotificationData data = new BusinessNotificationData();
+            data.setOldValue(codatAccountNested.getQualifiedName());
+            data.setNewValue(match.get().getQualifiedName());
+            BusinessNotification newAccountNotification =
+                new BusinessNotification(
+                    businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_RENAMED, data);
+            businessNotificationRepository.save(newAccountNotification);
+
+            chartOfAccountsMappingService.updateNameForMappedCodatId(
+                businessId, match.get().getId(), match.get().getName());
+
+            updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
+          }
+        } else {
+          updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
+        }
       } else {
         setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.NEW);
         notifyNewAccountRecursively(codatAccountNested, businessId);
-      }
-    }
-    // look for old categories that no longer exist and mark them as such
-    for (CodatAccountNested codatAccountNested : oldAccountNested.getChildren()) {
-      Optional<CodatAccountNested> match =
-          newAccountNested.getChildren().stream()
-              .filter(
-                  oldAccount ->
-                      oldAccount.getQualifiedName().equals(codatAccountNested.getQualifiedName()))
-              .findFirst();
-      if (match.isEmpty()) {
-        setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.DELETED);
-        notifyAccountDeletedRecursively(codatAccountNested, businessId);
-        newAccountNested.getChildren().add(codatAccountNested);
       }
     }
   }

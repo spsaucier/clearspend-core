@@ -878,7 +878,8 @@ class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.business().getId(),
             0,
             "TestCategory",
-            ExpenseCategoryStatus.ACTIVE);
+            ExpenseCategoryStatus.ACTIVE,
+            false);
 
     expenseCategoryRepository.save(expenseCategory);
 
@@ -955,7 +956,8 @@ class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.business().getId(),
             0,
             "TestCategory",
-            ExpenseCategoryStatus.ACTIVE);
+            ExpenseCategoryStatus.ACTIVE,
+            false);
 
     expenseCategoryRepository.save(expenseCategory);
 
@@ -1054,7 +1056,8 @@ class UserControllerTest extends BaseCapitalTest {
             createBusinessRecord.business().getId(),
             0,
             "TestCategory",
-            ExpenseCategoryStatus.ACTIVE);
+            ExpenseCategoryStatus.ACTIVE,
+            false);
 
     expenseCategoryRepository.save(expenseCategory);
 

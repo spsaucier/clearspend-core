@@ -426,7 +426,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     ExpenseCategory expenseCategory =
         new ExpenseCategory(
-            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE, false);
 
     expenseCategoryRepository.save(expenseCategory);
 
@@ -463,7 +463,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     // Add an Expense Category
     ExpenseCategory expenseCategory =
         new ExpenseCategory(
-            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE, false);
     expenseCategory = expenseCategoryRepository.save(expenseCategory);
 
     // Make sure that the Expense Category is 'mapped' to a QBO Account
@@ -506,7 +506,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     // Add an Expense Category
     ExpenseCategory expenseCategory =
         new ExpenseCategory(
-            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE);
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE, false);
     expenseCategory = expenseCategoryRepository.save(expenseCategory);
 
     // Don't map the Expense Category before the update. This should set the Expense Category but

@@ -1054,7 +1054,7 @@ public class CodatServiceTest extends BaseCapitalTest {
   public static List<String> getModifiedQualifiedNames() {
     return List.of(
         "Expense.Cost of Goods Sold.SuppliesMaterialsCogs.Cost of Goods Sold",
-        "Expense.Expense.AdvertisingPromotional.Advertising",
+        "Expense.Expense.AdvertisingPromotional.New Advertising",
         "Expense.Expense.AdvertisingPromotional.Promotional",
         "Expense.Expense.Auto.Automobile",
         "Expense.Expense.Auto.Automobile.Fuel",
@@ -1069,10 +1069,6 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Accounting",
         "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Bookkeeper",
         "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Lawyer",
-        // New categories:
-        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Retainer",
-        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Additional",
-        //
         "Expense.Expense.OfficeGeneralAdministrativeExpenses.Office Expenses",
         "Expense.Expense.OfficeGeneralAdministrativeExpenses.Stationery & Printing",
         "Expense.Expense.OtherMiscellaneousServiceCost.Commissions & fees",
@@ -1085,14 +1081,10 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Expense.OtherMiscellaneousServiceCost.Uncategorized Expense",
         "Expense.Expense.RentOrLeaseOfBuildings.Rent or Lease",
         "Expense.Expense.RepairMaintenance.Maintenance and Repair",
-        // new categories:
-        "Expense.Expense.RepairMaintenance.Maintenance and Repair.AC Repairs",
-        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Hardware Repairs",
-        //
         "Expense.Expense.RepairMaintenance.Maintenance and Repair.Building Repairs",
         // deleted categories:
-        // "Expense.Expense.RepairMaintenance.Maintenance and Repair.Computer Repairs",
-        // "Expense.Expense.RepairMaintenance.Maintenance and Repair.Equipment Repairs",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Computer Repairs (deleted)",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Equipment Repairs (deleted)",
         "Expense.Expense.RepairMaintenance.Repair & Maintenance (deleted)",
         "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials",
         "Expense.Expense.SuppliesMaterials.Job Expenses.Job Materials.Decks and Patios",
@@ -1112,7 +1104,17 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Other Expense.OtherMiscellaneousExpense.Miscellaneous",
         "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements",
         "Asset.Fixed Asset.AccumulatedDepreciation.Truck",
-        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation");
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation",
+        // New categories:
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Retainer",
+        "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Additional",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.AC Repairs",
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Hardware Repairs");
+  }
+
+  public static String getNameFromQualified(String qualifiedName) {
+    String[] qualifiedNameSplit = qualifiedName.split("\\.");
+    return qualifiedNameSplit[qualifiedNameSplit.length - 1];
   }
 
   @Test

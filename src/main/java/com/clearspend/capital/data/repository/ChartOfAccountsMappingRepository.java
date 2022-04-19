@@ -22,4 +22,7 @@ public interface ChartOfAccountsMappingRepository
 
   Optional<ChartOfAccountsMapping> findByBusinessIdAndExpenseCategoryId(
       TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId);
+
+  Optional<ChartOfAccountsMapping> findByAccountRefIdAndBusinessId(
+      String codatAccountId, TypedId<BusinessId> businessId);
 }

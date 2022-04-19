@@ -56,4 +56,8 @@ public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> {
   @Column(name = "parent_path", columnDefinition = "text[]")
   @Type(type = "string-array")
   private String[] pathSegments;
+
+  @NonNull
+  @Column(name = "isDefaultCategory")
+  private Boolean isDefaultCategory;
 }

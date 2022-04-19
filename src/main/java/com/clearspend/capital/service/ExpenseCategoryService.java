@@ -69,7 +69,8 @@ public class ExpenseCategoryService {
                       businessId,
                       index + 1,
                       defaultExpenseCategoryNames.get(index),
-                      ExpenseCategoryStatus.ACTIVE));
+                      ExpenseCategoryStatus.ACTIVE,
+                      true));
             });
   }
 
@@ -86,7 +87,8 @@ public class ExpenseCategoryService {
                       businessId,
                       0, // IconRef should be zero?
                       categoryName,
-                      ExpenseCategoryStatus.ACTIVE);
+                      ExpenseCategoryStatus.ACTIVE,
+                      false);
               newCategory.setPathSegments(parentPath.toArray(new String[parentPath.size()]));
               return expenseCategoryRepository.save(newCategory);
             });

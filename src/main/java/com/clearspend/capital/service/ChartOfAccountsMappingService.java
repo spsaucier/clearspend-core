@@ -10,12 +10,15 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.controller.type.chartOfAccounts.ChartOfAccountsMappingResponse;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.google.cloud.Tuple;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,7 @@ public class ChartOfAccountsMappingService {
   private final ChartOfAccountsMappingRepository mappingRepository;
   private final ExpenseCategoryService expenseCategoryService;
   private final CodatClient codatClient;
+  private final ExpenseCategoryRepository expenseCategoryRepository;
 
   public List<ChartOfAccountsMappingResponse> getAllMappingsForBusiness(
       TypedId<BusinessId> businessId) {
@@ -131,5 +135,22 @@ public class ChartOfAccountsMappingService {
   @Transactional
   public void deleteChartOfAccountsMappingsForBusiness(TypedId<BusinessId> businessId) {
     mappingRepository.deleteAll(mappingRepository.findAllByBusinessId(businessId));
+  }
+
+  public void updateNameForMappedCodatId(
+      TypedId<BusinessId> businessId, String accountRefId, String categoryName) {
+    Optional<ChartOfAccountsMapping> mapping =
+        mappingRepository.findByAccountRefIdAndBusinessId(accountRefId, businessId);
+    if (mapping.isPresent()) {
+      Optional<ExpenseCategory> mappedCategory =
+          expenseCategoryService.getExpenseCategoryById(mapping.get().getExpenseCategoryId());
+      if (mappedCategory.isPresent()) {
+        if (mappedCategory.get().getIsDefaultCategory()) return;
+
+        ExpenseCategory updatedCategory = mappedCategory.get();
+        updatedCategory.setCategoryName(categoryName);
+        expenseCategoryRepository.save(updatedCategory);
+      }
+    }
   }
 }
