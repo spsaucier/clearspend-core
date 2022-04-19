@@ -451,6 +451,13 @@ public class BusinessService {
     }
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  public void setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
+    Business business = businessRepository.getById(businessId);
+    business.setAutoCreateExpenseCategories(value);
+    businessRepository.save(business);
+  }
+
   private void setOnNotEqual(
       String value, String value2, Consumer<Object> consumer, StringBuilder stringBuilder) {
     if (!StringUtils.equals(value, value2)) {

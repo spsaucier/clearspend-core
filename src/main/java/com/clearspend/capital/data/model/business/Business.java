@@ -130,6 +130,8 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
 
   private String codatCreditCardId;
 
+  private boolean autoCreateExpenseCategories;
+
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;

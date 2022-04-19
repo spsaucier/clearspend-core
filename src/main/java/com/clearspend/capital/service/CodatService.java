@@ -300,19 +300,21 @@ public class CodatService {
 
   private List<CodatAccountNested> buildNestedListFromTree(
       Tree<String, CodatAccount> tree, CodatAccountNested parent) {
+    List<CodatAccountNested> result = new ArrayList<>();
     if (tree.getPayload() != null) {
       CodatAccountNested me = createNestedAccountFromAccount(tree.getPayload());
       for (Tree<String, CodatAccount> child : tree.getChildren()) {
         me.getChildren().addAll(buildNestedListFromTree(child, me));
       }
-      return List.of(me);
+      result.add(me);
     } else {
       List<CodatAccountNested> descendents = new ArrayList<>();
       for (Tree<String, CodatAccount> child : tree.getChildren()) {
         descendents.addAll(buildNestedListFromTree(child, null));
       }
-      return descendents;
+      result.addAll(descendents);
     }
+    return result;
   }
 
   private CodatAccountNested createNestedAccountFromAccount(CodatAccount account) {

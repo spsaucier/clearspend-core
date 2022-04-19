@@ -21,6 +21,7 @@ import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionC
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -108,25 +109,27 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      business.setCodatCompanyRef("test-codat-ref");
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      user = createBusinessRecord.user();
-      userCookie = testHelper.login(user);
-      testHelper.setCurrentUser(user);
-      card =
-          testHelper.issueCard(
-              business,
-              allocation,
-              user,
-              business.getCurrency(),
-              FundingType.POOLED,
-              CardType.VIRTUAL,
-              false);
-      entityManager.flush();
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    user = createBusinessRecord.user();
+    userCookie = testHelper.login(user);
+    testHelper.setCurrentUser(user);
+    card =
+        testHelper.issueCard(
+            business,
+            allocation,
+            user,
+            business.getCurrency(),
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    entityManager.flush();
+    // This is required to 'reset' the list of available Accounts. There is a method to override
+    // these accounts, but because the Mock Client is a @Component it retains changes between
+    // test.
+    mockClient.createDefaultAccountList();
   }
 
   @Test
@@ -211,7 +214,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
-    accountActivityRepository.save(newAccountActivity);
+    newAccountActivity = accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
@@ -272,7 +275,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             0,
             "1"));
 
-    accountActivityRepository.save(newAccountActivity);
+    newAccountActivity = accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
@@ -479,7 +482,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             0,
             "1"));
 
-    accountActivityRepository.save(firstAccountActivity);
+    firstAccountActivity = accountActivityRepository.save(firstAccountActivity);
 
     AccountActivity secondAccountActivity =
         new AccountActivity(
@@ -515,22 +518,24 @@ public class CodatServiceTest extends BaseCapitalTest {
             0,
             "1"));
 
-    accountActivityRepository.save(secondAccountActivity);
+    secondAccountActivity = accountActivityRepository.save(secondAccountActivity);
 
     codatService.syncMultipleTransactions(
         List.of(firstAccountActivity.getId(), secondAccountActivity.getId()), business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
 
+    TypedId<AccountActivityId> finalFirstAccountActivityId = firstAccountActivity.getId();
+    TypedId<AccountActivityId> finalSecondAccountActivityId = secondAccountActivity.getId();
     assertThat(
             loggedTransactions.stream()
                 .filter(
                     transactionSyncLog ->
                         transactionSyncLog
                                 .getAccountActivityId()
-                                .equals(firstAccountActivity.getId())
+                                .equals(finalFirstAccountActivityId)
                             || transactionSyncLog
                                 .getAccountActivityId()
-                                .equals(secondAccountActivity.getId()))
+                                .equals(finalSecondAccountActivityId))
                 .collect(Collectors.toUnmodifiableList())
                 .size())
         .isEqualTo(2);
@@ -573,7 +578,6 @@ public class CodatServiceTest extends BaseCapitalTest {
             "test.com",
             BigDecimal.ZERO,
             BigDecimal.ZERO));
-    accountActivityRepository.save(firstAccountActivity);
 
     AccountActivity secondAccountActivity =
         new AccountActivity(
@@ -625,6 +629,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             "1"));
 
     accountActivityRepository.save(secondAccountActivity);
+    accountActivityRepository.save(firstAccountActivity);
 
     codatService.syncAllReadyTransactions(business.getId());
     List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();

@@ -7,6 +7,7 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.data.model.BusinessNotification;
 import com.clearspend.capital.data.model.ChartOfAccounts;
 import com.clearspend.capital.data.model.enums.BusinessNotificationType;
@@ -15,6 +16,8 @@ import com.clearspend.capital.data.model.notifications.BusinessNotificationData;
 import com.clearspend.capital.data.repository.BusinessNotificationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.google.common.annotations.VisibleForTesting;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +30,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ChartOfAccountsService {
   private final ChartOfAccountsRepository chartOfAccountsRepository;
+  private final ChartOfAccountsMappingService mappingService;
   private final CodatService codatService;
   private final BusinessRepository businessRepository;
 
   private final BusinessNotificationRepository businessNotificationRepository;
 
+  @VisibleForTesting
   public ChartOfAccounts updateChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
     Optional<ChartOfAccounts> chartOfAccounts =
@@ -40,6 +45,7 @@ public class ChartOfAccountsService {
       ChartOfAccounts oldChartOfAccounts = chartOfAccounts.get();
 
       ChartOfAccounts newChartOfAccounts = new ChartOfAccounts();
+
       newChartOfAccounts.setNestedAccounts(accountNested);
 
       updateStatusesForChartOfAccounts(oldChartOfAccounts, newChartOfAccounts, businessId);
@@ -69,23 +75,46 @@ public class ChartOfAccountsService {
             .getResults());
   }
 
+  // Add Application Annotation when available
   public void updateChartOfAccountsFromCodatWebhook(String codatCompanyRef) {
     businessRepository
         .findByCodatCompanyRef(codatCompanyRef)
         .ifPresent(
-            business ->
-                updateChartOfAccountsForBusiness(
-                    business.getBusinessId(),
-                    codatService
-                        .getCodatChartOfAccountsForBusiness(
-                            business.getBusinessId(),
-                            CodatAccountType.EXPENSE,
-                            List.of(
-                                CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET))
-                        .getResults()));
+            business -> {
+              ChartOfAccounts delta =
+                  updateChartOfAccountsForBusiness(
+                      business.getBusinessId(),
+                      codatService
+                          .getCodatChartOfAccountsForBusiness(
+                              business.getBusinessId(),
+                              CodatAccountType.EXPENSE,
+                              List.of(
+                                  CodatAccountSubtype.OTHER_EXPENSE,
+                                  CodatAccountSubtype.FIXED_ASSET))
+                          .getResults());
+              if (business.isAutoCreateExpenseCategories()) {
+                mappingService.addChartOfAccountsMapping(
+                    business.getBusinessId(), getListOfNewCategories(delta.getNestedAccounts()));
+              }
+            });
   }
 
-  public ChartOfAccounts updateStatusesForChartOfAccounts(
+  private List<AddChartOfAccountsMappingRequest> getListOfNewCategories(
+      List<CodatAccountNested> accounts) {
+    List<AddChartOfAccountsMappingRequest> result = new ArrayList<>();
+    for (CodatAccountNested account : accounts) {
+      if (account.getUpdateStatus().equals(ChartOfAccountsUpdateStatus.NEW)) {
+        AddChartOfAccountsMappingRequest walker = new AddChartOfAccountsMappingRequest("");
+        walker.setExpenseCategoryName(account.getName());
+        walker.setFullyQualifiedCategory(account.getCategory());
+        result.add(walker);
+      }
+      result.addAll(getListOfNewCategories(account.getChildren()));
+    }
+    return result;
+  }
+
+  ChartOfAccounts updateStatusesForChartOfAccounts(
       ChartOfAccounts oldChartOfAccounts,
       ChartOfAccounts newChartOfAccounts,
       TypedId<BusinessId> businessId) {
@@ -98,7 +127,7 @@ public class ChartOfAccountsService {
     return newChartOfAccounts;
   }
 
-  public void updateStatusesForCodatAccountNested(
+  private void updateStatusesForCodatAccountNested(
       CodatAccountNested oldAccountNested,
       CodatAccountNested newAccountNested,
       TypedId<BusinessId> businessId) {
@@ -135,7 +164,7 @@ public class ChartOfAccountsService {
     }
   }
 
-  public void setUpdateStatusRecursively(
+  private void setUpdateStatusRecursively(
       CodatAccountNested codatAccountNested, ChartOfAccountsUpdateStatus status) {
     codatAccountNested.setUpdateStatus(status);
     for (CodatAccountNested codatAccount : codatAccountNested.getChildren()) {
@@ -143,7 +172,7 @@ public class ChartOfAccountsService {
     }
   }
 
-  public void notifyAccountDeletedRecursively(
+  private void notifyAccountDeletedRecursively(
       CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
 
     BusinessNotificationData data = new BusinessNotificationData();
@@ -158,7 +187,7 @@ public class ChartOfAccountsService {
         .forEach(codatAccount -> notifyAccountDeletedRecursively(codatAccount, businessId));
   }
 
-  public void notifyNewAccountRecursively(
+  private void notifyNewAccountRecursively(
       CodatAccountNested codatAccountNested, TypedId<BusinessId> businessId) {
     BusinessNotificationData data = new BusinessNotificationData();
     data.setNewValue(codatAccountNested.getQualifiedName());

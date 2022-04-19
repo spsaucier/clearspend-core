@@ -56,7 +56,7 @@ public class ChartOfAccountsController {
   GetChartOfAccountsMappingResponse addChartOfAccountsMappings(
       @Validated @RequestBody List<AddChartOfAccountsMappingRequest> request) {
     return new GetChartOfAccountsMappingResponse(
-        mappingService.addChartOfAccountsMappings(CurrentUser.getBusinessId(), request));
+        mappingService.overwriteAllMappings(CurrentUser.getBusinessId(), request));
   }
 
   @DeleteMapping("/mappings")

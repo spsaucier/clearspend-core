@@ -91,7 +91,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     account_2.setExpenseCategoryId(expenseCategories.get(5).getId());
     List<AddChartOfAccountsMappingRequest> request = List.of(account_1, account_2);
 
-    mappingService.addChartOfAccountsMappings(business.getId(), request);
+    mappingService.overwriteAllMappings(business.getId(), request);
 
     assertThat(
             mappingRepository
@@ -119,7 +119,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     List<ChartOfAccountsMappingResponse> response =
-        mappingService.addChartOfAccountsMappings(business.getId(), request);
+        mappingService.overwriteAllMappings(business.getId(), request);
 
     assertThat(expenseCategoryRepository.findFirstCategoryByName("NEW_CATEGORY_NAME")).isPresent();
   }
@@ -136,7 +136,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
     List<AddChartOfAccountsMappingRequest> request = List.of(test_account);
     testHelper.setCurrentUser(createBusinessRecord.user());
     List<ChartOfAccountsMappingResponse> response =
-        mappingService.addChartOfAccountsMappings(business.getId(), request);
+        mappingService.overwriteAllMappings(business.getId(), request);
 
     assertThat(expenseCategoryRepository.findByBusinessId(business.getId()))
         .size()
@@ -155,7 +155,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     List<ChartOfAccountsMappingResponse> response =
-        mappingService.addChartOfAccountsMappings(business.getId(), request);
+        mappingService.overwriteAllMappings(business.getId(), request);
 
     assertThat(expenseCategoryRepository.findById(response.get(0).getExpenseCategoryId()))
         .isPresent()

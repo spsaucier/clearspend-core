@@ -61,11 +61,16 @@ public class ChartOfAccountsMappingService {
   }
 
   @Transactional
-  public List<ChartOfAccountsMappingResponse> addChartOfAccountsMappings(
+  public List<ChartOfAccountsMappingResponse> overwriteAllMappings(
       TypedId<BusinessId> businessId, List<AddChartOfAccountsMappingRequest> request) {
     // delete existing chart of accounts mappings for business
     deleteChartOfAccountsMappingsForBusiness(businessId);
 
+    return addChartOfAccountsMapping(businessId, request);
+  }
+
+  List<ChartOfAccountsMappingResponse> addChartOfAccountsMapping(
+      TypedId<BusinessId> businessId, List<AddChartOfAccountsMappingRequest> request) {
     List<ChartOfAccountsMapping> allMappings =
         request.stream()
             .map(

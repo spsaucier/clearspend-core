@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.client.codat.CodatMockClient;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountStatus;
@@ -11,15 +12,21 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.BusinessNotificationRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsRepository;
+import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.github.javafaker.Faker;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
+import org.assertj.core.api.Condition;
+import org.assertj.core.data.Index;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +38,9 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
   @Autowired private CodatService codatService;
   @Autowired private BusinessNotificationRepository businessNotificationRepository;
   @Autowired private BusinessNotificationService businessNotificationService;
+  @Autowired private BusinessRepository businessRepository;
+  @Autowired private ExpenseCategoryRepository expenseCategoryRepository;
+  @Autowired private CodatMockClient mockClient;
 
   private TestHelper.CreateBusinessRecord createBusinessRecord;
   private Faker faker = new Faker();
@@ -42,15 +52,14 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
 
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      business.setCodatCompanyRef("test-codat-ref");
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      user = createBusinessRecord.user();
-      userCookie = testHelper.login(user);
-      testHelper.setCurrentUser(user);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    user = createBusinessRecord.user();
+    userCookie = testHelper.login(user);
+    testHelper.setCurrentUser(user);
+    mockClient.createDefaultAccountList();
   }
 
   @Test
@@ -136,5 +145,99 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
                 .getUnseenNotificationsForUser(business.getId(), user.getUserId())
                 .size())
         .isEqualTo(0);
+  }
+
+  @Test
+  public void
+      updateChartOfAccountsFromCodatWebhook_willAutomaticallyAddExpenseCategoriesIfEnabled() {
+    business = businessRepository.getById(business.getId());
+    business.setCodatCompanyRef("UPDATE_TEST");
+    business.setAutoCreateExpenseCategories(true);
+    business = businessRepository.save(business);
+
+    // We first need to sync with the Mock Codat Client to seed our Category Mapping history
+    chartOfAccountsService.updateChartOfAccountsFromCodat(business.getBusinessId());
+
+    // Get all the existing Expense Categories
+    List<ExpenseCategory> pre =
+        expenseCategoryRepository.findByBusinessId(business.getBusinessId());
+
+    // Add some more Accounts to the Mock
+    ArrayList<CodatAccount> overrides = new ArrayList<>();
+    overrides.add(
+        new CodatAccount(
+            "fixed",
+            "my asset",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.my asset",
+            CodatAccountType.ASSET));
+    overrides.add(
+        new CodatAccount(
+            "New Guy",
+            "New Guy",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.new guy",
+            CodatAccountType.ASSET));
+    mockClient.overrideDefaultAccountList(overrides);
+
+    chartOfAccountsService.updateChartOfAccountsFromCodatWebhook("UPDATE_TEST");
+
+    List<ExpenseCategory> post =
+        expenseCategoryRepository.findByBusinessId(business.getBusinessId());
+
+    Condition<ExpenseCategory> condition =
+        new Condition<ExpenseCategory>(
+            category -> category.getCategoryName().equals("New Guy"), "Contains the New Guy");
+    assertThat(pre).doNotHave(condition);
+    assertThat(post).hasSize(pre.size() + 1).has(condition, Index.atIndex(pre.size()));
+  }
+
+  @Test
+  public void
+      updateChartOfAccountsFromCodatWebhook_willNotAutomaticallyAddExpenseCategoriesIfDisabled() {
+    business = businessRepository.getById(business.getId());
+    business.setCodatCompanyRef("UPDATE_TEST");
+    business.setAutoCreateExpenseCategories(false);
+    business = businessRepository.save(business);
+
+    // We first need to sync with the Mock Codat Client to seed our Category Mapping history
+    chartOfAccountsService.updateChartOfAccountsFromCodat(business.getBusinessId());
+
+    // Get all the existing Expense Categories
+    List<ExpenseCategory> pre =
+        expenseCategoryRepository.findByBusinessId(business.getBusinessId());
+
+    // Add some more Accounts to the Mock
+    ArrayList<CodatAccount> overrides = new ArrayList<>();
+    overrides.add(
+        new CodatAccount(
+            "fixed",
+            "my asset",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.my asset",
+            CodatAccountType.ASSET));
+    overrides.add(
+        new CodatAccount(
+            "New Guy",
+            "New Guy",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.new guy",
+            CodatAccountType.ASSET));
+    mockClient.overrideDefaultAccountList(overrides);
+
+    chartOfAccountsService.updateChartOfAccountsFromCodatWebhook("UPDATE_TEST");
+
+    List<ExpenseCategory> post =
+        expenseCategoryRepository.findByBusinessId(business.getBusinessId());
+
+    Condition<ExpenseCategory> condition =
+        new Condition<ExpenseCategory>(
+            category -> category.getCategoryName().equals("New Guy"), "Contains the New Guy");
+    assertThat(pre).doNotHave(condition);
+    assertThat(post).hasSize(pre.size()).doNotHave(condition);
   }
 }

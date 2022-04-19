@@ -129,4 +129,52 @@ class BusinessServiceTest extends BaseCapitalTest {
         .build()
         .validateServiceMethod(action);
   }
+
+  @Test
+  public void enableAutomaticExpenseCategories_isFalseByDefault() {
+    assertThat(testHelper.createBusiness().business().isAutoCreateExpenseCategories()).isFalse();
+  }
+
+  @Test
+  public void setAutomaticExpenseCategories_persistsAppropriately() {
+    CreateBusinessRecord record = testHelper.createBusiness();
+    Business business = record.business();
+    testHelper.setCurrentUser(record.user());
+    assertThat(business.isAutoCreateExpenseCategories()).isFalse();
+
+    businessService.setAutomaticExpenseCategories(business.getBusinessId(), true);
+    assertThat(business.isAutoCreateExpenseCategories()).isTrue();
+    // Updating to the current value works
+    businessService.setAutomaticExpenseCategories(business.getBusinessId(), true);
+    assertThat(business.isAutoCreateExpenseCategories()).isTrue();
+
+    businessService.setAutomaticExpenseCategories(business.getBusinessId(), false);
+    assertThat(business.isAutoCreateExpenseCategories()).isFalse();
+  }
+
+  @Test
+  public void setAutomaticExpenseCategories_permissionsCheck() {
+    CreateBusinessRecord record = testHelper.createBusiness();
+    testHelper.setCurrentUser(record.user());
+    Allocation childAllocation =
+        testHelper
+            .createAllocation(
+                record.business().getBusinessId(),
+                "Sub-Allocation",
+                record.allocationRecord().allocation().getId(),
+                record.user())
+            .allocation();
+
+    final ThrowingRunnable action =
+        () ->
+            businessService.setAutomaticExpenseCategories(record.business().getBusinessId(), true);
+
+    permissionValidationHelper
+        .buildValidator(record)
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .build()
+        .validateServiceMethod(action);
+  }
 }
