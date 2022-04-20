@@ -119,7 +119,8 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
-  @PostFilter("hasRootPermission(#businessId, 'READ') or isSelfOwned(filterObject.allocation)")
+  @PostFilter(
+      "hasPermission(filterObject?.allocation(), 'READ|MANAGE_FUNDS|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> getAllocationsForBusiness(final TypedId<BusinessId> businessId) {
     final Business business =
         businessRepository
@@ -216,18 +217,14 @@ public class AllocationService {
     return allocation;
   }
 
-  @PreAuthorize(
-      "hasAllocationPermission(#allocationId, 'READ') or "
-          + "hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public Allocation getSingleAllocation(
       final TypedId<BusinessId> businessId, final TypedId<AllocationId> allocationId) {
     return retrieveAllocation(businessId, allocationId);
   }
 
   // TODO: improve entity retrieval to make a single db call
-  @PreAuthorize(
-      "hasAllocationPermission(#allocationId, 'READ') or "
-          + "hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public AllocationDetailsRecord getAllocation(
       Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
@@ -285,9 +282,7 @@ public class AllocationService {
         accountService.retrieveAllocationAccount(businessId, Currency.USD, rootAllocation.getId()));
   }
 
-  @PreAuthorize(
-      "hasAllocationPermission(#allocationId, 'READ') or "
-          + "hasGlobalPermission('CUSTOMER_SERVICE|GLOBAL_READ')")
+  @PostFilter("hasPermission(filterObject?.allocation, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> getAllocationChildren(
       Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId
@@ -326,7 +321,7 @@ public class AllocationService {
     return searchBusinessAllocations(business, null);
   }
 
-  @PreAuthorize("hasPermission(#business, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
+  @PostFilter("hasPermission(filterObject?.allocation, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> searchBusinessAllocations(Business business, String name) {
     List<Allocation> allocations =
         StringUtils.isEmpty(name)
