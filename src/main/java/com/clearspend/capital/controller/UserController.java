@@ -38,6 +38,7 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessProspectService;
+import com.clearspend.capital.service.BusinessProspectService.OnboardingBusinessProspectMethod;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.ReceiptService;
 import com.clearspend.capital.service.UserFilterCriteria;
@@ -156,6 +157,17 @@ public class UserController {
     return new User(userService.retrieveUser(userId));
   }
 
+  @OnboardingBusinessProspectMethod(
+      explanation =
+          """
+              This one is messed up. Yes, we have a CurrentUser,
+              which means we have a valid JWT. However, the user
+              in question is not 'real' yet if this is called during
+              the onboarding process, ie they are not in our Postgres DB.
+              That means we cannot evaluate permissions against them, hence
+              the RestrictedApi approach.
+              """,
+      reviewer = "Craig Miller")
   @GetMapping
   User currentUser() {
     CurrentUser currentUser = CurrentUser.get();

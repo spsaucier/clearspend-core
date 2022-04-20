@@ -42,7 +42,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,7 +71,11 @@ public class BusinessProspectService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
-  @PostAuthorize("hasPermission(returnObject, 'VIEW_OWN|CUSTOMER_SERVICE')")
+  @RestrictedApi(
+      explanation = "This is used when a 'real' user is not yet available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   public BusinessProspect retrieveBusinessProspect(final TypedId<BusinessOwnerId> businessOwnerId) {
     return businessProspectRepository
         .findByBusinessOwnerId(businessOwnerId)
