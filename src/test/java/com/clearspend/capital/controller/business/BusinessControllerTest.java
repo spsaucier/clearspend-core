@@ -30,12 +30,15 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.ServiceHelper;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.util.List;
@@ -54,6 +57,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
@@ -69,6 +73,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final ServiceHelper serviceHelper;
+  private final PermissionValidationHelper permissionValidationHelper;
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
@@ -376,6 +381,30 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     assertThat(businessLimit.getIssuedPhysicalCardsLimit()).isEqualTo(10);
     assertThat(businessLimit.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+  }
+
+  @Test
+  void getBusinessLimit_UserPermissions() {
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> mvc.perform(get("/businesses/business-limit").cookie(cookie));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .setAllocation(allocation)
+        .allowRolesOnRootAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @Test

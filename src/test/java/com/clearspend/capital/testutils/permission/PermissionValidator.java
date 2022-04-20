@@ -8,6 +8,7 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.util.function.ThrowableFunctions;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -215,6 +216,12 @@ public class PermissionValidator {
     testAllocationRoles(deniedAssertion, allowedAssertion);
     testCustomUsers(deniedAssertion, allowedAssertion);
     testGlobalRoles(deniedAssertion, allowedAssertion);
+  }
+
+  public void validateMockMvcCall(
+      final ThrowableFunctions.ThrowingFunction<Cookie, ResultActions> action) {
+    final ThrowingFunction<Cookie, ResultActions> newAction = action::apply;
+    validateMockMvcCall(newAction);
   }
 
   private Object assertWithFailureMessage(

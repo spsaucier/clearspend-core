@@ -23,7 +23,6 @@ import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
-import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -89,12 +88,13 @@ public class BusinessLimitService {
     this.issuedPhysicalCardDefaultLimit = issuedPhysicalCardDefaultLimit;
   }
 
-  public BusinessLimit initializeBusinessLimit(TypedId<BusinessId> businessId) {
+  BusinessLimit initializeBusinessLimit(TypedId<BusinessId> businessId) {
     return businessLimitRepository.save(
         new BusinessLimit(
             businessId, DEFAULT_LIMITS, DEFAULT_OPERATION_LIMITS, issuedPhysicalCardDefaultLimit));
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'READ')")
   public BusinessLimit retrieveBusinessLimit(TypedId<BusinessId> businessId) {
     BusinessLimit businessLimit = findBusinessLimit(businessId);
     businessLimit.setIssuedPhysicalCardsTotal(
@@ -266,7 +266,7 @@ public class BusinessLimitService {
     };
   }
 
-  protected void ensureWithinDepositLimit(TypedId<BusinessId> businessId, Amount amount) {
+  void ensureWithinDepositLimit(TypedId<BusinessId> businessId, Amount amount) {
     amount.ensureNonNegative();
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
@@ -290,7 +290,7 @@ public class BusinessLimitService {
         limit.getLimits().get(amount.getCurrency()).get(LimitType.ACH_DEPOSIT));
   }
 
-  public void ensureWithinWithdrawLimit(TypedId<BusinessId> businessId, Amount amount) {
+  void ensureWithinWithdrawLimit(TypedId<BusinessId> businessId, Amount amount) {
     amount.ensureNonNegative();
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
@@ -314,7 +314,6 @@ public class BusinessLimitService {
         limit.getLimits().get(amount.getCurrency()).get(LimitType.ACH_WITHDRAW));
   }
 
-  @VisibleForTesting
   void withinLimit(
       TypedId<BusinessId> businessId,
       AdjustmentType type,
@@ -350,7 +349,7 @@ public class BusinessLimitService {
     }
   }
 
-  void withinOperationLimits(
+  private void withinOperationLimits(
       TypedId<BusinessId> businessId,
       LimitType limitType,
       List<Adjustment> adjustments,
