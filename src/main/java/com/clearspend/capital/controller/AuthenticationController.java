@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.error.FusionAuthException;
+import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
@@ -8,11 +9,15 @@ import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.LoginBusinessOwner;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.AuthenticationBusinessProspectMethod;
+import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessService.PreLoginOperation;
 import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
@@ -42,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -61,6 +67,7 @@ public class AuthenticationController {
 
   private final BusinessProspectService businessProspectService;
   private final BusinessOwnerService businessOwnerService;
+  private final BusinessService businessService;
   private final FusionAuthService fusionAuthService;
   private final int refreshTokenTimeToLiveInMinutes;
   private final UserService userService;
@@ -68,10 +75,12 @@ public class AuthenticationController {
   public AuthenticationController(
       BusinessProspectService businessProspectService,
       BusinessOwnerService businessOwnerService,
+      BusinessService businessService,
       FusionAuthService fusionAuthService,
       UserService userService) {
     this.businessProspectService = businessProspectService;
     this.businessOwnerService = businessOwnerService;
+    this.businessService = businessService;
     this.fusionAuthService = fusionAuthService;
     this.userService = userService;
     refreshTokenTimeToLiveInMinutes =
@@ -140,15 +149,28 @@ public class AuthenticationController {
       reviewer = "Craig Miller",
       explanation =
           "Need to lookup Business Prospect info, but SecurityContext is not available yet")
+  @PreLoginOperation(
+      reviewer = "Patrick Morton",
+      explanation = "Retrieve the Business entity prior to login for Status check")
   @SuppressWarnings("JavaUtilDate")
   public ResponseEntity<UserLoginResponse> finalizeLogin(
       ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {
     LoginResponse response = loginResponse.successResponse;
 
+    CurrentUser user = CurrentUser.get(getClaims(response));
+
+    try {
+      Business business = businessService.retrieveBusinessPriorToLogin(user.businessId(), false);
+      if (business != null && business.getStatus() == BusinessStatus.SUSPENDED) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+      }
+    } catch (RecordNotFoundException rnfe) {
+      log.debug("Unable to locate business during login", rnfe);
+    }
+
     // Status 202 = The user was authenticated successfully. The user is not registered for
     // the application specified by the applicationId on the request. The response will contain
     // the User object that was authenticated.
-    CurrentUser user = CurrentUser.get(getClaims(response));
     if (loginResponse.status == 202) {
       // populate-token.js populates the JWT
       fusionAuthService.updateUser(

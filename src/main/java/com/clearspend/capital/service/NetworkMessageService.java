@@ -15,6 +15,7 @@ import com.clearspend.capital.data.model.decline.LimitExceeded;
 import com.clearspend.capital.data.model.decline.SpendControlViolated;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
@@ -53,6 +54,7 @@ public class NetworkMessageService {
   private final NetworkMerchantRepository networkMerchantRepository;
 
   private final AccountService accountService;
+  private final BusinessService businessService;
   private final AccountActivityService accountActivityService;
   private final AllocationService allocationService;
   private final CardService cardService;
@@ -289,8 +291,30 @@ public class NetworkMessageService {
     }
   }
 
+  private void processTransactionCreated(NetworkCommon common) {
+    common.setApprovedAmount(common.getRequestedAmount());
+
+    AccountActivityType accountActivityType = common.getAccountActivityType();
+
+    common
+        .getAccountActivityDetails()
+        .setAccountActivityStatus(
+            accountActivityType == AccountActivityType.NETWORK_REFUND
+                ? AccountActivityStatus.PROCESSED
+                : AccountActivityStatus.APPROVED);
+    common.setPostAdjustment(true);
+
+    releasePriorHold(common);
+  }
+
   private void processAuthorizationRequest(NetworkCommon common) {
     setPaddedAmountAndHoldPeriod(common);
+
+    if (businessService.getBusiness(common.getBusinessId()).business().getStatus()
+        == BusinessStatus.SUSPENDED) {
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.BUSINESS_SUSPENSION));
+      common.setPostDecline(true);
+    }
 
     // decline if we have any mismatches on address, CVN or card expiration date
     if (common.getAddressPostalCodeCheck() == VerificationResultType.MISMATCH) {
@@ -374,22 +398,6 @@ public class NetworkMessageService {
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);
     common.setPostHold(true);
-  }
-
-  private void processTransactionCreated(NetworkCommon common) {
-    common.setApprovedAmount(common.getRequestedAmount());
-
-    AccountActivityType accountActivityType = common.getAccountActivityType();
-
-    common
-        .getAccountActivityDetails()
-        .setAccountActivityStatus(
-            accountActivityType == AccountActivityType.NETWORK_REFUND
-                ? AccountActivityStatus.PROCESSED
-                : AccountActivityStatus.APPROVED);
-    common.setPostAdjustment(true);
-
-    releasePriorHold(common);
   }
 
   private void releasePriorHold(NetworkCommon common) {

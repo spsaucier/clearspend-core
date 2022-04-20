@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.business.BusinessStatusResponse;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.Account;
@@ -52,7 +53,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessService {
 
   public @interface OnboardingBusinessOp {
+    String reviewer();
 
+    String explanation();
+  }
+
+  public @interface PreLoginOperation {
     String reviewer();
 
     String explanation();
@@ -251,8 +257,29 @@ public class BusinessService {
     return business;
   }
 
+  @Transactional
+  @PreAuthorize("hasGlobalPermission('CUSTOMER_SERVICE')")
+  public BusinessStatusResponse updateBusinessStatus(
+      TypedId<BusinessId> businessId, BusinessStatus status) {
+    Business business = businessRepository.getById(businessId);
+    business.setStatus(status);
+    business = businessRepository.save(business);
+
+    return new BusinessStatusResponse(business.getId(), business.getStatus());
+  }
+
   private Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
     return retrievalService.retrieveBusiness(businessId, mustExist);
+  }
+
+  @RestrictedApi(
+      explanation = "Called prior to formal authentication to check if the business is suspended",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {PreLoginOperation.class})
+  public Business retrieveBusinessPriorToLogin(
+      final TypedId<BusinessId> businessId, final boolean mustExist) {
+    return retrieveBusiness(businessId, mustExist);
   }
 
   Business retrieveBusinessForService(

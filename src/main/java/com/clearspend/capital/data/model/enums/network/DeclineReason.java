@@ -10,6 +10,7 @@ public enum DeclineReason {
   ADDRESS_POSTAL_CODE_MISMATCH,
   CVC_MISMATCH,
   EXPIRY_MISMATCH,
+  BUSINESS_SUSPENSION,
 
   // Stripe failed inbound/outbound transfer reasons:
   ST_ACCOUNT_CLOSED,

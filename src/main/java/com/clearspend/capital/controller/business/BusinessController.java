@@ -11,6 +11,7 @@ import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalance
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceResponse;
 import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
+import com.clearspend.capital.controller.type.business.BusinessStatusResponse;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.controller.type.business.accounting.UpdateBusinessAccountingStepRequest;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
@@ -140,6 +141,30 @@ public class BusinessController {
     return new UpdateAllocationBalanceResponse(
         adjustmentRecord.adjustment().getId(),
         Amount.of(adjustmentRecord.account().getLedgerBalance()));
+  }
+
+  @PostMapping("/{businessId}/suspend")
+  public BusinessStatusResponse suspendBusiness(
+      @PathVariable(value = "businessId")
+          @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessId> businessId) {
+    return businessService.updateBusinessStatus(businessId, BusinessStatus.SUSPENDED);
+  }
+
+  @PostMapping("/{businessId}/restore")
+  public BusinessStatusResponse restoreBusiness(
+      @PathVariable(value = "businessId")
+          @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessId> businessId) {
+    return businessService.updateBusinessStatus(businessId, BusinessStatus.ACTIVE);
   }
 
   @GetMapping

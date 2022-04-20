@@ -11,11 +11,13 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.util.Set;
+import lombok.SneakyThrows;
 import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +128,26 @@ class BusinessServiceTest extends BaseCapitalTest {
         .buildValidator(createBusinessRecord)
         .allowRolesOnAllocation(
             Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @SneakyThrows
+  @Test
+  void suspendBusiness_requiresCustomerServicePermission() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final CreateBusinessRecord globalUserRecord = testHelper.createBusiness();
+
+    final ThrowingRunnable action =
+        () ->
+            businessService.updateBusinessStatus(
+                createBusinessRecord.user().getBusinessId(), BusinessStatus.SUSPENDED);
+
+    permissionValidationHelper
+        .buildValidator(globalUserRecord)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER, DefaultRoles.GLOBAL_CUSTOMER_SERVICE))
         .build()
         .validateServiceMethod(action);
   }

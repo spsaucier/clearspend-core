@@ -14,11 +14,15 @@ import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
+import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
@@ -43,6 +47,7 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   private final TwilioServiceMock twilioServiceMock;
   private final UserService userService;
   private final CardService cardService;
+  private final BusinessService businessService;
 
   private CreateBusinessRecord createBusinessRecord;
   private UserService.CreateUpdateUserRecord user;
@@ -249,5 +254,40 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
     // Log in and get a fresh cookie.
     Cookie cookie = testHelper.login(newUser.user().getEmail().getEncrypted(), replacementPassword);
     assertThat(cookie).isNotNull();
+  }
+
+  @SneakyThrows
+  @Test
+  void login_suspendedBusinessCausesLoginFailure() {
+    User user = createBusinessRecord.user();
+    User csManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE)
+            .user();
+
+    LoginRequest request =
+        new LoginRequest(user.getEmail().getEncrypted(), testHelper.getPassword(user));
+    String body = objectMapper.writeValueAsString(request);
+
+    MockHttpServletResponse response =
+        mvc.perform(post("/authentication/login").contentType("application/json").content(body))
+            .andExpect(status().is(200))
+            .andReturn()
+            .getResponse();
+
+    UserLoginResponse successful =
+        objectMapper.readValue(response.getContentAsString(), UserLoginResponse.class);
+
+    testHelper.setCurrentUser(csManager);
+    businessService.updateBusinessStatus(user.getBusinessId(), BusinessStatus.SUSPENDED);
+
+    MockHttpServletResponse suspendedResponse =
+        mvc.perform(post("/authentication/login").contentType("application/json").content(body))
+            .andExpect(status().is(403))
+            .andReturn()
+            .getResponse();
+
+    assertThat(suspendedResponse.getContentAsString()).isEqualTo("");
   }
 }
