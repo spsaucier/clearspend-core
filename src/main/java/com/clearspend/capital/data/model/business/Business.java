@@ -7,13 +7,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.BusinessRelated;
-import com.clearspend.capital.data.model.enums.AccountingSetupStep;
-import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
-import com.clearspend.capital.data.model.enums.BusinessStatus;
-import com.clearspend.capital.data.model.enums.BusinessStatusReason;
-import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
+import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
@@ -130,7 +124,7 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
 
   private String codatCreditCardId;
 
-  private boolean autoCreateExpenseCategories;
+  @NonNull private Boolean autoCreateExpenseCategories;
 
   @NonNull
   @Enumerated(EnumType.STRING)

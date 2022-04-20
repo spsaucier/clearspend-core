@@ -154,7 +154,7 @@ class BusinessServiceTest extends BaseCapitalTest {
 
   @Test
   public void enableAutomaticExpenseCategories_isFalseByDefault() {
-    assertThat(testHelper.createBusiness().business().isAutoCreateExpenseCategories()).isFalse();
+    assertThat(testHelper.createBusiness().business().getAutoCreateExpenseCategories()).isFalse();
   }
 
   @Test
@@ -162,16 +162,16 @@ class BusinessServiceTest extends BaseCapitalTest {
     CreateBusinessRecord record = testHelper.createBusiness();
     Business business = record.business();
     testHelper.setCurrentUser(record.user());
-    assertThat(business.isAutoCreateExpenseCategories()).isFalse();
+    assertThat(business.getAutoCreateExpenseCategories()).isFalse();
 
     businessService.setAutomaticExpenseCategories(business.getBusinessId(), true);
-    assertThat(business.isAutoCreateExpenseCategories()).isTrue();
+    assertThat(business.getAutoCreateExpenseCategories()).isTrue();
     // Updating to the current value works
     businessService.setAutomaticExpenseCategories(business.getBusinessId(), true);
-    assertThat(business.isAutoCreateExpenseCategories()).isTrue();
+    assertThat(business.getAutoCreateExpenseCategories()).isTrue();
 
     businessService.setAutomaticExpenseCategories(business.getBusinessId(), false);
-    assertThat(business.isAutoCreateExpenseCategories()).isFalse();
+    assertThat(business.getAutoCreateExpenseCategories()).isFalse();
   }
 
   @Test

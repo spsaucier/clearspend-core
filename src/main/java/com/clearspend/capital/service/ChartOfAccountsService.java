@@ -93,7 +93,7 @@ public class ChartOfAccountsService {
                                   CodatAccountSubtype.OTHER_EXPENSE,
                                   CodatAccountSubtype.FIXED_ASSET))
                           .getResults());
-              if (business.isAutoCreateExpenseCategories()) {
+              if (business.getAutoCreateExpenseCategories()) {
                 mappingService.addChartOfAccountsMapping(
                     business.getBusinessId(), getListOfNewCategories(delta.getNestedAccounts()));
               }

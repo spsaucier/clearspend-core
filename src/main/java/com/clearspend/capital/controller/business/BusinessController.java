@@ -13,6 +13,7 @@ import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.business.BusinessStatusResponse;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
+import com.clearspend.capital.controller.type.business.accounting.UpdateAutoCreateExpenseCategoriesRequest;
 import com.clearspend.capital.controller.type.business.accounting.UpdateBusinessAccountingStepRequest;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
@@ -224,5 +225,15 @@ public class BusinessController {
             businessService.updateBusinessAccountingSetupStep(
                 CurrentUser.getBusinessId(),
                 updateBusinessAccountingStepRequest.getAccountingSetupStep())));
+  }
+
+  @PostMapping("/auto-create-expense-categories")
+  ResponseEntity<?> updateAutoCreateExpenseCategories(
+      @RequestBody @Validated
+          UpdateAutoCreateExpenseCategoriesRequest updateAutoCreateExpenseCategoriesRequest) {
+    return ResponseEntity.ok(
+        businessService.setAutomaticExpenseCategories(
+            CurrentUser.getBusinessId(),
+            updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories()));
   }
 }

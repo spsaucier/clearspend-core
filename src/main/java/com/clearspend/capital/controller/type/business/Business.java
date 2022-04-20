@@ -3,11 +3,7 @@ package com.clearspend.capital.controller.type.business;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
-import com.clearspend.capital.data.model.enums.AccountingSetupStep;
-import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
-import com.clearspend.capital.data.model.enums.BusinessStatus;
-import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
+import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.persistence.EnumType;
@@ -70,6 +66,10 @@ public class Business {
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;
 
+  @JsonProperty("autoCreateExpenseCategories")
+  @NonNull
+  private Boolean autoCreateExpenseCategories;
+
   @JsonProperty("accountNumber")
   private String accountNumber;
 
@@ -101,6 +101,7 @@ public class Business {
         business.getKnowYourBusinessStatus(),
         business.getStatus(),
         business.getAccountingSetupStep(),
+        business.getAutoCreateExpenseCategories(),
         business.getMcc());
 
     this.businessName = business.getBusinessName();

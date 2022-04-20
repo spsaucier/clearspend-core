@@ -18,15 +18,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.StripeData;
 import com.clearspend.capital.data.model.business.TosAcceptance;
-import com.clearspend.capital.data.model.enums.AccountingSetupStep;
-import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
-import com.clearspend.capital.data.model.enums.BusinessStatus;
-import com.clearspend.capital.data.model.enums.BusinessStatusReason;
-import com.clearspend.capital.data.model.enums.BusinessType;
-import com.clearspend.capital.data.model.enums.Country;
-import com.clearspend.capital.data.model.enums.Currency;
-import com.clearspend.capital.data.model.enums.FinancialAccountState;
-import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
+import com.clearspend.capital.data.model.enums.*;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
@@ -102,6 +94,7 @@ public class BusinessService {
             BusinessStatusReason.NONE,
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
+            false,
             AccountingSetupStep.ADD_CREDIT_CARD);
     if (businessId != null) {
       business.setId(businessId);
@@ -479,10 +472,11 @@ public class BusinessService {
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
-  public void setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
+  public Business setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
     Business business = businessRepository.getById(businessId);
     business.setAutoCreateExpenseCategories(value);
     businessRepository.save(business);
+    return business;
   }
 
   private void setOnNotEqual(
