@@ -12,6 +12,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.LoginBusinessOwner;
 import com.clearspend.capital.service.BusinessProspectService;
+import com.clearspend.capital.service.BusinessProspectService.AuthenticationBusinessProspectMethod;
 import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
@@ -135,6 +136,10 @@ public class AuthenticationController {
       reviewer = "Craig Miller",
       explanation =
           "Business owner info is looked up here, but no SecurityContext is available to secure the method yet.")
+  @AuthenticationBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "Need to lookup Business Prospect info, but SecurityContext is not available yet")
   @SuppressWarnings("JavaUtilDate")
   public ResponseEntity<UserLoginResponse> finalizeLogin(
       ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {

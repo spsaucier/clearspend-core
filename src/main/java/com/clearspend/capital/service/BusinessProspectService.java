@@ -29,6 +29,7 @@ import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
+import com.google.errorprone.annotations.RestrictedApi;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.time.OffsetDateTime;
@@ -41,6 +42,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,18 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessProspectService {
+
+  public @interface AuthenticationBusinessProspectMethod {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface OnboardingBusinessProspectMethod {
+    String reviewer();
+
+    String explanation();
+  }
 
   private final BusinessProspectRepository businessProspectRepository;
 
@@ -58,7 +72,8 @@ public class BusinessProspectService {
   private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
-  public BusinessProspect retrieveBusinessProspect(TypedId<BusinessOwnerId> businessOwnerId) {
+  @PostAuthorize("hasPermission(returnObject, 'VIEW_OWN|CUSTOMER_SERVICE')")
+  public BusinessProspect retrieveBusinessProspect(final TypedId<BusinessOwnerId> businessOwnerId) {
     return businessProspectRepository
         .findByBusinessOwnerId(businessOwnerId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessOwnerId));
@@ -67,6 +82,12 @@ public class BusinessProspectService {
   public record BusinessProspectRecord(
       BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   @Transactional
   public BusinessProspectRecord createOrUpdateBusinessProspect(
       String firstName,
@@ -164,6 +185,16 @@ public class BusinessProspectService {
     return new BusinessProspectRecord(businessProspect, BusinessProspectStatus.NEW);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method is both used by the onboarding process, and uses an onboarding method itself")
   @Transactional
   public BusinessProspect setBusinessProspectPhone(
       TypedId<BusinessProspectId> businessProspectId, String phone, Boolean live) {
@@ -185,6 +216,12 @@ public class BusinessProspectService {
     return businessProspectRepository.save(businessProspect);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   public void resendValidationCode(
       TypedId<BusinessProspectId> businessProspectId, IdentifierType identifierType, Boolean live) {
 
@@ -229,6 +266,16 @@ public class BusinessProspectService {
     }
   }
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method is both used by the onboard process, and uses an onboarding method itself")
   @Transactional
   public ValidateIdentifierResponse validateBusinessProspectIdentifier(
       TypedId<BusinessProspectId> businessProspectId,
@@ -283,9 +330,19 @@ public class BusinessProspectService {
     return new ValidateIdentifierResponse(false);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   @FusionAuthUserCreator(
       reviewer = "jscarbor",
       explanation = "Beginning of onboarding, no User object exists yet, so not UserService")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method is both used by the onboard process, and uses an onboarding method itself")
   @Transactional
   public BusinessProspect setBusinessProspectPassword(
       TypedId<BusinessProspectId> businessProspectId, String password, Boolean live) {
@@ -319,9 +376,19 @@ public class BusinessProspectService {
       User user,
       List<String> stripeAccountCreationMessages) {}
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   @CreatesRootAllocation(
       reviewer = "jscarbor",
       explanation = "This is where the business gets created")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method is both used by the onboard process, and uses an onboarding method itself")
   @Transactional
   public ConvertBusinessProspectRecord convertBusinessProspect(
       ConvertBusinessProspect convertBusinessProspect) {
@@ -373,7 +440,7 @@ public class BusinessProspectService {
   }
 
   @Transactional
-  public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
+  BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
       BusinessOwnerData businessOwnerData, TosAcceptance tosAcceptance) {
 
     BusinessOwner businessOwner = businessOwnerService.createBusinessOwner(businessOwnerData);
@@ -394,10 +461,21 @@ public class BusinessProspectService {
     return new BusinessOwnerAndUserRecord(businessOwner, user);
   }
 
+  @RestrictedApi(
+      explanation = "This is used by the AuthenticationController",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {AuthenticationBusinessProspectMethod.class})
   public Optional<BusinessProspect> retrieveBusinessProspectBySubjectRef(String subjectRef) {
     return businessProspectRepository.findBySubjectRef(subjectRef);
   }
 
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   public BusinessProspect retrieveBusinessProspectById(
       TypedId<BusinessProspectId> businessProspectId) {
     return businessProspectRepository

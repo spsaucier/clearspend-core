@@ -3,12 +3,14 @@ package com.clearspend.capital.data.model.business;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.UserRelated;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -32,7 +34,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class BusinessProspect extends TypedMutable<BusinessProspectId> {
+public class BusinessProspect extends TypedMutable<BusinessProspectId> implements UserRelated {
 
   // This field is what the businessId will be when it's created. Needed so that we can correctly
   // create the businessOwner in FusionAuth
@@ -75,4 +77,11 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> {
   private String subjectRef;
 
   @Embedded @NonNull private TosAcceptance tosAcceptance;
+
+  @Override
+  public TypedId<UserId> getUserId() {
+    // We query this by passing the UUID from UserId to BusinessOwnerId, so they're clearly
+    // interchangeable
+    return new TypedId<>(getBusinessOwnerId().toUuid());
+  }
 }

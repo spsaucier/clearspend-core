@@ -57,6 +57,7 @@ import com.clearspend.capital.service.BusinessOwnerService.TestDataBusinessOp;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
+import com.clearspend.capital.service.BusinessProspectService.OnboardingBusinessProspectMethod;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -445,6 +446,9 @@ public class TestDataController {
   @CreateBusinessOwner(
       reviewer = "Craig Miller",
       explanation = "This is just for generating test data.")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is just for generating test data.")
   BusinessRecord onboardNewBusiness(
       @PathVariable(value = "type") BusinessType businessType,
       @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
@@ -596,6 +600,9 @@ public class TestDataController {
   @TestDataBusinessOp(
       explanation = "This is part of generating test data",
       reviewer = "Craig Miller")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is just for generating test data.")
   private BusinessRecord generateTestBusinessAndBusinessOwner(
       String userAgent,
       HttpServletRequest httpServletRequest,

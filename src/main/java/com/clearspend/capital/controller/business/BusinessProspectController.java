@@ -19,6 +19,7 @@ import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessProspectService.ConvertBusinessProspectRecord;
+import com.clearspend.capital.service.BusinessProspectService.OnboardingBusinessProspectMethod;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.Objects;
 import javax.servlet.http.HttpServletRequest;
@@ -48,6 +49,9 @@ public class BusinessProspectController {
   private final BusinessProspectService businessProspectService;
 
   @PostMapping("")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   CreateBusinessProspectResponse createBusinessProspect(
       @Validated @RequestBody CreateOrUpdateBusinessProspectRequest request,
       HttpServletRequest httpServletRequest) {
@@ -78,6 +82,9 @@ public class BusinessProspectController {
         businessProspect.businessProspect().getId(), businessProspect.businessProspectStatus());
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @GetMapping("/{businessProspectId}/{otpType}/resend-otp")
   void resendOtp(
       @PathVariable(value = "businessProspectId")
@@ -99,6 +106,9 @@ public class BusinessProspectController {
         businessProspectId, otpType, onboardingEmailPhoneValidation);
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @PostMapping("/{businessProspectId}/validate-identifier")
   ValidateIdentifierResponse validateBusinessProspectIdentifier(
       @PathVariable(value = "businessProspectId")
@@ -116,6 +126,9 @@ public class BusinessProspectController {
         onboardingEmailPhoneValidation);
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @PostMapping("/{businessProspectId}/phone")
   void setBusinessProspectPhone(
       @PathVariable(value = "businessProspectId")
@@ -130,6 +143,9 @@ public class BusinessProspectController {
         businessProspectId, request.getPhone(), onboardingEmailPhoneValidation);
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @PostMapping("/{businessProspectId}/password")
   void setBusinessProspectPassword(
       @PathVariable(value = "businessProspectId")
@@ -144,6 +160,9 @@ public class BusinessProspectController {
         businessProspectId, request.getPassword(), onboardingEmailPhoneValidation);
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @PostMapping("/{businessProspectId}/convert")
   ConvertBusinessProspectResponse convertBusinessProspect(
       @PathVariable(value = "businessProspectId")
@@ -163,6 +182,9 @@ public class BusinessProspectController {
         convertBusinessProspectRecord.businessOwner().getId());
   }
 
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation = "This is a part of the onboarding process before users exist for the business.")
   @GetMapping("/{businessProspectId}")
   BusinessProspectData getBusinessProspectData(
       @PathVariable(value = "businessProspectId")

@@ -17,8 +17,10 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.BusinessService.BusinessRecord;
+import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -43,6 +45,7 @@ public class ServiceHelper {
   private final TransactionLimitService transactionLimitService;
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
+  private final BusinessProspectService businessProspectService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -58,6 +61,21 @@ public class ServiceHelper {
 
   public BusinessOwnerServiceWrapper businessOwnerService() {
     return new BusinessOwnerServiceWrapper(businessOwnerService);
+  }
+
+  public BusinessProspectServiceWrapper businessProspectService() {
+    return new BusinessProspectServiceWrapper(businessProspectService);
+  }
+
+  @RequiredArgsConstructor
+  public static class BusinessProspectServiceWrapper {
+    private final BusinessProspectService businessProspectService;
+
+    public BusinessOwnerAndUserRecord createMainBusinessOwnerAndRepresentative(
+        final BusinessOwnerData businessOwnerData, final TosAcceptance tosAcceptance) {
+      return businessProspectService.createMainBusinessOwnerAndRepresentative(
+          businessOwnerData, tosAcceptance);
+    }
   }
 
   @RequiredArgsConstructor

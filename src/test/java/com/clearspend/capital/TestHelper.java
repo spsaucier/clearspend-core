@@ -695,29 +695,31 @@ public class TestHelper {
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
     passwords.put(businessOwnerId, password);
-    return businessProspectService.createMainBusinessOwnerAndRepresentative(
-        new BusinessOwnerData(
-            businessOwnerId,
-            businessId,
-            generateFirstName(),
-            generateLastName(),
-            null,
-            null,
-            true,
-            false,
-            false,
-            false,
-            null,
-            null,
-            generateEntityAddress(),
-            email,
-            generatePhone(),
-            fusionAuthUserId.toString(),
-            null),
-        new TosAcceptance(
-            OffsetDateTime.now(ZoneOffset.UTC),
-            faker.internet().ipV4Address(),
-            faker.internet().userAgentAny()));
+    return serviceHelper
+        .businessProspectService()
+        .createMainBusinessOwnerAndRepresentative(
+            new BusinessOwnerData(
+                businessOwnerId,
+                businessId,
+                generateFirstName(),
+                generateLastName(),
+                null,
+                null,
+                true,
+                false,
+                false,
+                false,
+                null,
+                null,
+                generateEntityAddress(),
+                email,
+                generatePhone(),
+                fusionAuthUserId.toString(),
+                null),
+            new TosAcceptance(
+                OffsetDateTime.now(ZoneOffset.UTC),
+                faker.internet().ipV4Address(),
+                faker.internet().userAgentAny()));
   }
 
   public void deleteBusinessOwner(TypedId<BusinessOwnerId> businessOwnerId) {
