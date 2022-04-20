@@ -70,6 +70,7 @@ import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.With;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -407,6 +408,66 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .business()
                 .getCodatConnectionId()
                 .equals("codat-connection-id"))
+        .isTrue();
+  }
+
+  @Test
+  public void canDeleteConnectionWithEmptyExpenseMapping() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    AccountActivity firstAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    firstAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Business",
+            new Amount(Currency.USD, BigDecimal.TEN),
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO));
+    List<ExpenseCategory> expenseCategories =
+        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
+
+    firstAccountActivity.setExpenseDetails(
+        new ExpenseDetails(
+            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
+
+    chartOfAccountsMappingRepository.save(
+        new ChartOfAccountsMapping(
+            createBusinessRecord.business().getId(),
+            firstAccountActivity.getExpenseDetails().getExpenseCategoryId(),
+            0,
+            "1"));
+
+    firstAccountActivity = accountActivityRepository.save(firstAccountActivity);
+
+    codatService.deleteCodatIntegrationConnection(business.getId());
+
+    assertThat(
+            serviceHelper
+                    .businessService()
+                    .getBusiness(business.getId())
+                    .business()
+                    .getCodatConnectionId()
+                == null)
+        .isTrue();
+
+    assertThat(
+            CollectionUtils.isEmpty(
+                chartOfAccountsMappingRepository.findAllByBusinessId(business.getId())))
         .isTrue();
   }
 

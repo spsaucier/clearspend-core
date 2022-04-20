@@ -75,6 +75,8 @@ public class CodatService {
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
 
+  private final ChartOfAccountsMappingService chartOfAccountsMappingService;
+
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
@@ -273,6 +275,7 @@ public class CodatService {
       businessService.updateBusinessAccountingSetupStep(
           businessId, AccountingSetupStep.ADD_CREDIT_CARD);
       businessService.deleteCodatConnectionForBusiness(businessId);
+      chartOfAccountsMappingService.deleteChartOfAccountsMappingsForBusiness(businessId);
     }
 
     return deleteResult;
