@@ -144,15 +144,15 @@ public class ChartOfAccountsService {
         if (!match.get().getQualifiedName().equals(codatAccountNested.getQualifiedName())) {
           // The name has changed--does it end with "(deleted)"? This is how QBO denotes deleted
           // categories.
-          if (match.get().getQualifiedName().endsWith("(deleted)")) {
+          if (codatAccountNested.getQualifiedName().endsWith("(deleted)")) {
             setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.DELETED);
             notifyAccountDeletedRecursively(codatAccountNested, businessId);
           } else {
             setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.RENAMED);
 
             BusinessNotificationData data = new BusinessNotificationData();
-            data.setOldValue(codatAccountNested.getQualifiedName());
-            data.setNewValue(match.get().getQualifiedName());
+            data.setNewValue(codatAccountNested.getQualifiedName());
+            data.setOldValue(match.get().getQualifiedName());
             BusinessNotification newAccountNotification =
                 new BusinessNotification(
                     businessId, null, BusinessNotificationType.CHART_OF_ACCOUNTS_RENAMED, data);
