@@ -13,10 +13,12 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.LedgerAccountType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.data.model.ledger.LedgerAccount;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.BusinessService.BusinessRecord;
@@ -46,6 +48,7 @@ public class ServiceHelper {
   private final BusinessService businessService;
   private final BusinessOwnerService businessOwnerService;
   private final BusinessProspectService businessProspectService;
+  private final LedgerService ledgerService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -61,6 +64,20 @@ public class ServiceHelper {
 
   public BusinessOwnerServiceWrapper businessOwnerService() {
     return new BusinessOwnerServiceWrapper(businessOwnerService);
+  }
+
+  public LedgerServiceWrapper ledgerService() {
+    return new LedgerServiceWrapper(ledgerService);
+  }
+
+  @RequiredArgsConstructor
+  public static class LedgerServiceWrapper {
+    private final LedgerService ledgerService;
+
+    public LedgerAccount getOrCreateLedgerAccount(
+        final LedgerAccountType type, final Currency currency) {
+      return ledgerService.getOrCreateLedgerAccount(type, currency);
+    }
   }
 
   public BusinessProspectServiceWrapper businessProspectService() {

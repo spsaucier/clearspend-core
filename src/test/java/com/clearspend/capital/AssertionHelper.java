@@ -261,7 +261,8 @@ public class AssertionHelper {
                 LedgerAccountType.ALLOCATION,
                 accountActivity.getAmount()),
             new PostingAssertion(
-                ledgerService
+                serviceHelper
+                    .ledgerService()
                     .getOrCreateLedgerAccount(
                         LedgerAccountType.NETWORK, accountActivity.getAmount().getCurrency())
                     .getId(),

@@ -69,7 +69,7 @@ public class LedgerService {
   }
 
   // this method will create a new account for an allocation, a business or a card
-  public LedgerAccount createLedgerAccount(LedgerAccountType type, Currency currency) {
+  LedgerAccount createLedgerAccount(LedgerAccountType type, Currency currency) {
     if (!LedgerAccountType.createOnlySet.contains(type)) {
       throw new IllegalArgumentException("Invalid ledgerAccountType: " + type);
     }
@@ -79,26 +79,24 @@ public class LedgerService {
 
   // this method will create or get an existing system ledgerAccount for non-BUSINESS, ALLOCATION,
   // CARD ledger accounts
-  public LedgerAccount getOrCreateLedgerAccount(LedgerAccountType type, Currency currency) {
+  LedgerAccount getOrCreateLedgerAccount(LedgerAccountType type, Currency currency) {
     return ledgerAccountRepository
         .findByTypeAndCurrency(type, currency)
         .orElseGet(() -> ledgerAccountRepository.save(new LedgerAccount(type, currency)));
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry recordDepositFunds(
-      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+  BankJournalEntry recordDepositFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, amount);
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry recordWithdrawFunds(
-      TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+  BankJournalEntry recordWithdrawFunds(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     return bankFunds(ledgerAccountId, amount.negate());
   }
 
   @Transactional(TxType.REQUIRED)
-  public BankJournalEntry recordApplyFee(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
+  BankJournalEntry recordApplyFee(TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount businessAccount = getLedgerAccount(ledgerAccountId);
     LedgerAccount clearspendAccount =
         getOrCreateLedgerAccount(LedgerAccountType.CLEARSPEND, amount.getCurrency());
@@ -136,7 +134,7 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public ReallocationJournalEntry recordReallocateFunds(
+  ReallocationJournalEntry recordReallocateFunds(
       TypedId<LedgerAccountId> fromLedgerAccountId,
       TypedId<LedgerAccountId> toLedgerAccountId,
       Amount amount) {
@@ -154,7 +152,7 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public ManualAdjustmentJournalEntry recordManualAdjustment(
+  ManualAdjustmentJournalEntry recordManualAdjustment(
       TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount manualAdjustmentLedgerAccount =
         getOrCreateLedgerAccount(LedgerAccountType.MANUAL, amount.getCurrency());
@@ -172,7 +170,7 @@ public class LedgerService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public NetworkJournalEntry recordNetworkAdjustment(
+  NetworkJournalEntry recordNetworkAdjustment(
       TypedId<LedgerAccountId> ledgerAccountId, Amount amount) {
     LedgerAccount networkLedgerAccount =
         getOrCreateLedgerAccount(LedgerAccountType.NETWORK, amount.getCurrency());
