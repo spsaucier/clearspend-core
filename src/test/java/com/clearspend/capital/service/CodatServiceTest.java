@@ -761,7 +761,11 @@ public class CodatServiceTest extends BaseCapitalTest {
     log.setLastName(new RequiredEncryptedStringWithHash("Last"));
     log = transactionSyncLogRepository.save(log);
 
-    codatService.updateStatusForSyncedTransaction("UNUSED", "MY_KEY");
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> {
+          codatService.updateStatusForSyncedTransaction("UNUSED", "MY_KEY");
+        });
 
     assertThat(transactionSyncLogRepository.findById(log.getId()))
         .isPresent()

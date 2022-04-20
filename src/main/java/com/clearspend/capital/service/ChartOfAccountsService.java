@@ -76,7 +76,7 @@ public class ChartOfAccountsService {
             .getResults());
   }
 
-  // Add Application Annotation when available
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void updateChartOfAccountsFromCodatWebhook(String codatCompanyRef) {
     businessRepository
         .findByCodatCompanyRef(codatCompanyRef)

@@ -501,6 +501,7 @@ public class CodatService {
             receipt.getId()));
   }
 
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void syncTransactionAwaitingSupplier(String companyId, String pushOperationKey) {
     Optional<TransactionSyncLog> syncForKey =
         transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
@@ -512,6 +513,7 @@ public class CodatService {
     syncTransactionIfSupplierExists(syncForKey.get(), syncForKey.get().getBusinessId());
   }
 
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void updateStatusForSyncedTransaction(String companyId, String pushOperationKey) {
     Optional<TransactionSyncLog> syncForKey =
         transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
@@ -523,6 +525,7 @@ public class CodatService {
     updateSyncStatusIfComplete(syncForKey.get());
   }
 
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void updateConnectionIdForBusiness(String codatCompanyRef, String dataConnectionId) {
     businessRepository
         .findByCodatCompanyRef(codatCompanyRef)
@@ -532,6 +535,7 @@ public class CodatService {
                     business.getId(), dataConnectionId));
   }
 
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void updateCodatBankAccountForBusiness(String codatCompanyRef, String pushOperationKey) {
     CodatBankAccountStatusResponse accountStatus =
         codatClient.getBankAccountDetails(pushOperationKey, codatCompanyRef);

@@ -232,6 +232,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     business.setCodatCompanyRef("UPDATE_TEST");
     business.setAutoCreateExpenseCategories(true);
     business = businessRepository.save(business);
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
 
     // We first need to sync with the Mock Codat Client to seed our Category Mapping history
     chartOfAccountsService.updateChartOfAccountsFromCodat(business.getBusinessId());
@@ -279,6 +280,8 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     business.setCodatCompanyRef("UPDATE_TEST");
     business.setAutoCreateExpenseCategories(false);
     business = businessRepository.save(business);
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
 
     // We first need to sync with the Mock Codat Client to seed our Category Mapping history
     chartOfAccountsService.updateChartOfAccountsFromCodat(business.getBusinessId());
