@@ -23,4 +23,9 @@ public interface BusinessNotificationRepository
       "select b from BusinessNotification b where b.businessId = :businessId and b.created > :created and b.type in :types")
   List<BusinessNotification> findAllForBusinessSinceTime(
       TypedId<BusinessId> businessId, OffsetDateTime created, List<BusinessNotificationType> types);
+
+  @Query(
+      "select b from BusinessNotification b where b.businessId = :businessId and b.created > :targetTime and b.type = :type")
+  List<BusinessNotification> findRecentForBusinessIdAndType(
+      TypedId<BusinessId> businessId, BusinessNotificationType type, OffsetDateTime targetTime);
 }

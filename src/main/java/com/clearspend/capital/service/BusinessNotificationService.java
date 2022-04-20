@@ -6,6 +6,9 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.BusinessNotification;
 import com.clearspend.capital.data.model.enums.BusinessNotificationType;
 import com.clearspend.capital.data.repository.BusinessNotificationRepository;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -44,5 +47,13 @@ public class BusinessNotificationService {
     }
     acceptChartOfAccountChangesForUser(businessId, userId);
     return List.of();
+  }
+
+  public List<BusinessNotification> getRecentChartOfAccountsNotifications(
+      TypedId<BusinessId> businessId) {
+    OffsetDateTime targetTime = OffsetDateTime.now(ZoneOffset.UTC);
+    targetTime = targetTime.minus(3, ChronoUnit.HOURS);
+    return businessNotificationRepository.findRecentForBusinessIdAndType(
+        businessId, BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, targetTime);
   }
 }

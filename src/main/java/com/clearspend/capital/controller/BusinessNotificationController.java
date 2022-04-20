@@ -29,4 +29,10 @@ public class BusinessNotificationController {
     return businessNotificationService.acceptChartOfAccountChangesForUser(
         CurrentUser.getBusinessId(), CurrentUser.get().userId());
   }
+
+  @GetMapping("/chart-of-accounts/recent")
+  List<BusinessNotification> getRecentChartOfAccountsNotifications() {
+    return businessNotificationService.getRecentChartOfAccountsNotifications(
+        CurrentUser.getBusinessId());
+  }
 }
