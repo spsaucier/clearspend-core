@@ -42,6 +42,7 @@ import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
+
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -411,6 +412,30 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .getCodatConnectionId()
                 .equals("codat-connection-id"))
         .isTrue();
+  }
+
+  @Test
+  public void canDeleteConnectionAndRestoreDefaultExpenseCategories() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    codatService.deleteCodatIntegrationConnection(business.getId());
+
+    assertThat(
+            serviceHelper
+                    .businessService()
+                    .getBusiness(business.getId())
+                    .business()
+                    .getCodatConnectionId()
+                == null)
+        .isTrue();
+
+    List<ExpenseCategory> allDefaults =
+        expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
+            business.getId(), ExpenseCategoryStatus.ACTIVE, Boolean.TRUE);
+    List<ExpenseCategory> allActives =
+        expenseCategoryRepository.findByBusinessIdAndStatus(
+            business.getId(), ExpenseCategoryStatus.ACTIVE);
+    assertThat(allDefaults.size()).isEqualTo(allActives.size());
   }
 
   @Test

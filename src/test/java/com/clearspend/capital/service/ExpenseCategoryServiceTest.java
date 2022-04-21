@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
@@ -57,5 +59,35 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
                 .findByBusinessIdAndStatus(business.getId(), ExpenseCategoryStatus.DISABLED)
                 .size())
         .isEqualTo(0);
+  }
+
+  @Test
+  void canEnableDisabledDefaultCategories() {
+    Business business = testHelper.createBusiness().business();
+    List<ExpenseCategory> foundCategories =
+        expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
+            business.getId(), ExpenseCategoryStatus.ACTIVE, Boolean.TRUE);
+    List<TypedId<ExpenseCategoryId>> testData =
+        List.of(foundCategories.get(0).getId(), foundCategories.get(1).getId());
+    List<ExpenseCategory> disabled = expenseCategoryService.disableExpenseCategories(testData);
+    List<ExpenseCategory> enabled =
+        expenseCategoryService.enableDefaultExpenseCategories(business.getId());
+    assertThat(enabled.size()).isEqualTo(disabled.size());
+  }
+
+  @Test
+  void canDisableNonDefaultCategories() {
+    Business business = testHelper.createBusiness().business();
+    List<ExpenseCategory> foundCategories =
+        expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
+            business.getId(), ExpenseCategoryStatus.ACTIVE, Boolean.TRUE);
+
+    ExpenseCategory testData = foundCategories.get(0);
+    testData.setIsDefaultCategory(false);
+    expenseCategoryRepository.save(testData);
+    List<ExpenseCategory> disabled =
+        expenseCategoryService.disableQboExpenseCategories(business.getId());
+    assertThat(disabled.size()).isEqualTo(1);
+    assertThat(disabled.get(0).getId()).isEqualTo(testData.getId());
   }
 }

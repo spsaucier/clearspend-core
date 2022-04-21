@@ -24,4 +24,7 @@ public interface ExpenseCategoryRepository
 
   Optional<ExpenseCategory> findFirstByBusinessIdAndCategoryName(
       TypedId<BusinessId> businessIdTypedId, String categoryName);
+
+  List<ExpenseCategory> findByBusinessIdAndStatusAndIsDefaultCategory(
+      TypedId<BusinessId> businessId, ExpenseCategoryStatus status, Boolean isDefaultCategory);
 }

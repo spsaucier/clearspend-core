@@ -107,6 +107,7 @@ public class ExpenseCategoryService {
         .collect(Collectors.toList());
   }
 
+  @Transactional
   public List<ExpenseCategory> enableAllExpenseCategories(TypedId<BusinessId> businessId) {
     List<ExpenseCategory> disabledCategories =
         expenseCategoryRepository.findByBusinessIdAndStatus(
@@ -116,6 +117,36 @@ public class ExpenseCategoryService {
             category -> {
               ExpenseCategory currentCategory = expenseCategoryRepository.getById(category.getId());
               currentCategory.setStatus(ExpenseCategoryStatus.ACTIVE);
+              return expenseCategoryRepository.save(currentCategory);
+            })
+        .collect(Collectors.toList());
+  }
+
+  @Transactional
+  public List<ExpenseCategory> enableDefaultExpenseCategories(TypedId<BusinessId> businessId) {
+    List<ExpenseCategory> disabledCategories =
+        expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
+            businessId, ExpenseCategoryStatus.DISABLED, Boolean.TRUE);
+    return disabledCategories.stream()
+        .map(
+            category -> {
+              ExpenseCategory currentCategory = expenseCategoryRepository.getById(category.getId());
+              currentCategory.setStatus(ExpenseCategoryStatus.ACTIVE);
+              return expenseCategoryRepository.save(currentCategory);
+            })
+        .collect(Collectors.toList());
+  }
+
+  @Transactional
+  public List<ExpenseCategory> disableQboExpenseCategories(TypedId<BusinessId> businessId) {
+    List<ExpenseCategory> disabledCategories =
+        expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
+            businessId, ExpenseCategoryStatus.ACTIVE, Boolean.FALSE);
+    return disabledCategories.stream()
+        .map(
+            category -> {
+              ExpenseCategory currentCategory = expenseCategoryRepository.getById(category.getId());
+              currentCategory.setStatus(ExpenseCategoryStatus.DISABLED);
               return expenseCategoryRepository.save(currentCategory);
             })
         .collect(Collectors.toList());

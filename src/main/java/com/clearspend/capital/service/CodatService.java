@@ -75,6 +75,7 @@ public class CodatService {
   private final TransactionSyncLogRepository transactionSyncLogRepository;
   private final UserService userService;
 
+  private final ExpenseCategoryService expenseCategoryService;
   private final ChartOfAccountsMappingService chartOfAccountsMappingService;
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -284,6 +285,9 @@ public class CodatService {
           businessId, AccountingSetupStep.AWAITING_SYNC);
       businessService.deleteCodatConnectionForBusiness(businessId);
       chartOfAccountsMappingService.deleteChartOfAccountsMappingsForBusiness(businessId);
+      // first enable all default categories and then disable the qbo/non default categories
+      expenseCategoryService.enableDefaultExpenseCategories(businessId);
+      expenseCategoryService.disableQboExpenseCategories(businessId);
     }
 
     return deleteResult;
