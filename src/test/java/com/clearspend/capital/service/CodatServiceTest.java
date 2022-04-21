@@ -18,9 +18,10 @@ import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookNewCompanySyncRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCompleteRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookSyncData;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
@@ -42,12 +43,12 @@ import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
-
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
@@ -1257,11 +1258,12 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Test
   public void accountingStepUpdatesOnFirstSync() throws Exception {
     assertThat(business.getAccountingSetupStep()).isEqualTo(AccountingSetupStep.AWAITING_SYNC);
-    CodatWebhookNewCompanySyncRequest webhookRequest =
-        new CodatWebhookNewCompanySyncRequest(business.getCodatCompanyRef());
+    CodatWebhookDataSyncCompleteRequest webhookRequest =
+        new CodatWebhookDataSyncCompleteRequest(
+            business.getCodatCompanyRef(), new CodatWebhookSyncData("bankAccounts"));
 
     mvc.perform(
-            MockMvcRequestBuilders.post("/codat-webhook/new-company-synchronized")
+            MockMvcRequestBuilders.post("/codat-webhook/data-sync-complete")
                 .contentType("application/json")
                 .header(
                     "Authorization",

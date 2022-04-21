@@ -107,7 +107,8 @@ public class CodatService {
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void updateBusinessStatusOnSync(String companyRef) {
     Optional<Business> business = businessRepository.findByCodatCompanyRef(companyRef);
-    if (business.isPresent()) {
+    if (business.isPresent()
+        && business.get().getAccountingSetupStep().equals(AccountingSetupStep.AWAITING_SYNC)) {
       businessService.updateBusinessAccountingStepFromSync(business.get().getBusinessId());
     }
   }
