@@ -14,15 +14,24 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.PlaidLogEntryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.business.BusinessLimit.BusinessLimitOperationRecord;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails.DefaultPlaidLogEntryDetails;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryMetadata;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryRequest;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.PlaidLogEntry;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
@@ -30,7 +39,9 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
+import com.clearspend.capital.data.model.enums.PlaidResponseType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
@@ -38,8 +49,15 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
-import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
+import com.clearspend.capital.util.function.ThrowableFunctions;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.plaid.client.model.AccountsGetResponse;
+import com.plaid.client.model.AuthGetResponse;
+import com.plaid.client.model.IdentityGetResponse;
+import com.plaid.client.model.ItemPublicTokenExchangeResponse;
+import com.plaid.client.model.LinkTokenCreateResponse;
+import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -51,13 +69,17 @@ import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.testcontainers.utility.ThrowingFunction;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
@@ -69,11 +91,12 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   private final BusinessService businessService;
   private final UserRepository userRepository;
+  private final PermissionValidationHelper permissionValidationHelper;
+  private final PlaidLogEntryRepository plaidLogEntryRepository;
 
   private final AccountService accountService;
   private final AllocationService allocationService;
   private final ServiceHelper serviceHelper;
-  private final PermissionValidationHelper permissionValidationHelper;
 
   private Cookie authCookie;
   private CreateBusinessRecord createBusinessRecord;
@@ -113,6 +136,260 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertThat(jsonBusiness.getKnowYourBusinessStatus())
         .isEqualTo(business.getKnowYourBusinessStatus());
     assertThat(jsonBusiness.getStatus()).isEqualTo(business.getStatus());
+  }
+
+  @Test
+  void getPlaidLogsForBusiness_UserPermissions() {
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mvc.perform(
+                post("/businesses/%s/plaid/logs"
+                        .formatted(
+                            createBusinessRecord.business().getBusinessId().toUuid().toString()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new PlaidLogEntryRequest()))
+                    .cookie(cookie));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowGlobalRoles(DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void getPlaidLogsForBusiness_WithPagination() {
+    final PlaidTestData plaidTestData = setupPlaidLogs();
+    final User customerServiceManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+            .user();
+    final JavaType pagedDataType =
+        objectMapper
+            .getTypeFactory()
+            .constructParametricType(PagedData.class, PlaidLogEntryMetadata.class);
+    final Cookie customerServiceManagerCookie = testHelper.login(customerServiceManager);
+    final ThrowingFunction<PlaidLogEntryRequest, PagedData<PlaidLogEntryMetadata>> makeRequest =
+        request -> {
+          final String response =
+              mvc.perform(
+                      post("/businesses/%s/plaid/logs"
+                              .formatted(
+                                  createBusinessRecord
+                                      .business()
+                                      .getBusinessId()
+                                      .toUuid()
+                                      .toString()))
+                          .contentType(MediaType.APPLICATION_JSON)
+                          .content(objectMapper.writeValueAsString(request))
+                          .cookie(customerServiceManagerCookie))
+                  .andExpect(status().isOk())
+                  .andReturn()
+                  .getResponse()
+                  .getContentAsString();
+          return objectMapper.readValue(response, pagedDataType);
+        };
+
+    final PagedData<PlaidLogEntryMetadata> noQueryPage =
+        makeRequest.apply(new PlaidLogEntryRequest());
+
+    final List<PlaidLogEntryMetadata> noQueryExpectedContent =
+        plaidTestData.orderedEntries().stream()
+            .map(PlaidLogEntryWithData::plaidLogEntry)
+            .map(PlaidLogEntryMetadata::fromPlaidLogEntry)
+            .toList();
+
+    assertThat(noQueryPage)
+        .hasFieldOrPropertyWithValue("pageNumber", 0)
+        .hasFieldOrPropertyWithValue("pageSize", 20)
+        .hasFieldOrPropertyWithValue("totalElements", 6L)
+        .extracting("content")
+        .asList()
+        .hasSize(6)
+        .containsExactlyElementsOf(noQueryExpectedContent);
+
+    final PagedData<PlaidLogEntryMetadata> page0 =
+        makeRequest.apply(new PlaidLogEntryRequest(0, 3));
+    final List<PlaidLogEntryMetadata> expectedPage0 =
+        plaidTestData.orderedEntries().stream()
+            .limit(3)
+            .map(PlaidLogEntryWithData::plaidLogEntry)
+            .map(PlaidLogEntryMetadata::fromPlaidLogEntry)
+            .toList();
+
+    assertThat(page0)
+        .hasFieldOrPropertyWithValue("pageNumber", 0)
+        .hasFieldOrPropertyWithValue("pageSize", 3)
+        .hasFieldOrPropertyWithValue("totalElements", 6L)
+        .extracting("content")
+        .asList()
+        .hasSize(3)
+        .containsExactlyElementsOf(expectedPage0);
+
+    final PagedData<PlaidLogEntryMetadata> page1 =
+        makeRequest.apply(new PlaidLogEntryRequest(1, 3));
+    final List<PlaidLogEntryMetadata> expectedPage1 =
+        plaidTestData.orderedEntries().stream()
+            .skip(3)
+            .map(PlaidLogEntryWithData::plaidLogEntry)
+            .map(PlaidLogEntryMetadata::fromPlaidLogEntry)
+            .toList();
+
+    assertThat(page1)
+        .hasFieldOrPropertyWithValue("pageNumber", 1)
+        .hasFieldOrPropertyWithValue("pageSize", 3)
+        .hasFieldOrPropertyWithValue("totalElements", 6L)
+        .extracting("content")
+        .asList()
+        .hasSize(3)
+        .containsExactlyElementsOf(expectedPage1);
+  }
+
+  @Test
+  @SneakyThrows
+  void getPlaidLogDetails_DifferentMessageTypes() {
+    final PlaidTestData plaidTestData = setupPlaidLogs();
+    final User customerServiceManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+            .user();
+    final Cookie customerServiceManagerCookie = testHelper.login(customerServiceManager);
+    final ThrowingFunction<
+            Pair<TypedId<PlaidLogEntryId>, PlaidResponseType>, PlaidLogEntryDetails<?>>
+        makeRequest =
+            pair -> {
+              final PlaidResponseType type = pair.getRight();
+              final String idString = pair.getLeft().toUuid().toString();
+              final String content =
+                  mvc.perform(
+                          get("/businesses/%s/plaid/logs/%s"
+                                  .formatted(
+                                      createBusinessRecord
+                                          .business()
+                                          .getBusinessId()
+                                          .toUuid()
+                                          .toString(),
+                                      idString))
+                              .cookie(customerServiceManagerCookie))
+                      .andExpect(status().isOk())
+                      .andReturn()
+                      .getResponse()
+                      .getContentAsString();
+              final JavaType responseType =
+                  objectMapper
+                      .getTypeFactory()
+                      .constructParametricType(
+                          DefaultPlaidLogEntryDetails.class, type.getResponseClass());
+              return objectMapper.readValue(content, responseType);
+            };
+
+    plaidTestData
+        .entriesByType()
+        .forEach(
+            (plaidResponseType, plaidEntryWithData) -> {
+              final PlaidLogEntryDetails<?> details =
+                  ThrowableFunctions.sneakyThrows(makeRequest::apply)
+                      .apply(
+                          new ImmutablePair<>(
+                              plaidEntryWithData.plaidLogEntry().getId(), plaidResponseType));
+              try {
+                assertThat(details)
+                    .hasFieldOrPropertyWithValue("id", plaidEntryWithData.plaidLogEntry().getId())
+                    .hasFieldOrPropertyWithValue(
+                        "businessId", plaidEntryWithData.plaidLogEntry().getBusinessId())
+                    .hasFieldOrPropertyWithValue(
+                        "created", plaidEntryWithData.plaidLogEntry().getCreated())
+                    .hasFieldOrPropertyWithValue(
+                        "plaidResponseType",
+                        plaidEntryWithData.plaidLogEntry().getPlaidResponseType())
+                    .hasFieldOrPropertyWithValue("message", plaidEntryWithData.data());
+              } catch (AssertionError ex) {
+                throw new AssertionError(
+                    "Error evaluating response for %s".formatted(plaidResponseType), ex);
+              }
+            });
+  }
+
+  @Test
+  void getPlaidLogDetails_UserPermissions() {
+    final PlaidTestData plaidTestData = setupPlaidLogs();
+    final String plaidLogId =
+        plaidTestData.orderedEntries().get(0).plaidLogEntry().getId().toUuid().toString();
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mvc.perform(
+                get("/businesses/%s/plaid/logs/%s"
+                        .formatted(
+                            createBusinessRecord.business().getBusinessId().toUuid().toString(),
+                            plaidLogId))
+                    .cookie(cookie));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowGlobalRoles(DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  private PlaidTestData setupPlaidLogs() {
+    final AccountsGetResponse accountsGetResponse = new AccountsGetResponse();
+    accountsGetResponse.setRequestId("AccountsGetRequest");
+    final PlaidLogEntryWithData balanceLog =
+        createAndSaveLog(PlaidResponseType.BALANCE, accountsGetResponse);
+
+    final IdentityGetResponse identityGetResponse = new IdentityGetResponse();
+    identityGetResponse.setRequestId("IdentityGetRequest");
+    final PlaidLogEntryWithData ownerLog =
+        createAndSaveLog(PlaidResponseType.OWNER, identityGetResponse);
+
+    final AuthGetResponse authGetResponse = new AuthGetResponse();
+    authGetResponse.setRequestId("AuthGetRequest");
+    final PlaidLogEntryWithData accountLog =
+        createAndSaveLog(PlaidResponseType.ACCOUNT, authGetResponse);
+
+    final LinkTokenCreateResponse linkTokenCreateResponse = new LinkTokenCreateResponse();
+    linkTokenCreateResponse.setRequestId("LinkTokenCreateRequest");
+    final PlaidLogEntryWithData linkTokenLog =
+        createAndSaveLog(PlaidResponseType.LINK_TOKEN, linkTokenCreateResponse);
+
+    final ItemPublicTokenExchangeResponse itemPublicTokenExchangeResponse =
+        new ItemPublicTokenExchangeResponse();
+    itemPublicTokenExchangeResponse.setRequestId("ItemTokenPublicExchangeRequest");
+    final PlaidLogEntryWithData accessTokenLog =
+        createAndSaveLog(PlaidResponseType.ACCESS_TOKEN, itemPublicTokenExchangeResponse);
+
+    final SandboxPublicTokenCreateResponse sandboxPublicTokenCreateResponse =
+        new SandboxPublicTokenCreateResponse();
+    sandboxPublicTokenCreateResponse.setRequestId("SandboxPublicTokenCreateRequest");
+    final PlaidLogEntryWithData sandboxTokenLog =
+        createAndSaveLog(PlaidResponseType.SANDBOX_LINK_TOKEN, sandboxPublicTokenCreateResponse);
+
+    return new PlaidTestData(
+        List.of(balanceLog, ownerLog, accountLog, linkTokenLog, accessTokenLog, sandboxTokenLog),
+        Map.of(
+            PlaidResponseType.BALANCE, balanceLog,
+            PlaidResponseType.OWNER, ownerLog,
+            PlaidResponseType.ACCOUNT, accountLog,
+            PlaidResponseType.LINK_TOKEN, linkTokenLog,
+            PlaidResponseType.ACCESS_TOKEN, accessTokenLog,
+            PlaidResponseType.SANDBOX_LINK_TOKEN, sandboxTokenLog));
+  }
+
+  private record PlaidTestData(
+      List<PlaidLogEntryWithData> orderedEntries,
+      Map<PlaidResponseType, PlaidLogEntryWithData> entriesByType) {}
+
+  private record PlaidLogEntryWithData(PlaidLogEntry plaidLogEntry, Object data) {}
+
+  @SneakyThrows
+  private PlaidLogEntryWithData createAndSaveLog(final PlaidResponseType type, final Object data) {
+    final String message = objectMapper.writeValueAsString(data);
+    final PlaidLogEntry entry =
+        plaidLogEntryRepository.save(
+            new PlaidLogEntry(
+                createBusinessRecord.business().getId(), new EncryptedString(message), type));
+    return new PlaidLogEntryWithData(entry, data);
   }
 
   @SneakyThrows

@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.EncryptedString;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -37,6 +38,9 @@ public class PlaidLogEntry extends TypedImmutable<PlaidLogEntryId> {
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
+
+  @Column(name = "created", insertable = false, updatable = false)
+  private OffsetDateTime created;
 
   @Sensitive @NonNull @Embedded private EncryptedString message;
 

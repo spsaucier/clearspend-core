@@ -6,7 +6,9 @@ import com.plaid.client.model.IdentityGetResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
+import lombok.Getter;
 
+@Getter
 public enum PlaidResponseType {
   BALANCE(AccountsGetResponse.class),
   OWNER(IdentityGetResponse.class),
@@ -17,7 +19,7 @@ public enum PlaidResponseType {
   ERROR(Error.class),
   OTHER(Object.class);
 
-  public final Class<?> responseClass;
+  private final Class<?> responseClass;
 
   PlaidResponseType(Class<?> responseClass) {
     this.responseClass = responseClass;

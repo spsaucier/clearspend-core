@@ -212,7 +212,7 @@ public class PlaidClient {
     final T responseObj = (T) Objects.requireNonNull(response.body());
     PlaidResponseType responseType =
         Arrays.stream(PlaidResponseType.values())
-            .filter(t -> t.responseClass.isAssignableFrom(responseObj.getClass()))
+            .filter(t -> t.getResponseClass().isAssignableFrom(responseObj.getClass()))
             .findFirst()
             .orElseThrow(() -> new NoSuchElementException(responseObj.getClass().getName()));
     StringWriter writer = new StringWriter();

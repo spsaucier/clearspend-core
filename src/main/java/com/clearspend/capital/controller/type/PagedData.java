@@ -19,16 +19,16 @@ import org.springframework.data.domain.Page;
 public class PagedData<T> {
 
   @JsonProperty("pageNumber")
-  private final int pageNumber;
+  int pageNumber;
 
   @JsonProperty("pageSize")
-  private final int pageSize;
+  int pageSize;
 
   @JsonProperty("totalElements")
-  private final long totalElements;
+  long totalElements;
 
   @JsonProperty("content")
-  private final List<T> content;
+  List<T> content;
 
   public static <T> PagedData<T> of(Page<T> page) {
     return new PagedData<>(

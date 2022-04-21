@@ -19,6 +19,7 @@ public enum Table {
   LEDGER_ACCOUNT("LedgerAccount"),
   NETWORK_MESSAGE("NetworkMessage"),
   PENDING_STRIPE_TRANSFER("pending_stripe_transfer"),
+  PLAID_LOG_ENTRY("plaid_log_entry"),
   POSTING("Posting"),
   RECEIPT("Receipt"),
   SPEND_LIMIT("SpendLimit"),

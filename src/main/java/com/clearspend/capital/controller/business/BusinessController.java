@@ -1,9 +1,11 @@
 package com.clearspend.capital.controller.business;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.PlaidLogEntryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
+import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
@@ -17,6 +19,9 @@ import com.clearspend.capital.controller.type.business.accounting.UpdateAutoCrea
 import com.clearspend.capital.controller.type.business.accounting.UpdateBusinessAccountingStepRequest;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryMetadata;
+import com.clearspend.capital.controller.type.plaid.PlaidLogEntryRequest;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -25,6 +30,7 @@ import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessLimitService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.BusinessService.OnboardingBusinessOp;
+import com.clearspend.capital.service.PlaidLogService;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
@@ -56,6 +62,39 @@ public class BusinessController {
   private final AllocationService allocationService;
   private final BusinessService businessService;
   private final BusinessLimitService businessLimitService;
+  private final PlaidLogService plaidLogService;
+
+  @GetMapping("/{businessId}/plaid/logs/{plaidLogEntryId}")
+  PlaidLogEntryDetails<?> getPlaidLogDetails(
+      @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @PathVariable("businessId")
+          final TypedId<BusinessId> businessId,
+      @Parameter(
+              required = true,
+              name = "plaidLogEntryId",
+              description = "ID of the Plaid log entry to retrieve.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @PathVariable("plaidLogEntryId")
+          final TypedId<PlaidLogEntryId> plaidLogEntryId) {
+    return plaidLogService.getLogDetails(businessId, plaidLogEntryId);
+  }
+
+  @PostMapping("/{businessId}/plaid/logs")
+  PagedData<PlaidLogEntryMetadata> getPlaidLogsForBusiness(
+      @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          @PathVariable("businessId")
+          final TypedId<BusinessId> businessId,
+      @RequestBody final PlaidLogEntryRequest request) {
+    return plaidLogService.getLogsForBusiness(businessId, request);
+  }
 
   @PostMapping("/transactions")
   BusinessFundAllocationResponse reallocateBusinessFunds(
