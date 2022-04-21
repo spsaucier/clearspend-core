@@ -323,7 +323,8 @@ public class BusinessService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_FUNDS')")
+  @PreAuthorize(
+      "hasAllocationPermission(#allocationIdFrom, 'MANAGE_FUNDS') and hasAllocationPermission(#allocationIdTo, 'MANAGE_FUNDS')")
   public AccountReallocateFundsRecord reallocateBusinessFunds(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,

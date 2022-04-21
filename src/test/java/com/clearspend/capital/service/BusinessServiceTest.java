@@ -29,6 +29,7 @@ class BusinessServiceTest extends BaseCapitalTest {
   @Autowired private BusinessRepository businessRepository;
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   @Autowired private BusinessService businessService;
+  @Autowired private RolesAndPermissionsService rolesAndPermissionsService;
 
   @Test
   void createBusiness() {
@@ -115,19 +116,33 @@ class BusinessServiceTest extends BaseCapitalTest {
             .allocation();
     final Amount amount = Amount.of(Currency.USD);
 
+    final User managerOnBothAllocations =
+        testHelper.createUserWithRole(allocation1, DefaultRoles.ALLOCATION_MANAGER).user();
+    rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+        managerOnBothAllocations.getId(), allocation2.getId(), DefaultRoles.ALLOCATION_MANAGER);
+
+    final User managerOnOneAllocation =
+        testHelper.createUserWithRole(allocation1, DefaultRoles.ALLOCATION_MANAGER).user();
+
     final ThrowingRunnable action =
         () ->
             businessService.reallocateBusinessFunds(
                 createBusinessRecord.business().getId(),
                 createBusinessRecord.user().getId(),
                 allocation1.getId(),
-                allocation2.getParentAllocationId(),
+                allocation2.getId(),
                 amount);
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        // PermissionsValidationHelper defaults to creating users on the root allocation, so these
+        // roles always have access from the root
         .allowRolesOnAllocation(
             Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        // A manager on both allocations should have access
+        .allowUser(managerOnBothAllocations)
+        // A manager on only one allocation should not have access
+        .denyUser(managerOnOneAllocation)
         .build()
         .validateServiceMethod(action);
   }
