@@ -13,7 +13,9 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.SneakyThrows;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -164,5 +166,41 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
         .extracting(array -> List.of(array))
         .asList()
         .containsExactly("real1", "real2", "real3");
+  }
+
+  @SneakyThrows
+  @Test
+  void deleteChartOfAccountsMapping_doesNotDeleteIfRecordIsNotFound() {
+    long totalCount = mappingRepository.count();
+
+    mappingService.deleteChartOfAccountsMapping(
+        createBusinessRecord.business().getBusinessId(), "zzz-Test");
+
+    assertThat(mappingRepository.count()).isEqualTo(totalCount);
+  }
+
+  @SneakyThrows
+  @Test
+  void deleteChartOfAccountsMapping_removesMappingWhenFound() {
+    Optional<String> targetId =
+        mappingRepository
+            .findAllByBusinessId(createBusinessRecord.business().getBusinessId())
+            .stream()
+            .findAny()
+            .map(ChartOfAccountsMapping::getAccountRefId);
+
+    if (targetId.isPresent()) {
+      mappingService.deleteChartOfAccountsMapping(
+          createBusinessRecord.business().getBusinessId(), targetId.get());
+    }
+
+    List<ChartOfAccountsMapping> allMappings =
+        mappingRepository.findAllByBusinessId(createBusinessRecord.business().getBusinessId());
+
+    Condition<ChartOfAccountsMapping> missingTarget =
+        new Condition<ChartOfAccountsMapping>(
+            mapping -> mapping.getAccountRefId().equals(targetId.get()),
+            "Contains an element that should be deleted");
+    assertThat(allMappings).doNotHave(missingTarget);
   }
 }

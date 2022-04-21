@@ -137,6 +137,16 @@ public class ChartOfAccountsMappingService {
     mappingRepository.deleteAll(mappingRepository.findAllByBusinessId(businessId));
   }
 
+  @Transactional
+  void deleteChartOfAccountsMapping(TypedId<BusinessId> businessId, String externalId) {
+    Optional<ChartOfAccountsMapping> potentialMapping =
+        mappingRepository.findByBusinessIdAndAccountRefId(businessId, externalId);
+
+    if (potentialMapping.isPresent()) {
+      mappingRepository.delete(potentialMapping.get());
+    }
+  }
+
   public void updateNameForMappedCodatId(
       TypedId<BusinessId> businessId, String accountRefId, String categoryName) {
     Optional<ChartOfAccountsMapping> mapping =

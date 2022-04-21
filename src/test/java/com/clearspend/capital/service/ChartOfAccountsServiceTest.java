@@ -321,4 +321,62 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     assertThat(pre).doNotHave(condition);
     assertThat(post).hasSize(pre.size()).doNotHave(condition);
   }
+
+  @Test
+  void updateChartOfAccountsFromCodatWebhook_handlesAccountDeletion() {
+    business = businessRepository.getById(business.getId());
+    business.setCodatCompanyRef("UPDATE_TEST");
+    business.setAutoCreateExpenseCategories(true);
+    business = businessRepository.save(business);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    // We first need to sync with the Mock Codat Client to seed our Category Mapping history
+    chartOfAccountsService.updateChartOfAccountsFromCodat(business.getBusinessId());
+
+    ExpenseCategory category =
+        expenseCategoryRepository
+            .findByBusinessId(createBusinessRecord.businessOwner().getBusinessId())
+            .get(0);
+    ChartOfAccountsMapping manualMapping = new ChartOfAccountsMapping();
+    manualMapping.setAccountRefId("fixed");
+    manualMapping.setExpenseCategoryId(category.getId());
+    manualMapping.setExpenseCategoryIconRef(0);
+    manualMapping.setBusinessId(createBusinessRecord.business().getBusinessId());
+    manualMapping = chartOfAccountsMappingRepository.save(manualMapping);
+
+    // Get all Mappings before we start
+    List<ChartOfAccountsMapping> preMapping =
+        chartOfAccountsMappingRepository.findAllByBusinessId(business.getBusinessId());
+
+    // Add another Account and remove "fixed"
+    ArrayList<CodatAccount> overrides = new ArrayList<>();
+    overrides.add(
+        new CodatAccount(
+            "fixed",
+            "my asset",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.something.my asset(deleted)",
+            CodatAccountType.ASSET));
+    overrides.add(
+        new CodatAccount(
+            "New Guy",
+            "New Guy",
+            CodatAccountStatus.ACTIVE,
+            "category",
+            "Asset.Fixed Asset.something.new guy",
+            CodatAccountType.ASSET));
+    mockClient.overrideDefaultAccountList(overrides);
+
+    testHelper.runWithWebhookUser(
+        createBusinessRecord.user(),
+        () -> chartOfAccountsService.updateChartOfAccountsFromCodatWebhook("UPDATE_TEST"));
+
+    List<ChartOfAccountsMapping> postMapping =
+        chartOfAccountsMappingRepository.findAllByBusinessId(business.getBusinessId());
+
+    assertThat(preMapping).anyMatch(item -> item.getAccountRefId().equals("fixed"));
+
+    assertThat(postMapping).noneMatch(item -> item.getAccountRefId().equals("fixed"));
+  }
 }

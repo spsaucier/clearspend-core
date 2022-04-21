@@ -10,6 +10,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
 import com.clearspend.capital.data.model.BusinessNotification;
 import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessNotificationType;
 import com.clearspend.capital.data.model.enums.ChartOfAccountsUpdateStatus;
 import com.clearspend.capital.data.model.notifications.BusinessNotificationData;
@@ -20,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -93,24 +95,50 @@ public class ChartOfAccountsService {
                                   CodatAccountSubtype.OTHER_EXPENSE,
                                   CodatAccountSubtype.FIXED_ASSET))
                           .getResults());
-              if (business.getAutoCreateExpenseCategories()) {
-                mappingService.addChartOfAccountsMapping(
-                    business.getBusinessId(), getListOfNewCategories(delta.getNestedAccounts()));
-              }
+              createAndMapCategoriesFromNewCodatAccounts(business, delta);
+              unmapDeletedCodatAccounts(business, delta);
             });
+  }
+
+  private void unmapDeletedCodatAccounts(Business business, ChartOfAccounts delta) {
+    List<CodatAccountNested> deletedAccounts =
+        getAccountsByStatus(delta.getNestedAccounts(), ChartOfAccountsUpdateStatus.DELETED);
+
+    for (CodatAccountNested target : deletedAccounts) {
+      mappingService.deleteChartOfAccountsMapping(business.getBusinessId(), target.getId());
+    }
+  }
+
+  private void createAndMapCategoriesFromNewCodatAccounts(
+      Business business, ChartOfAccounts delta) {
+    if (business.getAutoCreateExpenseCategories()) {
+      mappingService.addChartOfAccountsMapping(
+          business.getBusinessId(), getListOfNewCategories(delta.getNestedAccounts()));
+    }
   }
 
   private List<AddChartOfAccountsMappingRequest> getListOfNewCategories(
       List<CodatAccountNested> accounts) {
-    List<AddChartOfAccountsMappingRequest> result = new ArrayList<>();
+    return getAccountsByStatus(accounts, ChartOfAccountsUpdateStatus.NEW).stream()
+        .map(
+            nested -> {
+              AddChartOfAccountsMappingRequest walker =
+                  new AddChartOfAccountsMappingRequest(nested.getId());
+              walker.setExpenseCategoryName(nested.getName());
+              walker.setFullyQualifiedCategory(nested.getCategory());
+              return walker;
+            })
+        .collect(Collectors.toList());
+  }
+
+  private List<CodatAccountNested> getAccountsByStatus(
+      List<CodatAccountNested> accounts, ChartOfAccountsUpdateStatus status) {
+    List<CodatAccountNested> result = new ArrayList<>();
     for (CodatAccountNested account : accounts) {
-      if (account.getUpdateStatus().equals(ChartOfAccountsUpdateStatus.NEW)) {
-        AddChartOfAccountsMappingRequest walker = new AddChartOfAccountsMappingRequest("");
-        walker.setExpenseCategoryName(account.getName());
-        walker.setFullyQualifiedCategory(account.getCategory());
-        result.add(walker);
+      if (account.getUpdateStatus().equals(status)) {
+        result.add(account);
       }
-      result.addAll(getListOfNewCategories(account.getChildren()));
+      result.addAll(getAccountsByStatus(account.getChildren(), status));
     }
     return result;
   }

@@ -57,7 +57,7 @@ public class CodatMockClient extends CodatClient {
             "checking",
             CodatAccountStatus.ACTIVE,
             "category",
-            "Asset.accounts.full_name",
+            "Asset.accounts.something.full_name",
             CodatAccountType.ASSET));
     accountList.add(
         new CodatAccount(
@@ -65,7 +65,7 @@ public class CodatMockClient extends CodatClient {
             "checking_account",
             CodatAccountStatus.ACTIVE,
             "category",
-            "Asset.accounts.full_name",
+            "Asset.accounts.something.full_name",
             CodatAccountType.ASSET));
     accountList.add(
         new CodatAccount(
@@ -73,7 +73,7 @@ public class CodatMockClient extends CodatClient {
             "automobile",
             CodatAccountStatus.ACTIVE,
             "category",
-            "expense.auto.auto",
+            "expense.auto.something.auto",
             CodatAccountType.EXPENSE));
     accountList.add(
         new CodatAccount(
@@ -81,7 +81,7 @@ public class CodatMockClient extends CodatClient {
             "fuel",
             CodatAccountStatus.ACTIVE,
             "category",
-            "expense.auto.fuel",
+            "expense.auto.something.fuel",
             CodatAccountType.EXPENSE));
     accountList.add(
         new CodatAccount(
@@ -89,7 +89,7 @@ public class CodatMockClient extends CodatClient {
             "trash",
             CodatAccountStatus.ACTIVE,
             "category",
-            "dont.want.this",
+            "dont.want.something.this",
             CodatAccountType.EQUITY));
     accountList.add(
         new CodatAccount(
@@ -97,7 +97,7 @@ public class CodatMockClient extends CodatClient {
             "my asset",
             CodatAccountStatus.ACTIVE,
             "category",
-            "Asset.Fixed Asset.my asset",
+            "Asset.Fixed Asset.something.my asset",
             CodatAccountType.ASSET));
   }
 

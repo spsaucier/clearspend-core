@@ -1251,7 +1251,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             business.getId(),
             CodatAccountType.EXPENSE,
             List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
-    assertThat(response.getResults().size()).isEqualTo(1);
+    assertThat(response.getResults().size()).isEqualTo(3);
   }
 
   @Test
