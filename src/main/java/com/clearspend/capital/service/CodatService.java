@@ -103,6 +103,14 @@ public class CodatService {
     return business.getCodatConnectionId() != null;
   }
 
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
+  public void updateBusinessStatusOnSync(String companyRef) {
+    Optional<Business> business = businessRepository.findByCodatCompanyRef(companyRef);
+    if (business.isPresent()) {
+      businessService.updateBusinessAccountingStepFromSync(business.get().getBusinessId());
+    }
+  }
+
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public SyncTransactionResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
@@ -273,7 +281,7 @@ public class CodatService {
 
     if (deleteResult) {
       businessService.updateBusinessAccountingSetupStep(
-          businessId, AccountingSetupStep.ADD_CREDIT_CARD);
+          businessId, AccountingSetupStep.AWAITING_SYNC);
       businessService.deleteCodatConnectionForBusiness(businessId);
       chartOfAccountsMappingService.deleteChartOfAccountsMappingsForBusiness(businessId);
     }

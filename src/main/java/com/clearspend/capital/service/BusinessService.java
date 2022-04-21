@@ -95,7 +95,7 @@ public class BusinessService {
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
             false,
-            AccountingSetupStep.ADD_CREDIT_CARD);
+            AccountingSetupStep.AWAITING_SYNC);
     if (businessId != null) {
       business.setId(businessId);
     }
@@ -175,6 +175,14 @@ public class BusinessService {
     business.setAccountingSetupStep(accountingSetupStep);
 
     return businessRepository.save(business);
+  }
+
+  @Transactional
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
+  public void updateBusinessAccountingStepFromSync(TypedId<BusinessId> businessId) {
+    Business business = businessRepository.getById(businessId);
+    business.setAccountingSetupStep(AccountingSetupStep.ADD_CREDIT_CARD);
+    businessRepository.save(business);
   }
 
   @Transactional

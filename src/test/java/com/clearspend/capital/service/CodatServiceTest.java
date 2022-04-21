@@ -18,6 +18,7 @@ import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookNewCompanySyncRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
 import com.clearspend.capital.common.data.model.Amount;
@@ -44,6 +45,7 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.MccGroup;
@@ -1225,5 +1227,24 @@ public class CodatServiceTest extends BaseCapitalTest {
             CodatAccountType.EXPENSE,
             List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
     assertThat(response.getResults().size()).isEqualTo(1);
+  }
+
+  @Test
+  public void accountingStepUpdatesOnFirstSync() throws Exception {
+    assertThat(business.getAccountingSetupStep()).isEqualTo(AccountingSetupStep.AWAITING_SYNC);
+    CodatWebhookNewCompanySyncRequest webhookRequest =
+        new CodatWebhookNewCompanySyncRequest(business.getCodatCompanyRef());
+
+    mvc.perform(
+            MockMvcRequestBuilders.post("/codat-webhook/new-company-synchronized")
+                .contentType("application/json")
+                .header(
+                    "Authorization",
+                    "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                .content(objectMapper.writeValueAsString(webhookRequest)))
+        .andReturn()
+        .getResponse();
+
+    assertThat(business.getAccountingSetupStep()).isEqualTo(AccountingSetupStep.ADD_CREDIT_CARD);
   }
 }

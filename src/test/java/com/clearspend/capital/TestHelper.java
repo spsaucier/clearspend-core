@@ -47,6 +47,7 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.business.TosAcceptance;
+import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessType;
@@ -927,6 +928,7 @@ public class TestHelper {
     business.setCodatCompanyRef("codat_company_ref");
     business.setCodatConnectionId("codat-connection-id");
     business.setCodatCreditCardId("codat-card-id");
+    business.setAccountingSetupStep(AccountingSetupStep.AWAITING_SYNC);
 
     business = businessRepository.save(business);
 

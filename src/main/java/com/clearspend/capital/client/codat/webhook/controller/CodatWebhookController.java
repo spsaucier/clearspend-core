@@ -2,6 +2,7 @@ package com.clearspend.capital.client.codat.webhook.controller;
 
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCompleteRequest;
+import com.clearspend.capital.client.codat.webhook.types.CodatWebhookNewCompanySyncRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.common.advice.AssignWebhookSecurityContextAdvice.SecureWebhook;
 import com.clearspend.capital.service.ChartOfAccountsService;
@@ -85,6 +86,15 @@ public class CodatWebhookController {
     if (validateToken(validation.replace("Bearer ", ""))
         && "chartOfAccounts".equals(request.getData().getDataType())) {
       chartOfAccountsService.updateChartOfAccountsFromCodatWebhook(request.getCompanyId());
+    }
+  }
+
+  @PostMapping("/new-company-synchronized")
+  public void handleWebhookCall(
+      @RequestHeader("Authorization") String validation,
+      @RequestBody @Validated CodatWebhookNewCompanySyncRequest request) {
+    if (validateToken(validation.replace("Bearer ", ""))) {
+      codatService.updateBusinessStatusOnSync(request.getCompanyId());
     }
   }
 }
