@@ -14,6 +14,7 @@ import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.KnowYourCustomerStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -82,10 +83,10 @@ public class BusinessOwnerData {
             new NullableEncryptedString(firstName),
             new NullableEncryptedString(lastName),
             title,
-            relationshipOwner,
-            relationshipRepresentative,
-            relationshipExecutive,
-            relationshipDirector,
+            Optional.ofNullable(relationshipOwner).orElse(false),
+            Optional.ofNullable(relationshipRepresentative).orElse(false),
+            Optional.ofNullable(relationshipExecutive).orElse(false),
+            Optional.ofNullable(relationshipDirector).orElse(false),
             percentageOwnership,
             address,
             new NullableEncryptedString(taxIdentificationNumber),

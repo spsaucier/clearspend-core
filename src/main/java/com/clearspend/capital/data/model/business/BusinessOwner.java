@@ -56,13 +56,13 @@ public class BusinessOwner extends TypedMutable<BusinessOwnerId> {
 
   private String title;
 
-  private Boolean relationshipOwner;
+  @NonNull private Boolean relationshipOwner;
 
-  private Boolean relationshipRepresentative;
+  @NonNull private Boolean relationshipRepresentative;
 
-  private Boolean relationshipExecutive;
+  @NonNull private Boolean relationshipExecutive;
 
-  private Boolean relationshipDirector;
+  @NonNull private Boolean relationshipDirector;
 
   private BigDecimal percentageOwnership;
 
