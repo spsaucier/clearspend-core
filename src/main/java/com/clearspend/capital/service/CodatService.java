@@ -21,7 +21,6 @@ import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
-import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -122,20 +121,21 @@ public class CodatService {
     if (business.getCodatCompanyRef() == null) {
       return null;
     }
+    String connectionId = business.getCodatConnectionId();
 
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(
             CurrentUser.getBusinessId(), accountActivityId);
 
-    GetSuppliersResponse suppliersResponse =
-        codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
+    Optional<CodatSupplier> supplier =
+        codatClient
+            .getSupplierForBusiness(
+                business.getCodatCompanyRef(), accountActivity.getMerchant().getName())
+            .getResults()
+            .stream()
+            .findFirst();
 
-    CodatSupplier supplier =
-        supplierForTransaction(accountActivity, suppliersResponse.getResults());
-
-    String connectionId = business.getCodatConnectionId();
-    if (supplier != null) {
-      // if supplier does exist, use it
+    if (supplier.isPresent()) {
 
       // TODO there could be more than one page of accounts. Fix when we filter for the actual
       // account.
@@ -164,7 +164,7 @@ public class CodatService {
               connectionId,
               accountActivity,
               business.getCurrency().name(),
-              supplier,
+              supplier.get(),
               expenseAccount.get(),
               expenseCategoryMapping.get().getAccountRefId());
 
@@ -173,7 +173,7 @@ public class CodatService {
           new TransactionSyncLog(
               business.getId(),
               accountActivityId,
-              supplier.getId(), // TODO look back at this
+              supplier.get().getId(),
               TransactionSyncStatus.IN_PROGRESS,
               directCostSyncResponse.getPushOperationKey(),
               business.getCodatCompanyRef(),
@@ -202,7 +202,7 @@ public class CodatService {
           new TransactionSyncLog(
               business.getId(),
               accountActivityId,
-              "", // TODO look back at this
+              "",
               TransactionSyncStatus.AWAITING_SUPPLIER,
               response.getPushOperationKey(),
               business.getCodatCompanyRef(),
@@ -358,17 +358,19 @@ public class CodatService {
       TransactionSyncLog transaction, TypedId<BusinessId> businessId) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
 
-    GetSuppliersResponse suppliersResponse =
-        codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
-
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivityForService(
             businessId, transaction.getAccountActivityId());
 
-    CodatSupplier supplier =
-        supplierForTransaction(accountActivity, suppliersResponse.getResults());
+    Optional<CodatSupplier> supplier =
+        codatClient
+            .getSupplierForBusiness(
+                business.getCodatCompanyRef(), accountActivity.getMerchant().getName())
+            .getResults()
+            .stream()
+            .findFirst();
 
-    if (supplier != null) {
+    if (supplier.isPresent()) {
       GetAccountsResponse accountsResponse =
           codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
       Optional<CodatAccount> expenseAccount =
@@ -387,7 +389,7 @@ public class CodatService {
                 business.getCodatConnectionId(),
                 accountActivity,
                 business.getCurrency().name(),
-                supplier,
+                supplier.get(),
                 expenseAccount.get(),
                 expenseCategoryMapping.get().getAccountRefId());
 
@@ -405,22 +407,6 @@ public class CodatService {
             directCostSyncResponse.getPushOperationKey());
         transactionSyncLogRepository.saveAndFlush(transactionSyncLog);
       }
-    }
-  }
-
-  private CodatSupplier supplierForTransaction(
-      AccountActivity accountActivity, List<CodatSupplier> suppliers) {
-    Optional<CodatSupplier> matchingSupplier =
-        suppliers.stream()
-            .filter(
-                supplier ->
-                    supplier.getSupplierName().equals(accountActivity.getMerchant().getName()))
-            .findFirst();
-
-    if (matchingSupplier.isEmpty()) {
-      return null;
-    } else {
-      return matchingSupplier.get();
     }
   }
 

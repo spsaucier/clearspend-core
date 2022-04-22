@@ -178,6 +178,12 @@ public class CodatClient {
         "/companies/%s/data/suppliers".formatted(companyRef), GetSuppliersResponse.class);
   }
 
+  public GetSuppliersResponse getSupplierForBusiness(String companyRef, String supplierName) {
+    return getFromCodatApi(
+        "/companies/%s/data/suppliers?query=supplierName=%s".formatted(companyRef, supplierName),
+        GetSuppliersResponse.class);
+  }
+
   public GetAccountsResponse getAccountsForBusiness(String companyRef) {
     return getFromCodatApi(
         "/companies/%s/data/accounts?page=1".formatted(companyRef), GetAccountsResponse.class);

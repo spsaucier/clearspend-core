@@ -18,10 +18,8 @@ import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCompleteRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
-import com.clearspend.capital.client.codat.webhook.types.CodatWebhookSyncData;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
@@ -46,7 +44,6 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
-import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -1046,6 +1043,51 @@ public class CodatServiceTest extends BaseCapitalTest {
     assertThat(result.get(0).getChildren()).hasSize(2);
   }
 
+  @Test
+  public void canCreateBankAccount() {
+    codatService.createBankAccountForBusiness(
+        business.getId(), new CreateCreditCardRequest("My Card"));
+  }
+
+  @Test
+  public void canGetSyncableCount() {
+    accountActivityRepository.save(
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY));
+
+    accountActivityRepository.save(
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.NOT_READY));
+
+    assertThat(codatService.getSyncReadyCount(business.getId())).isEqualTo(1);
+  }
+
+  @Test
+  public void canGetChartOfAccountsForBusiness() {
+    CodatAccountNestedResponse response =
+        codatService.getCodatChartOfAccountsForBusiness(
+            business.getId(),
+            CodatAccountType.EXPENSE,
+            List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
+    assertThat(response.getResults().size()).isEqualTo(3);
+  }
+
   @SneakyThrows
   @Test
   @Ignore("Added and retained for 'realistic' data")
@@ -1208,70 +1250,5 @@ public class CodatServiceTest extends BaseCapitalTest {
   public static String getNameFromQualified(String qualifiedName) {
     String[] qualifiedNameSplit = qualifiedName.split("\\.");
     return qualifiedNameSplit[qualifiedNameSplit.length - 1];
-  }
-
-  @Test
-  public void canCreateBankAccount() {
-    codatService.createBankAccountForBusiness(
-        business.getId(), new CreateCreditCardRequest("My Card"));
-  }
-
-  @Test
-  public void canGetSyncableCount() {
-    accountActivityRepository.save(
-        new AccountActivity(
-            business.getId(),
-            allocation.getAccountId(),
-            AccountActivityType.NETWORK_CAPTURE,
-            AccountActivityStatus.APPROVED,
-            AllocationDetails.of(allocation),
-            OffsetDateTime.now(),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.READY));
-
-    accountActivityRepository.save(
-        new AccountActivity(
-            business.getId(),
-            allocation.getAccountId(),
-            AccountActivityType.NETWORK_CAPTURE,
-            AccountActivityStatus.APPROVED,
-            AllocationDetails.of(allocation),
-            OffsetDateTime.now(),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.NOT_READY));
-
-    assertThat(codatService.getSyncReadyCount(business.getId())).isEqualTo(1);
-  }
-
-  @Test
-  public void canGetChartOfAccountsForBusiness() {
-    CodatAccountNestedResponse response =
-        codatService.getCodatChartOfAccountsForBusiness(
-            business.getId(),
-            CodatAccountType.EXPENSE,
-            List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
-    assertThat(response.getResults().size()).isEqualTo(3);
-  }
-
-  @Test
-  public void accountingStepUpdatesOnFirstSync() throws Exception {
-    assertThat(business.getAccountingSetupStep()).isEqualTo(AccountingSetupStep.AWAITING_SYNC);
-    CodatWebhookDataSyncCompleteRequest webhookRequest =
-        new CodatWebhookDataSyncCompleteRequest(
-            business.getCodatCompanyRef(), new CodatWebhookSyncData("bankAccounts"));
-
-    mvc.perform(
-            MockMvcRequestBuilders.post("/codat-webhook/data-sync-complete")
-                .contentType("application/json")
-                .header(
-                    "Authorization",
-                    "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
-                .content(objectMapper.writeValueAsString(webhookRequest)))
-        .andReturn()
-        .getResponse();
-
-    assertThat(business.getAccountingSetupStep()).isEqualTo(AccountingSetupStep.ADD_CREDIT_CARD);
   }
 }

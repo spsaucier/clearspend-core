@@ -26,6 +26,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -107,15 +108,17 @@ public class CodatMockClient extends CodatClient {
     return new GetAccountsResponse(accountList);
   }
 
-  private <T> T getFromCodatApi(String uri, Class<T> clazz) {
-    if (uri.equals("companies/test-codat-ref/data/suppliers")) {
-      return (T) List.of(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
-    }
-    return null;
-  }
-
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
     return new GetSuppliersResponse(supplierList);
+  }
+
+  public GetSuppliersResponse getSupplierForBusiness(String companyRef, String supplierName) {
+    List<CodatSupplier> list = new ArrayList<>();
+    list.addAll(
+        supplierList.stream()
+            .filter(supplier -> supplier.getSupplierName().equals(supplierName))
+            .collect(Collectors.toList()));
+    return new GetSuppliersResponse(list);
   }
 
   public ConnectionStatusResponse getConnectionsForBusiness(String companyRef) {
