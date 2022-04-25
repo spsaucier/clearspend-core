@@ -256,6 +256,52 @@ public class AllocationServiceTest extends BaseCapitalTest {
   }
 
   @Test
+  void searchBusinessAllocations_NoName_UserPermissions() {
+    final Allocation root = createBusinessRecord.allocationRecord().allocation();
+    final Allocation child1 =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child1",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+    final User viewOnlyChild1 =
+        testHelper.createUserWithRole(child1, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
+    final ThrowingSupplier<List<AllocationRecord>> action =
+        () -> allocationService.searchBusinessAllocations(createBusinessRecord.business());
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        // These roles are set on the root allocation by the validator, and should see everything
+        .<List<AllocationRecord>>allowRolesOnAllocationWithResult(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            records -> assertThat(toAllocations(records)).hasSize(2).contains(root, child1))
+        // Employees can't see any allocations
+        .<List<AllocationRecord>>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_EMPLOYEE, records -> assertThat(records).isEmpty())
+        // These global roles should see everything
+        .<List<AllocationRecord>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_VIEWER,
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE,
+                GLOBAL_CUSTOMER_SERVICE_MANAGER),
+            records -> assertThat(toAllocations(records)).hasSize(2).contains(root, child1))
+        // These global roles should see nothing
+        .<List<AllocationRecord>>allowGlobalRolesWithResult(
+            Set.of(DefaultRoles.GLOBAL_BOOKKEEPER, DefaultRoles.GLOBAL_RESELLER),
+            records -> assertThat(toAllocations(records)).isEmpty())
+        // This user should only see the child allocation they have the role on
+        .<List<AllocationRecord>>allowUserWithResult(
+            viewOnlyChild1,
+            records -> assertThat(toAllocations(records)).hasSize(1).contains(child1))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
   void searchBusinessAllocations_UserPermissions() {
     final Allocation root = createBusinessRecord.allocationRecord().allocation();
     final Allocation child1 =

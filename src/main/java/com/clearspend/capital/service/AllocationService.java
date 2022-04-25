@@ -317,6 +317,7 @@ public class AllocationService {
         .collect(Collectors.toList());
   }
 
+  @PostFilter("hasPermission(filterObject?.allocation, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
   public List<AllocationRecord> searchBusinessAllocations(Business business) {
     return searchBusinessAllocations(business, null);
   }

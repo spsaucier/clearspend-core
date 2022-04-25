@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -137,10 +138,10 @@ public class BusinessController {
             allocation -> {
               TypedId<AllocationId> parentAllocationId = allocation.getParentAllocationId();
               if (parentAllocationId != null) {
-                result
-                    .get(parentAllocationId)
-                    .getChildrenAllocationIds()
-                    .add(allocation.getAllocationId());
+                Optional.ofNullable(result.get(parentAllocationId))
+                    .ifPresent(
+                        parent ->
+                            parent.getChildrenAllocationIds().add(allocation.getAllocationId()));
               }
             });
 
