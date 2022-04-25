@@ -4,10 +4,9 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRecord;
-import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.service.AllocationService;
-import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.SecuredRolesAndPermissionsService;
@@ -47,19 +46,16 @@ public class RolesAndPermissionsController {
         rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(allocationId));
   }
 
-  @GetMapping("/allPermissions/{businessId}")
-  public AllocationsAndPermissionsResponse getAllAllocationsAndPermissions(
-      @PathVariable(value = "businessId")
-          @Parameter(
-              required = true,
-              name = "businessId",
-              description = "ID of the business to get all permissions for.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          final TypedId<BusinessId> businessId) {
+  @GetMapping("/allPermissions")
+  public AllocationsAndPermissionsResponse getAllAllocationsAndPermissions() {
+    if (CurrentUser.get() == null) {
+      return new AllocationsAndPermissionsResponse(List.of(), List.of());
+    }
     final TypedId<UserId> userId = CurrentUser.getUserId();
+    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
     final List<Allocation> allocations =
         allocationService.getAllocationsForBusiness(businessId).stream()
-            .map(AllocationRecord::allocation)
+            .map(Allocation::of)
             .toList();
     final List<UserRolesAndPermissionsRecord> permissions =
         securedRolesAndPermissionsService
