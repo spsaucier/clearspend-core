@@ -64,4 +64,10 @@ public class ChartOfAccountsController {
     mappingService.deleteChartOfAccountsMappingsForBusiness(CurrentUser.getBusinessId());
     return true;
   }
+
+  @PostMapping("/resync")
+  Boolean resyncChartOfAccounts() {
+    chartOfAccountsService.resyncChartOfAccountsForBusiness(CurrentUser.getBusinessId());
+    return true;
+  }
 }

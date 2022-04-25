@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
+import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -32,7 +33,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ChartOfAccountsService {
   private final ChartOfAccountsRepository chartOfAccountsRepository;
-  private final ChartOfAccountsMappingService mappingService;
   private final CodatService codatService;
   private final BusinessRepository businessRepository;
 
@@ -105,14 +105,15 @@ public class ChartOfAccountsService {
         getAccountsByStatus(delta.getNestedAccounts(), ChartOfAccountsUpdateStatus.DELETED);
 
     for (CodatAccountNested target : deletedAccounts) {
-      mappingService.deleteChartOfAccountsMapping(business.getBusinessId(), target.getId());
+      chartOfAccountsMappingService.deleteChartOfAccountsMapping(
+          business.getBusinessId(), target.getId());
     }
   }
 
   private void createAndMapCategoriesFromNewCodatAccounts(
       Business business, ChartOfAccounts delta) {
     if (business.getAutoCreateExpenseCategories()) {
-      mappingService.addChartOfAccountsMapping(
+      chartOfAccountsMappingService.addChartOfAccountsMapping(
           business.getBusinessId(), getListOfNewCategories(delta.getNestedAccounts()));
     }
   }
@@ -259,5 +260,10 @@ public class ChartOfAccountsService {
       total += getTotalChangesForNestedAccount(codatAccount);
     }
     return total;
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatSyncResponse resyncChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
+    return codatService.updateChartOfAccountsForBusiness(businessId);
   }
 }

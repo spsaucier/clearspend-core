@@ -18,6 +18,7 @@ import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
+import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
@@ -547,6 +548,15 @@ public class CodatService {
                       business.getId(), accountStatus.getData().getId()));
       codatClient.syncDataTypeForCompany(codatCompanyRef, "chartOfAccounts");
     }
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatSyncResponse updateChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
+    Business business = businessService.getBusiness(businessId, true);
+    if (business.getCodatCompanyRef() != null) {
+      return codatClient.syncDataTypeForCompany(business.getCodatCompanyRef(), "chartOfAccounts");
+    }
+    return null;
   }
 
   public List<SyncTransactionResponse> syncMultipleTransactions(
