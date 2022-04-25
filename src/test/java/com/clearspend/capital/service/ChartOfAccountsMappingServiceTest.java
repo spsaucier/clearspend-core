@@ -58,6 +58,19 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   }
 
   @Test
+  public void testSyncQBOExpenseCategoryWithoutAutoSyncOn() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    testHelper.createCodatExpenseCategoryMappings(business);
+    business.setAutoCreateExpenseCategories(false);
+    List<ChartOfAccountsMappingResponse> result =
+        mappingService.getAllMappingsForBusiness(business.getId());
+    mappingService.updateNameForMappedCodatId(business.getId(), "2", "abc");
+    Optional<ExpenseCategory> expenseCategoryOptional =
+        expenseCategoryRepository.findFirstCategoryByName("abc");
+    assertThat(expenseCategoryOptional.isPresent()).isFalse();
+  }
+
+  @Test
   public void testGetSingleMapping() {
     testHelper.createCodatExpenseCategoryMappings(business);
     ChartOfAccountsMapping mapping =

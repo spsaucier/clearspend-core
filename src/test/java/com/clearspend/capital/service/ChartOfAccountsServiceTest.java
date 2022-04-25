@@ -163,6 +163,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
   public void canUpdateExistingMappingOnChartOfAccountsChange() {
     businessNotificationService.acceptChartOfAccountChangesForUser(
         business.getId(), user.getUserId());
+    business.setAutoCreateExpenseCategories(true);
     List<CodatAccount> accounts = new ArrayList<>();
     IntStream.range(0, CodatServiceTest.getQualifiedNames().size())
         .forEach(
