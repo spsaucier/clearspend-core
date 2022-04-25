@@ -481,6 +481,7 @@ public class BusinessService {
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  @Transactional
   public Business setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
     Business business = businessRepository.getById(businessId);
     business.setAutoCreateExpenseCategories(value);
