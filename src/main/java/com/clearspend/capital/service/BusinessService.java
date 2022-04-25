@@ -485,8 +485,7 @@ public class BusinessService {
   public Business setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
     Business business = businessRepository.getById(businessId);
     business.setAutoCreateExpenseCategories(value);
-    businessRepository.save(business);
-    return business;
+    return businessRepository.save(business);
   }
 
   private void setOnNotEqual(

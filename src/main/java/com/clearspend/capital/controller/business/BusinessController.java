@@ -272,8 +272,9 @@ public class BusinessController {
       @RequestBody @Validated
           UpdateAutoCreateExpenseCategoriesRequest updateAutoCreateExpenseCategoriesRequest) {
     return ResponseEntity.ok(
-        businessService.setAutomaticExpenseCategories(
-            CurrentUser.getBusinessId(),
-            updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories()));
+        new Business(
+            businessService.setAutomaticExpenseCategories(
+                CurrentUser.getBusinessId(),
+                updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories())));
   }
 }
