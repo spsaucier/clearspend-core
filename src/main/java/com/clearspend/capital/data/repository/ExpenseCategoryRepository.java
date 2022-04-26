@@ -22,6 +22,15 @@ public interface ExpenseCategoryRepository
     return findFirstByBusinessIdAndCategoryName(CurrentUser.getBusinessId(), categoryName);
   }
 
+  default Optional<ExpenseCategory> findFirstCategoryByNameAndStatus(
+      String categoryName, ExpenseCategoryStatus status) {
+    return findFirstByBusinessIdAndCategoryNameAndStatus(
+        CurrentUser.getBusinessId(), categoryName, status);
+  }
+
+  Optional<ExpenseCategory> findFirstByBusinessIdAndCategoryNameAndStatus(
+      TypedId<BusinessId> businessId, String categoryName, ExpenseCategoryStatus status);
+
   Optional<ExpenseCategory> findFirstByBusinessIdAndCategoryName(
       TypedId<BusinessId> businessIdTypedId, String categoryName);
 

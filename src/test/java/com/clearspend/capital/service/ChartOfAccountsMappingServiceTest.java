@@ -141,7 +141,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
-  void addChartOfAccountsMapping_whenExpenseCategoriesAlreadyExistCreateNew() {
+  void addChartOfAccountsMapping_whenExpenseCategoriesExistDisabledCreateNew() {
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 
@@ -155,7 +155,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
     assertThat(expenseCategoryRepository.findByBusinessId(business.getId()))
         .size()
-        .isEqualTo(expenseCategories.size() + 1);
+        .isEqualTo(expenseCategories.size());
   }
 
   @SneakyThrows
