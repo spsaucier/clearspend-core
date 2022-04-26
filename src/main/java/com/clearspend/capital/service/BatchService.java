@@ -26,7 +26,7 @@ public class BatchService {
   private final RetrievalService retrievalService;
   private final TwilioService twilioService;
 
-  @Scheduled(fixedRate = 900000)
+  @Scheduled(fixedRate = 900000, initialDelay = 60000)
   /*
   This function is invoked every 15 minutes and checks for any placed holds with expiration
   time between the "high watermark" time saved during the previous run and [now]
