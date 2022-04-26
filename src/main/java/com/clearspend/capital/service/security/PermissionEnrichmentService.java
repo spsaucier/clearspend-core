@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -42,35 +43,18 @@ public class PermissionEnrichmentService {
 
   public boolean evaluatePermission(
       @NonNull final Authentication authentication,
-      @NonNull PermissionEvaluationIds permissionEvaluationIds,
+      @NonNull PermissionEvaluationContext permissionEvaluationContext,
       @NonNull final String permissions) {
     final UserRolesAndPermissionsCache cache =
         (UserRolesAndPermissionsCache) authentication.getDetails();
-    return getPermissions(cache, permissionEvaluationIds)
-        .map(
-            userPermissions ->
-                doEvaluatePermissions(permissionEvaluationIds, cache, userPermissions, permissions))
-        .orElseGet(
-            () -> {
-              cache.storeFailedPermissions(permissionEvaluationIds, permissions);
-              return false;
-            });
+    final List<UserRolesAndPermissions> userPermissions =
+        getPermissions(cache, permissionEvaluationContext);
+    return doEvaluatePermissions(permissionEvaluationContext, cache, userPermissions, permissions);
   }
 
   private record LastCall(String className, String methodName) {}
 
-  private boolean doEvaluatePermissions(
-      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
-      @NonNull final UserRolesAndPermissionsCache cache,
-      @NonNull final UserRolesAndPermissions userPermissions,
-      @NonNull final String permissions) {
-    final TypedId<UserId> userId = permissionEvaluationIds.userId();
-    log.trace("User Permissions: {}", userPermissions);
-    final OverlapPermissions overlapPermissions = resolvePermission(permissions);
-    log.trace("Overlap permissions: {}", overlapPermissions);
-    overlapPermissions.allocationPermissions().retainAll(userPermissions.allocationPermissions());
-    overlapPermissions.globalUserPermissions().retainAll(userPermissions.globalUserPermissions());
-
+  private void logCustomerServicePermission(final OverlapPermissions overlapPermissions) {
     if (log.isInfoEnabled()) {
       final EnumSet<GlobalUserPermission> customerServiceUsed =
           GlobalUserPermission.ALL_CUSTOMER_SERVICE.clone();
@@ -95,6 +79,43 @@ public class PermissionEnrichmentService {
             CurrentUser.getUserId());
       }
     }
+  }
+
+  private OverlapPermissions overlapPermissionsReducer(
+      final OverlapPermissions permissionsA, final OverlapPermissions permissionsB) {
+    final int comparison =
+        Comparator.<EnumSet<AllocationPermission>>comparingInt(EnumSet::size)
+            .compare(permissionsA.allocationPermissions(), permissionsB.allocationPermissions());
+    if (comparison > 0) {
+      return permissionsA;
+    }
+    return permissionsB;
+  }
+
+  private boolean doEvaluatePermissions(
+      @NonNull final PermissionEvaluationContext permissionEvaluationContext,
+      @NonNull final UserRolesAndPermissionsCache cache,
+      @NonNull final List<UserRolesAndPermissions> userPermissions,
+      @NonNull final String permissions) {
+    final TypedId<UserId> userId = permissionEvaluationContext.userId();
+    log.trace("User Permissions: {}", userPermissions);
+    final OverlapPermissions resolvedPermissions = resolvePermission(permissions);
+    log.trace("Resolved Permissions: {}", resolvedPermissions);
+    // Get the overlap with the highest number of allocation permissions for the best match
+    // Global permissions should be unchanging for each UserRolesAndPermissions record
+    final OverlapPermissions overlapPermissions =
+        userPermissions.stream()
+            .map(
+                record -> {
+                  final OverlapPermissions overlap = resolvedPermissions.copy();
+                  overlap.allocationPermissions().retainAll(record.allocationPermissions());
+                  overlap.globalUserPermissions().retainAll(record.globalUserPermissions());
+                  return overlap;
+                })
+            .reduce(new OverlapPermissions(), this::overlapPermissionsReducer);
+    log.trace("Overlap Permissions: {}", overlapPermissions);
+
+    logCustomerServicePermission(overlapPermissions);
 
     // For VIEW_OWN:
     // 1) If there are any other valid permissions besides VIEW_OWN, we don't need to evaluate
@@ -104,12 +125,12 @@ public class PermissionEnrichmentService {
     // This is because the User ID passed to this method is the User ID of the resource being
     // retrieved and it determines ownership
     final boolean result =
-        (hasPermissions(overlapPermissions) && !isOnlyPermissionViewOwn(overlapPermissions))
+        (overlapPermissions.hasPermissions() && !isOnlyPermissionViewOwn(overlapPermissions))
             || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId))
             || hasApplicationPermission(userPermissions);
     if (!result) {
       cache.storeFailedPermissions(
-          permissionEvaluationIds, permissions, userPermissions, overlapPermissions);
+          permissionEvaluationContext, permissions, userPermissions, overlapPermissions);
     }
     return result;
   }
@@ -119,13 +140,10 @@ public class PermissionEnrichmentService {
    * allow them through. This is a temporary measure because we don't have good enough test coverage
    * around our Webhooks and we cannot risk accidentally breaking them due to a permissions issue.
    */
-  private boolean hasApplicationPermission(final UserRolesAndPermissions userPermissions) {
-    return userPermissions.globalUserPermissions().contains(GlobalUserPermission.APPLICATION);
-  }
-
-  private boolean hasPermissions(@NonNull final OverlapPermissions overlapPermissions) {
-    return !(overlapPermissions.allocationPermissions().isEmpty()
-        && overlapPermissions.globalUserPermissions().isEmpty());
+  private boolean hasApplicationPermission(final List<UserRolesAndPermissions> userPermissions) {
+    return userPermissions.stream()
+        .anyMatch(
+            record -> record.globalUserPermissions().contains(GlobalUserPermission.APPLICATION));
   }
 
   private boolean isOnlyPermissionViewOwn(@NonNull final OverlapPermissions overlapPermissions) {
@@ -135,20 +153,24 @@ public class PermissionEnrichmentService {
   }
 
   private boolean isAllowedViewOwn(@Nullable final TypedId<UserId> userId) {
-    return CurrentUser.getUserId().equals(userId);
+    return Optional.ofNullable(CurrentUser.getUserId()).filter(id -> id.equals(userId)).isPresent();
   }
 
-  private Optional<UserRolesAndPermissions> getPermissions(
+  private List<UserRolesAndPermissions> getPermissions(
       @NonNull final UserRolesAndPermissionsCache cache,
-      @NonNull final PermissionEvaluationIds permissionEvaluationIds) {
-    return switch (permissionEvaluationIds.getEvaluationType()) {
-      case BUSINESS_AND_ALLOCATION_ID -> getPermissionsForBusinessAndAllocation(
-          cache, permissionEvaluationIds.businessId(), permissionEvaluationIds.allocationId());
-      case BUSINESS_ID_ONLY -> getRootAllocationPermissions(
-          cache, permissionEvaluationIds.businessId());
-      case ALLOCATION_ID_ONLY -> getPermissionsForAllocation(
-          cache, permissionEvaluationIds.allocationId());
-      case NO_IDS -> getPermissionsForGlobal(cache);
+      @NonNull final PermissionEvaluationContext permissionEvaluationContext) {
+    return switch (permissionEvaluationContext.getEvaluationType()) {
+      case ALLOCATION_BY_BUSINESS_AND_ALLOCATION_ID -> getPermissionsForBusinessAndAllocation(
+          cache,
+          permissionEvaluationContext.businessId(),
+          permissionEvaluationContext.allocationId());
+      case ROOT_ALLOCATION_BY_BUSINESS_ID_ONLY -> getRootAllocationPermissions(
+          cache, permissionEvaluationContext.businessId());
+      case ALLOCATION_BY_ALLOCATION_ID_ONLY -> getPermissionsForAllocation(
+          cache, permissionEvaluationContext.allocationId());
+      case GLOBAL_PERMISSIONS_BY_NO_IDS -> getPermissionsForGlobal(cache);
+      case ANY_ALLOCATION_BY_BUSINESS_ID_ONLY -> getPermissionsForAllAllocationsInBusiness(
+          cache, permissionEvaluationContext.businessId());
     };
   }
 
@@ -162,7 +184,7 @@ public class PermissionEnrichmentService {
    * called when no business or allocation id is provided), the allocation permissions from the
    * record are cleared prior to it being returned so that only global permissions are provided.
    */
-  private Optional<UserRolesAndPermissions> getPermissionsForGlobal(
+  private List<UserRolesAndPermissions> getPermissionsForGlobal(
       @NonNull final UserRolesAndPermissionsCache cache) {
     return cache
         .getPermissionsForGlobal()
@@ -181,11 +203,13 @@ public class PermissionEnrichmentService {
                       CurrentUser.getBusinessId(),
                       CurrentUser.getRoles()));
               return cache.getPermissionsForGlobal();
-            });
+            })
+        .map(List::of)
+        .orElse(List.of());
   }
 
   /** Load all permissions for the specified allocation into memory. */
-  private Optional<UserRolesAndPermissions> getPermissionsForAllocation(
+  private List<UserRolesAndPermissions> getPermissionsForAllocation(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<AllocationId> allocationId) {
     return cache
@@ -203,11 +227,34 @@ public class PermissionEnrichmentService {
                       permissions -> cache.cachePermissionsForAllocation(allocationId, permissions))
                   // Store empty permissions if nothing returned so we don't try the query again
                   .or(() -> Optional.of(cache.cachePermissionsForAllocation(allocationId, null)));
+            })
+        .map(List::of)
+        .orElse(List.of());
+  }
+
+  /** Loads all permissions for business into memory and returns them all. */
+  private List<UserRolesAndPermissions> getPermissionsForAllAllocationsInBusiness(
+      @NonNull final UserRolesAndPermissionsCache cache,
+      @NonNull final TypedId<BusinessId> businessId) {
+    return cache
+        .getPermissionsForBusiness(businessId)
+        .orElseGet(
+            () -> {
+              log.trace(
+                  "Permissions Cache Miss. Querying by Business ({}) for User ({})",
+                  businessId,
+                  CurrentUser.getUserId());
+              return // Will cache empty list if no permissions found to short-circuit future
+              // queries
+              cache.cachePermissionsForBusiness(
+                  businessId,
+                  rolesAndPermissionsService.findAllByUserIdAndBusinessId(
+                      CurrentUser.getUserId(), businessId, CurrentUser.getRoles()));
             });
   }
 
   /** Load all permissions for business into memory, then just return the root allocation. */
-  private Optional<UserRolesAndPermissions> getRootAllocationPermissions(
+  private List<UserRolesAndPermissions> getRootAllocationPermissions(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<BusinessId> businessId) {
     return cache
@@ -226,14 +273,15 @@ public class PermissionEnrichmentService {
                       CurrentUser.getUserId(), businessId, CurrentUser.getRoles()));
             })
         .stream()
+        // Only one result should match this filter, for the root allocation only
         .filter(userPermissions -> userPermissions.parentAllocationId() == null)
-        .findFirst();
+        .toList();
   }
 
   /**
    * Load all permissions for the specified allocation within the specified business into memory.
    */
-  private Optional<UserRolesAndPermissions> getPermissionsForBusinessAndAllocation(
+  private List<UserRolesAndPermissions> getPermissionsForBusinessAndAllocation(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<BusinessId> businessId,
       @NonNull final TypedId<AllocationId> allocationId) {
@@ -253,7 +301,9 @@ public class PermissionEnrichmentService {
                       permissions -> cache.cachePermissionsForAllocation(allocationId, permissions))
                   // Store empty permissions if nothing returned so we don't try the query again
                   .or(() -> Optional.of(cache.cachePermissionsForAllocation(allocationId, null)));
-            });
+            })
+        .map(List::of)
+        .orElse(List.of());
   }
 
   private static final Map<String, AllocationPermission> allocationPermissions =

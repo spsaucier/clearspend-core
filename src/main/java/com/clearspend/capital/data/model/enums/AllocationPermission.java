@@ -5,6 +5,7 @@ public enum AllocationPermission {
   READ,
   CATEGORIZE,
   LINK_RECEIPTS,
+  EMPLOYEE,
   MANAGE_FUNDS,
   MANAGE_CARDS,
   MANAGE_USERS,

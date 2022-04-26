@@ -16,6 +16,7 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.service.security.PermissionEvaluationContext.AllocationStrategy;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
@@ -36,11 +37,19 @@ public class FailedPermissionsTest {
       UUID.fromString("c2d56628-b08f-41ea-bfda-93f356eb4780");
   private static final UUID CURRENT_USER_BUSINESS_ID =
       UUID.fromString("b462aa55-c1eb-410b-b705-22c3d893481f");
-  private static final PermissionEvaluationIds PERMISSION_EVALUATION_IDS =
-      new PermissionEvaluationIds(
+  private static final PermissionEvaluationContext PERMISSION_EVALUATION_CONTEXT =
+      new PermissionEvaluationContext(
           new TypedId<>("7feb9c45-b163-453f-bfc8-822c3ed2df80"),
           new TypedId<>("2ad6e753-5547-453c-a1c6-83ad4e05ddca"),
-          new TypedId<>("c7f4e625-158f-42f9-9fc6-e18bda5253ec"));
+          new TypedId<>("c7f4e625-158f-42f9-9fc6-e18bda5253ec"),
+          AllocationStrategy.SINGLE_ALLOCATION);
+
+  private static final PermissionEvaluationContext PERMISSION_EVALUATION_CONTEXT_ANY_ALLOCATION =
+      new PermissionEvaluationContext(
+          new TypedId<>("7feb9c45-b163-453f-bfc8-822c3ed2df80"),
+          null,
+          new TypedId<>("c7f4e625-158f-42f9-9fc6-e18bda5253ec"),
+          AllocationStrategy.ANY_ALLOCATION);
 
   private UserRolesAndPermissions createUserRolesAndPermissions(
       final EnumSet<AllocationPermission> allocationPermissions,
@@ -101,7 +110,8 @@ public class FailedPermissionsTest {
     final UserRolesAndPermissions userPermissions =
         createUserRolesAndPermissions(allocationPermissions, globalPermissions, false);
     final FailedPermissions failedPermissions =
-        new FailedPermissions(PERMISSION_EVALUATION_IDS, "READ|MANAGE_USERS", userPermissions);
+        new FailedPermissions(
+            PERMISSION_EVALUATION_CONTEXT, "READ|MANAGE_USERS", List.of(userPermissions));
     final AccessDeniedException ex = new AccessDeniedException("");
     final String message =
         new PermissionFailureException(List.of(failedPermissions, failedPermissions), ex)
@@ -111,10 +121,10 @@ public class FailedPermissionsTest {
                 Access Denied: Permission Evaluation Failures
                 CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
                 Failure 1. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
                 """
             .trim(),
@@ -130,7 +140,8 @@ public class FailedPermissionsTest {
     final UserRolesAndPermissions userPermissions =
         createUserRolesAndPermissions(allocationPermissions, globalPermissions, false);
     final FailedPermissions failedPermissions =
-        new FailedPermissions(PERMISSION_EVALUATION_IDS, "READ|MANAGE_USERS", userPermissions);
+        new FailedPermissions(
+            PERMISSION_EVALUATION_CONTEXT, "READ|MANAGE_USERS", List.of(userPermissions));
     final AccessDeniedException ex = new AccessDeniedException("");
     final String message =
         new PermissionFailureException(List.of(failedPermissions), ex).getMessage();
@@ -139,9 +150,39 @@ public class FailedPermissionsTest {
                 Access Denied: Permission Evaluation Failures
                 CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
                 """
+            .trim(),
+        message);
+  }
+
+  @Test
+  void failureWithPermissions_MultipleUserPermissions() {
+    final EnumSet<AllocationPermission> allocationPermissions =
+        EnumSet.of(AllocationPermission.VIEW_OWN);
+    final EnumSet<GlobalUserPermission> globalPermissions =
+        EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE, GlobalUserPermission.GLOBAL_READ);
+    final UserRolesAndPermissions userPermissions =
+        createUserRolesAndPermissions(allocationPermissions, globalPermissions, false);
+    final FailedPermissions failedPermissions =
+        new FailedPermissions(
+            PERMISSION_EVALUATION_CONTEXT_ANY_ALLOCATION,
+            "READ|MANAGE_USERS",
+            List.of(userPermissions, userPermissions, userPermissions));
+    final AccessDeniedException ex = new AccessDeniedException("");
+    final String message =
+        new PermissionFailureException(List.of(failedPermissions), ex).getMessage();
+    assertEquals(
+        """
+                    Access Denied: Permission Evaluation Failures
+                    CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                    Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE],[VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE],[VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
+                        PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=null, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=ANY_ALLOCATION]
+                        UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
+                        UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
+                        UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
+                    """
             .trim(),
         message);
   }
@@ -155,7 +196,8 @@ public class FailedPermissionsTest {
     final UserRolesAndPermissions userPermissions =
         createUserRolesAndPermissions(allocationPermissions, globalPermissions, true);
     final FailedPermissions failedPermissions =
-        new FailedPermissions(PERMISSION_EVALUATION_IDS, "READ|MANAGE_USERS", userPermissions);
+        new FailedPermissions(
+            PERMISSION_EVALUATION_CONTEXT, "READ|MANAGE_USERS", List.of(userPermissions));
     final AccessDeniedException ex = new AccessDeniedException("");
     final String message =
         new PermissionFailureException(List.of(failedPermissions), ex).getMessage();
@@ -164,7 +206,7 @@ public class FailedPermissionsTest {
                 Access Denied: Permission Evaluation Failures
                 CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=true, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
                 """
             .trim(),
@@ -180,7 +222,8 @@ public class FailedPermissionsTest {
     final UserRolesAndPermissions userPermissions =
         createUserRolesAndPermissions(allocationPermissions, globalPermissions, false);
     final FailedPermissions failedPermissions =
-        new FailedPermissions(PERMISSION_EVALUATION_IDS, "READ|MANAGE_USERS", userPermissions);
+        new FailedPermissions(
+            PERMISSION_EVALUATION_CONTEXT, "READ|MANAGE_USERS", List.of(userPermissions));
     final AccessDeniedException ex = new AccessDeniedException("");
     final String message =
         new PermissionFailureException(List.of(failedPermissions), ex).getMessage();
@@ -189,7 +232,7 @@ public class FailedPermissionsTest {
                 Access Denied: Permission Evaluation Failures
                 CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual []
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[], globalPermissions=[]]
                 """
             .trim(),
@@ -203,7 +246,7 @@ public class FailedPermissionsTest {
     final EnumSet<GlobalUserPermission> globalPermissions =
         EnumSet.of(GlobalUserPermission.CUSTOMER_SERVICE, GlobalUserPermission.GLOBAL_READ);
     final FailedPermissions failedPermissions =
-        new FailedPermissions(PERMISSION_EVALUATION_IDS, "READ|MANAGE_USERS", null);
+        new FailedPermissions(PERMISSION_EVALUATION_CONTEXT, "READ|MANAGE_USERS", null);
     final AccessDeniedException ex = new AccessDeniedException("");
     final String message =
         new PermissionFailureException(List.of(failedPermissions), ex).getMessage();
@@ -211,8 +254,8 @@ public class FailedPermissionsTest {
         """
                 Access Denied: Permission Evaluation Failures
                 CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
-                Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [[]]
-                    PermissionEvaluationIds[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec]
+                Failure 0. Expected One Of [READ|MANAGE_USERS], Actual []
+                    PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, userId=c7f4e625-158f-42f9-9fc6-e18bda5253ec, allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[NONE]
                 """
             .trim(),

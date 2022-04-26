@@ -17,10 +17,10 @@ public class CapitalPermissionEvaluator implements PermissionEvaluator {
   public boolean hasPermission(
       final Authentication authentication, final Object targetObject, final Object permissions) {
     final String permissionsString = getPermissionsAsString(permissions);
-    final PermissionEvaluationIds permissionEvaluationIds =
-        PermissionEvaluationIds.fromTarget(targetObject);
+    final PermissionEvaluationContext permissionEvaluationContext =
+        PermissionEvaluationContext.fromTarget(targetObject);
     return permissionEnrichmentService.evaluatePermission(
-        authentication, permissionEvaluationIds, permissionsString);
+        authentication, permissionEvaluationContext, permissionsString);
   }
 
   private String getPermissionsAsString(final Object permissions) {

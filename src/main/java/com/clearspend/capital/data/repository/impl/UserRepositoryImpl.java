@@ -1,11 +1,8 @@
 package com.clearspend.capital.data.repository.impl;
 
-import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
-import com.blazebit.persistence.JoinType;
-import com.blazebit.persistence.PagedList;
-import com.blazebit.persistence.PaginatedCriteriaBuilder;
 import com.clearspend.capital.common.data.model.TypedMutable;
+import com.clearspend.capital.common.data.util.MustacheResourceLoader;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -13,107 +10,136 @@ import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
-import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.UserRepositoryCustom;
-import com.clearspend.capital.service.BeanUtils;
+import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig;
 import com.clearspend.capital.service.UserFilterCriteria;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
+import com.samskivert.mustache.Template;
+import com.vladmihalcea.hibernate.type.array.StringArrayType;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.jpa.TypedParameterValue;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepositoryCustom {
 
   private final EntityManager entityManager;
   private final CriteriaBuilderFactory creCriteriaBuilderFactory;
+  private final Template findUsersTemplate;
+
+  public UserRepositoryImpl(
+      final EntityManager entityManager,
+      final CriteriaBuilderFactory creCriteriaBuilderFactory,
+      @Value("classpath:db/sql/userRepository/findUsers.sql") final Resource findUsersQuery) {
+    this.entityManager = entityManager;
+    this.creCriteriaBuilderFactory = creCriteriaBuilderFactory;
+    this.findUsersTemplate = MustacheResourceLoader.load(findUsersQuery);
+  }
 
   public record CardAndAllocationName(Card card, String allocationName) {}
+
+  private record SearchTextAndHash(String searchText, byte[] hash) {
+    public String likeSearchText() {
+      return Optional.ofNullable(searchText).map("%%%s%%"::formatted).orElse(null);
+    }
+  }
 
   @Override
   public Page<FilteredUserWithCardListRecord> find(
       @NonNull TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
 
-    CriteriaBuilder<User> userCriteriaBuilder =
-        creCriteriaBuilderFactory
-            .create(entityManager, User.class)
-            .from(User.class, "user")
-            .joinOn(Card.class, "card", JoinType.LEFT)
-            .on("user.id")
-            .eqExpression("card.userId")
-            .end()
-            .joinOn(Allocation.class, "allocation", JoinType.LEFT)
-            .on("card.allocationId")
-            .eqExpression("allocation.id")
-            .end()
-            .select("user");
-
-    userCriteriaBuilder.where("user.businessId").eqLiteral(businessId);
-
-    BeanUtils.setIfTrue(
-        criteria.getWithoutCard(), withoutCard -> userCriteriaBuilder.where("card").isNull());
-
-    BeanUtils.setIfTrue(
-        criteria.getHasVirtualCard(),
-        hasVirtualCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.VIRTUAL));
-
-    BeanUtils.setIfTrue(
-        criteria.getHasPhysicalCard(),
-        hasPlasticCode -> userCriteriaBuilder.where("card.type").eqLiteral(CardType.PHYSICAL));
-
-    BeanUtils.setNotEmpty(
-        criteria.getAllocations(),
-        allocations -> userCriteriaBuilder.where("card.allocationId").in(allocations));
-
-    if (criteria.getIncludeArchived() == null || !criteria.getIncludeArchived()) {
-      userCriteriaBuilder.where("user.archived").eq(false);
-    }
-
-    String searchText = criteria.getSearchText();
-    if (StringUtils.isNotEmpty(searchText)) {
-      searchText = searchText.trim();
-      String likeSearchString = "%" + searchText + "%";
-      byte[] encryptedValue = HashUtil.calculateHash(searchText);
-      userCriteriaBuilder
-          .whereOr()
-          .where("card.lastFour")
-          .eq(searchText)
-          .where("user.firstName.hash")
-          .eq(encryptedValue)
-          .where("user.lastName.hash")
-          .eq(encryptedValue)
-          .where("user.email.hash")
-          .eq(encryptedValue)
-          .where("allocation.name")
-          .like(false)
-          .value(likeSearchString)
-          .noEscape()
-          .endOr();
-    }
-
-    userCriteriaBuilder.groupBy("user.id");
-
-    // we should order by an unique identifier to apply pagination
-    userCriteriaBuilder.orderByDesc("user.created");
-    userCriteriaBuilder.orderByDesc("user.id");
+    final boolean includeArchived =
+        Optional.ofNullable(criteria.getIncludeArchived()).orElse(false);
+    final List<UUID> allocations =
+        Optional.ofNullable(criteria.getAllocations())
+            .filter(list -> !list.isEmpty())
+            .map(list -> list.stream().map(TypedId::toUuid).toList())
+            .orElse(null);
+    final SearchTextAndHash searchTextAndHash =
+        Optional.ofNullable(criteria.getSearchText())
+            .filter(StringUtils::isNotEmpty)
+            .map(String::trim)
+            .map(search -> new SearchTextAndHash(search, HashUtil.calculateHash(search)))
+            .orElse(new SearchTextAndHash(null, null));
 
     PageToken pageToken = criteria.getPageToken();
     int maxResults = pageToken.getPageSize();
     int firstResult = pageToken.getPageNumber() * maxResults;
-    PaginatedCriteriaBuilder<User> page = userCriteriaBuilder.page(firstResult, maxResults);
-    PagedList<User> paged = page.getResultList();
 
-    List<TypedId<UserId>> listOfUserId = paged.stream().map(TypedMutable::getId).toList();
+    final UUID invokingUser =
+        Optional.ofNullable(CurrentUser.getUserId()).map(TypedId::toUuid).orElse(null);
+    final String[] globalRoles =
+        Optional.ofNullable(CurrentUser.getRoles())
+            .map(roles -> roles.toArray(String[]::new))
+            .orElse(new String[0]);
+
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("businessId", businessId.toUuid())
+            .addValue("withoutCard", criteria.getWithoutCard())
+            .addValue("hasVirtualCard", criteria.getHasVirtualCard())
+            .addValue("hasPhysicalCard", criteria.getHasPhysicalCard())
+            .addValue("includeArchived", includeArchived)
+            .addValue("allocations", allocations)
+            .addValue("searchText", searchTextAndHash.searchText())
+            .addValue("likeSearchText", searchTextAndHash.likeSearchText())
+            .addValue("hash", searchTextAndHash.hash())
+            .addValue("firstResult", firstResult)
+            .addValue("pageSize", pageToken.getPageSize())
+            .addValue("invokingUser", invokingUser)
+            .addValue(
+                "globalRoles", new TypedParameterValue(StringArrayType.INSTANCE, globalRoles));
+
+    final List<User> users =
+        JDBCUtils.executeMustacheQuery(
+                entityManager,
+                findUsersTemplate,
+                MustacheQueryConfig.<User>builder()
+                    .parameterSource(params)
+                    .entityClass(User.class)
+                    .build())
+            .result();
+
+    final long totalElements;
+    if (users.size() < pageToken.getPageSize() && pageToken.getPageNumber() == 0) {
+      final SqlParameterSource countParams =
+          params
+              // Difference in behavior between using a JdbcTemplate (below) and a NativeQuery
+              // (above) requires this
+              .addValue("globalRoles", globalRoles, Types.ARRAY)
+              .addValue("count", true);
+      totalElements =
+          JDBCUtils.executeMustacheQuery(
+                  entityManager,
+                  findUsersTemplate,
+                  MustacheQueryConfig.<Long>builder()
+                      .parameterSource(countParams)
+                      .rowMapper((resultSet, rowNum) -> resultSet.getLong(1))
+                      .build())
+              .result()
+              .get(0);
+    } else {
+      totalElements = users.size();
+    }
+
+    final List<TypedId<UserId>> userIds = users.stream().map(TypedMutable::getId).toList();
 
     Map<TypedId<UserId>, List<CardAndAllocationName>> cardsGroupByUserId =
         creCriteriaBuilderFactory
@@ -126,7 +152,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .select("card")
             .select("allocation.name")
             .where("card.userId")
-            .in(listOfUserId)
+            .in(userIds)
             .getResultList()
             .stream()
             .map(
@@ -139,13 +165,13 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                     cardAndAllocationName -> cardAndAllocationName.card.getUserId()));
 
     return new PageImpl<>(
-        paged.stream()
+        users.stream()
             .map(
                 user ->
                     new FilteredUserWithCardListRecord(user, cardsGroupByUserId.get(user.getId())))
             .toList(),
         PageRequest.of(
             criteria.getPageToken().getPageNumber(), criteria.getPageToken().getPageSize()),
-        paged.getTotalSize());
+        totalElements);
   }
 }

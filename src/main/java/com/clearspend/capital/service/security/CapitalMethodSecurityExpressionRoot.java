@@ -8,7 +8,9 @@ import com.clearspend.capital.data.model.AllocationRelated;
 import com.clearspend.capital.data.model.BusinessRelated;
 import com.clearspend.capital.data.model.UserRelated;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
+import com.clearspend.capital.service.security.PermissionEvaluationContext.AllocationStrategy;
 import com.clearspend.capital.service.type.CurrentUser;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -29,21 +31,14 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
 
   @SuppressWarnings("unused")
   public boolean isSelfOwned(@Nullable final Object selfOwnedTarget) {
-    final Object permissionsObject;
-    if (selfOwnedTarget == null) {
-      permissionsObject = null;
-    } else if (selfOwnedTarget instanceof UserRelated) {
-      // Ownable inherits from UserRelated and is covered by this branch
-      permissionsObject = selfOwnedTarget;
-    } else if (selfOwnedTarget instanceof TypedId<?> typedId) {
+    if (selfOwnedTarget instanceof TypedId<?> typedId) {
       throw new IllegalArgumentException(
           "Cannot only use User ID to identify self-owned status, need either Business ID or Allocation ID to properly evaluate permission.");
-    } else {
-      throw new IllegalArgumentException(
-          "Invalid self owned target: %s".formatted(selfOwnedTarget.getClass().getName()));
     }
 
-    return hasPermission(permissionsObject, AllocationPermission.VIEW_OWN.name());
+    final PermissionEvaluationContext context =
+        PermissionEvaluationContext.fromTarget(selfOwnedTarget);
+    return hasPermission(context, AllocationPermission.VIEW_OWN.name());
   }
 
   @SuppressWarnings("unused")
@@ -59,46 +54,66 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
       throw new IllegalArgumentException(
           "Invalid business target: %s".formatted(businessTarget.getClass().getName()));
     }
-    return CurrentUser.getBusinessId().equals(businessId);
+    return Optional.ofNullable(CurrentUser.getBusinessId())
+        .filter(id -> id.equals(businessId))
+        .isPresent();
   }
 
   @SuppressWarnings("unused")
   public boolean hasAllocationPermission(
       @Nullable final Object allocationTarget, @NonNull final String permissions) {
-    final AllocationRelated allocationRelated;
-    if (allocationTarget == null) {
-      allocationRelated = null;
-    } else if (allocationTarget instanceof AllocationRelated ar) {
-      allocationRelated = ar;
-    } else if (allocationTarget instanceof TypedId<?> typedId) {
-      allocationRelated = new AllocationContainer((TypedId<AllocationId>) typedId);
+    final PermissionEvaluationContext context;
+    if (allocationTarget instanceof TypedId<?> typedId) {
+      context =
+          PermissionEvaluationContext.fromTarget(
+              new AllocationContainer((TypedId<AllocationId>) typedId));
     } else {
-      throw new IllegalArgumentException(
-          "Invalid allocation target: %s".formatted(allocationTarget.getClass().getName()));
+      context = PermissionEvaluationContext.fromTarget(allocationTarget);
     }
-    return hasPermission(allocationRelated, permissions);
+    return hasPermission(context, permissions);
   }
 
   @SuppressWarnings("unused")
   public boolean hasGlobalPermission(@NonNull final String permissions) {
-    return hasPermission(null, permissions);
+    return hasPermission(PermissionEvaluationContext.fromTarget(null), permissions);
   }
 
   @SuppressWarnings("unused")
   public boolean hasRootPermission(
       @Nullable final Object businessTarget, @NonNull final String permissions) {
-    final BusinessRelated businessRelated;
-    if (businessTarget == null) {
-      businessRelated = null;
-    } else if (businessTarget instanceof BusinessRelated br) {
-      businessRelated = br;
-    } else if (businessTarget instanceof TypedId<?> typedId) {
-      businessRelated = new BusinessContainer((TypedId<BusinessId>) typedId);
+    final PermissionEvaluationContext context;
+    if (businessTarget instanceof TypedId<?> typedId) {
+      context =
+          PermissionEvaluationContext.fromTarget(
+              new BusinessContainer((TypedId<BusinessId>) typedId));
     } else {
-      throw new IllegalArgumentException(
-          "Invalid business target: %s".formatted(businessTarget.getClass().getName()));
+      context = PermissionEvaluationContext.fromTarget(businessTarget);
     }
-    return hasPermission(businessRelated, permissions);
+    return hasPermission(context, permissions);
+  }
+
+  @SuppressWarnings("unused")
+  public boolean hasPermissionAnyAllocation(
+      @Nullable Object businessTarget, @NonNull String permissions) {
+    final PermissionEvaluationContext context =
+        PermissionEvaluationContext.fromTarget(businessTarget, AllocationStrategy.ANY_ALLOCATION);
+    return hasPermission(context, permissions);
+  }
+
+  @SuppressWarnings("unused")
+  public boolean hasPermissionAnyAllocationForBusiness(
+      @Nullable Object businessTarget, @NonNull String permissions) {
+    final PermissionEvaluationContext context;
+    if (businessTarget instanceof TypedId<?> typedId) {
+      context =
+          PermissionEvaluationContext.fromTarget(
+              new BusinessContainer((TypedId<BusinessId>) typedId),
+              AllocationStrategy.ANY_ALLOCATION);
+    } else {
+      context =
+          PermissionEvaluationContext.fromTarget(businessTarget, AllocationStrategy.ANY_ALLOCATION);
+    }
+    return hasPermission(context, permissions);
   }
 
   @Override

@@ -373,6 +373,41 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   }
 
   @Test
+  void createOrUpdateUserAllocationRole_CannotUpgradeToHigherThanCurrentUserRole() {
+    final User manager1 =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    final User manager2 =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    testHelper.setCurrentUser(manager1);
+
+    // Cannot upgrade your own permissions to be higher
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+                manager1,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_ADMIN));
+
+    // Cannot upgrade someone else to be higher than you are
+    assertThrows(
+        InvalidRequestException.class,
+        () ->
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+                manager2,
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_ADMIN));
+  }
+
+  @Test
   void createAndThenUpdatePermissions() {
     final User newUser = testHelper.createUser(createBusinessRecord.business()).user();
     final Optional<UserAllocationRole> noRoleResult =

@@ -44,19 +44,13 @@ public class UserRolesAndPermissionsCache {
   private final List<FailedPermissions> failedPermissions = new ArrayList<>();
 
   public void storeFailedPermissions(
-      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
+      @NonNull final PermissionEvaluationContext permissionEvaluationContext,
       @NonNull final String requiredPermissions,
-      @Nullable final UserRolesAndPermissions userRolesAndPermissions,
+      @Nullable final List<UserRolesAndPermissions> userRolesAndPermissions,
       @Nullable final OverlapPermissions overlapPermissions) {
     failedPermissions.add(
         new FailedPermissions(
-            permissionEvaluationIds, requiredPermissions, userRolesAndPermissions));
-  }
-
-  public void storeFailedPermissions(
-      @NonNull final PermissionEvaluationIds permissionEvaluationIds,
-      @NonNull final String requiredPermissions) {
-    storeFailedPermissions(permissionEvaluationIds, requiredPermissions, null, null);
+            permissionEvaluationContext, requiredPermissions, userRolesAndPermissions));
   }
 
   public List<FailedPermissions> getFailedPermissions() {

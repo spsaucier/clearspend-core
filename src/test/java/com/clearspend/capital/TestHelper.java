@@ -484,11 +484,29 @@ public class TestHelper {
   }
 
   @SneakyThrows
+  public <T> T runWithCurrentUser(@NonNull final User user, final ThrowingSupplier<T> action) {
+    final CurrentUser oldCurrentUser = CurrentUser.get();
+    setCurrentUser(user);
+    final T result = action.get();
+    setCurrentUser(oldCurrentUser);
+    return result;
+  }
+
+  @SneakyThrows
   public void runWithWebhookUser(@NonNull final User user, final ThrowingRunnable action) {
     final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUserAsWebhook(user);
     action.run();
     setCurrentUser(oldCurrentUser);
+  }
+
+  @SneakyThrows
+  public <T> T runWithWebhookUser(@NonNull final User user, final ThrowingSupplier<T> action) {
+    final CurrentUser oldCurrentUser = CurrentUser.get();
+    setCurrentUserAsWebhook(user);
+    final T result = action.get();
+    setCurrentUser(oldCurrentUser);
+    return result;
   }
 
   @SneakyThrows

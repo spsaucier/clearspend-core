@@ -210,6 +210,15 @@ public class RolesAndPermissionsService {
       prepareUserAllocationRoleChange(User grantee, Allocation allocation, String newRole) {
     entityManager.flush();
 
+    final UserRolesAndPermissions grantorPermissions =
+        userAllocationRoleRepository
+            .findAllByUserIdAndAllocationId(
+                CurrentUser.getUserId(), allocation.getId(), CurrentUser.getRoles())
+            .orElseThrow(
+                () ->
+                    new AccessDeniedException(
+                        "Current User does not have permissions on allocation"));
+
     log.info(
         "Grantor {} , Grantee {}, allocation {}, role {} ",
         CurrentUser.get(),
@@ -330,6 +339,11 @@ public class RolesAndPermissionsService {
     grantorNeedsPerms.add(AllocationPermission.MANAGE_PERMISSIONS);
     assertUserHasPermission(
         allocation.getId(), grantorNeedsPerms, GlobalUserPermission.ALL_CUSTOMER_SERVICE);
+
+    if (!grantorPermissions.allocationPermissions().containsAll(allPerms)) {
+      throw new InvalidRequestException(
+          "Cannot elevate the Grantee to a role higher than the currently authenticated user");
+    }
 
     // Is the grantee archived?
     if (grantee.isArchived()) {

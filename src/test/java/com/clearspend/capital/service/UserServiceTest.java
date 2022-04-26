@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.user.UpdateUserRequest;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -19,6 +20,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 
 @Slf4j
 class UserServiceTest extends BaseCapitalTest {
@@ -430,6 +433,14 @@ class UserServiceTest extends BaseCapitalTest {
   void retrieveUsersForBusiness_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation child =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
     final User employee =
         testHelper
             .createUserWithRole(
@@ -440,17 +451,18 @@ class UserServiceTest extends BaseCapitalTest {
         () -> userService.retrieveUsersForBusiness(createBusinessRecord.business().getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
+        .setAllocation(child)
         .<List<User>>allowRolesOnAllocationWithResult(
-            DefaultRoles.ALLOCATION_ADMIN,
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
             records ->
                 // Will contain all users created for the test, so using these two to ensure it's
                 // working
                 assertThat(records).contains(createBusinessRecord.user(), employee))
         .<List<User>>allowRolesOnAllocationWithResult(
-            Set.of(
-                DefaultRoles.ALLOCATION_MANAGER,
-                DefaultRoles.ALLOCATION_EMPLOYEE,
-                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            DefaultRoles.ALLOCATION_EMPLOYEE,
             records ->
                 // Should only contain the user created with the role, but we don't have that
                 // reference here
@@ -478,19 +490,64 @@ class UserServiceTest extends BaseCapitalTest {
   @Test
   void retrieveUserPage_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation child =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
+
+    final User user1 = testHelper.createUser(createBusinessRecord.business()).user();
+    final User user2 = testHelper.createUser(createBusinessRecord.business()).user();
+    final User user3 = testHelper.createUser(createBusinessRecord.business()).user();
+
     final PageRequest pageRequest = new PageRequest();
-    pageRequest.setPageSize(1);
-    pageRequest.setPageNumber(1);
+    pageRequest.setPageSize(50);
+    pageRequest.setPageNumber(0);
     final UserFilterCriteria criteria = new UserFilterCriteria();
     criteria.setPageToken(PageRequest.toPageToken(pageRequest));
-    final ThrowingRunnable action =
+    final ThrowingSupplier<Page<FilteredUserWithCardListRecord>> action =
         () -> userService.retrieveUserPage(createBusinessRecord.business().getId(), criteria);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .allowAllRolesOnAllocation()
-        .allowAllGlobalRoles()
+        .setAllocation(child)
+        // These users should see all users, including the four created above
+        .<Page<FilteredUserWithCardListRecord>>allowRolesOnAllocationWithResult(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY),
+            records ->
+                assertThat(toUsers(records))
+                    .hasSizeGreaterThan(4)
+                    .contains(createBusinessRecord.user(), user1, user2, user3))
+        // This user should only see themselves
+        .<Page<FilteredUserWithCardListRecord>>allowRolesOnAllocationWithResult(
+            DefaultRoles.ALLOCATION_EMPLOYEE, records -> assertThat(toUsers(records)).hasSize(1))
+        // These users should see all users, including the four created above
+        .<Page<FilteredUserWithCardListRecord>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER),
+            records ->
+                assertThat(toUsers(records))
+                    .hasSizeGreaterThan(4)
+                    .contains(createBusinessRecord.user(), user1, user2, user3))
+        // These users should see only themselves
+        .<Page<FilteredUserWithCardListRecord>>allowGlobalRolesWithResult(
+            Set.of(
+                DefaultRoles.GLOBAL_BOOKKEEPER,
+                DefaultRoles.GLOBAL_VIEWER,
+                DefaultRoles.GLOBAL_RESELLER),
+            records -> assertThat(toUsers(records)).isEmpty())
         .build()
         .validateServiceMethod(action);
+  }
+
+  private List<User> toUsers(final Page<FilteredUserWithCardListRecord> page) {
+    return page.get().map(FilteredUserWithCardListRecord::user).toList();
   }
 
   @Test
@@ -508,27 +565,17 @@ class UserServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void createCSVFile_UserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    final PageRequest pageRequest = new PageRequest();
-    pageRequest.setPageSize(1);
-    pageRequest.setPageNumber(1);
-    final UserFilterCriteria criteria = new UserFilterCriteria();
-    criteria.setPageToken(PageRequest.toPageToken(pageRequest));
-    final ThrowingRunnable action =
-        () -> userService.createCSVFile(createBusinessRecord.business().getId(), criteria);
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .allowAllRolesOnAllocation()
-        .allowAllGlobalRoles()
-        .build()
-        .validateServiceMethod(action);
-  }
-
-  @Test
   void retrieveUser_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation child =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                createBusinessRecord.user())
+            .allocation();
     final User owner =
         testHelper
             .createUserWithRole(
@@ -538,7 +585,12 @@ class UserServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action = () -> userService.retrieveUser(owner.getId());
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
-        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .setAllocation(child)
+        .allowRolesOnAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
         .allowGlobalRoles(
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))

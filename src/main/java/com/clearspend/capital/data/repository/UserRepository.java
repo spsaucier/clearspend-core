@@ -7,6 +7,8 @@ import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString
 import com.clearspend.capital.data.model.User;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -20,6 +22,8 @@ public interface UserRepository
   Optional<User> findBySubjectRef(String subjectRef);
 
   Optional<User> findByBusinessIdAndId(TypedId<BusinessId> businessId, TypedId<UserId> id);
+
+  Page<User> findAllByBusinessId(final TypedId<BusinessId> businessId, final Pageable pageable);
 
   List<User> findByBusinessIdAndFirstNameLikeOrLastNameLike(
       TypedId<BusinessId> businessId,

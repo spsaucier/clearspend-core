@@ -55,6 +55,7 @@ import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -92,6 +93,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final CardRepository cardRepository;
   private final ExpenseCategoryRepository expenseCategoryRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final PermissionValidationHelper permissionValidationHelper;
 
   private final Faker faker = new Faker();
 

@@ -857,11 +857,10 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
 
   @Test
   void getAllAllocationPermissions_BusinessIsClosed_NoReadPermission() {
-    createBusinessRecord.business().setStatus(BusinessStatus.CLOSED);
-    entityManager.flush();
     final User employee =
         testHelper.createUserWithRole(rootAllocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
     createBusinessRecord.business().setStatus(BusinessStatus.CLOSED);
+    entityManager.flush();
     final SqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("businessId", createBusinessRecord.business().getId().toUuid())
@@ -976,7 +975,8 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                     AllocationPermission.READ,
                     AllocationPermission.VIEW_OWN,
                     AllocationPermission.CATEGORIZE,
-                    AllocationPermission.LINK_RECEIPTS),
+                    AllocationPermission.LINK_RECEIPTS,
+                    AllocationPermission.EMPLOYEE),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)),
             new AllAllocationPermissions(
                 bookkeeper.getId(),
@@ -989,7 +989,8 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                     AllocationPermission.READ,
                     AllocationPermission.VIEW_OWN,
                     AllocationPermission.CATEGORIZE,
-                    AllocationPermission.LINK_RECEIPTS),
+                    AllocationPermission.LINK_RECEIPTS,
+                    AllocationPermission.EMPLOYEE),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)));
   }
 
