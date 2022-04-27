@@ -10,7 +10,7 @@ pipelines:
   default:
     - step:
         name: Build and test application
-        image: openjdk:17.0.2-jdk-oracle
+        image: amazoncorretto:17.0.3-al2
         size: 2x
         artifacts:
           - build/libs/*.jar
@@ -44,7 +44,7 @@ pipelines:
     master:
       - step:
           name: Build and test application
-          image: openjdk:17.0.2-jdk-oracle
+          image: amazoncorretto:17.0.3-al2
           size: 2x
           artifacts:
             - build/libs/*.jar
