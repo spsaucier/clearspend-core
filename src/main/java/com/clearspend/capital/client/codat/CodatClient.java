@@ -31,8 +31,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -221,7 +219,7 @@ public class CodatClient {
 
     DirectCostRequest request =
         new DirectCostRequest(
-            LocalDate.now(ZoneOffset.UTC),
+            transaction.getActivityTime().toLocalDate(),
             currency,
             -transaction.getAmount().getAmount().doubleValue(),
             0,
