@@ -236,6 +236,19 @@ public class BusinessService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  public com.clearspend.capital.controller.type.business.Business updateBusinessTosAcceptance(
+      TypedId<BusinessId> businessId, TosAcceptance tosAcceptance) {
+    Business business = retrieveBusiness(businessId, true);
+    business.getStripeData().setTosAcceptance(tosAcceptance);
+    businessRepository.save(business);
+
+    stripeClient.updateAccountTosAcceptance(business);
+
+    return new com.clearspend.capital.controller.type.business.Business(business);
+  }
+
+  @Transactional
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public Business updateBusinessStripeData(
       TypedId<BusinessId> businessId,

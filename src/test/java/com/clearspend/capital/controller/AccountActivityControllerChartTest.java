@@ -344,7 +344,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     Business business = createBusinessRecord.business();
 
-    testHelper.createBusinessOwner(business.getId(), email, password);
+    testHelper.createBusinessOwner(business.getId(), email, password, false);
 
     Cookie authCookie = testHelper.login(email, password);
 

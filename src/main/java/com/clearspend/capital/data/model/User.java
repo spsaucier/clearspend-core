@@ -8,9 +8,9 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.vladmihalcea.hibernate.type.array.EnumArrayType;
-import java.time.LocalDateTime;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -67,8 +67,8 @@ public class User extends TypedMutable<UserId> implements BusinessRelated, UserR
 
   private boolean archived;
 
-  // Timestamp for terms & conditions
-  private LocalDateTime termsAndConditionsAcceptanceTimestamp;
+  // Acceptance for terms & conditions and terms of service
+  private TosAcceptance tosAcceptance;
 
   @Override
   public TypedId<UserId> getUserId() {

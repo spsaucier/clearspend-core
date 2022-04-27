@@ -784,4 +784,9 @@ public class StripeMockClient extends StripeClient {
         // amounts going back to Stripe for authorizations should be positive
         networkCommon.getRequestedAmount().abs());
   }
+
+  @Override
+  public Account updateAccountTosAcceptance(Business business) {
+    return new Account();
+  }
 }

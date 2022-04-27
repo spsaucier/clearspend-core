@@ -848,7 +848,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         testHelper.createBusinessOwner(
             createBusinessRecord.business().getId(),
             testHelper.generateEmail(),
-            testHelper.generatePassword());
+            testHelper.generatePassword(),
+            false);
     assertUserRolesAndPermissions(
         ALLOCATION_ADMIN,
         EnumSet.allOf(AllocationPermission.class),

@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.TosAcceptance;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.Month;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,21 +62,33 @@ public class TermsAndConditionsServiceTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(user);
 
-    user.setTermsAndConditionsAcceptanceTimestamp(
-        LocalDateTime.of(2015, Month.JULY, 29, 19, 30, 40));
-    log.info("userAcceptanceTimestamp: {}", user.getTermsAndConditionsAcceptanceTimestamp());
-    assertThat(user.getTermsAndConditionsAcceptanceTimestamp().isAfter(documentTimestamp))
+    user.setTosAcceptance(
+        new TosAcceptance(
+            OffsetDateTime.of(LocalDateTime.of(2015, Month.JULY, 29, 19, 30, 40), ZoneOffset.UTC),
+            testHelper.getFaker().internet().ipV4Address(),
+            testHelper.getFaker().internet().userAgentAny()));
+    log.info("userAcceptanceTimestamp: {}", user.getTosAcceptance());
+    assertThat(
+            user.getTosAcceptance()
+                .getDate()
+                .isAfter(OffsetDateTime.of(documentTimestamp, ZoneOffset.UTC)))
         .isFalse();
     // User who hasn't accepted T&C
-    user.setTermsAndConditionsAcceptanceTimestamp(
-        LocalDateTime.of(1970, Month.SEPTEMBER, 12, 00, 00, 00));
-    assertThat(documentTimestamp.isAfter(user.getTermsAndConditionsAcceptanceTimestamp())).isTrue();
+    user.setTosAcceptance(
+        new TosAcceptance(
+            OffsetDateTime.of(
+                LocalDateTime.of(1970, Month.SEPTEMBER, 12, 00, 00, 00), ZoneOffset.UTC),
+            testHelper.getFaker().internet().ipV4Address(),
+            testHelper.getFaker().internet().userAgentAny()));
+
+    assertThat(documentTimestamp.isAfter(user.getTosAcceptance().getDate().toLocalDateTime()))
+        .isTrue();
 
     // User who just got created and hasn't accepted anything yet CAP-878
     User peon = testHelper.createUser(createBusinessRecord.business()).user();
 
     testHelper.setCurrentUser(peon);
-    assertThat(peon.getTermsAndConditionsAcceptanceTimestamp()).isNull();
+    assertThat(peon.getTosAcceptance()).isNull();
     assertThat(
             termsAndConditionsService
                 .userAcceptedTermsAndConditions()

@@ -27,8 +27,6 @@ import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -138,7 +136,7 @@ public class UserService {
     user.setId(userId);
     user.setAddress(address);
     user.setSubjectRef(subjectRef);
-    user.setTermsAndConditionsAcceptanceTimestamp(tosAcceptance.getDate().toLocalDateTime());
+    user.setTosAcceptance(tosAcceptance);
 
     user = userRepository.save(user);
     userRepository.flush();
@@ -405,9 +403,9 @@ public class UserService {
     return csvFile.toByteArray();
   }
 
-  void acceptTermsAndConditions(TypedId<UserId> userId) {
+  void acceptTermsAndConditions(TypedId<UserId> userId, TosAcceptance tosAcceptance) {
     User user = retrieveUserForService(userId);
-    user.setTermsAndConditionsAcceptanceTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+    user.setTosAcceptance(tosAcceptance);
     userRepository.save(user);
     userRepository.flush();
   }

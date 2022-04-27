@@ -336,6 +336,73 @@ public class StripeClient {
                 accountUpdateParams, getRequestOptions(new TypedId<>(), 0L, stripeAccountId)));
   }
 
+  public Account updateAccountTosAcceptance(Business business) {
+    Account account = new Account();
+    String stripeAccountId = business.getStripeData().getAccountRef();
+    account.setId(stripeAccountId);
+
+    AccountUpdateParams.Builder accountBuilder = AccountUpdateParams.builder();
+
+    AccountUpdateParams accountUpdateParams =
+        accountBuilder
+            .setTosAcceptance(
+                AccountUpdateParams.TosAcceptance.builder()
+                    .setDate(
+                        business
+                            .getStripeData()
+                            .getTosAcceptance()
+                            .getDate()
+                            .toInstant()
+                            .getEpochSecond())
+                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                    .setUserAgent(business.getStripeData().getTosAcceptance().getUserAgent())
+                    .setServiceAgreement("full")
+                    .build())
+            .setSettings(
+                AccountUpdateParams.Settings.builder()
+                    .setCardIssuing(
+                        AccountUpdateParams.Settings.CardIssuing.builder()
+                            .setTosAcceptance(
+                                AccountUpdateParams.Settings.CardIssuing.TosAcceptance.builder()
+                                    .setDate(
+                                        business
+                                            .getStripeData()
+                                            .getTosAcceptance()
+                                            .getDate()
+                                            .toInstant()
+                                            .getEpochSecond())
+                                    .setIp(business.getStripeData().getTosAcceptance().getIp())
+                                    .setUserAgent(
+                                        business.getStripeData().getTosAcceptance().getUserAgent())
+                                    .build())
+                            .build())
+                    .putExtraParam(
+                        "treasury",
+                        Map.of(
+                            "tos_acceptance",
+                            Map.of(
+                                "date",
+                                business
+                                    .getStripeData()
+                                    .getTosAcceptance()
+                                    .getDate()
+                                    .toInstant()
+                                    .getEpochSecond(),
+                                "ip",
+                                business.getStripeData().getTosAcceptance().getIp(),
+                                "user_agent",
+                                business.getStripeData().getTosAcceptance().getUserAgent())))
+                    .build())
+            .build();
+
+    return callStripe(
+        "updateAccount",
+        accountUpdateParams,
+        () ->
+            account.update(
+                accountUpdateParams, getRequestOptions(new TypedId<>(), 0L, stripeAccountId)));
+  }
+
   public Account retrieveAccount(String stripeAccountId) {
     return callStripe("retrieveAccount", null, () -> Account.retrieve(stripeAccountId));
   }

@@ -277,7 +277,7 @@ public class TestHelper {
                           && passwords.containsKey(u.getId()))
               .findFirst()
               .orElse(
-                  createBusinessOwner(business.getId(), generateEmail(), generatePassword())
+                  createBusinessOwner(business.getId(), generateEmail(), generatePassword(), false)
                       .user());
       entityManager.flush();
       setCurrentUser(user);
@@ -369,6 +369,10 @@ public class TestHelper {
 
   public String generateAllocationName() {
     return "Alloc-" + faker.number().digits(8);
+  }
+
+  public Faker getFaker() {
+    return faker;
   }
 
   public OnboardBusinessRecord onboardBusiness() throws Exception {
@@ -709,7 +713,7 @@ public class TestHelper {
       reviewer = "jscarbor",
       explanation = "for mimicking the onboarding process")
   public BusinessOwnerAndUserRecord createBusinessOwner(
-      TypedId<BusinessId> businessId, String email, String password) {
+      TypedId<BusinessId> businessId, String email, String password, Boolean representative) {
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
     UUID fusionAuthUserId =
         fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
@@ -725,7 +729,7 @@ public class TestHelper {
                 null,
                 null,
                 true,
-                false,
+                representative,
                 false,
                 false,
                 null,
@@ -917,7 +921,7 @@ public class TestHelper {
                     faker.internet().userAgentAny()))
             .business();
     BusinessOwnerAndUserRecord businessOwner =
-        createBusinessOwner(business.getId(), email, password);
+        createBusinessOwner(business.getId(), email, password, true);
     passwords.put(businessOwner.user().getId(), password);
     setCurrentUser(businessOwner.user());
     AllocationRecord rootAllocation =
