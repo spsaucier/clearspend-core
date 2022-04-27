@@ -96,6 +96,10 @@ public class BusinessLimitService {
 
   @PreAuthorize("hasRootPermission(#businessId, 'READ')")
   public BusinessLimit retrieveBusinessLimit(TypedId<BusinessId> businessId) {
+    return retrieveBusinessLimitForService(businessId);
+  }
+
+  BusinessLimit retrieveBusinessLimitForService(final TypedId<BusinessId> businessId) {
     BusinessLimit businessLimit = findBusinessLimit(businessId);
     businessLimit.setIssuedPhysicalCardsTotal(
         cardRepository.countByBusinessIdAndType(businessId, CardType.PHYSICAL));

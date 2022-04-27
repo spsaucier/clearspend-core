@@ -110,7 +110,8 @@ public class CardService {
         throw new InvalidRequestException("Shipping address required for physical cards");
       }
 
-      BusinessLimit businessLimit = businessLimitService.retrieveBusinessLimit(businessId);
+      BusinessLimit businessLimit =
+          businessLimitService.retrieveBusinessLimitForService(businessId);
       if (businessLimit.getIssuedPhysicalCardsTotal()
           >= businessLimit.getIssuedPhysicalCardsLimit()) {
         throw new InvalidRequestException("Physical card issuance limit exceeded");
