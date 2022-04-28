@@ -29,6 +29,7 @@ import com.stripe.model.Account.BusinessProfile;
 import com.stripe.model.Account.Company;
 import com.stripe.model.Address;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -317,10 +318,9 @@ public class BusinessService {
     return retrieveBusiness(businessId, mustExist);
   }
 
-  Business retrieveBusinessByEmployerIdentificationNumber(String employerIdentificationNumber) {
-    return businessRepository
-        .findByEmployerIdentificationNumber(employerIdentificationNumber)
-        .orElse(null);
+  Optional<Business> retrieveBusinessByEmployerIdentificationNumber(
+      String employerIdentificationNumber) {
+    return businessRepository.findByEmployerIdentificationNumber(employerIdentificationNumber);
   }
 
   @PreAuthorize("hasGlobalPermission('APPLICATION')")

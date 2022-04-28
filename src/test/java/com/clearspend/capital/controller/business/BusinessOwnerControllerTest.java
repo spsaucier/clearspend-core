@@ -411,7 +411,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                     .contentType("application/json")
                     .content(body)
                     .cookie(onboardBusinessRecord.cookie()))
-            .andExpect(status().is5xxServerError())
+            .andExpect(status().is4xxClientError())
             .andReturn()
             .getResponse();
 
@@ -438,7 +438,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                     .contentType("application/json")
                     .content(body)
                     .cookie(onboardBusinessRecord.cookie()))
-            .andExpect(status().is5xxServerError())
+            .andExpect(status().is4xxClientError())
             .andReturn()
             .getResponse();
 
@@ -465,7 +465,7 @@ class BusinessOwnerControllerTest extends BaseCapitalTest {
                     .contentType("application/json")
                     .content(body)
                     .cookie(onboardBusinessRecord.cookie()))
-            .andExpect(status().is5xxServerError())
+            .andExpect(status().is4xxClientError())
             .andReturn()
             .getResponse();
 

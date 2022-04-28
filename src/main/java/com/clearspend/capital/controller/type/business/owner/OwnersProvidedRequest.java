@@ -12,10 +12,18 @@ import lombok.Setter;
 public class OwnersProvidedRequest {
 
   @JsonProperty("noOtherOwnersToProvide")
-  @Schema(title = "No other owners to provide")
+  @Schema(
+      title = "No other owners to provide",
+      description =
+          "If this will be set to true, will send to stripe info that we have no owner to provide.",
+      defaultValue = "false")
   private Boolean noOtherOwnersToProvide;
 
   @JsonProperty("noExecutiveToProvide")
-  @Schema(title = "No executive to provide")
+  @Schema(
+      title = "No executive to provide",
+      description =
+          "If this will be set to true, will send to stripe info that we have no executive to provide.",
+      defaultValue = "false")
   private Boolean noExecutiveToProvide;
 }

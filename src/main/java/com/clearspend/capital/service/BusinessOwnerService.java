@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.service.type.BusinessOwnerData;
+import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.stripe.model.Person;
 import io.jsonwebtoken.lang.Assert;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -124,6 +126,18 @@ public class BusinessOwnerService {
     List<BusinessOwner> ownersForBusinessId =
         businessOwnerRepository.findByBusinessId(businessOwnerData.getBusinessId());
 
+    ownersForBusinessId.stream()
+        .filter(
+            businessOwner ->
+                businessOwnerData.getBusinessOwnerId() == null
+                    && businessOwner.getEmail().getEncrypted().equals(businessOwnerData.getEmail()))
+        .findAny()
+        .ifPresent(
+            businessOwner -> {
+              throw new InvalidKycDataException(
+                  StripePersonFieldsToClearspendOwnerFields.email.name(), "Duplicate email.");
+            });
+
     if (business.getType() != BusinessType.INDIVIDUAL) {
       if (ownersForBusinessId.stream()
               .filter(businessOwner -> businessOwner.getRelationshipRepresentative() != null)
@@ -161,32 +175,39 @@ public class BusinessOwnerService {
 
     if (!List.of(BusinessType.SOLE_PROPRIETORSHIP, BusinessType.INDIVIDUAL)
             .contains(business.getType())
-        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipRepresentative)) {
-      throw new AssertionError(
+        && ownersForBusinessId.stream()
+            .noneMatch(
+                businessOwner ->
+                    BooleanUtils.isTrue(businessOwner.getRelationshipRepresentative()))) {
+      throw new InvalidKycDataException(
           String.format(
               "Please provide at least one representative for %s.", business.getLegalName()));
     }
 
-    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoOtherOwnersToProvide())
+    if (!BooleanUtils.isTrue(ownersProvidedRequest.getNoOtherOwnersToProvide())
         && List.of(
                 BusinessType.MULTI_MEMBER_LLC,
                 BusinessType.PRIVATE_PARTNERSHIP,
                 BusinessType.PRIVATE_CORPORATION)
             .contains(business.getType())
-        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipOwner)) {
-      throw new AssertionError(
+        && ownersForBusinessId.stream()
+            .noneMatch(
+                businessOwner -> BooleanUtils.isTrue(businessOwner.getRelationshipOwner()))) {
+      throw new InvalidKycDataException(
           String.format("Please provide owner details for business %s.", business.getLegalName()));
     }
 
-    if (!Boolean.TRUE.equals(ownersProvidedRequest.getNoExecutiveToProvide())
+    if (!BooleanUtils.isTrue(ownersProvidedRequest.getNoExecutiveToProvide())
         && List.of(
                 BusinessType.MULTI_MEMBER_LLC,
                 BusinessType.PRIVATE_PARTNERSHIP,
                 BusinessType.PRIVATE_CORPORATION,
                 BusinessType.INCORPORATED_NON_PROFIT)
             .contains(business.getType())
-        && ownersForBusinessId.stream().noneMatch(BusinessOwner::getRelationshipExecutive)) {
-      throw new AssertionError(
+        && ownersForBusinessId.stream()
+            .noneMatch(
+                businessOwner -> BooleanUtils.isTrue(businessOwner.getRelationshipExecutive()))) {
+      throw new InvalidKycDataException(
           String.format("Please provide the executive for business %s.", business.getLegalName()));
     }
   }

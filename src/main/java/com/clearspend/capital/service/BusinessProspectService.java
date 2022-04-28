@@ -402,13 +402,7 @@ public class BusinessProspectService {
       throw new InvalidRequestException("password has not been set");
     }
 
-    if (businessService.retrieveBusinessByEmployerIdentificationNumber(
-            convertBusinessProspect.getEmployerIdentificationNumber())
-        != null) {
-      throw new InvalidKycDataException(
-          StripeAccountFieldsToClearspendBusinessFields.employerIdentificationNumber.name(),
-          "Duplicate employer identification number.");
-    }
+    validateBusinessUniqueIdentifiers(convertBusinessProspect);
 
     // When a business is created, a corespondent into stripe will be created too
     BusinessAndStripeAccount businessAndStripeAccount =
@@ -440,6 +434,17 @@ public class BusinessProspectService {
         businessOwner.businessOwner(),
         businessOwner.user(),
         Collections.emptyList());
+  }
+
+  private void validateBusinessUniqueIdentifiers(ConvertBusinessProspect convertBusinessProspect) {
+    if (businessService
+        .retrieveBusinessByEmployerIdentificationNumber(
+            convertBusinessProspect.getEmployerIdentificationNumber())
+        .isPresent()) {
+      throw new InvalidKycDataException(
+          StripeAccountFieldsToClearspendBusinessFields.employerIdentificationNumber.name(),
+          "Duplicate employer identification number.");
+    }
   }
 
   @Transactional
