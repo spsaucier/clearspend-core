@@ -10,6 +10,7 @@ import com.clearspend.capital.controller.type.chartOfAccounts.ChartOfAccountsMap
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import java.util.List;
@@ -58,16 +59,47 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  public void testSyncQBOExpenseCategoryWithoutAutoSyncOn() {
+  public void testSyncQBOExpenseCategoryWithAutoSyncOff() {
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(business.getId(), 0, "Old", ExpenseCategoryStatus.ACTIVE, false);
+
+    expenseCategoryRepository.save(expenseCategory);
+    ChartOfAccountsMapping expenseMapping =
+        new ChartOfAccountsMapping(business.getId(), expenseCategory.getId(), 0, "101");
+    mappingRepository.save(expenseMapping);
+
     testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.createCodatExpenseCategoryMappings(business);
     business.setAutoCreateExpenseCategories(false);
+
     List<ChartOfAccountsMappingResponse> result =
         mappingService.getAllMappingsForBusiness(business.getId());
-    mappingService.updateNameForMappedCodatId(business.getId(), "2", "abc");
+    mappingService.updateNameForMappedCodatId(business.getId(), "101", "new");
     Optional<ExpenseCategory> expenseCategoryOptional =
-        expenseCategoryRepository.findFirstCategoryByName("abc");
+        expenseCategoryRepository.findFirstCategoryByName("new");
     assertThat(expenseCategoryOptional.isPresent()).isFalse();
+  }
+
+  @Test
+  public void testSyncQBOExpenseCategoryWithAutoSyncOn() {
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(business.getId(), 0, "Old", ExpenseCategoryStatus.ACTIVE, false);
+
+    expenseCategoryRepository.save(expenseCategory);
+    ChartOfAccountsMapping expenseMapping =
+        new ChartOfAccountsMapping(business.getId(), expenseCategory.getId(), 0, "101");
+    mappingRepository.save(expenseMapping);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    testHelper.createCodatExpenseCategoryMappings(business);
+    business.setAutoCreateExpenseCategories(true);
+
+    List<ChartOfAccountsMappingResponse> result =
+        mappingService.getAllMappingsForBusiness(business.getId());
+    mappingService.updateNameForMappedCodatId(business.getId(), "101", "new");
+    Optional<ExpenseCategory> expenseCategoryOptional =
+        expenseCategoryRepository.findFirstCategoryByName("new");
+    assertThat(expenseCategoryOptional.isPresent()).isTrue();
   }
 
   @Test

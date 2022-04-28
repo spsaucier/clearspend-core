@@ -149,7 +149,7 @@ public class ChartOfAccountsMappingService {
 
   public void updateNameForMappedCodatId(
       TypedId<BusinessId> businessId, String accountRefId, String categoryName) {
-    // if auto sync does not turn on, skip expense category name sync
+    // if automatic updates are off, skip expense category name update
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
     if (!currentBusiness.getAutoCreateExpenseCategories()) return;
 

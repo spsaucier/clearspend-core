@@ -188,7 +188,7 @@ public class ChartOfAccountsService {
             businessNotificationRepository.save(newAccountNotification);
 
             chartOfAccountsMappingService.updateNameForMappedCodatId(
-                businessId, match.get().getId(), match.get().getName());
+                businessId, match.get().getId(), codatAccountNested.getName());
 
             updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
           }
