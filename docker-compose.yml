@@ -1,3 +1,4 @@
+---
 version: '3.9'
 
 services:
@@ -14,7 +15,7 @@ services:
       - ./local/database:/docker-entrypoint-initdb.d
 
   fusionauth:
-    image: 'fusionauth/fusionauth-app:1.30.2'
+    image: 'fusionauth/fusionauth-app:1.35.0'
     container_name: fusion-auth
     depends_on:
       - capital-db

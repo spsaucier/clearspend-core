@@ -5,8 +5,11 @@ import com.inversoft.error.Error;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import io.fusionauth.domain.TwoFactorMethod;
+import io.fusionauth.domain.User;
+import io.fusionauth.domain.UserTwoFactorConfiguration;
 import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
+import io.fusionauth.domain.api.TwoFactorDisableRequest;
 import io.fusionauth.domain.api.TwoFactorRequest;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.UserResponse;
@@ -14,12 +17,13 @@ import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
-import java.util.ArrayList;
+import io.fusionauth.domain.api.user.ChangePasswordRequest;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -30,6 +34,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -41,14 +46,13 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
 
-  private record TwoFactorEnabled(
-      TwoFactorRequest request, List<TwoFactorMethod> methods, List<String> recoveryCodes) {}
-
-  private record TwoFactorPending(UUID userId, Map<String, Object> context, String code) {}
+  private record TwoFactorPending(
+      UUID userId, Map<String, Object> context, String code, String trustChallenge) {}
 
   private final Map<UUID, TwoFactorEnable> pendingEnable = new HashMap<>();
-  private final Map<UUID, TwoFactorEnabled> twoFactorEnabled = new HashMap<>();
+  private final Map<UUID, UserTwoFactorConfiguration> twoFactorConfiguration = new HashMap<>();
   private final Map<TwoFactorId, TwoFactorPending> twoFactorPending = new HashMap<>();
+  private final Map<String, String> trustTokensToChallenges = new HashMap<>();
 
   @Getter
   @EqualsAndHashCode
@@ -67,8 +71,9 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   public void reset() {
     pendingEnable.clear();
-    twoFactorEnabled.clear();
+    twoFactorConfiguration.clear();
     twoFactorPending.clear();
+    trustTokensToChallenges.clear();
   }
 
   public String getTwoFactorCodeForEnable(UUID userId) {
@@ -124,9 +129,10 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
     TwoFactorId twoFactorId = new TwoFactorId();
     twoFactorPending.put(
-        twoFactorId, new TwoFactorPending(userId, state, generateNextTwoFactorCode()));
+        twoFactorId,
+        new TwoFactorPending(userId, state, generateNextTwoFactorCode(), request.trustChallenge));
 
-    List<TwoFactorMethod> methods = twoFactorEnabled.get(userId).methods;
+    List<TwoFactorMethod> methods = twoFactorConfiguration.get(userId).methods;
     String code = RandomStringUtils.randomNumeric(6);
     TwoFactorStartResponse response =
         new TwoFactorStartResponse(code, methods, twoFactorId.getTwoFactorId());
@@ -158,6 +164,24 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   @Override
   public ClientResponse<Void, Errors> disableTwoFactor(UUID userId, String methodId, String code) {
+    TwoFactorDisableRequest request = new TwoFactorDisableRequest();
+    request.methodId = methodId;
+    request.code = code;
+    /*
+     * It might be appropriate to pull out common code between these two methods as
+     * a private function, but that's not necessary since it is not calling FA
+     * but it's mocking the functionality since it's not passing work up to the
+     * superclass.
+     */
+    return disableTwoFactorWithRequest(userId, request);
+  }
+
+  @Override
+  public ClientResponse<Void, Errors> disableTwoFactorWithRequest(
+      UUID userId, TwoFactorDisableRequest request) {
+    String code = request.code;
+    String methodId = request.methodId;
+
     if (!retrieveUser(userId).wasSuccessful()) {
       return clientResponseFactory(404);
     }
@@ -169,18 +193,22 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
             .orElse(null);
 
     boolean disableAll =
-        pendingAuth == null && twoFactorEnabled.get(userId).recoveryCodes.remove(code);
+        pendingAuth == null && twoFactorConfiguration.get(userId).recoveryCodes.remove(code);
 
     if (pendingAuth == null && !disableAll) {
       return clientResponseFactory(421);
     } else {
+      // This is the place to validate tokens, but FA doesn't support that (yet?)
+
+      // good to go
+
       if (pendingAuth != null) {
         twoFactorPending.remove(pendingAuth.getKey());
       }
       if (disableAll) {
-        twoFactorEnabled.remove(userId);
+        twoFactorConfiguration.remove(userId);
       } else {
-        Iterator<TwoFactorMethod> methods = twoFactorEnabled.get(userId).methods.iterator();
+        Iterator<TwoFactorMethod> methods = twoFactorConfiguration.get(userId).methods.iterator();
         while (methods.hasNext()) {
           TwoFactorMethod m = methods.next();
           if (m.id.equals(methodId)) {
@@ -188,8 +216,8 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
             break;
           }
         }
-        if (twoFactorEnabled.get(userId).methods.isEmpty()) {
-          twoFactorEnabled.remove(userId);
+        if (twoFactorConfiguration.get(userId).methods.isEmpty()) {
+          twoFactorConfiguration.remove(userId);
         }
       }
     }
@@ -230,20 +258,18 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       method.mobilePhone = enableRequest.mobilePhone;
       method.email = enableRequest.email;
 
-      if (!twoFactorEnabled.containsKey(userId)) {
-        twoFactorEnabled.put(
-            userId,
-            new TwoFactorEnabled(
-                request,
-                new ArrayList<>(),
-                IntStream.range(0, 10)
-                    .mapToObj(i -> generateNextTwoFactorCode())
-                    .collect(Collectors.toList())));
+      if (!twoFactorConfiguration.containsKey(userId)) {
+        UserTwoFactorConfiguration config = new UserTwoFactorConfiguration();
+        config.recoveryCodes.addAll(
+            IntStream.range(0, 10)
+                .mapToObj(i -> generateNextTwoFactorCode())
+                .collect(Collectors.toList()));
+        twoFactorConfiguration.put(userId, config);
       }
-      twoFactorEnabled.get(userId).methods.add(method);
+      twoFactorConfiguration.get(userId).methods.add(method);
       pendingEnable.remove(userId);
       return clientResponseFactory(
-          200, new TwoFactorResponse(twoFactorEnabled.get(userId).recoveryCodes));
+          200, new TwoFactorResponse(twoFactorConfiguration.get(userId).recoveryCodes));
     }
   }
 
@@ -262,14 +288,16 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     }
     if (response.successResponse != null
         && response.successResponse.user != null
-        && twoFactorEnabled.containsKey(response.successResponse.user.id)) {
-      TwoFactorEnabled twoFactorEnableRec = twoFactorEnabled.get(response.successResponse.user.id);
+        && twoFactorConfiguration.containsKey(response.successResponse.user.id)) {
+      UserTwoFactorConfiguration twoFactorEnableRec =
+          twoFactorConfiguration.get(response.successResponse.user.id);
       TwoFactorId twoFactorId = new TwoFactorId();
       twoFactorPending.put(
           twoFactorId,
           new TwoFactorPending(
               response.successResponse.user.id,
               Map.of("successResponse", response.successResponse),
+              null,
               null));
 
       LoginResponse loginResponse = new LoginResponse();
@@ -298,7 +326,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
           400, "twoFactorId", "[invalid]twoFactorId", "The given twoFactorId was not found.");
     }
     TwoFactorMethod method =
-        twoFactorEnabled.get(pending.userId).methods.stream()
+        twoFactorConfiguration.get(pending.userId).methods.stream()
             .filter(fa -> fa.id.equals(request.methodId))
             .findFirst()
             .orElse(null);
@@ -319,7 +347,11 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
     twoFactorPending.put(
         twoFactorId1,
-        new TwoFactorPending(pending.userId, twoFactorPending.get(twoFactorId1).context, code));
+        new TwoFactorPending(
+            pending.userId,
+            twoFactorPending.get(twoFactorId1).context,
+            code,
+            pending.trustChallenge));
 
     return clientResponseFactory(200);
   }
@@ -349,14 +381,131 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     }
 
     final TwoFactorPending twoFactorPending = this.twoFactorPending.get(twoFactorId);
-    if (request.code.equals(twoFactorPending.code)
-        || twoFactorEnabled.get(twoFactorPending.userId).recoveryCodes.contains(request.code)) {
+    if (twoFactorPending == null) {
+      response.status = 421;
+    } else if (twoFactorPending.code.equals(request.code)
+        || spendRecoveryCode(twoFactorPending.userId, request.code)) {
+      this.twoFactorPending.remove(twoFactorId);
+      /* for a normal login, this mock will cache the result of the login pending 2FA validation
+       * and then dress the user with their mocked 2FA status.
+       */
       response.successResponse =
-          (LoginResponse) this.twoFactorPending.remove(twoFactorId).context.get("successResponse");
+          Optional.ofNullable((LoginResponse) twoFactorPending.context.get("successResponse"))
+              .map(
+                  lr -> {
+                    apply2FA(lr.user);
+                    return lr;
+                  })
+              .orElse(
+                  new LoginResponse(retrieveUser(twoFactorPending.userId).successResponse.user));
+      Optional.ofNullable(twoFactorPending.trustChallenge)
+          .ifPresent(
+              t -> {
+                String trustToken = RandomStringUtils.randomPrint(24);
+                response.successResponse.trustToken = trustToken;
+                this.trustTokensToChallenges.put(trustToken, twoFactorPending.trustChallenge);
+              });
       response.status = 200;
+      response.successResponse.state = twoFactorPending.context();
     } else {
       response.status = 421;
     }
     return response;
+  }
+
+  /**
+   * Spend an outstanding recovery code.
+   *
+   * @param userId The user whose code to spend
+   * @param code The code being spent
+   * @return True if the code was spent, false if it didn't match outstanding codes
+   */
+  private boolean spendRecoveryCode(@NonNull UUID userId, @NonNull String code) {
+    return twoFactorConfiguration.get(userId).recoveryCodes.remove(code);
+  }
+
+  @Override
+  public ClientResponse<Void, Errors> changePasswordByIdentity(ChangePasswordRequest request) {
+    /*
+    "{\n \"fieldErrors\" : { },\n \"generalErrors\" : [ {\n \"code\" : \"[TrustTokenRequired]\",\n \"message\" : \"This request requires a Trust Token. Use the Start Two-Factor API to obtain a Trust Token required to complete this request.\"\n } ]\n}"
+     */
+    if (retrieveUserByLoginId(request.loginId).successResponse.user.twoFactorEnabled()) {
+      if (StringUtils.isEmpty(request.trustToken)) {
+        return clientResponseFactoryErr(
+            400,
+            "trustToken",
+            "[TrustTokenRequired]",
+            "This request requires a Trust Token. Use the Start Two-Factor API to obtain a Trust Token required to complete this request.");
+      } else {
+        if (validateTrustPair(request.trustChallenge, request.trustToken))
+          ;
+      }
+    }
+    request.trustChallenge = null;
+    request.trustToken = null;
+    return super.changePasswordByIdentity(request);
+  }
+
+  private boolean validateTrustPair(String trustChallenge, String trustToken) {
+    if (trustTokensToChallenges.get(trustToken).equals(trustChallenge)) {
+      trustTokensToChallenges.remove(trustToken);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUser(UUID userId) {
+    return apply2FA(super.retrieveUser(userId));
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUserByChangePasswordId(
+      String changePasswordId) {
+    return apply2FA(super.retrieveUserByChangePasswordId(changePasswordId));
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUserByEmail(String email) {
+    return apply2FA(super.retrieveUserByEmail(email));
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUserByUsername(String username) {
+    return apply2FA(super.retrieveUserByUsername(username));
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUserByVerificationId(String verificationId) {
+    return apply2FA(super.retrieveUserByVerificationId(verificationId));
+  }
+
+  @Override
+  public ClientResponse<UserResponse, Errors> retrieveUserByLoginId(String loginId) {
+    return apply2FA(super.retrieveUserByLoginId(loginId));
+  }
+
+  /**
+   * For mocking fidelity - retrieving user should yeild 2FA config
+   *
+   * @param response to be checked for a user and decorated
+   * @return the same response, if successful, with mock 2FA config
+   */
+  private ClientResponse<UserResponse, Errors> apply2FA(
+      ClientResponse<UserResponse, Errors> response) {
+    if (response.wasSuccessful()) {
+      apply2FA(response.successResponse.user);
+    }
+    return response;
+  }
+
+  /**
+   * For mocking fidelity - retrieving user should yield 2FA config
+   *
+   * @param user having some 2FA config
+   */
+  private void apply2FA(User user) {
+    Optional.ofNullable(twoFactorConfiguration.get(user.id))
+        .ifPresent(config -> user.twoFactor = config);
   }
 }

@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.error.FusionAuthException;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -33,7 +34,6 @@ import io.fusionauth.domain.TwoFactorMethod;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
-import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.text.ParseException;
@@ -41,6 +41,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +51,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -280,7 +280,13 @@ public class AuthenticationController {
    * - * Some 2FA actions are done while the user is logged in. These have a twoFactorId and
    * possibly a - * methodId which could be needed for follow-up with the code. -
    */
-  public record TwoFactorStartLoggedInResponse(String twoFactorId, String methodId) {}
+  public record TwoFactorStartLoggedInResponse(
+      String twoFactorId, String methodId, String trustChallenge) {
+
+    static TwoFactorStartLoggedInResponse of(FusionAuthService.TwoFactorStartLoggedInResponse r) {
+      return new TwoFactorStartLoggedInResponse(r.twoFactorId(), r.methodId(), r.trustChallenge());
+    }
+  }
 
   /**
    * This is for things requiring a very fresh code, such as disabling 2FA and changing password.
@@ -291,17 +297,9 @@ public class AuthenticationController {
   @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Starting to change the user")
   @PostMapping("/two-factor/start")
   TwoFactorStartLoggedInResponse sendCodeToBegin2FA() {
-    TwoFactorStartResponse initResponse =
-        fusionAuthService.startTwoFactorLogin(
-            userService.retrieveUser(CurrentUser.getUserId()), Collections.emptyMap());
-    final String methodId =
-        initResponse.methods.stream()
-            .filter(m -> m.method.equals(TwoFactorMethod.SMS))
-            .findFirst()
-            .map(m -> m.id)
-            .orElseThrow();
-    fusionAuthService.sendTwoFactorCodeUsingMethod(initResponse.twoFactorId, methodId);
-    return new TwoFactorStartLoggedInResponse(initResponse.twoFactorId, methodId);
+    return TwoFactorStartLoggedInResponse.of(
+        fusionAuthService.sendCodeToBegin2FA(
+            userService.retrieveUser(CurrentUser.getUserId()), Collections.emptyMap()));
   }
 
   /**
@@ -316,8 +314,7 @@ public class AuthenticationController {
       explanation = "Authentication Controller has responsibility for changing users")
   @DeleteMapping("/two-factor")
   void disable2FA(@RequestParam String methodId, @RequestParam String code) {
-    User user = userService.retrieveUser(CurrentUser.getUserId());
-    fusionAuthService.disableTwoFactor(UUID.fromString(user.getSubjectRef()), methodId, code);
+    fusionAuthService.disableTwoFactor(CurrentUser.getFusionAuthUserId(), methodId, code);
   }
 
   @PostMapping("/logout")
@@ -344,16 +341,26 @@ public class AuthenticationController {
 
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
-      explanation = "Changing password, checking that it's the same user")
-  @PostMapping("/change-password")
-  void changePassword(@Validated @RequestBody ChangePasswordRequest request) {
-    if (!CurrentUser.getEmail().equals(request.getUsername())) {
-      throw new AccessDeniedException("");
+      explanation = "Changing password, only for CurrentUser")
+  @PostMapping(value = "/change-password", consumes = "application/json")
+  ResponseEntity<TwoFactorStartLoggedInResponse> changePassword(
+      @Validated @RequestBody ChangePasswordRequest request) {
+    User user = userService.retrieveUser(CurrentUser.getUserId());
+    FusionAuthService.TwoFactorStartLoggedInResponse response;
+    try {
+      response = fusionAuthService.changePassword(request.toFusionAuthRequest(user));
+    } catch (InvalidRequestException e) {
+      if ("Unauthorized".equals(e.getMessage())) {
+        return ResponseEntity.status(401).build();
+      }
+      throw e;
     }
-    fusionAuthService.changePassword(
-        request.getUsername(), request.getCurrentPassword(), request.getNewPassword());
+    return Optional.ofNullable(response)
+        .map(r -> ResponseEntity.status(242).body(TwoFactorStartLoggedInResponse.of(r)))
+        .orElse(ResponseEntity.status(204).build());
   }
 
+  /** Change password from a change request */
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
       explanation = "Changing password, ID ensures it's the same user doing it")
@@ -370,7 +377,7 @@ public class AuthenticationController {
       @Validated @RequestBody ChangePasswordRequest request) {
     return fusionAuthService.changePassword(
         changePasswordId,
-        request.getUsername(),
+        CurrentUser.getEmail(),
         request.getCurrentPassword(),
         request.getNewPassword());
   }

@@ -1,6 +1,10 @@
 package com.clearspend.capital;
 
+import com.clearspend.capital.util.SimpleYaml;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.util.Map;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.SocketUtils;
 import org.testcontainers.containers.BindMode;
@@ -15,8 +19,16 @@ public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuth
 
   private static final SharedFusionAuthContainer container = new SharedFusionAuthContainer();
 
+  @SneakyThrows
+  private static String getImageName() {
+    final SimpleYaml config =
+        new SimpleYaml(new BufferedInputStream(new FileInputStream("docker-compose.yml")));
+    return (String) config.get("services.fusionauth.image");
+  }
+
+  @SneakyThrows
   private SharedFusionAuthContainer() {
-    super(DockerImageName.parse("fusionauth/fusionauth-app:1.30.2"));
+    super(DockerImageName.parse(getImageName()));
     withNetwork(BaseCapitalTest.fusionAuthNetwork);
     withFileSystemBind(
         "./local/fusionauth/kickstart", "/usr/local/fusionauth/kickstart", BindMode.READ_ONLY);

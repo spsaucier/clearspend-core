@@ -19,6 +19,7 @@ import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import io.fusionauth.domain.Application;
 import io.fusionauth.domain.ChangePasswordReason;
+import io.fusionauth.domain.TwoFactorMethod;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.UserRegistration;
 import io.fusionauth.domain.api.ApplicationResponse;
@@ -32,7 +33,6 @@ import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
-import io.fusionauth.domain.api.user.ChangePasswordRequest;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
 import io.fusionauth.domain.api.user.RegistrationRequest;
@@ -50,6 +50,8 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
@@ -232,7 +234,7 @@ public class FusionAuthService {
    */
   @RestrictedApi(
       explanation = "This should only ever be used by AuthenticationController",
-      allowlistAnnotations = {FusionAuthUserAccessor.class},
+      allowlistAnnotations = {FusionAuthUserAccessor.class, FusionAuthUserModifier.class},
       link =
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public ClientResponse<LoginResponse, Errors> twoFactorLogin(TwoFactorLoginRequest request) {
@@ -278,8 +280,11 @@ public class FusionAuthService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
       allowlistAnnotations = {FusionAuthUserModifier.class})
   public TwoFactorStartResponse startTwoFactorLogin(
-      com.clearspend.capital.data.model.User user, Map<String, Object> state) {
+      com.clearspend.capital.data.model.User user,
+      Map<String, Object> state,
+      String trustChallenge) {
     TwoFactorStartRequest request = new TwoFactorStartRequest();
+    request.trustChallenge = trustChallenge;
     request.applicationId = getApplicationId();
     request.loginId = user.getEmail().getEncrypted();
     request.state = Optional.ofNullable(state).orElse(Collections.emptyMap());
@@ -287,7 +292,7 @@ public class FusionAuthService {
   }
 
   /**
-   * Preceded by {@link #startTwoFactorLogin(com.clearspend.capital.data.model.User, Map)}
+   * Preceded by {@link #startTwoFactorLogin(com.clearspend.capital.data.model.User, Map, String)}
    *
    * @param userId The FusionAuth User ID (clearspend User.getSubjectRef())
    * @param methodId the method ID to disable (from the request initiating the flow)
@@ -494,7 +499,8 @@ public class FusionAuthService {
 
     ClientResponse<ChangePasswordResponse, Errors> changePasswordResponse =
         client.changePassword(
-            request.getChangePasswordId(), new ChangePasswordRequest(request.getNewPassword()));
+            request.getChangePasswordId(),
+            new io.fusionauth.domain.api.user.ChangePasswordRequest(request.getNewPassword()));
 
     switch (changePasswordResponse.status) {
       case 200 -> {
@@ -508,6 +514,63 @@ public class FusionAuthService {
     }
   }
 
+  /**
+   * Some 2FA actions are done while the user is logged in. These have a twoFactorId and possibly a
+   * methodId which could be needed for follow-up with the code.
+   */
+  public record TwoFactorStartLoggedInResponse(
+      String twoFactorId, String methodId, String trustChallenge) {}
+
+  /**
+   * This is for things requiring a very fresh code, such as disabling 2FA and changing password.
+   * This is not how a 2FA login begins - that begins the same as every other login.
+   *
+   * @param user the User object corresponding to CurrentUser
+   * @param state any state to be returned after successful authentication
+   * @return codes required to proceed
+   */
+  @RestrictedApi(
+      explanation =
+          "This should only ever be used by AuthenticationController to step up"
+              + "permissions for an imminent risky operation",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "calling other restricted functions")
+  public TwoFactorStartLoggedInResponse sendCodeToBegin2FA(
+      com.clearspend.capital.data.model.User user, Map<String, Object> state) {
+    if (!user.getId().equals(CurrentUser.getUserId())) {
+      throw new IllegalArgumentException("user");
+    }
+    String trustChallenge = RandomStringUtils.randomPrint(24);
+    TwoFactorStartResponse initResponse = startTwoFactorLogin(user, state, trustChallenge);
+    final String methodId =
+        initResponse.methods.stream()
+            .filter(m -> m.method.equals(TwoFactorMethod.SMS))
+            .findFirst()
+            .map(m -> m.id)
+            .orElseThrow();
+    sendTwoFactorCodeUsingMethod(initResponse.twoFactorId, methodId);
+    return new TwoFactorStartLoggedInResponse(initResponse.twoFactorId, methodId, trustChallenge);
+  }
+
+  public record ChangePasswordRequest(
+      com.clearspend.capital.data.model.User user,
+      String currentPassword,
+      String newPassword,
+      String trustChallenge,
+      String twoFactorId,
+      String twoFactorCode) {}
+
+  /**
+   * A user wants to change their own password and they remember the old one.
+   *
+   * @param request For the initial request, just the user, old and new passwords need to be
+   *     specified. Submit again to finalize, and then only the other parameters (trustChallenge,
+   *     trustToken, and twoFactorCode) need to be submitted since the others are cached between
+   *     calls.
+   * @return null upon success, non-null if 2FA is needed
+   */
   @RestrictedApi(
       explanation =
           "This should only ever be used by AuthenticationController, and only "
@@ -515,16 +578,56 @@ public class FusionAuthService {
       allowlistAnnotations = {FusionAuthUserModifier.class},
       link =
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public void changePassword(
-      String loginId, @Sensitive String currentPassword, @Sensitive String password) {
-    final ChangePasswordRequest changePasswordRequest =
-        new ChangePasswordRequest(loginId, currentPassword, password);
+  @FusionAuthUserModifier(
+      reviewer = "jscarbor",
+      explanation = "delegating some work within the class")
+  public TwoFactorStartLoggedInResponse changePassword(ChangePasswordRequest request) {
+    LoginResponse twoFactorLogin = null;
+    if (twoFactorEnabled()) {
+      if (StringUtils.isAnyEmpty(
+          request.trustChallenge, request.twoFactorId, request.twoFactorCode)) {
+        return sendCodeToBegin2FA(request.user, Map.of("changeRequest", request));
+      }
+      TwoFactorLoginRequest twoFactorLoginRequest =
+          new TwoFactorLoginRequest(getApplicationId(), request.twoFactorCode, request.twoFactorId);
+      ClientResponse<LoginResponse, Errors> twoFactorLoginResponse =
+          twoFactorLogin(twoFactorLoginRequest);
+      if (!twoFactorLoginResponse.wasSuccessful()) {
+        throw new InvalidRequestException("Unauthorized");
+      }
+      twoFactorLogin = twoFactorLoginResponse.successResponse;
+      ChangePasswordRequest oldRequest =
+          (ChangePasswordRequest) twoFactorLogin.state.get("changeRequest");
+      request =
+          new ChangePasswordRequest(
+              request.user,
+              oldRequest.currentPassword,
+              oldRequest.newPassword,
+              request.trustChallenge,
+              request.twoFactorId,
+              request.twoFactorCode);
+    }
+
+    final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
+        new io.fusionauth.domain.api.user.ChangePasswordRequest(
+            request.user.getEmail().getEncrypted(), request.currentPassword, request.newPassword);
+    changePasswordRequest.trustToken =
+        Optional.ofNullable(twoFactorLogin).map(l -> l.trustToken).orElse(null);
+    changePasswordRequest.trustChallenge = request.trustChallenge;
     changePasswordRequest.applicationId = getApplicationId();
-    ClientResponse<Void, Errors> changePasswordResponse =
-        client.changePasswordByIdentity(changePasswordRequest);
-    validateResponse(changePasswordResponse);
+    validateResponse(client.changePasswordByIdentity(changePasswordRequest));
+    return null;
   }
 
+  /**
+   * Change an expired password
+   *
+   * @param changePasswordId The ID of the change request
+   * @param loginId The user's email
+   * @param currentPassword The current password
+   * @param password The new password
+   * @return
+   */
   @RestrictedApi(
       explanation = "This should only ever be used by AuthenticationController",
       allowlistAnnotations = {FusionAuthUserModifier.class},
@@ -532,8 +635,8 @@ public class FusionAuthService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public ChangePasswordResponse changePassword(
       String changePasswordId, String loginId, String currentPassword, String password) {
-    final ChangePasswordRequest request =
-        new ChangePasswordRequest(loginId, currentPassword, password);
+    final io.fusionauth.domain.api.user.ChangePasswordRequest request =
+        new io.fusionauth.domain.api.user.ChangePasswordRequest(loginId, currentPassword, password);
     request.applicationId = getApplicationId();
     ClientResponse<ChangePasswordResponse, Errors> changePasswordResponse =
         client.changePassword(changePasswordId, request);
@@ -559,6 +662,11 @@ public class FusionAuthService {
       reviewer = "jscarbor")
   public UUID getApplicationId() {
     return UUID.fromString(fusionAuthProperties.getApplicationId());
+  }
+
+  @OpenAccessAPI(explanation = "Returns info about the current user only", reviewer = "jscarbor")
+  public boolean twoFactorEnabled() {
+    return getUser(CurrentUser.getFusionAuthUserId()).twoFactorEnabled();
   }
 
   public Application getApplication() {

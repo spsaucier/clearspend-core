@@ -150,18 +150,15 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   void testIfIncorrectLoginIdOrPassword() {
     Cookie authCookie = userCookie;
-    checkLoginDetailsAndUpdatePassword(
-        authCookie, user.user().getEmail().toString(), user.password(), "lucky1234");
-    checkLoginDetailsAndUpdatePassword(
-        authCookie, user.user().getEmail().toString(), "lucky1234", "lucky1234");
+    checkLoginDetailsAndUpdatePassword(authCookie, user.password(), "lucky1234");
+    checkLoginDetailsAndUpdatePassword(authCookie, "lucky1234", "lucky1234");
   }
 
   private void checkLoginDetailsAndUpdatePassword(
-      Cookie authCookie, String loginId, String currentPassword, String newPassword)
-      throws Exception {
+      Cookie authCookie, String currentPassword, String newPassword) throws Exception {
     // Check login details against fusion auth and throw errors as per the response
     ChangePasswordRequest changePasswordRequest =
-        new ChangePasswordRequest(loginId, currentPassword, newPassword);
+        new ChangePasswordRequest(currentPassword, newPassword);
     String body = objectMapper.writeValueAsString(changePasswordRequest);
     mvc.perform(
             post("/authentication/change-password")
@@ -233,8 +230,7 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
     // Set a new password
     String replacementPassword = testHelper.generatePassword(16);
     ChangePasswordRequest changePasswordRequest =
-        new ChangePasswordRequest(
-            newUser.user().getEmail().getEncrypted(), newPassword, replacementPassword);
+        new ChangePasswordRequest(newPassword, replacementPassword);
 
     MockHttpServletResponse httpResponseAfterChange =
         mvc.perform(

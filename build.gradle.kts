@@ -1,9 +1,8 @@
-import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     java
-    id("org.springframework.boot") version "2.6.6"
+    id("org.springframework.boot") version "2.6.7"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
@@ -73,6 +72,7 @@ tasks {
             disable("SameNameButDifferent") // https://github.com/google/error-prone/issues/2982
             disable("MissingOverride") // Lombok equals and hash code
             disable("DefaultCharset") // We set UTF-8 when the JVM starts
+            disable("UnusedMethod") // https://github.com/google/error-prone/issues/3058
         }
     }
 
@@ -135,7 +135,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testCompileOnly("org.projectlombok:lombok")
-    errorprone("com.google.errorprone:error_prone_core:2.11.0")
+    errorprone("com.google.errorprone:error_prone_core:2.13.1")
 
 //spring boot starters
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -173,7 +173,7 @@ dependencies {
     implementation("com.sendgrid:sendgrid-java:4.8.3")
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.25.1")
-    implementation("io.fusionauth:fusionauth-java-client:1.30.2")
+    implementation("io.fusionauth:fusionauth-java-client:1.33.0")
 
 //snyk fixes (revisit if fixed in the next spring boot version > 2.6.3)
     constraints {

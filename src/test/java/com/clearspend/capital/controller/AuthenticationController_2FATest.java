@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -16,6 +17,7 @@ import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactor
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
 import com.clearspend.capital.controller.AuthenticationController.TwoFactorStartLoggedInResponse;
 import com.clearspend.capital.controller.security.TestFusionAuthClient;
+import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
@@ -116,10 +118,45 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     loginCompleteResponse = complete2FALogin(twoFactorId, wrong2FCode);
     assertThat(loginCompleteResponse.getStatus()).isEqualTo(421);
 
+    // Successful login
     loginCompleteResponse = complete2FALogin(twoFactorId, twoFactorCodeForLogin);
     assertThat(loginCompleteResponse.getStatus()).isEqualTo(200);
     Cookie authCookie = loginCompleteResponse.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
+
+    // Check that the authCookie works
     assertNotNull(authCookie);
+    validateCookie(authCookie);
+
+    // Gearing up for password change - generate a new password
+    String newPassword = RandomStringUtils.randomAlphanumeric(10);
+
+    // step up 2FA for password change
+    MockHttpServletResponse changePasswordResponse =
+        changePassword(authCookie, null, null, null, password, newPassword);
+    assertThat(changePasswordResponse.getStatus()).isEqualTo(242);
+    TwoFactorStartLoggedInResponse twoFactorStartLoggedInResponse =
+        validateResponse(changePasswordResponse, TwoFactorStartLoggedInResponse.class);
+
+    // change the password
+    String twoFactorCode =
+        faClient.getTwoFactorCodeForLogin(twoFactorStartLoggedInResponse.twoFactorId());
+    MockHttpServletResponse realChangeResponse =
+        changePassword(
+            authCookie,
+            twoFactorStartLoggedInResponse.trustChallenge(),
+            twoFactorStartLoggedInResponse.twoFactorId(),
+            twoFactorCode,
+            null,
+            null);
+    assertThat(realChangeResponse.getStatus()).isEqualTo(204);
+    assertThat(realChangeResponse.getContentLength()).isEqualTo(0);
+
+    // NB the old auth cookie still works
+    validateCookie(authCookie);
+
+    // get a new auth cookie with the new password and verify it works
+    authCookie = twoFactorLogin(username, newPassword);
+    validateCookie(authCookie);
 
     // Start to disable 2FA
     @NotNull TwoFactorStartLoggedInResponse startResponse = start2FALoggedIn(authCookie);
@@ -143,8 +180,26 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
         () -> disable2FA(userCookie, twoFactorCodeForDisable, startResponse.methodId()));
 
     // log in again without 2FA
-    authCookie = testHelper.login(username, password);
+    authCookie = testHelper.login(username, newPassword);
     assertThat(authCookie).isNotNull();
+    validateCookie(authCookie);
+  }
+
+  @NotNull
+  private Cookie twoFactorLogin(String username, String password) throws Exception {
+    TestFusionAuthClient faClient = (TestFusionAuthClient) fusionAuthClient;
+    String twoFactorId = login(username, password).getTwoFactorId();
+    Cookie authCookie =
+        complete2FALogin(twoFactorId, faClient.getTwoFactorCodeForLogin(twoFactorId))
+            .getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
+    assertNotNull(authCookie);
+    return authCookie;
+  }
+
+  private void validateCookie(Cookie authCookie) throws Exception {
+    MockHttpServletResponse response;
+    response = getCurrentUser(authCookie);
+    assertThat(response.getStatus()).isEqualTo(200);
   }
 
   private Set<String> makeSet(String one, List<String> others) {
@@ -250,6 +305,45 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
                     .contentType("application/json")
                     .content(objectMapper.writeValueAsString(firstTwoFactorValidateRequest))
                     .cookie(userCookie))
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response);
+    return response;
+  }
+
+  private MockHttpServletResponse changePassword(
+      Cookie userCookie,
+      String trustChallenge,
+      String twoFactorCode,
+      String twoFactorId,
+      String currentPassword,
+      String newPassword)
+      throws Exception {
+    MockHttpServletResponse response;
+    ChangePasswordRequest changePasswordRequest =
+        new ChangePasswordRequest(
+            currentPassword, newPassword, trustChallenge, twoFactorCode, twoFactorId);
+
+    response =
+        mvc.perform(
+                post("/authentication/change-password")
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(changePasswordRequest))
+                    .cookie(userCookie))
+            .andReturn()
+            .getResponse();
+
+    log.info("response: {}", response);
+    return response;
+  }
+
+  @NotNull
+  private MockHttpServletResponse getCurrentUser(Cookie userCookie) throws Exception {
+    MockHttpServletResponse response;
+
+    response =
+        mvc.perform(get("/users").contentType("application/json").cookie(userCookie))
             .andReturn()
             .getResponse();
 

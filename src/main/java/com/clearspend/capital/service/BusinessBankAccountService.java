@@ -85,6 +85,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BusinessBankAccountService {
+
   private final BusinessBankAccountRepository businessBankAccountRepository;
 
   private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
@@ -694,6 +695,9 @@ public class BusinessBankAccountService {
             "Financial institution", businessBankAccountId, AdjustmentType.DEPOSIT, amount);
       }
     } catch (PlaidClientException e) {
+      if (e.isCanReInitialize()) {
+        throw new ReLinkException(e);
+      }
       if (e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
         String plaidAccountRef = businessBankAccount.getPlaidAccountRef().getEncrypted();
         log.info(
