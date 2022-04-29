@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.plaid.PlaidClient;
+import com.clearspend.capital.client.plaid.PlaidClient.AccountsResponse;
 import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
@@ -138,7 +139,24 @@ public class BusinessBankAccountService {
   @PostAuthorize("hasRootPermission(returnObject, 'LINK_BANK_ACCOUNTS')")
   public BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
-    return retrievalService.retrieveBusinessBankAccount(businessBankAccountId);
+    BusinessBankAccount businessBankAccount =
+        retrievalService.retrieveBusinessBankAccount(businessBankAccountId);
+    if (StringUtils.isEmpty(businessBankAccount.getBankName())) {
+      try {
+        AccountsResponse accounts =
+            plaidClient.getAccounts(
+                businessBankAccount.getAccessToken().getEncrypted(),
+                businessBankAccount.getBusinessId());
+        businessBankAccount.setBankName(accounts.institutionName());
+        businessBankAccount = businessBankAccountRepository.save(businessBankAccount);
+      } catch (PlaidClientException plaidClientException) {
+        tryReLink(plaidClientException);
+        log.warn("Failed to fetch institution name", plaidClientException);
+      } catch (IOException ioException) {
+        log.warn("Failed to fetch institution name", ioException);
+      }
+    }
+    return businessBankAccount;
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")

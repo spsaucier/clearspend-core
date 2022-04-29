@@ -39,6 +39,7 @@ import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
+import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
@@ -53,6 +54,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
+import org.junit.platform.commons.util.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -64,6 +66,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Autowired private BusinessBankAccountBalanceRepository businessBankAccountBalanceRepository;
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   @Autowired private AccountActivityRepository accountActivityRepository;
+  @Autowired private BusinessBankAccountRepository businessBankAccountRepository;
 
   private CreateBusinessRecord createBusinessRecord;
   private Allocation childAllocation;
@@ -501,6 +504,19 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     final BusinessBankAccount result =
         bankAccountService.retrieveBusinessBankAccount(bankAccount.getId());
     assertEquals(bankAccount, result);
+  }
+
+  @Test
+  void retrieveBusinessBankAccount_WhenBankNameIsEmpty() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final BusinessBankAccount bankAccount =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    bankAccount.setBankName("");
+    businessBankAccountRepository.saveAndFlush(bankAccount);
+    assertTrue(StringUtils.isBlank(bankAccount.getBankName()));
+    final BusinessBankAccount result =
+        bankAccountService.retrieveBusinessBankAccount(bankAccount.getId());
+    assertTrue(StringUtils.isNotBlank(result.getBankName()));
   }
 
   @Test
