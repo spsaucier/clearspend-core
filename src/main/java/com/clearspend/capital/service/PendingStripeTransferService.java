@@ -18,6 +18,7 @@ import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.data.repository.PendingStripeTransferRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +30,13 @@ public class PendingStripeTransferService {
   private final StripeClient stripeClient;
   private final PendingStripeTransferRepository pendingStripeTransferRepository;
 
-  public List<PendingStripeTransfer> retrievePendingTransfers(TypedId<BusinessId> businessId) {
+  List<PendingStripeTransfer> retrievePendingTransfers(TypedId<BusinessId> businessId) {
     return pendingStripeTransferRepository.findByBusinessIdAndState(
         businessId, PendingStripeTransferState.PENDING);
   }
 
   @Transactional
-  public TypedId<PendingStripeTransferId> createStripeTransfer(
+  TypedId<PendingStripeTransferId> createStripeTransfer(
       TypedId<BusinessId> businessId,
       TypedId<BusinessBankAccountId> businessBankAccountId,
       TypedId<AdjustmentId> adjustmentId,
@@ -59,8 +60,7 @@ public class PendingStripeTransferService {
     return pendingStripeTransferRepository.save(pendingStripeTransfer).getId();
   }
 
-  @Transactional
-  public void executeStripeTransfer(TypedId<PendingStripeTransferId> transferId) {
+  private void executeStripeTransfer(TypedId<PendingStripeTransferId> transferId) {
     PendingStripeTransfer pendingStripeTransfer = retrieve(transferId);
     Business business =
         retrievalService.retrieveBusiness(pendingStripeTransfer.getBusinessId(), true);
@@ -94,6 +94,8 @@ public class PendingStripeTransferService {
   }
 
   // @Async
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
+  @Transactional
   public void executePendingStripeTransfers(TypedId<BusinessId> businessId) {
     retrievePendingTransfers(businessId)
         .forEach(transfer -> executeStripeTransfer(transfer.getId()));

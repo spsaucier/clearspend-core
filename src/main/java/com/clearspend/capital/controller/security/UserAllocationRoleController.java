@@ -6,6 +6,8 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.security.UserAllocationRolesResponse;
 import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRecord;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.RolesAndPermissionsService.ChangePermissions;
+import com.clearspend.capital.service.SecuredRolesAndPermissionsService;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserAllocationRoleController {
 
   private final RolesAndPermissionsService rolesAndPermissionsService;
+  private final SecuredRolesAndPermissionsService securedRolesAndPermissionsService;
   private final EntityManager entityManager;
 
   @GetMapping("/allocation/{allocationId}")
@@ -40,7 +43,7 @@ public class UserAllocationRoleController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     return new UserAllocationRolesResponse(
-        rolesAndPermissionsService
+        securedRolesAndPermissionsService
             .getAllRolesAndPermissionsForAllocation(allocationId)
             .values()
             .stream()
@@ -48,6 +51,9 @@ public class UserAllocationRoleController {
             .collect(Collectors.toList()));
   }
 
+  @ChangePermissions(
+      reviewer = "Craig Miller",
+      explanation = "This is how the UI sends a request to update a user's permissions")
   @PutMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
   void updateUserAllocationPermission(
@@ -71,6 +77,9 @@ public class UserAllocationRoleController {
 
   @DeleteMapping("/allocation/{allocationId}/user/{granteeId}")
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
+  @ChangePermissions(
+      explanation = "The invoked method enforces its security internally",
+      reviewer = "Craig Miller")
   void deleteUserAllocationPermission(
       @PathVariable(value = "allocationId")
           @Parameter(

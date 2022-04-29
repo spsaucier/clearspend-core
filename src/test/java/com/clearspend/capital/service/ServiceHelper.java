@@ -1,5 +1,7 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.client.codat.types.CodatAccount;
+import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -8,6 +10,8 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.TosAcceptance;
@@ -19,12 +23,15 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.ledger.LedgerAccount;
+import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.BusinessService.BusinessRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +56,10 @@ public class ServiceHelper {
   private final BusinessOwnerService businessOwnerService;
   private final BusinessProspectService businessProspectService;
   private final LedgerService ledgerService;
+  private final PendingStripeTransferService pendingStripeTransferService;
+  private final CodatService codatService;
+  private final ChartOfAccountsService chartOfAccountsService;
+  private final AllocationService allocationService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -68,6 +79,60 @@ public class ServiceHelper {
 
   public LedgerServiceWrapper ledgerService() {
     return new LedgerServiceWrapper(ledgerService);
+  }
+
+  public PendingStripeTransferServiceWrapper pendingStripeTransferService() {
+    return new PendingStripeTransferServiceWrapper(pendingStripeTransferService);
+  }
+
+  public CodatServiceWrapper codatService() {
+    return new CodatServiceWrapper(codatService);
+  }
+
+  public ChartOfAccountsServiceWrapper chartOfAccountsService() {
+    return new ChartOfAccountsServiceWrapper(chartOfAccountsService);
+  }
+
+  public AllocationServiceWrapper allocationService() {
+    return new AllocationServiceWrapper(allocationService);
+  }
+
+  @RequiredArgsConstructor
+  public static class AllocationServiceWrapper {
+    private final AllocationService allocationService;
+
+    public AllocationRecord getRootAllocation(final TypedId<BusinessId> businessId) {
+      return allocationService.getRootAllocation(businessId);
+    }
+  }
+
+  @RequiredArgsConstructor
+  public static class ChartOfAccountsServiceWrapper {
+    private final ChartOfAccountsService chartOfAccountsService;
+
+    public ChartOfAccounts updateChartOfAccountsForBusiness(
+        TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
+      return chartOfAccountsService.updateChartOfAccountsForBusiness(businessId, accountNested);
+    }
+  }
+
+  @RequiredArgsConstructor
+  public static class CodatServiceWrapper {
+    private final CodatService codatService;
+
+    public List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
+      return codatService.nestCodatAccounts(accounts);
+    }
+  }
+
+  @RequiredArgsConstructor
+  public static class PendingStripeTransferServiceWrapper {
+    private final PendingStripeTransferService pendingStripeTransferService;
+
+    public List<PendingStripeTransfer> retrievePendingTransfers(
+        final TypedId<BusinessId> businessId) {
+      return pendingStripeTransferService.retrievePendingTransfers(businessId);
+    }
   }
 
   @RequiredArgsConstructor
@@ -151,6 +216,14 @@ public class ServiceHelper {
   @RequiredArgsConstructor
   public static class AccountServiceWrapper {
     private final AccountService accountService;
+
+    public AdjustmentAndHoldRecord depositFunds(
+        final TypedId<BusinessId> businessId,
+        final Account rootAllocationAccount,
+        final Amount amount,
+        final boolean standardHold) {
+      return accountService.depositFunds(businessId, rootAllocationAccount, amount, standardHold);
+    }
 
     public Account retrieveAllocationAccount(
         final TypedId<BusinessId> businessId,

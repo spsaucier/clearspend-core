@@ -12,7 +12,7 @@ import com.clearspend.capital.controller.Common;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.service.security.OpenAccessAPI;
+import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;

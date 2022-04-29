@@ -5,11 +5,14 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
@@ -33,6 +36,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @Autowired private StripeClient stripeClient;
   @Autowired private BusinessKycStepHandler stepHandler;
   @Autowired private ServiceHelper serviceHelper;
+  @Autowired private UserRepository userRepository;
   @Autowired private StripeRequirementsRepository stripeRequirementsRepository;
 
   @Test
@@ -49,6 +53,12 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             stripeClient
                 .retrieveAccount(business1.getStripeData().getAccountRef())
                 .getRequirements()));
+
+    final User owner =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow();
+    testHelper.setCurrentUser(owner);
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -83,6 +93,11 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
             stripeClient
                 .retrieveAccount(business1.getStripeData().getAccountRef())
                 .getRequirements()));
+    final User owner =
+        userRepository
+            .findById(new TypedId<>(onboardBusinessRecord.businessOwner().getId().toUuid()))
+            .orElseThrow();
+    testHelper.setCurrentUser(owner);
 
     ApplicationReviewRequirements stripeApplicationRequirements =
         applicationReviewService.getStripeApplicationRequirements(
@@ -107,6 +122,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void accountAddRepresentative() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("accountAddRepresentative");
     businessRepository.save(business1);
@@ -141,6 +157,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void invalidAccountAddressInvalidPersonAddressRequirePersonDocument() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("invalidAccountAddressInvalidPersonAddressRequirePersonDocument");
     businessRepository.save(business1);
@@ -168,6 +185,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void addressNotCorrectForPerson() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("addressNotCorrectForPerson");
     businessRepository.save(business1);
@@ -201,6 +219,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void addressNotCorrectForPersonAndDocumentRequired() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("addressNotCorrectForPersonAndDocumentRequired");
     businessRepository.save(business1);
@@ -234,6 +253,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void ownersAndRepresentativeProvided() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("ownersAndRepresentativeProvided");
     businessRepository.save(business1);
@@ -262,6 +282,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void ownersAndRepresentativeProvidedSecondStepInStripe() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("ownersAndRepresentativeProvided_event2fromStripe");
     businessRepository.save(business1);
@@ -289,6 +310,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void onSuccessValidOnboarding() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("successOnboarding");
     businessRepository.save(business1);
@@ -311,6 +333,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void ownerRepresentativeAditionaCompanyAndSettingDetailsRequired() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setLegalName("ownerRepresentativeAditionaCompanyAndSettingDetailsRequired");
     businessRepository.save(business1);
@@ -335,6 +358,7 @@ class ApplicationReviewServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void individualDetailsRequired() {
     CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     Business business1 = createBusinessRecord.business();
     business1.setType(BusinessType.INDIVIDUAL);
     business1.setLegalName("individualDetailsRequired");

@@ -103,17 +103,8 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  public void testGetSingleMapping() {
-    testHelper.createCodatExpenseCategoryMappings(business);
-    ChartOfAccountsMapping mapping =
-        mappingService.getAccountMappingForBusiness(business.getId(), "auto");
-
-    assertThat(mapping).isNotNull();
-    assertThat(mapping.getAccountRefId()).isEqualTo("auto");
-  }
-
-  @Test
   public void testDeleteMappingsForBusiness() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.createCodatExpenseCategoryMappings(business);
     List<ChartOfAccountsMapping> mappings = mappingRepository.findAllByBusinessId(business.getId());
 
@@ -129,6 +120,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
 
   @Test
   public void testAddMappingsToBusiness() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(business.getId());
 

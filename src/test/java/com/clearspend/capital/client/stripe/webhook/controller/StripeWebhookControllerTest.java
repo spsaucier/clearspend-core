@@ -1057,7 +1057,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     financialAccount.setFinancialAddresses(List.of(financialAccountAddress));
 
     List<PendingStripeTransfer> pendingStripeTransfers =
-        pendingStripeTransferService.retrievePendingTransfers(business.getId());
+        serviceHelper.pendingStripeTransferService().retrievePendingTransfers(business.getId());
 
     assertThat(pendingStripeTransfers).hasSize(1);
     assertThat(pendingStripeTransfers.get(0).getState())
@@ -1071,7 +1071,9 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     // then
     assertThat(testHelper.retrieveBusiness().getStripeData().getFinancialAccountState())
         .isEqualTo(FinancialAccountState.READY);
-    assertThat(pendingStripeTransferService.retrievePendingTransfers(business.getId())).isEmpty();
+    assertThat(
+            serviceHelper.pendingStripeTransferService().retrievePendingTransfers(business.getId()))
+        .isEmpty();
   }
 
   @Test

@@ -43,6 +43,7 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -212,7 +213,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordApplyFeeActivity(
+  AccountActivity recordApplyFeeActivity(
       Allocation allocation, Adjustment adjustment, String notes) {
     final AccountActivity accountActivity =
         new AccountActivity(
@@ -232,8 +233,7 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AccountActivity recordCardReturnFundsActivity(
-      Allocation allocation, Adjustment adjustment) {
+  AccountActivity recordCardReturnFundsActivity(Allocation allocation, Adjustment adjustment) {
     AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
@@ -454,6 +454,7 @@ public class AccountActivityService {
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<AccountActivity> findAllSyncableForBusiness(TypedId<BusinessId> businessId) {
     return accountActivityRepository.findByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);
@@ -511,6 +512,7 @@ public class AccountActivityService {
         .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, accountActivityId));
   }
 
+  @SqlPermissionAPI
   public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) {
 
     Page<AccountActivity> accountActivityPage =
@@ -582,16 +584,19 @@ public class AccountActivityService {
     return csvFile.toByteArray();
   }
 
+  @SqlPermissionAPI
   public Page<AccountActivity> find(
       TypedId<BusinessId> businessId, AccountActivityFilterCriteria filterCriteria) {
     return accountActivityRepository.find(businessId, filterCriteria);
   }
 
+  @SqlPermissionAPI
   public DashboardData findDataForLineGraph(
       TypedId<BusinessId> businessId, GraphFilterCriteria filterCriteria) {
     return accountActivityRepository.findDataForLineGraph(businessId, filterCriteria);
   }
 
+  @SqlPermissionAPI
   public ChartData findDataForChart(
       TypedId<BusinessId> businessId, ChartFilterCriteria filterCriteria) {
     return accountActivityRepository.findDataForChart(businessId, filterCriteria);

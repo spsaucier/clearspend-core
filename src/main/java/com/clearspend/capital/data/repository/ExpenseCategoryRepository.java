@@ -18,6 +18,10 @@ public interface ExpenseCategoryRepository
   List<ExpenseCategory> findByBusinessIdAndStatus(
       TypedId<BusinessId> businessId, ExpenseCategoryStatus status);
 
+  List<ExpenseCategory> findAllByBusinessIdAndIdIn(
+      final TypedId<BusinessId> businessId,
+      final List<TypedId<ExpenseCategoryId>> expenseCategoryId);
+
   default Optional<ExpenseCategory> findFirstCategoryByName(String categoryName) {
     return findFirstByBusinessIdAndCategoryName(CurrentUser.getBusinessId(), categoryName);
   }

@@ -364,7 +364,7 @@ public class TwilioService {
   }
 
   /* Bank Details Removed */
-  public void sendBankDetailsRemovedEmail(
+  protected void sendBankDetailsRemovedEmail(
       String to,
       String firstName,
       String bankName,
@@ -497,7 +497,7 @@ public class TwilioService {
   }
 
   /* Update : Employee Update Phone number or email or Address email */
-  public void sendUserDetailsUpdatedEmail(String to, String firstName) {
+  protected void sendUserDetailsUpdatedEmail(String to, String firstName) {
     Personalization personalization = new Personalization();
     personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
     Mail mail =

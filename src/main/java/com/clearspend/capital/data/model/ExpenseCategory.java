@@ -32,7 +32,7 @@ import org.hibernate.annotations.TypeDefs;
   @TypeDef(name = "type-id", typeClass = TypedIdJpaType.class),
   @TypeDef(name = "string-array", typeClass = StringArrayType.class)
 })
-public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> {
+public class ExpenseCategory extends TypedMutable<ExpenseCategoryId> implements BusinessRelated {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")

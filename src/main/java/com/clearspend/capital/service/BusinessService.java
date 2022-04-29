@@ -158,6 +158,7 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public Business updateCodatCreditCardForBusiness(
       TypedId<BusinessId> businessId, String codatCreditCardId) {
     Business business = retrieveBusiness(businessId, true);
@@ -399,6 +400,7 @@ public class BusinessService {
   }
 
   @Transactional
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void syncWithStripeAccountData(Business business, com.stripe.model.Account account) {
     StringBuilder stringBuilder = new StringBuilder();
     Company company = account.getCompany();

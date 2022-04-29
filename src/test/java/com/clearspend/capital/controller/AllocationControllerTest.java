@@ -166,7 +166,10 @@ class AllocationControllerTest extends BaseCapitalTest {
             amount.getAmount(),
             false);
     final Allocation rootAllocation =
-        allocationService.getRootAllocation(testHelper.retrieveBusiness().getId()).allocation();
+        serviceHelper
+            .allocationService()
+            .getRootAllocation(testHelper.retrieveBusiness().getId())
+            .allocation();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
             business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
@@ -179,7 +182,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             FundingType.INDIVIDUAL,
             CardType.PHYSICAL,
             false);
-    Account businessAccount = allocationService.getRootAllocation(business.getId()).account();
+    Account businessAccount =
+        serviceHelper.allocationService().getRootAllocation(business.getId()).account();
     AccountReallocateFundsRecord reallocateFundsRecord =
         serviceHelper
             .accountService()
@@ -224,7 +228,7 @@ class AllocationControllerTest extends BaseCapitalTest {
         amount.getAmount(),
         false);
     final Allocation rootAllocation =
-        allocationService.getRootAllocation(business.getId()).allocation();
+        serviceHelper.allocationService().getRootAllocation(business.getId()).allocation();
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             testHelper.generateFullName(),

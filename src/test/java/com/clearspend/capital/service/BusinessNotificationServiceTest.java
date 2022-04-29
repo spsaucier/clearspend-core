@@ -52,6 +52,7 @@ public class BusinessNotificationServiceTest extends BaseCapitalTest {
 
   @Test
   public void canGetRecentNotifications() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
     businessNotificationRepository.save(
         buildBusinessNotification(
             BusinessNotificationType.CHART_OF_ACCOUNTS_CREATED, null, "New Category"));

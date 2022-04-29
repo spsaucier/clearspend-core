@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class BusinessNotificationService {
   private final BusinessNotificationRepository businessNotificationRepository;
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public BusinessNotification acceptChartOfAccountChangesForUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     BusinessNotification businessNotification = new BusinessNotification();
@@ -31,6 +33,7 @@ public class BusinessNotificationService {
     return businessNotificationRepository.save(businessNotification);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<BusinessNotification> getUnseenNotificationsForUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     Optional<BusinessNotification> lastUserAccept =
@@ -49,6 +52,7 @@ public class BusinessNotificationService {
     return List.of();
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<BusinessNotification> getRecentChartOfAccountsNotifications(
       TypedId<BusinessId> businessId) {
     OffsetDateTime targetTime = OffsetDateTime.now(ZoneOffset.UTC);

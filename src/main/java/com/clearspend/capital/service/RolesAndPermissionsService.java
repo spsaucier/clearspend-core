@@ -25,10 +25,12 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.GlobalRoleRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
+import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthRoleAdministrator;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,6 +76,18 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class RolesAndPermissionsService {
 
+  public @interface ReadPermissions {
+    String reviewer();
+
+    String explanation();
+  }
+
+  public @interface ChangePermissions {
+    String reviewer();
+
+    String explanation();
+  }
+
   // This uses repositories instead of services because it is responsible for securing the services
   private final UserAllocationRoleRepository userAllocationRoleRepository;
   private final UserRepository userRepository;
@@ -92,6 +106,12 @@ public class RolesAndPermissionsService {
    * @return The newly created UserAllocationRole
    * @throws AccessDeniedException when the current user's permissions are insufficient
    */
+  @RestrictedApi(
+      explanation =
+          "This method internally validates whether the user is allowed to make this permissions change",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ChangePermissions.class})
   public UserAllocationRole createUserAllocationRole(
       @NonNull TypedId<UserId> granteeId,
       TypedId<AllocationId> allocationId,
@@ -123,6 +143,12 @@ public class RolesAndPermissionsService {
    * @param newRole The new role to set
    * @throws AccessDeniedException when the current user's permissions are insufficient
    */
+  @RestrictedApi(
+      explanation =
+          "This method internally validates whether the user is allowed to make this permissions change",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ChangePermissions.class})
   public UserAllocationRole createOrUpdateUserAllocationRole(
       @NonNull TypedId<UserId> granteeId,
       TypedId<AllocationId> allocationId,
@@ -154,6 +180,12 @@ public class RolesAndPermissionsService {
    * @param newRole The new role to set
    * @throws AccessDeniedException when the current user's permissions are insufficient
    */
+  @RestrictedApi(
+      explanation =
+          "This method internally validates whether the user is allowed to make this permissions change",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ChangePermissions.class})
   public UserAllocationRole updateUserAllocationRole(
       @NonNull TypedId<UserId> granteeId,
       TypedId<AllocationId> allocationId,
@@ -178,6 +210,11 @@ public class RolesAndPermissionsService {
                     "User does not have any role to update at allocation."));
   }
 
+  @RestrictedApi(
+      explanation = "This is used to lookup if the user has permission for an operation",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ReadPermissions.class})
   public List<UserRolesAndPermissions> findAllByUserIdAndBusinessId(
       final TypedId<UserId> userId,
       final TypedId<BusinessId> businessId,
@@ -186,6 +223,11 @@ public class RolesAndPermissionsService {
         userId, businessId, globalRoles);
   }
 
+  @RestrictedApi(
+      explanation = "This is used to lookup if the user has permission for an operation",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ReadPermissions.class})
   public Optional<UserRolesAndPermissions> findAllByUserIdAndAllocationId(
       final TypedId<UserId> userId,
       final TypedId<AllocationId> allocationId,
@@ -194,6 +236,11 @@ public class RolesAndPermissionsService {
         userId, allocationId, globalRoles);
   }
 
+  @RestrictedApi(
+      explanation = "This is used to lookup if the user has permission for an operation",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ReadPermissions.class})
   public Optional<UserRolesAndPermissions> findAllByUserIdAndBusinessIdAndAllocationId(
       final TypedId<UserId> userId,
       final TypedId<BusinessId> businessId,
@@ -369,7 +416,7 @@ public class RolesAndPermissionsService {
    * @param globalRoles Roles under consideration
    * @return EnumSet of the permissions granted by those globalUserPermissions
    */
-  public EnumSet<GlobalUserPermission> getGlobalPermissions(Set<String> globalRoles) {
+  EnumSet<GlobalUserPermission> getGlobalPermissions(Set<String> globalRoles) {
     if (globalRoles == null || globalRoles.isEmpty()) {
       return EnumSet.noneOf(GlobalUserPermission.class);
     }
@@ -393,6 +440,12 @@ public class RolesAndPermissionsService {
    * @throws RecordNotFoundException if there is nothing to delete, with the exception's id
    *     consisting of a Map of the grantee Id and allocation Id
    */
+  @RestrictedApi(
+      explanation =
+          "This method internally validates whether the user is allowed to make this permissions change",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ChangePermissions.class})
   public void deleteUserAllocationRole(
       TypedId<AllocationId> allocationId, @NonNull TypedId<UserId> granteeId) {
     Optional<UserAllocationRole> doomedRecord =
@@ -420,7 +473,7 @@ public class RolesAndPermissionsService {
    * @param globalUserPermissions Each given user permission is sufficient
    * @throws AccessDeniedException when user permissions are insufficient
    */
-  public void assertUserHasPermission(
+  void assertUserHasPermission(
       TypedId<AllocationId> allocationId,
       @NonNull EnumSet<AllocationPermission> allocationPermission,
       EnumSet<GlobalUserPermission> globalUserPermissions) {
@@ -452,6 +505,11 @@ public class RolesAndPermissionsService {
   }
 
   @NonNull
+  @RestrictedApi(
+      explanation = "This is simply returning permissions for the current user",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {ReadPermissions.class})
   public UserRolesAndPermissions getUserRolesAndPermissionsForAllocation(
       TypedId<AllocationId> allocationId) {
     entityManager.flush();
@@ -462,35 +520,17 @@ public class RolesAndPermissionsService {
         allocationId);
   }
 
-  public Map<TypedId<UserId>, UserRolesAndPermissions> getAllRolesAndPermissionsForAllocation(
-      TypedId<AllocationId> allocationId) {
-    CurrentUser currentUser = CurrentUser.get();
-    Map<TypedId<UserId>, UserRolesAndPermissions> permissionsMap =
-        userAllocationRoleRepository.getActiveUsersWithAllocationPermission(
-            currentUser.businessId(), allocationId);
-
-    if (ensureNonNullPermissions(
-                Optional.ofNullable(permissionsMap.get(currentUser.userId())), allocationId)
-            .allocationPermissions()
-            .contains(AllocationPermission.READ)
-        || getGlobalPermissions(currentUser.roles()).contains(GlobalUserPermission.GLOBAL_READ)) {
-      return permissionsMap;
-    }
-
-    throw new AccessDeniedException("");
-  }
-
   @FusionAuthRoleAdministrator(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
-  public boolean grantGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
+  boolean grantGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
     return grantGlobalRole(entityManager.getReference(User.class, grantee), role);
   }
 
   @FusionAuthRoleAdministrator(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
-  public boolean grantGlobalRole(@NonNull User grantee, @NonNull String role) {
+  private boolean grantGlobalRole(@NonNull User grantee, @NonNull String role) {
     authorizeGlobalRoleChange(role);
     return fusionAuthService.changeUserRole(RoleChange.GRANT, grantee.getSubjectRef(), role);
   }
@@ -498,7 +538,7 @@ public class RolesAndPermissionsService {
   @FusionAuthRoleAdministrator(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
-  public boolean revokeGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
+  boolean revokeGlobalRole(@NonNull TypedId<UserId> grantee, @NonNull String role) {
     authorizeGlobalRoleChange(role);
     return fusionAuthService.changeUserRole(
         RoleChange.REVOKE, entityManager.getReference(User.class, grantee).getSubjectRef(), role);
@@ -524,11 +564,14 @@ public class RolesAndPermissionsService {
   @FusionAuthUserAccessor(
       reviewer = "jscarbor",
       explanation = "This is the service for managing user roles")
-  public Set<String> getGlobalRoles(@NonNull User user) {
+  Set<String> getGlobalRoles(@NonNull User user) {
     return fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef()));
   }
 
   @NonNull
+  @OpenAccessAPI(
+      explanation = "This just returns what permissions the current user has",
+      reviewer = "Craig Miller")
   public UserRolesAndPermissions getUserRolesAndPermissionsAtRootAllocation(
       TypedId<BusinessId> businessId) {
     entityManager.flush();
@@ -539,8 +582,7 @@ public class RolesAndPermissionsService {
         null);
   }
 
-  public void ensureMinimumAllocationPermissions(
-      User user, Allocation allocation, String defaultRole) {
+  void ensureMinimumAllocationPermissions(User user, Allocation allocation, String defaultRole) {
     if (user.getType().equals(UserType.EMPLOYEE)) {
       UserRolesAndPermissions existingRole =
           ensureNonNullPermissions(
@@ -577,7 +619,7 @@ public class RolesAndPermissionsService {
   }
 
   @NonNull
-  private UserRolesAndPermissions ensureNonNullPermissions(
+  UserRolesAndPermissions ensureNonNullPermissions(
       Optional<UserRolesAndPermissions> target, TypedId<AllocationId> allocationId) {
     return target.orElseGet(
         () -> {
@@ -597,7 +639,7 @@ public class RolesAndPermissionsService {
         });
   }
 
-  public Allocation retrieveAllocation(
+  private Allocation retrieveAllocation(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
     Allocation allocation =
         allocationRepository

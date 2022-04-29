@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.FusionAuthService.CapitalChangePasswordReason;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
@@ -340,6 +341,7 @@ public class UserService {
     return userRepository.findByEmailHash(HashUtil.calculateHash(email));
   }
 
+  @SqlPermissionAPI
   public Page<FilteredUserWithCardListRecord> retrieveUserPage(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
     return userRepository.find(businessId, userFilterCriteria);
@@ -355,6 +357,7 @@ public class UserService {
     return userRepository.save(user).isArchived();
   }
 
+  @SqlPermissionAPI
   public byte[] createCSVFile(
       TypedId<BusinessId> businessId, UserFilterCriteria userFilterCriteria) {
 

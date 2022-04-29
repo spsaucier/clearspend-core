@@ -4,7 +4,6 @@ import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.chartOfAccounts.AddChartOfAccountsMappingRequest;
@@ -22,6 +21,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,6 +33,7 @@ public class ChartOfAccountsMappingService {
   private final CodatClient codatClient;
   private final ExpenseCategoryRepository expenseCategoryRepository;
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<ChartOfAccountsMappingResponse> getAllMappingsForBusiness(
       TypedId<BusinessId> businessId) {
 
@@ -65,6 +66,7 @@ public class ChartOfAccountsMappingService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<ChartOfAccountsMappingResponse> overwriteAllMappings(
       TypedId<BusinessId> businessId, List<AddChartOfAccountsMappingRequest> request) {
     // delete existing chart of accounts mappings for business
@@ -119,20 +121,8 @@ public class ChartOfAccountsMappingService {
         .collect(Collectors.toList());
   }
 
-  public boolean isExpenseCategoryMapped(
-      TypedId<BusinessId> businessId, TypedId<ExpenseCategoryId> expenseCategoryId) {
-    return mappingRepository.existsByBusinessIdAndExpenseCategoryId(businessId, expenseCategoryId);
-  }
-
-  public ChartOfAccountsMapping getAccountMappingForBusiness(
-      TypedId<BusinessId> businessId, String accountRefId) {
-    return mappingRepository
-        .findByBusinessIdAndAccountRefId(businessId, accountRefId)
-        .orElseThrow(
-            () -> new RecordNotFoundException(Table.CHART_OF_ACCOUNTS_MAPPING, accountRefId));
-  }
-
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public void deleteChartOfAccountsMappingsForBusiness(TypedId<BusinessId> businessId) {
     mappingRepository.deleteAll(mappingRepository.findAllByBusinessId(businessId));
   }
@@ -147,7 +137,7 @@ public class ChartOfAccountsMappingService {
     }
   }
 
-  public void updateNameForMappedCodatId(
+  void updateNameForMappedCodatId(
       TypedId<BusinessId> businessId, String accountRefId, String categoryName) {
     // if automatic updates are off, skip expense category name update
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);

@@ -268,11 +268,13 @@ public class AllocationService {
         entityManager.getReference(User.class, allocation.getOwnerId()), allocation);
   }
 
-  // TODO: should be uncomment when CAP-442 is implemented - to allow security context creation for
-  // webhooks
-  // @PreAuthorize("hasPermission(#businessId, 'BusinessId', 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
-  public AllocationRecord getRootAllocation(TypedId<BusinessId> businessId) {
-    Allocation rootAllocation =
+  @PreAuthorize("hasRootPermission(#businessId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
+  public AllocationRecord securedGetRootAllocation(final TypedId<BusinessId> businessId) {
+    return getRootAllocation(businessId);
+  }
+
+  AllocationRecord getRootAllocation(final TypedId<BusinessId> businessId) {
+    final Allocation rootAllocation =
         allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId);
     if (rootAllocation == null) {
       throw new RecordNotFoundException(Table.ALLOCATION, businessId);

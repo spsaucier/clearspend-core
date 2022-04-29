@@ -9,6 +9,7 @@ import com.clearspend.capital.controller.type.security.UserRolesAndPermissionsRe
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.RolesAndPermissionsService.ReadPermissions;
 import com.clearspend.capital.service.SecuredRolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -33,6 +34,9 @@ public class RolesAndPermissionsController {
   private final AllocationService allocationService;
 
   @GetMapping("/allocation/{allocationId}")
+  @ReadPermissions(
+      explanation = "This is used to return user permissions",
+      reviewer = "Craig Miller")
   UserRolesAndPermissionsRecord getUserAllocationRoles(
       @PathVariable(value = "allocationId")
           @Parameter(

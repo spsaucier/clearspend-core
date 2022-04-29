@@ -27,13 +27,13 @@ class RetrievalService {
   private final BusinessBankAccountRepository businessBankAccountRepository;
   private final UserRepository userRepository;
 
-  public Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
+  Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
     return businessRepository
         .findById(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, mustExist, businessId));
   }
 
-  public BusinessBankAccount retrieveBusinessBankAccount(
+  BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
     return businessBankAccountRepository
         .findById(businessBankAccountId)
@@ -41,7 +41,7 @@ class RetrievalService {
             () -> new RecordNotFoundException(Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
   }
 
-  public User retrieveUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
+  User retrieveUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     return userRepository
         .findByBusinessIdAndId(businessId, userId)
         .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId, businessId));

@@ -30,7 +30,7 @@ public class ApplicationReviewController {
   @PostMapping("/document")
   String uploadDocuments(@RequestParam(name = "documentList") List<MultipartFile> files) {
 
-    applicationReviewService.uploadStripeRequiredDocuments(files);
+    applicationReviewService.uploadStripeRequiredDocuments(CurrentUser.getBusinessId(), files);
 
     return "Files successfully sent for review.";
   }

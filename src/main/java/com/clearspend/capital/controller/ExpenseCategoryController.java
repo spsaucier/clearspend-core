@@ -36,7 +36,9 @@ public class ExpenseCategoryController {
   @PostMapping("/disable")
   List<ExpenseCategory> disableExpenseCategories(
       @Validated @RequestBody List<TypedId<ExpenseCategoryId>> expenseCategories) {
-    return expenseCategoryService.disableExpenseCategories(expenseCategories).stream()
+    return expenseCategoryService
+        .disableExpenseCategories(CurrentUser.getBusinessId(), expenseCategories)
+        .stream()
         .map(ExpenseCategory::of)
         .collect(Collectors.toList());
   }

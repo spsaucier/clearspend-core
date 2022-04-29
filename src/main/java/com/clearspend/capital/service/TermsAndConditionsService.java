@@ -6,6 +6,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedReader;
@@ -60,6 +61,10 @@ public class TermsAndConditionsService {
    * Fetches document timestamp from two urls and getting the latest from two
    * @return the most recent timestamp of the terms and privacy documents
    */
+  @OpenAccessAPI(
+      reviewer = "Craig Miller",
+      explanation =
+          "Terms & Conditions is a part of onboarding, and this just returns public info and when the user accepted them.")
   public TermsAndConditionsRecord userAcceptedTermsAndConditions() {
     LocalDateTime privacyPolicyTimestamp =
         getDocumentTimestamp("https://www.clearspend.com/privacy");
@@ -117,6 +122,10 @@ public class TermsAndConditionsService {
   }
 
   @Transactional
+  @OpenAccessAPI(
+      explanation =
+          "This is a part of our onboarding, and it can only accept for the currently authenticated user.",
+      reviewer = "Craig Miller")
   public void acceptTermsAndConditions(
       TypedId<UserId> userId, String clientIp, String clientUserAgent) {
     TosAcceptance tosAcceptance =

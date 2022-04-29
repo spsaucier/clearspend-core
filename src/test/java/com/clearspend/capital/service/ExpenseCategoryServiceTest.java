@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.ExpenseCategory;
@@ -26,7 +27,9 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Test
   void retrieveExpenseCategories() {
-    Business business = testHelper.createBusiness().business();
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Business business = createBusinessRecord.business();
 
     log.info("AllCategories: {}", expenseCategoryRepository.findByBusinessId(business.getId()));
     List<ExpenseCategory> foundCategories =
@@ -38,11 +41,14 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Test
   void canDisableAndEnableExpenseCategories() {
-    Business business = testHelper.createBusiness().business();
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Business business = createBusinessRecord.business();
     List<ExpenseCategory> foundCategories =
         expenseCategoryService.retrieveExpenseCategoriesForBusiness(business.getId());
     List<ExpenseCategory> disabledCategories =
         expenseCategoryService.disableExpenseCategories(
+            createBusinessRecord.business().getId(),
             List.of(foundCategories.get(0).getId(), foundCategories.get(1).getId()));
 
     assertThat(disabledCategories.size()).isEqualTo(2);
@@ -63,13 +69,17 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Test
   void canEnableDisabledDefaultCategories() {
-    Business business = testHelper.createBusiness().business();
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Business business = createBusinessRecord.business();
     List<ExpenseCategory> foundCategories =
         expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
             business.getId(), ExpenseCategoryStatus.ACTIVE, Boolean.TRUE);
     List<TypedId<ExpenseCategoryId>> testData =
         List.of(foundCategories.get(0).getId(), foundCategories.get(1).getId());
-    List<ExpenseCategory> disabled = expenseCategoryService.disableExpenseCategories(testData);
+    List<ExpenseCategory> disabled =
+        expenseCategoryService.disableExpenseCategories(
+            createBusinessRecord.business().getId(), testData);
     List<ExpenseCategory> enabled =
         expenseCategoryService.enableDefaultExpenseCategories(business.getId());
     assertThat(enabled.size()).isEqualTo(disabled.size());
@@ -77,7 +87,9 @@ class ExpenseCategoryServiceTest extends BaseCapitalTest {
 
   @Test
   void canDisableNonDefaultCategories() {
-    Business business = testHelper.createBusiness().business();
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Business business = createBusinessRecord.business();
     List<ExpenseCategory> foundCategories =
         expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
             business.getId(), ExpenseCategoryStatus.ACTIVE, Boolean.TRUE);

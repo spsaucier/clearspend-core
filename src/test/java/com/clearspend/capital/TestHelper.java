@@ -287,7 +287,7 @@ public class TestHelper {
               businessOwner,
               user,
               user.getEmail().getEncrypted(),
-              allocationService.getRootAllocation(businessId),
+              serviceHelper.allocationService().getRootAllocation(businessId),
               login(user));
     }
 
@@ -800,7 +800,10 @@ public class TestHelper {
       BigDecimal amount,
       boolean standardHold) {
     Account businessAccount =
-        allocationService.getRootAllocation(businessBankAccount.getBusinessId()).account();
+        serviceHelper
+            .allocationService()
+            .getRootAllocation(businessBankAccount.getBusinessId())
+            .account();
     return businessBankAccountService.transactBankAccount(
         businessBankAccount.getBusinessId(),
         businessBankAccount.getId(),
@@ -817,7 +820,12 @@ public class TestHelper {
       User user) {
     setCurrentUser(
         entityManager.getReference(
-            User.class, allocationService.getRootAllocation(businessId).allocation().getOwnerId()));
+            User.class,
+            serviceHelper
+                .allocationService()
+                .getRootAllocation(businessId)
+                .allocation()
+                .getOwnerId()));
     entityManager.flush();
     final AllocationRecord allocationRecord =
         allocationService.createAllocation(
@@ -933,11 +941,13 @@ public class TestHelper {
     setCurrentUser(businessOwner.user());
 
     if (openingBalance != null && openingBalance != 0L) {
-      accountService.depositFunds(
-          business.getId(),
-          rootAllocation.account(),
-          Amount.of(Currency.USD, new BigDecimal(openingBalance)),
-          false);
+      serviceHelper
+          .accountService()
+          .depositFunds(
+              business.getId(),
+              rootAllocation.account(),
+              Amount.of(Currency.USD, new BigDecimal(openingBalance)),
+              false);
     }
 
     business

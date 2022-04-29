@@ -402,11 +402,13 @@ public class BusinessControllerTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation().getId(),
             createBusinessRecord.user());
 
-    accountService.depositFunds(
-        createBusinessRecord.business().getId(),
-        createBusinessRecord.allocationRecord().account(),
-        Amount.of(Currency.USD, new BigDecimal("1000")),
-        false);
+    serviceHelper
+        .accountService()
+        .depositFunds(
+            createBusinessRecord.business().getId(),
+            createBusinessRecord.allocationRecord().account(),
+            Amount.of(Currency.USD, new BigDecimal("1000")),
+            false);
 
     // move $100 from root allocation (balance $1000) to newly created allocation (balance $0)
     BusinessReallocationRequest request =
@@ -497,11 +499,16 @@ public class BusinessControllerTest extends BaseCapitalTest {
             allocationChild1.allocation().getId(),
             businessRecord.user());
 
-    accountService.depositFunds(
-        businessRecord.business().getId(),
-        allocationService.getRootAllocation(businessRecord.business().getId()).account(),
-        Amount.of(Currency.USD, new BigDecimal(200)),
-        true);
+    serviceHelper
+        .accountService()
+        .depositFunds(
+            businessRecord.business().getId(),
+            serviceHelper
+                .allocationService()
+                .getRootAllocation(businessRecord.business().getId())
+                .account(),
+            Amount.of(Currency.USD, new BigDecimal(200)),
+            true);
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -631,11 +638,13 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   void getBusinessAccountWithFetchHoldTrueWhenAmountIsAddedOnHold() {
     Business business = createBusinessRecord.business();
-    accountService.depositFunds(
-        business.getId(),
-        allocationService.getRootAllocation(business.getId()).account(),
-        Amount.of(Currency.USD, new BigDecimal(200)),
-        true);
+    serviceHelper
+        .accountService()
+        .depositFunds(
+            business.getId(),
+            serviceHelper.allocationService().getRootAllocation(business.getId()).account(),
+            Amount.of(Currency.USD, new BigDecimal(200)),
+            true);
     MockHttpServletResponse response =
         mvc.perform(get("/businesses/accounts").contentType("application/json").cookie(authCookie))
             .andExpect(status().isOk())

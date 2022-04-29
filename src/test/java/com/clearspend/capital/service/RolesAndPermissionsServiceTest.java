@@ -65,6 +65,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   @Autowired AllocationService allocationService;
   @Autowired UserAllocationRoleRepository userAllocationRoleRepository;
   @Autowired AllocationRolePermissionsRepository allocationRolePermissionsRepo;
+  @Autowired SecuredRolesAndPermissionsService securedRolesAndPermissionsService;
   @Autowired RolesAndPermissionsService rolesAndPermissionsService;
   @Autowired UserService userService;
   @Autowired BusinessBankAccountService businessBankAccountService;
@@ -723,14 +724,18 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     EnumSet<AllocationPermission> managerPermissions = EnumSet.allOf(AllocationPermission.class);
     managerPermissions.remove(AllocationPermission.MANAGE_USERS);
     managerPermissions.remove(AllocationPermission.LINK_BANK_ACCOUNTS);
+    managerPermissions.remove(AllocationPermission.MANAGE_CATEGORIES);
 
     assertEquals(managerPermissions, queriedPermissions.allocationPermissions());
     assertEquals(
         EnumSet.noneOf(GlobalUserPermission.class), queriedPermissions.globalUserPermissions());
 
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
     // Then check all the users of this allocation
     Map<TypedId<UserId>, UserRolesAndPermissions> users =
-        rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(rootAllocation.getId());
+        securedRolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+            rootAllocation.getId());
 
     assertEquals(2, users.size());
     assertEquals(
@@ -897,7 +902,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     // Ensure that the createUser(...) method does not grant any Permissions
     assertThat(
-            rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+            securedRolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
                 rootAllocation.getId()))
         .isNotNull()
         .extracting(i -> i.get(noPermissionsUser.getId()))
@@ -909,7 +914,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     // Run the same test as above but we should now have permissions
     assertThat(
-            rolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+            securedRolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
                 rootAllocation.getId()))
         .isNotNull()
         .extracting(i -> i.get(noPermissionsUser.getId()))

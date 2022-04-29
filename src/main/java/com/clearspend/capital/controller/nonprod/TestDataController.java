@@ -449,6 +449,9 @@ public class TestDataController {
   @OnboardingBusinessProspectMethod(
       reviewer = "Craig Miller",
       explanation = "This is just for generating test data.")
+  @SwitchesCurrentUser(
+      reviewer = "Craig Miller",
+      explanation = "This is just for generating test data.")
   BusinessRecord onboardNewBusiness(
       @PathVariable(value = "type") BusinessType businessType,
       @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
@@ -546,6 +549,12 @@ public class TestDataController {
                     true)));
 
     AllocationRecord allocationRecord = convertBusinessProspectRecord.rootAllocationRecord();
+
+    final User owner =
+        userRepository
+            .findById(new TypedId<>(businessOwners.get(0).getId().toUuid()))
+            .orElseThrow();
+    setCurrentUser(owner);
 
     ApplicationReviewRequirements documentsForManualReview =
         applicationReviewService.getStripeApplicationRequirements(business.getId());

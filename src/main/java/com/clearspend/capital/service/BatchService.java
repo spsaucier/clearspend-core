@@ -6,6 +6,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.BatchSummaryRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
+import com.google.errorprone.annotations.RestrictedApi;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -26,12 +27,17 @@ public class BatchService {
   private final RetrievalService retrievalService;
   private final TwilioService twilioService;
 
-  @Scheduled(fixedRate = 900000, initialDelay = 60000)
   /*
   This function is invoked every 15 minutes and checks for any placed holds with expiration
   time between the "high watermark" time saved during the previous run and [now]
   Currently it's single purpose it to send email to the business email about funds availability
   */
+  @Scheduled(fixedRate = 900000, initialDelay = 60000)
+  @RestrictedApi(
+      explanation =
+          "This method should never be called directly, only invoked by Spring @Scheduled",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void holdChecker() {
     log.debug("BatchService holdChecker: execution started");
     BatchSummary batchSummary = batchSummaryRepository.findByBatchType("HOLD_EXPIRATION_CHECK");

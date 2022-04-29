@@ -40,7 +40,7 @@ public class ChartOfAccountsService {
   private final ChartOfAccountsMappingService chartOfAccountsMappingService;
 
   @VisibleForTesting
-  public ChartOfAccounts updateChartOfAccountsForBusiness(
+  ChartOfAccounts updateChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountNested> accountNested) {
     Optional<ChartOfAccounts> chartOfAccounts =
         chartOfAccountsRepository.findByBusinessId(businessId);

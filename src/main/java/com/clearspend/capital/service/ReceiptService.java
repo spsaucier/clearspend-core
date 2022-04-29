@@ -36,6 +36,7 @@ public class ReceiptService {
   private final ReceiptImageService receiptImageService;
 
   // creates new receipt record and uploads receipt image to GCS (Google Cloud Storage)
+  @PreAuthorize("hasRootPermission(#businessId, 'EMPLOYEE')")
   public Receipt storeReceiptImage(
       TypedId<BusinessId> businessId,
       TypedId<UserId> userId,

@@ -768,11 +768,15 @@ public class CodatServiceTest extends BaseCapitalTest {
     String myFileContents = "My file contents!!!";
 
     Receipt receipt =
-        receiptService.storeReceiptImage(
-            createBusinessRecord.user().getBusinessId(),
-            createBusinessRecord.user().getId(),
-            myFileContents.getBytes(StandardCharsets.UTF_8),
-            "image/jpeg");
+        testHelper.createWithCurrentUser(
+            createBusinessRecord.user(),
+            () ->
+                receiptService.storeReceiptImage(
+                    createBusinessRecord.user().getBusinessId(),
+                    createBusinessRecord.user().getId(),
+                    myFileContents.getBytes(StandardCharsets.UTF_8),
+                    "image/jpeg"));
+
     ReceiptDetails details = new ReceiptDetails();
     details.getReceiptIds().add(receipt.getId());
     newAccountActivity.setReceipt(details);

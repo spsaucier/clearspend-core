@@ -35,6 +35,7 @@ import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -473,10 +474,12 @@ public class CardService {
         disabledPaymentTypes);
   }
 
+  @SqlPermissionAPI
   public Page<SearchCardData> filterCards(CardFilterCriteria filterCriteria) {
     return cardRepository.filter(filterCriteria);
   }
 
+  @SqlPermissionAPI
   public byte[] createCSVFile(CardFilterCriteria filterCriteria) {
 
     Page<SearchCardData> cardsPage = cardRepository.filter(filterCriteria);

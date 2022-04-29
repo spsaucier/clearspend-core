@@ -1,4 +1,4 @@
-package com.clearspend.capital.service.security;
+package com.clearspend.capital.permissioncheck.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;

@@ -8,6 +8,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.RolesAndPermissionsService.ReadPermissions;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -184,6 +185,10 @@ public class PermissionEnrichmentService {
    * called when no business or allocation id is provided), the allocation permissions from the
    * record are cleared prior to it being returned so that only global permissions are provided.
    */
+  @ReadPermissions(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method needs to lookup user permissions to help evalute if they have access to something")
   private List<UserRolesAndPermissions> getPermissionsForGlobal(
       @NonNull final UserRolesAndPermissionsCache cache) {
     return cache
@@ -209,6 +214,10 @@ public class PermissionEnrichmentService {
   }
 
   /** Load all permissions for the specified allocation into memory. */
+  @ReadPermissions(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method needs to lookup user permissions to help evalute if they have access to something")
   private List<UserRolesAndPermissions> getPermissionsForAllocation(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<AllocationId> allocationId) {
@@ -233,6 +242,10 @@ public class PermissionEnrichmentService {
   }
 
   /** Loads all permissions for business into memory and returns them all. */
+  @ReadPermissions(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method needs to lookup user permissions to help evalute if they have access to something")
   private List<UserRolesAndPermissions> getPermissionsForAllAllocationsInBusiness(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<BusinessId> businessId) {
@@ -254,6 +267,10 @@ public class PermissionEnrichmentService {
   }
 
   /** Load all permissions for business into memory, then just return the root allocation. */
+  @ReadPermissions(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method needs to lookup user permissions to help evalute if they have access to something")
   private List<UserRolesAndPermissions> getRootAllocationPermissions(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<BusinessId> businessId) {
@@ -281,6 +298,10 @@ public class PermissionEnrichmentService {
   /**
    * Load all permissions for the specified allocation within the specified business into memory.
    */
+  @ReadPermissions(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method needs to lookup user permissions to help evalute if they have access to something")
   private List<UserRolesAndPermissions> getPermissionsForBusinessAndAllocation(
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final TypedId<BusinessId> businessId,

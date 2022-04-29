@@ -25,6 +25,7 @@ import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.CodatServiceTest;
+import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.testutils.data.TestDataHelper;
 import com.clearspend.capital.testutils.data.TestDataHelper.AccountActivityConfig;
 import com.github.javafaker.Faker;
@@ -54,6 +55,7 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
   private final ChartOfAccountsService chartOfAccountsService;
   private final CodatMockClient codatClient;
   private final ChartOfAccountsRepository chartOfAccountsRepository;
+  private final ServiceHelper serviceHelper;
   private Faker faker = new Faker();
 
   @Value("${client.codat.auth-secret}")
@@ -164,10 +166,13 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
                         .build())
             .collect(Collectors.toList());
 
-    List<CodatAccountNested> oldNestedAccount = codatService.nestCodatAccounts(accounts);
+    List<CodatAccountNested> oldNestedAccount =
+        serviceHelper.codatService().nestCodatAccounts(accounts);
 
-    chartOfAccountsService.updateChartOfAccountsForBusiness(
-        createBusinessRecord.business().getId(), oldNestedAccount);
+    serviceHelper
+        .chartOfAccountsService()
+        .updateChartOfAccountsForBusiness(
+            createBusinessRecord.business().getId(), oldNestedAccount);
 
     List<CodatAccount> newAccounts =
         CodatServiceTest.getModifiedQualifiedNames().stream()

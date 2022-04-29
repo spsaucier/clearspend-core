@@ -1,19 +1,26 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.dao.UserRolesAndPermissions;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.enums.AllocationPermission;
+import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PostFilter;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,6 +28,7 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class SecuredRolesAndPermissionsService {
   private final UserAllocationRoleRepository userAllocationRoleRepository;
+  private final RolesAndPermissionsService rolesAndPermissionsService;
   private final FusionAuthService fusionAuthService;
   private final UserRepository userRepository;
 
@@ -31,6 +39,28 @@ public class SecuredRolesAndPermissionsService {
     final Set<String> globalRoles = getGlobalRoles(userId);
     return userAllocationRoleRepository.findAllByUserIdAndBusinessId(
         userId, businessId, globalRoles);
+  }
+
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_USERS|CUSTOMER_SERVICE')")
+  public Map<TypedId<UserId>, UserRolesAndPermissions> getAllRolesAndPermissionsForAllocation(
+      TypedId<AllocationId> allocationId) {
+    CurrentUser currentUser = CurrentUser.get();
+    Map<TypedId<UserId>, UserRolesAndPermissions> permissionsMap =
+        userAllocationRoleRepository.getActiveUsersWithAllocationPermission(
+            currentUser.businessId(), allocationId);
+
+    if (rolesAndPermissionsService
+            .ensureNonNullPermissions(
+                Optional.ofNullable(permissionsMap.get(currentUser.userId())), allocationId)
+            .allocationPermissions()
+            .contains(AllocationPermission.READ)
+        || rolesAndPermissionsService
+            .getGlobalPermissions(currentUser.roles())
+            .contains(GlobalUserPermission.GLOBAL_READ)) {
+      return permissionsMap;
+    }
+
+    throw new AccessDeniedException("");
   }
 
   @FusionAuthUserAccessor(

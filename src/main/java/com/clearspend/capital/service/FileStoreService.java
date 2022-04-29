@@ -21,7 +21,7 @@ public class FileStoreService {
   private final FileStoreRepository fileStoreRepository;
 
   @Transactional
-  public FileStore saveFileForBusiness(
+  FileStore saveFileForBusiness(
       TypedId<BusinessId> businessId,
       String stripeId,
       String fileName,
@@ -44,7 +44,7 @@ public class FileStoreService {
   }
 
   @Transactional
-  public FileStore saveFileForBusinessOwner(
+  FileStore saveFileForBusinessOwner(
       TypedId<BusinessId> businessId,
       TypedId<BusinessOwnerId> businessOwnerId,
       String stripeId,
@@ -68,7 +68,7 @@ public class FileStoreService {
     return fileStore;
   }
 
-  public byte[] getFileStoreData(String fileStorePath) {
+  byte[] getFileStoreData(String fileStorePath) {
     return googleCloudStorageClient.readOnboardFile(fileStorePath);
   }
 

@@ -44,7 +44,6 @@ import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.CurrentUser;
-import com.google.common.annotations.VisibleForTesting;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -238,6 +237,7 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(chartOfAccounts.getResults()));
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId,
       CodatAccountType type,
@@ -297,8 +297,7 @@ public class CodatService {
 
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
   // their end.
-  @VisibleForTesting
-  public List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
+  List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
     Tree<String, CodatAccount> tree = new Tree<String, CodatAccount>("root");
     Tree<String, CodatAccount> current = tree;
 
@@ -342,17 +341,6 @@ public class CodatService {
     newAccount.setQualifiedName(account.getQualifiedName());
     newAccount.setType(account.getType().getName());
     return newAccount;
-  }
-
-  public void syncTransactionsAwaitingSupplierForCompany(String companyRef) {
-    List<TransactionSyncLog> transactionsWaitingForSupplier =
-        transactionSyncLogRepository.findByStatusAndCodatCompanyRef(
-            TransactionSyncStatus.AWAITING_SUPPLIER, companyRef);
-
-    transactionsWaitingForSupplier.stream()
-        .forEach(
-            transaction ->
-                syncTransactionIfSupplierExists(transaction, transaction.getBusinessId()));
   }
 
   private void syncTransactionIfSupplierExists(
@@ -470,7 +458,7 @@ public class CodatService {
     }
   }
 
-  public void syncIndividualReceipt(Receipt receipt, AccountActivity accountActivity) {
+  void syncIndividualReceipt(Receipt receipt, AccountActivity accountActivity) {
     Optional<TransactionSyncLog> transactionLog =
         transactionSyncLogRepository.findFirstByAccountActivityIdSortByUpdated(
             accountActivity.getId());
@@ -559,6 +547,7 @@ public class CodatService {
     return null;
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<SyncTransactionResponse> syncMultipleTransactions(
       List<TypedId<AccountActivityId>> accountActivityIds, TypedId<BusinessId> businessId) {
     return accountActivityIds.stream()
@@ -566,6 +555,7 @@ public class CodatService {
         .collect(Collectors.toUnmodifiableList());
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public List<SyncTransactionResponse> syncAllReadyTransactions(TypedId<BusinessId> businessId) {
     List<AccountActivity> transactionsReadyToSync =
         accountActivityService.findAllSyncableForBusiness(businessId);
@@ -574,6 +564,7 @@ public class CodatService {
         businessId);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public Integer getSyncReadyCount(TypedId<BusinessId> businessId) {
     return accountActivityRepository.countByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);

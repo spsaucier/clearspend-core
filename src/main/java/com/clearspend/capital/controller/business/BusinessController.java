@@ -118,7 +118,8 @@ public class BusinessController {
 
   @GetMapping("/accounts")
   Account getRootAllocationAccount() {
-    return Account.of(allocationService.getRootAllocation(CurrentUser.getBusinessId()).account());
+    return Account.of(
+        allocationService.securedGetRootAllocation(CurrentUser.getBusinessId()).account());
   }
 
   @GetMapping("/allocations")

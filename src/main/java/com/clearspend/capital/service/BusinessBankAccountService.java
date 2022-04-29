@@ -796,7 +796,9 @@ public class BusinessBankAccountService {
         accountNumber.substring(accountNumber.length() - 4));
   }
 
+  // TODO needs a test
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public void unregisterExternalBank(
       TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankaccountId) {
     BusinessBankAccount businessBankAccount =

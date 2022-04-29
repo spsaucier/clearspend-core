@@ -13,6 +13,8 @@ import java.util.stream.IntStream;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,20 +23,18 @@ import org.springframework.stereotype.Service;
 public class ExpenseCategoryService {
   private final ExpenseCategoryRepository expenseCategoryRepository;
 
+  @PreAuthorize("hasRootPermission(#businessId, 'CATEGORIZE')")
   public List<ExpenseCategory> retrieveExpenseCategoriesForBusiness(
       TypedId<BusinessId> businessId) {
     return expenseCategoryRepository.findByBusinessId(businessId);
   }
 
+  @PostAuthorize("hasPermission(returnObject.orElse(null), 'CATEGORIZE')")
   public Optional<ExpenseCategory> getExpenseCategoryById(TypedId<ExpenseCategoryId> id) {
     return expenseCategoryRepository.findById(id);
   }
 
-  public Optional<ExpenseCategory> getExpenseCategoryByName(String name) {
-    return expenseCategoryRepository.findFirstCategoryByName(name);
-  }
-
-  public void createDefaultCategoriesForBusiness(TypedId<BusinessId> businessId) {
+  void createDefaultCategoriesForBusiness(TypedId<BusinessId> businessId) {
     List<String> defaultExpenseCategoryNames =
         List.of(
             "Assets",
@@ -75,6 +75,7 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
   public ExpenseCategory addExpenseCategory(
       TypedId<BusinessId> businessId, String categoryName, List<String> parentPath) {
     return expenseCategoryRepository
@@ -96,19 +97,22 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
   public List<ExpenseCategory> disableExpenseCategories(
-      List<TypedId<ExpenseCategoryId>> expenseCategories) {
-    return expenseCategories.stream()
-        .map(
-            categoryId -> {
-              ExpenseCategory currentCategory = expenseCategoryRepository.getById(categoryId);
-              currentCategory.setStatus(ExpenseCategoryStatus.DISABLED);
-              return expenseCategoryRepository.save(currentCategory);
-            })
-        .collect(Collectors.toList());
+      final TypedId<BusinessId> businessId, final List<TypedId<ExpenseCategoryId>> categoryIds) {
+    final List<ExpenseCategory> categories =
+        expenseCategoryRepository.findAllByBusinessIdAndIdIn(businessId, categoryIds).stream()
+            .map(
+                category -> {
+                  category.setStatus(ExpenseCategoryStatus.DISABLED);
+                  return category;
+                })
+            .toList();
+    return expenseCategoryRepository.saveAll(categories);
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
   public List<ExpenseCategory> enableAllExpenseCategories(TypedId<BusinessId> businessId) {
     List<ExpenseCategory> disabledCategories =
         expenseCategoryRepository.findByBusinessIdAndStatus(
@@ -124,6 +128,7 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
   public List<ExpenseCategory> enableDefaultExpenseCategories(TypedId<BusinessId> businessId) {
     List<ExpenseCategory> disabledCategories =
         expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(
@@ -139,6 +144,7 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
   public List<ExpenseCategory> disableQboExpenseCategories(TypedId<BusinessId> businessId) {
     List<ExpenseCategory> disabledCategories =
         expenseCategoryRepository.findByBusinessIdAndStatusAndIsDefaultCategory(

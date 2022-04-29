@@ -96,7 +96,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord depositFunds(
+  AdjustmentAndHoldRecord depositFunds(
       TypedId<BusinessId> businessId,
       Account rootAllocationAccount,
       Amount amount,
@@ -124,8 +124,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord depositExternalAchFunds(
-      Account rootAllocationAccount, Amount amount) {
+  AdjustmentAndHoldRecord depositExternalAchFunds(Account rootAllocationAccount, Amount amount) {
     amount.ensureNonNegative();
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
@@ -135,7 +134,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord returnFunds(Account rootAllocationAccount, Amount amount) {
+  AdjustmentAndHoldRecord returnFunds(Account rootAllocationAccount, Amount amount) {
     Adjustment adjustment = adjustmentService.recordReturnFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
@@ -143,7 +142,7 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  public AdjustmentAndHoldRecord returnCardFunds(Account cardAccount, Amount amount) {
+  AdjustmentAndHoldRecord returnCardFunds(Account cardAccount, Amount amount) {
     amount.ensureNonNegative();
 
     Adjustment adjustment = adjustmentService.recordCardReturnFunds(cardAccount, amount);

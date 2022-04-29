@@ -15,7 +15,6 @@ import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.StripeRequirements;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
-import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
 import com.clearspend.capital.service.type.StripePersonFieldsToClearspendOwnerFields;
 import com.google.common.base.Splitter;
@@ -40,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -81,8 +81,10 @@ public class ApplicationReviewService {
 
   @SneakyThrows
   @Transactional
-  public void uploadStripeRequiredDocuments(List<MultipartFile> files) {
-    Business business = retrievalService.retrieveBusiness(CurrentUser.get().businessId(), true);
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS|CUSTOMER_SERVICE')")
+  public void uploadStripeRequiredDocuments(
+      final TypedId<BusinessId> businessId, final List<MultipartFile> files) {
+    Business business = retrievalService.retrieveBusiness(businessId, true);
     Map<String, List<StripeSavedFile>> stripeSavedFilesForPerson = new HashMap<>();
     for (MultipartFile multipartFile : files) {
       String originalFileName =
@@ -166,6 +168,7 @@ public class ApplicationReviewService {
   }
 
   @Transactional
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS|CUSTOMER_SERVICE')")
   public ApplicationReviewRequirements getStripeApplicationRequirements(
       TypedId<BusinessId> businessId) {
 
@@ -181,6 +184,7 @@ public class ApplicationReviewService {
     return getReviewRequirements(business, businessOwners, requirements);
   }
 
+  @PreAuthorize("hasRootPermission(#business, 'LINK_BANK_ACCOUNTS|CUSTOMER_SERVICE')")
   public ApplicationReviewRequirements getReviewRequirements(
       Business business, List<BusinessOwner> businessOwners, Requirements requirements) {
     List<KycOwnerDocuments> kycDocuments =

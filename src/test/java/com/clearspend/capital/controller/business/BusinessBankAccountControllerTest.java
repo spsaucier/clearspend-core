@@ -31,6 +31,7 @@ import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.github.javafaker.Faker;
 import com.plaid.client.model.AccountBase;
 import java.math.BigDecimal;
@@ -57,6 +58,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   private final MockMvcHelper mvcHelper;
   private final TestHelper testHelper;
   private final PlaidProperties plaidProperties;
+  private final ServiceHelper serviceHelper;
   private final PlaidClient plaidClient;
 
   private final PendingStripeTransferService pendingStripeTransferService;
@@ -155,7 +157,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         CreateAdjustmentResponse.class);
 
     List<PendingStripeTransfer> pendingStripeTransfers =
-        pendingStripeTransferService.retrievePendingTransfers(business.business().getId());
+        serviceHelper
+            .pendingStripeTransferService()
+            .retrievePendingTransfers(business.business().getId());
     assertThat(pendingStripeTransfers).hasSize(1);
 
     PendingStripeTransfer pendingStripeTransfer = pendingStripeTransfers.get(0);
@@ -194,7 +198,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
         CreateAdjustmentResponse.class);
 
     List<PendingStripeTransfer> pendingStripeTransfers =
-        pendingStripeTransferService.retrievePendingTransfers(business.business().getId());
+        serviceHelper
+            .pendingStripeTransferService()
+            .retrievePendingTransfers(business.business().getId());
     assertThat(pendingStripeTransfers).hasSize(0);
   }
 
