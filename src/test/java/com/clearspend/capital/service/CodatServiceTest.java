@@ -410,6 +410,15 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .getCodatConnectionId()
                 .equals("codat-connection-id"))
         .isTrue();
+
+    assertThat(
+            serviceHelper
+                .businessService()
+                .getBusiness(business.getId())
+                .business()
+                .getAutoCreateExpenseCategories()
+                .equals(false))
+        .isTrue();
   }
 
   @Test

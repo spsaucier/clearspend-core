@@ -286,6 +286,7 @@ public class CodatService {
       businessService.updateBusinessAccountingSetupStep(
           businessId, AccountingSetupStep.AWAITING_SYNC);
       businessService.deleteCodatConnectionForBusiness(businessId);
+      businessService.setAutomaticExpenseCategories(businessId, false);
       chartOfAccountsMappingService.deleteChartOfAccountsMappingsForBusiness(businessId);
       // first enable all default categories and then disable the qbo/non default categories
       expenseCategoryService.enableDefaultExpenseCategories(businessId);
