@@ -140,7 +140,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = createBusinessRecord.user();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(), testHelper.generateAllocationName(), rootAllocation.getId(), user);
+            business.getId(), testHelper.generateAllocationName(), rootAllocation.getId());
     Card card =
         testHelper.issueCard(
             business,

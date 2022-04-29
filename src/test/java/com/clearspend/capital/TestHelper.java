@@ -483,42 +483,44 @@ public class TestHelper {
   public void runWithCurrentUser(@NonNull final User user, final ThrowingRunnable action) {
     final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUser(user);
-    action.run();
-    setCurrentUser(oldCurrentUser);
+    try {
+      action.run();
+    } finally {
+      setCurrentUser(oldCurrentUser);
+    }
   }
 
   @SneakyThrows
   public <T> T runWithCurrentUser(@NonNull final User user, final ThrowingSupplier<T> action) {
     final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUser(user);
-    final T result = action.get();
-    setCurrentUser(oldCurrentUser);
-    return result;
+    try {
+      return action.get();
+    } finally {
+      setCurrentUser(oldCurrentUser);
+    }
   }
 
   @SneakyThrows
   public void runWithWebhookUser(@NonNull final User user, final ThrowingRunnable action) {
     final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUserAsWebhook(user);
-    action.run();
-    setCurrentUser(oldCurrentUser);
+    try {
+      action.run();
+    } finally {
+      setCurrentUser(oldCurrentUser);
+    }
   }
 
   @SneakyThrows
   public <T> T runWithWebhookUser(@NonNull final User user, final ThrowingSupplier<T> action) {
     final CurrentUser oldCurrentUser = CurrentUser.get();
     setCurrentUserAsWebhook(user);
-    final T result = action.get();
-    setCurrentUser(oldCurrentUser);
-    return result;
-  }
-
-  @SneakyThrows
-  public <T> T createWithCurrentUser(@NonNull final User user, final ThrowingSupplier<T> action) {
-    setCurrentUser(user);
-    final T result = action.get();
-    clearCurrentUser();
-    return result;
+    try {
+      return action.get();
+    } finally {
+      setCurrentUser(oldCurrentUser);
+    }
   }
 
   @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "For testing")
@@ -814,25 +816,13 @@ public class TestHelper {
   }
 
   public AllocationRecord createAllocation(
-      TypedId<BusinessId> businessId,
-      String name,
-      TypedId<AllocationId> parentAllocationId,
-      User user) {
-    setCurrentUser(
-        entityManager.getReference(
-            User.class,
-            serviceHelper
-                .allocationService()
-                .getRootAllocation(businessId)
-                .allocation()
-                .getOwnerId()));
+      TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
     entityManager.flush();
     final AllocationRecord allocationRecord =
         allocationService.createAllocation(
             businessId,
             parentAllocationId,
             name,
-            user,
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
             Collections.emptySet(),
@@ -844,15 +834,11 @@ public class TestHelper {
   @SneakyThrows
   public @NonNull @NotNull(message = "allocationId required") TypedId<AllocationId>
       createAllocationMvc(
-          TypedId<UserId> actor,
-          String allocationName,
-          TypedId<AllocationId> parentAllocationId,
-          TypedId<UserId> owner) {
+          TypedId<UserId> actor, String allocationName, TypedId<AllocationId> parentAllocationId) {
     CreateAllocationRequest request =
         new CreateAllocationRequest(
             allocationName,
             parentAllocationId,
-            owner,
             new com.clearspend.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
@@ -1148,8 +1134,7 @@ public class TestHelper {
           createAllocation(
               business.getId(),
               generateAccountName(),
-              createBusinessRecord.allocationRecord().allocation().getId(),
-              user.user());
+              createBusinessRecord.allocationRecord().allocation().getId());
       serviceHelper
           .accountService()
           .reallocateFunds(

@@ -103,16 +103,14 @@ class BusinessServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Allocation1",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final Allocation allocation2 =
         testHelper
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Allocation2",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final Amount amount = Amount.of(Currency.USD);
 
@@ -198,8 +196,7 @@ class BusinessServiceTest extends BaseCapitalTest {
             .createAllocation(
                 record.business().getBusinessId(),
                 "Sub-Allocation",
-                record.allocationRecord().allocation().getId(),
-                record.user())
+                record.allocationRecord().allocation().getId())
             .allocation();
 
     final ThrowingRunnable action =

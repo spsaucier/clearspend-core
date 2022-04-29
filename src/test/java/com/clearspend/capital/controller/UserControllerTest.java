@@ -167,8 +167,7 @@ class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUserRequest userRecord =
         new CreateUserRequest(
@@ -213,8 +212,7 @@ class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUpdateUserRecord createdUser = testHelper.createUser(business);
 
@@ -263,8 +261,7 @@ class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUpdateUserRecord createdUser = testHelper.createUser(business);
 
@@ -303,8 +300,7 @@ class UserControllerTest extends BaseCapitalTest {
     testHelper.createAllocation(
         business.getId(),
         "allocationName",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUserRequest userRecord1 =
         new CreateUserRequest(
@@ -348,10 +344,7 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = createBusinessRecord.authCookie();
 
     testHelper.createAllocation(
-        business.getId(),
-        "",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     userService.createUser(
         business.getId(),
@@ -1120,10 +1113,7 @@ class UserControllerTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
     testHelper.setCurrentUser(createBusinessRecord.user());
     testHelper.createAllocation(
-        business.getId(),
-        "",
-        createBusinessRecord.allocationRecord().allocation().getId(),
-        createBusinessRecord.user());
+        business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUpdateUserRecord userRecord =
         userService.createUser(
@@ -1168,10 +1158,7 @@ class UserControllerTest extends BaseCapitalTest {
     testHelper.setCurrentUser(createBusinessRecord.user());
     AllocationService.AllocationRecord allocation =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
 
     CreateUpdateUserRecord user =
         userService.createUser(
@@ -1253,22 +1240,19 @@ class UserControllerTest extends BaseCapitalTest {
         testHelper.createAllocation(
             business.getId(),
             "allocation1",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AllocationService.AllocationRecord allocation2 =
         testHelper.createAllocation(
             business.getId(),
             "allocation2",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AllocationService.AllocationRecord allocation3 =
         testHelper.createAllocation(
             business.getId(),
             "allocation3",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
@@ -1352,22 +1336,19 @@ class UserControllerTest extends BaseCapitalTest {
         testHelper.createAllocation(
             business.getId(),
             "allocation1",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AllocationService.AllocationRecord allocation2 =
         testHelper.createAllocation(
             business.getId(),
             "allocation2",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AllocationService.AllocationRecord allocation3 =
         testHelper.createAllocation(
             business.getId(),
             "allocation3",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
@@ -1625,15 +1606,13 @@ class UserControllerTest extends BaseCapitalTest {
         testHelper.createAllocation(
             business.getId(),
             "allocation1",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     AllocationService.AllocationRecord allocation2 =
         testHelper.createAllocation(
             business.getId(),
             "allocation2",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     Cookie authCookie = createBusinessRecord.authCookie();
 

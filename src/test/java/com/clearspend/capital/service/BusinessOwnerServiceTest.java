@@ -27,6 +27,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
   @BeforeEach
   void setup() {
     createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
   }
 
   @Test
@@ -36,8 +37,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final OwnersProvidedRequest request = new OwnersProvidedRequest(false, false);
     final ThrowingRunnable action =
@@ -59,8 +59,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final BusinessOwnerData businessOwnerData = new BusinessOwnerData();
     businessOwnerData.setBusinessId(createBusinessRecord.business().getId());
@@ -80,8 +79,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     createBusinessRecord.business().setType(BusinessType.INDIVIDUAL);
     final OwnersProvidedRequest request = new OwnersProvidedRequest(false, false);
@@ -104,8 +102,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final BusinessOwnerData data =
         testDataHelper.createBusinessOwnerData(createBusinessRecord.business().getId());
@@ -128,8 +125,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingRunnable action =
         () -> businessOwnerService.updateBusinessOwnerAndStripePerson(createBusinessRecord.user());
@@ -148,8 +144,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final BusinessOwnerData data =
         testDataHelper.createBusinessOwnerData(createBusinessRecord.business().getId());
@@ -173,8 +168,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingRunnable action =
         () ->
@@ -195,8 +189,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingRunnable action =
         () -> businessOwnerService.secureFindBusinessOwner(createBusinessRecord.business().getId());
@@ -215,8 +208,7 @@ public class BusinessOwnerServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingRunnable action =
         () ->

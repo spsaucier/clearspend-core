@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.type.allocation;
 
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
-import com.clearspend.capital.controller.type.user.UserData;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.service.AllocationService.AllocationDetailsRecord;
@@ -22,10 +21,6 @@ public class AllocationDetailsResponse {
   private Allocation allocation;
 
   @NonNull
-  @JsonProperty("owner")
-  private UserData owner;
-
-  @NonNull
   @JsonProperty("limits")
   private List<CurrencyLimit> limits;
 
@@ -42,13 +37,11 @@ public class AllocationDetailsResponse {
         new Allocation(
             record.allocation().getId(),
             record.allocation().getName(),
-            record.allocation().getOwnerId(),
             Account.of(record.account()));
     allocation.setParentAllocationId(record.allocation().getParentAllocationId());
 
     return new AllocationDetailsResponse(
         allocation,
-        new UserData(record.owner()),
         CurrencyLimit.ofMap(record.transactionLimit().getLimits()),
         record.transactionLimit().getDisabledMccGroups(),
         record.transactionLimit().getDisabledPaymentTypes());

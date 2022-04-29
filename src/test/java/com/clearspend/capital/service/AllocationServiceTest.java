@@ -67,10 +67,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   void getAllocationsForBusiness() {
     final AllocationRecord child =
         testHelper.createAllocation(
-            createBusinessRecord.business().getId(),
-            "Child",
-            rootAllocation.getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.business().getId(), "Child", rootAllocation.getId());
 
     final List<AllocationRecord> result =
         allocationService.getAllocationsForBusiness(createBusinessRecord.business().getId());
@@ -95,15 +92,12 @@ public class AllocationServiceTest extends BaseCapitalTest {
     final Allocation childAllocation1 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child1",
-                rootAllocation.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "Child1", rootAllocation.getId())
             .allocation();
     final Allocation childAllocation2 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(), "Child2", rootAllocation.getId(), employee)
+                createBusinessRecord.business().getId(), "Child2", rootAllocation.getId())
             .allocation();
     final User viewOnlyChild1 =
         testHelper.createUserWithRole(childAllocation1, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
@@ -203,19 +197,11 @@ public class AllocationServiceTest extends BaseCapitalTest {
     final Allocation root = createBusinessRecord.allocationRecord().allocation();
     final Allocation child1 =
         testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child1",
-                root.getId(),
-                createBusinessRecord.user())
+            .createAllocation(createBusinessRecord.business().getId(), "Child1", root.getId())
             .allocation();
     final Allocation child2 =
         testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child2",
-                root.getId(),
-                createBusinessRecord.user())
+            .createAllocation(createBusinessRecord.business().getId(), "Child2", root.getId())
             .allocation();
     final User viewOnlyChild2 =
         testHelper.createUserWithRole(child2, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
@@ -263,8 +249,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child1",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final User viewOnlyChild1 =
         testHelper.createUserWithRole(child1, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
@@ -309,8 +294,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child1",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final User viewOnlyChild1 =
         testHelper.createUserWithRole(child1, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
@@ -358,7 +342,6 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId(),
                 createBusinessRecord.allocationRecord().allocation().getId(),
                 "not root",
-                createBusinessRecord.user(),
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -377,7 +360,6 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 createBusinessRecord.business().getId(),
                 createBusinessRecord.allocationRecord().allocation().getId(),
                 "also not root",
-                peon.user(),
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -388,7 +370,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   @Test
   void updateAllocationBalance_addRemove_success() {
     // Bootstrap an admin user for this test
-    User admin = userService.retrieveUser(rootAllocation.getOwnerId());
+    User admin = createBusinessRecord.user();
     fusionAuthService.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
     testHelper.setCurrentUser(admin);
@@ -474,7 +456,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   @Test
   void updateAllocationBalance_excessiveAddRemove_fail() {
     // Bootstrap an admin user for this test
-    User admin = userService.retrieveUser(rootAllocation.getOwnerId());
+    User admin = createBusinessRecord.user();
     fusionAuthService.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
     testHelper.setCurrentUser(admin);

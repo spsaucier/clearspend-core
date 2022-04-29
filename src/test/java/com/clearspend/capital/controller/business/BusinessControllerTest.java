@@ -399,8 +399,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
         testHelper.createAllocation(
             createBusinessRecord.business().getId(),
             testHelper.generateAllocationName(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     serviceHelper
         .accountService()
@@ -479,25 +478,21 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   public void getBusinessAllocations_success() {
     CreateBusinessRecord businessRecord = testHelper.createBusiness(100L);
+    testHelper.setCurrentUser(businessRecord.user());
     Allocation rootAllocation = businessRecord.allocationRecord().allocation();
     AllocationRecord allocationChild1 =
         testHelper.createAllocation(
-            businessRecord.business().getId(),
-            "child_1",
-            rootAllocation.getId(),
-            businessRecord.user());
+            businessRecord.business().getId(), "child_1", rootAllocation.getId());
     AllocationRecord allocationGrandchild1 =
         testHelper.createAllocation(
             businessRecord.business().getId(),
             "grandchild_1",
-            allocationChild1.allocation().getId(),
-            businessRecord.user());
+            allocationChild1.allocation().getId());
     AllocationRecord allocationGrandchild2 =
         testHelper.createAllocation(
             businessRecord.business().getId(),
             "grandchild_2",
-            allocationChild1.allocation().getId(),
-            businessRecord.user());
+            allocationChild1.allocation().getId());
 
     serviceHelper
         .accountService()
@@ -676,8 +671,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingFunction<Cookie, ResultActions> action =
         cookie -> mvc.perform(get("/businesses/business-limit").cookie(cookie));

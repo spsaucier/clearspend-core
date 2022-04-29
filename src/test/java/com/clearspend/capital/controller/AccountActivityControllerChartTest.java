@@ -79,10 +79,7 @@ public class AccountActivityControllerChartTest extends BaseCapitalTest {
                 false);
     AllocationRecord allocation =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     serviceHelper
         .accountService()
         .reallocateFunds(

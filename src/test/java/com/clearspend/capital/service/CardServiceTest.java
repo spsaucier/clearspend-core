@@ -678,10 +678,7 @@ class CardServiceTest extends BaseCapitalTest {
     Card card = issueCard();
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            testHelper.generateBusinessName(),
-            allocation.getId(),
-            userRecord.user());
+            business.getId(), testHelper.generateBusinessName(), allocation.getId());
 
     Card updatedCard = cardService.updateCardAccount(card, allocationRecord.allocation());
     assertThat(updatedCard.getAllocationId()).isEqualTo(allocationRecord.allocation().getId());

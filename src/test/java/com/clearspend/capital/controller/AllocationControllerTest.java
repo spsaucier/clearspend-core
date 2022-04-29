@@ -80,7 +80,6 @@ class AllocationControllerTest extends BaseCapitalTest {
         new CreateAllocationRequest(
             testHelper.generateFullName(),
             rootAllocation.getId(),
-            testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
@@ -88,7 +87,7 @@ class AllocationControllerTest extends BaseCapitalTest {
 
     String body = objectMapper.writeValueAsString(request);
 
-    Cookie authCookie = testHelper.login(rootAllocation.getOwnerId());
+    Cookie authCookie = testHelper.login(createBusinessRecord.user());
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -126,14 +125,10 @@ class AllocationControllerTest extends BaseCapitalTest {
     final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
     testHelper.setCurrentUser(createBusinessRecord.user());
     AllocationRecord parentAllocationRecord =
-        testHelper.createAllocation(
-            business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
+        testHelper.createAllocation(business.getId(), "", rootAllocation.getId());
     AllocationRecord allocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            parentAllocationRecord.allocation().getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", parentAllocationRecord.allocation().getId());
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
@@ -171,8 +166,7 @@ class AllocationControllerTest extends BaseCapitalTest {
             .getRootAllocation(testHelper.retrieveBusiness().getId())
             .allocation();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            business.getId(), "", rootAllocation.getId(), testHelper.createUser(business).user());
+        testHelper.createAllocation(business.getId(), "", rootAllocation.getId());
     Card card =
         testHelper.issueCard(
             business,
@@ -233,7 +227,6 @@ class AllocationControllerTest extends BaseCapitalTest {
         new CreateAllocationRequest(
             testHelper.generateFullName(),
             rootAllocation.getId(),
-            testHelper.createUser(testHelper.retrieveBusiness()).user().getId(),
             new Amount(Currency.USD, BigDecimal.valueOf(10)),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
@@ -263,13 +256,10 @@ class AllocationControllerTest extends BaseCapitalTest {
     testHelper.setCurrentUser(createBusinessRecord.user());
     final User firstALlocationOwner = testHelper.createUser(business).user();
     AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            business.getId(), faker.name().name(), rootAllocation.getId(), firstALlocationOwner);
+        testHelper.createAllocation(business.getId(), faker.name().name(), rootAllocation.getId());
 
-    final User secondAllocationOwner = testHelper.createUser(business).user();
     UpdateAllocationRequest updateAllocationRequest = new UpdateAllocationRequest();
     updateAllocationRequest.setName("Changed name");
-    updateAllocationRequest.setOwnerId(secondAllocationOwner.getId());
     updateAllocationRequest.setLimits(
         Collections.singletonList(
             new CurrencyLimit(
@@ -302,9 +292,6 @@ class AllocationControllerTest extends BaseCapitalTest {
         .isEqualTo(allocationRecord.allocation().getId());
     assertThat(allocationDetailsResponse.getAllocation().getName())
         .isEqualTo(updateAllocationRequest.getName());
-    assertThat(allocationDetailsResponse.getAllocation().getOwnerId())
-        .isEqualTo(updateAllocationRequest.getOwnerId());
-    assertThat(allocationDetailsResponse.getOwner()).isNotNull();
     assertThat(allocationDetailsResponse.getLimits())
         .isEqualTo(updateAllocationRequest.getLimits());
     assertThat(allocationDetailsResponse.getDisabledMccGroups())

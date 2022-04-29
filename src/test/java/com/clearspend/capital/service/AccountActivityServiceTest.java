@@ -121,10 +121,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -180,10 +177,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     Account rootAllocationAccount = createBusinessRecord.allocationRecord().account();
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         rootAllocationAccount.getId(),
         parentAllocationRecord.account().getId(),
@@ -259,10 +253,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             false);
     AllocationRecord parentAllocationRecord =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     accountService.reallocateFunds(
         account.getId(),
         parentAllocationRecord.account().getId(),
@@ -604,7 +595,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   void createCSVFile_UserFilterPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     final FindPermissionUsers users =
-        testHelper.createWithCurrentUser(
+        testHelper.runWithCurrentUser(
             createBusinessRecord.user(),
             () -> {
               final User employeeOwner =
@@ -691,8 +682,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Howdy",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
 
     final MerchantDetails merchant1 = testDataHelper.createMerchant();

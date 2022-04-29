@@ -79,10 +79,7 @@ public class CardControllerSearchTest extends BaseCapitalTest {
       testHelper.setCurrentUser(createBusinessRecord.user());
       childAllocation =
           testHelper.createAllocation(
-              business.getId(),
-              "Child Allocation",
-              rootAllocation.allocation().getId(),
-              createBusinessRecord.user());
+              business.getId(), "Child Allocation", rootAllocation.allocation().getId());
       userA =
           testHelper.createUserWithRole(
               createBusinessRecord.allocationRecord().allocation(),

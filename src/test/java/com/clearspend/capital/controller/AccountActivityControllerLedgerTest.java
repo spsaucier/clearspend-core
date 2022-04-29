@@ -212,8 +212,7 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
         testHelper.createAllocation(
             businessRecord.business().getId(),
             "Another allocation",
-            businessRecord.allocationRecord().allocation().getId(),
-            user);
+            businessRecord.allocationRecord().allocation().getId());
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         businessService.reallocateBusinessFunds(

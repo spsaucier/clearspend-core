@@ -143,8 +143,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     managerOnRoot =
         testHelper.createUserWithRole(rootAllocation, DefaultRoles.ALLOCATION_MANAGER).user();
@@ -312,34 +311,22 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
     final Allocation newChild1 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild1",
-                rootAllocation.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild1", rootAllocation.getId())
             .allocation();
     final Allocation newChild2 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild2",
-                newChild1.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild2", newChild1.getId())
             .allocation();
     final Allocation newChild3 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild3",
-                newChild2.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild3", newChild2.getId())
             .allocation();
     final Allocation newChild4 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild4",
-                newChild3.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild4", newChild3.getId())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
     rolesAndPermissionsService.createOrUpdateUserAllocationRole(
@@ -458,34 +445,22 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
     final Allocation newChild1 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild1",
-                rootAllocation.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild1", rootAllocation.getId())
             .allocation();
     final Allocation newChild2 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild2",
-                newChild1.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild2", newChild1.getId())
             .allocation();
     final Allocation newChild3 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild3",
-                newChild2.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild3", newChild2.getId())
             .allocation();
     final Allocation newChild4 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild4",
-                newChild3.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild4", newChild3.getId())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
     rolesAndPermissionsService.createOrUpdateUserAllocationRole(
@@ -539,34 +514,22 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
     final Allocation newChild1 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild1",
-                rootAllocation.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild1", rootAllocation.getId())
             .allocation();
     final Allocation newChild2 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild2",
-                newChild1.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild2", newChild1.getId())
             .allocation();
     final Allocation newChild3 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild3",
-                newChild2.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild3", newChild2.getId())
             .allocation();
     final Allocation newChild4 =
         testHelper
             .createAllocation(
-                createBusinessRecord.business().getId(),
-                "NewChild4",
-                newChild1.getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.business().getId(), "NewChild4", newChild1.getId())
             .allocation();
     final User otherUser = testHelper.createUser(createBusinessRecord.business()).user();
     rolesAndPermissionsService.createOrUpdateUserAllocationRole(

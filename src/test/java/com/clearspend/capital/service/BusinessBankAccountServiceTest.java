@@ -71,13 +71,13 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @BeforeEach
   void setup() {
     createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
     childAllocation =
         testHelper
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
   }
 

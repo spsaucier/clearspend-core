@@ -69,7 +69,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
 
     assertEquals(ALLOCATION_MANAGER, permissions.get(manager.getId()).getAllocationRole());
     assertEquals(
-        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
+        ALLOCATION_ADMIN, permissions.get(rootAllocationOwner.getId()).getAllocationRole());
 
     // Now edit the permission - give the second user only read permission
     mvc.perform(
@@ -89,7 +89,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     permissions = getPermissions(rootAllocation);
     assertEquals(ALLOCATION_VIEW_ONLY, permissions.get(manager.getId()).getAllocationRole());
     assertEquals(
-        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
+        ALLOCATION_ADMIN, permissions.get(rootAllocationOwner.getId()).getAllocationRole());
 
     // Then delete the manager user's permission
     mvc.perform(
@@ -108,7 +108,7 @@ public class UserAllocationRoleControllerTest extends BaseCapitalTest implements
     // And check it
     permissions = getPermissions(rootAllocation);
     assertEquals(
-        ALLOCATION_ADMIN, permissions.get(rootAllocation.getOwnerId()).getAllocationRole());
+        ALLOCATION_ADMIN, permissions.get(rootAllocationOwner.getId()).getAllocationRole());
     assertFalse(permissions.containsKey(manager.getId()));
   }
 

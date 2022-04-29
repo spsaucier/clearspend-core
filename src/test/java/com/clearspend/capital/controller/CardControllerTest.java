@@ -71,22 +71,20 @@ public class CardControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      userId = createBusinessRecord.allocationRecord().allocation().getOwnerId();
-      userCookie = createBusinessRecord.authCookie();
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      card =
-          testHelper.issueCard(
-              business,
-              createBusinessRecord.allocationRecord().allocation(),
-              entityManager.getReference(User.class, userId),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.PHYSICAL,
-              false);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    userId = createBusinessRecord.user().getId();
+    userCookie = createBusinessRecord.authCookie();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            entityManager.getReference(User.class, userId),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
   }
 
   @SneakyThrows
@@ -94,10 +92,9 @@ public class CardControllerTest extends BaseCapitalTest {
   void createCard() {
     TypedId<AllocationId> allocationId =
         testHelper.createAllocationMvc(
-            createBusinessRecord.allocationRecord().allocation().getOwnerId(),
+            userId,
             faker.name().name(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user().getId());
+            createBusinessRecord.allocationRecord().allocation().getId());
 
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
@@ -119,6 +116,8 @@ public class CardControllerTest extends BaseCapitalTest {
             Collections.emptySet(),
             Set.of(PaymentType.MANUAL_ENTRY));
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
+
+    entityManager.flush();
 
     List<IssueCardResponse> issueCardResponse =
         mockMvcHelper.queryList(

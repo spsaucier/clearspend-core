@@ -17,7 +17,6 @@ import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.security.AllocationRolePermissions;
-import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.GlobalRole;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
@@ -332,30 +331,7 @@ public class RolesAndPermissionsService {
     Collections.reverse(allocationIds); // sort leaf to root
     // TODO see that this check is working its way up the tree,
 
-    // See if they own any of the allocations with the role
-    List<TypedId<AllocationId>> maybeOwnedAllocationIds =
-        allocationIds.subList(allocationIds.indexOf(foundRoleAllocationId), allocationIds.size());
-    Map<TypedId<AllocationId>, Allocation> ancestorAllocations =
-        allocationRepository.findAllById(maybeOwnedAllocationIds).stream()
-            .collect(Collectors.toMap(Allocation::getId, a -> a));
-    Optional<Allocation> ownedAllocationOptional =
-        maybeOwnedAllocationIds.stream()
-            .map(ancestorAllocations::get)
-            .filter(a -> a.getOwnerId().equals(grantee.getId()))
-            .findFirst();
-    boolean isAllocationOwner = ownedAllocationOptional.isPresent();
     EnumSet<AllocationPermission> requiredPermissions = EnumSet.noneOf(AllocationPermission.class);
-    if (isAllocationOwner) {
-      requiredPermissions.addAll(
-          allocationRolePermissionsRepository
-              .findAllocationRolePermissionsByBusinessAndRole(
-                  allocation.getBusinessId(), DefaultRoles.ALLOCATION_MANAGER)
-              .map(AllocationRolePermissions::getPermissions)
-              .stream()
-              .flatMap(Arrays::stream)
-              .collect(Collectors.toCollection(() -> EnumSet.noneOf(AllocationPermission.class))));
-      log.info("Allocation owner permissions: {}", allocation.getBusinessId());
-    }
     if (allocation.getParentAllocationId() != null) {
       log.info("Parent level allocation: {}", allocation.getParentAllocationId());
       requiredPermissions.addAll(

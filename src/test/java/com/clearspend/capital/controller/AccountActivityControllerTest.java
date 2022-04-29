@@ -105,10 +105,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
                 false);
     AllocationRecord allocation =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            createBusinessRecord.user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     serviceHelper
         .accountService()
         .reallocateFunds(
@@ -184,10 +181,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
                 false);
     AllocationRecord allocation =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     serviceHelper
         .accountService()
         .reallocateFunds(
@@ -509,10 +503,7 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
                 false);
     AllocationRecord allocation =
         testHelper.createAllocation(
-            business.getId(),
-            "",
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            testHelper.createUser(business).user());
+            business.getId(), "", createBusinessRecord.allocationRecord().allocation().getId());
     serviceHelper
         .accountService()
         .reallocateFunds(

@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.type.allocation;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
@@ -24,9 +23,6 @@ public class UpdateAllocationRequest {
   @JsonProperty("parentAllocationId")
   @Schema(example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
   private TypedId<AllocationId> parentAllocationId;
-
-  @JsonProperty("ownerId")
-  private TypedId<UserId> ownerId;
 
   @JsonProperty("limits")
   private List<CurrencyLimit> limits;

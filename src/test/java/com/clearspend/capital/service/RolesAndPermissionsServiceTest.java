@@ -28,6 +28,7 @@ import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
+import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
@@ -38,12 +39,14 @@ import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -81,7 +84,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   void init() {
     createBusinessRecord = testHelper.createBusiness();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
-    rootAllocationOwner = entityManager.getReference(User.class, rootAllocation.getOwnerId());
+    rootAllocationOwner = createBusinessRecord.user();
     testHelper.setCurrentUser(createBusinessRecord.user());
 
     // Give the root allocation some money
@@ -250,7 +253,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocation.getBusinessId(),
                 rootAllocation.getId(),
                 "Second Allocation",
-                otherUser,
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -284,7 +286,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocation.getBusinessId(),
                 secondAllocation.getId(),
                 "Third Allocation",
-                rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -358,7 +359,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocation.getBusinessId(),
                 thirdAllocation.getId(),
                 "Third Allocation",
-                rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -371,6 +371,66 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
         rolesAndPermissionsService
             .getUserRolesAndPermissionsForAllocation(fourthAllocation.getId())
             .allocationRole());
+  }
+
+  @Test
+  void createOrUpdateUserAllocationRole_DowngradeUserWithNoParentAllocations() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation child =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId())
+            .allocation();
+    final User managerOnChild =
+        testHelper.createUserWithRole(child, DefaultRoles.ALLOCATION_MANAGER).user();
+
+    final EnumSet<AllocationPermission> managerPermissions =
+        allocationRolePermissionsRepo
+            .findByRoleNameAndBusinessId(DefaultRoles.ALLOCATION_MANAGER, null)
+            .map(AllocationRolePermissions::getPermissions)
+            .map(
+                permissions ->
+                    Arrays.stream(permissions)
+                        .collect(
+                            Collectors.toCollection(
+                                () -> EnumSet.noneOf(AllocationPermission.class))))
+            .orElseThrow();
+    final EnumSet<AllocationPermission> viewOnlyPermissions =
+        allocationRolePermissionsRepo
+            .findByRoleNameAndBusinessId(DefaultRoles.ALLOCATION_VIEW_ONLY, null)
+            .map(AllocationRolePermissions::getPermissions)
+            .map(
+                permissions ->
+                    Arrays.stream(permissions)
+                        .collect(
+                            Collectors.toCollection(
+                                () -> EnumSet.noneOf(AllocationPermission.class))))
+            .orElseThrow();
+
+    final UserRolesAndPermissions initialManagerOnChildPermissions =
+        testHelper.runWithCurrentUser(
+            managerOnChild,
+            () ->
+                rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(child.getId()));
+    assertThat(initialManagerOnChildPermissions)
+        .hasFieldOrPropertyWithValue("allocationRole", DefaultRoles.ALLOCATION_MANAGER)
+        .hasFieldOrPropertyWithValue("allocationPermissions", managerPermissions);
+
+    assertDoesNotThrow(
+        () ->
+            rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+                managerOnChild, child, DefaultRoles.ALLOCATION_VIEW_ONLY));
+
+    final UserRolesAndPermissions endingManagerOnChildPermissions =
+        testHelper.runWithCurrentUser(
+            managerOnChild,
+            () ->
+                rolesAndPermissionsService.getUserRolesAndPermissionsForAllocation(child.getId()));
+    assertThat(endingManagerOnChildPermissions)
+        .hasFieldOrPropertyWithValue("allocationRole", DefaultRoles.ALLOCATION_VIEW_ONLY)
+        .hasFieldOrPropertyWithValue("allocationPermissions", viewOnlyPermissions);
   }
 
   @Test
@@ -604,7 +664,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   @Test
   void testNoMixingAndMatchingBusinessesExceptBookkeepers() {
     // Bootstrap an admin user for this test
-    User admin = userService.retrieveUser(rootAllocation.getOwnerId());
+    User admin = createBusinessRecord.user();
     // go under the radar using test privilege to call fusionAuthService for bootstrapping CSM role
     fusionAuthService.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
@@ -614,7 +674,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     // Second business to cross boundaries
     CreateBusinessRecord business2 = testHelper.createBusiness();
     Allocation rootAllocation2 = business2.allocationRecord().allocation();
-    final User bookkeeper = entityManager.getReference(User.class, rootAllocation2.getOwnerId());
+    final User bookkeeper = business2.user();
 
     // Bookkeeper doesn't have the bookkeeper role yet, so should not get read permission
     setCurrentUser(admin);
@@ -698,7 +758,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   @Test
   void getUserRolesForAllocation() {
     CreateUpdateUserRecord newUser = testHelper.createUser(createBusinessRecord.business());
-    User allocationOwner = userService.retrieveUser(rootAllocation.getOwnerId());
+    User allocationOwner = createBusinessRecord.user();
 
     // The root allocation owner is a BUSINESS_OWNER so has Admin permission by default
     setCurrentUser(rootAllocationOwner);
@@ -768,7 +828,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocation.getBusinessId(),
                 rootAllocation.getId(),
                 "Child Allocation",
-                rootAllocationOwner,
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
@@ -804,7 +863,6 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 rootAllocation.getBusinessId(),
                 rootAllocation.getId(),
                 "Child Allocation",
-                manager,
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),

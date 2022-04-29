@@ -768,7 +768,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     String myFileContents = "My file contents!!!";
 
     Receipt receipt =
-        testHelper.createWithCurrentUser(
+        testHelper.runWithCurrentUser(
             createBusinessRecord.user(),
             () ->
                 receiptService.storeReceiptImage(

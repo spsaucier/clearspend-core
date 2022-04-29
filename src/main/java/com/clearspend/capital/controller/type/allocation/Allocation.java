@@ -2,7 +2,6 @@ package com.clearspend.capital.controller.type.allocation;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,11 +29,6 @@ public class Allocation {
   @JsonProperty("parentAllocationId")
   private TypedId<AllocationId> parentAllocationId;
 
-  @JsonProperty("ownerId")
-  @NonNull
-  @NotNull(message = "owner is required")
-  private TypedId<UserId> ownerId;
-
   @JsonProperty("childrenAllocationIds")
   private List<TypedId<AllocationId>> childrenAllocationIds = new ArrayList<>();
 
@@ -48,7 +42,6 @@ public class Allocation {
         new Allocation(
             record.allocation().getId(),
             record.allocation().getName(),
-            record.allocation().getOwnerId(),
             Account.of(record.account()));
 
     result.setParentAllocationId(record.allocation().getParentAllocationId());

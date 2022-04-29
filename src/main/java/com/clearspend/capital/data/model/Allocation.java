@@ -5,7 +5,6 @@ import com.clearspend.capital.common.data.type.TypedIdArrayType;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +30,7 @@ import org.hibernate.annotations.TypeDefs;
 @DynamicUpdate
 @TypeDefs({@TypeDef(name = "uuid-array", typeClass = TypedIdArrayType.class)})
 @Slf4j
-public class Allocation extends TypedMutable<AllocationId> implements Ownable {
+public class Allocation extends TypedMutable<AllocationId> implements AllocationRelated {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -54,20 +53,10 @@ public class Allocation extends TypedMutable<AllocationId> implements Ownable {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AccountId> accountId;
 
-  @NonNull
-  @JoinColumn(referencedColumnName = "id", table = "user")
-  @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
-  private TypedId<UserId> ownerId;
-
   @NonNull private String name;
 
   @Override
   public TypedId<AllocationId> getAllocationId() {
     return getId();
-  }
-
-  @Override
-  public TypedId<UserId> getUserId() {
-    return getOwnerId();
   }
 }

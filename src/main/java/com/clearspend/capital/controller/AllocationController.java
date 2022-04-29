@@ -50,7 +50,6 @@ public class AllocationController {
             CurrentUser.get().businessId(),
             request.getParentAllocationId(),
             request.getName(),
-            userService.retrieveUser(request.getOwnerId()),
             request.getAmount().toAmount(),
             CurrencyLimit.toMap(request.getLimits()),
             request.getDisabledMccGroups(),
@@ -92,7 +91,6 @@ public class AllocationController {
         allocationId,
         request.getName(),
         request.getParentAllocationId(),
-        request.getOwnerId(),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
         request.getDisabledPaymentTypes());
@@ -120,10 +118,7 @@ public class AllocationController {
         .map(
             e ->
                 new Allocation(
-                    e.allocation().getId(),
-                    e.allocation().getName(),
-                    e.allocation().getOwnerId(),
-                    Account.of(e.account())))
+                    e.allocation().getId(), e.allocation().getName(), Account.of(e.account())))
         .collect(Collectors.toList());
   }
 

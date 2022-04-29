@@ -70,13 +70,13 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
             .findFirst()
             .orElseThrow(() -> new RuntimeException("Unable to get TestPlaidClient business"));
     createBusinessRecord = testHelper.createBusiness(businessSandboxEntry.getKey());
+    testHelper.setCurrentUser(createBusinessRecord.user());
     childAllocation =
         testHelper
             .createAllocation(
                 createBusinessRecord.business().getId(),
                 "Child",
-                createBusinessRecord.allocationRecord().allocation().getId(),
-                createBusinessRecord.user())
+                createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
 
     final AccountBase accountBase =

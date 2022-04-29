@@ -31,7 +31,6 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
-import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -39,6 +38,7 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
+import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -79,7 +79,7 @@ public class AllocationService {
   public record AllocationRecord(Allocation allocation, Account account) {}
 
   public record AllocationDetailsRecord(
-      Allocation allocation, Account account, User owner, TransactionLimit transactionLimit) {}
+      Allocation allocation, Account account, TransactionLimit transactionLimit) {}
 
   public @interface CreatesRootAllocation {
 
@@ -108,7 +108,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, Currency.USD);
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
+    Allocation allocation = new Allocation(businessId, account.getId(), name);
     allocation.setId(allocationId);
 
     allocation = allocationRepository.save(allocation);
@@ -135,7 +135,6 @@ public class AllocationService {
       TypedId<BusinessId> businessId,
       @NonNull TypedId<AllocationId> parentAllocationId,
       String name,
-      User user,
       Amount amount,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
@@ -169,7 +168,7 @@ public class AllocationService {
         accountService.createAccount(
             businessId, AccountType.ALLOCATION, allocationId, null, amount.getCurrency());
 
-    Allocation allocation = new Allocation(businessId, account.getId(), user.getId(), name);
+    Allocation allocation = new Allocation(businessId, account.getId(), name);
     allocation.setId(allocationId);
     allocation.setParentAllocationId(parentAllocationId);
     allocation.setAncestorAllocationIds(
@@ -182,6 +181,11 @@ public class AllocationService {
       AccountReallocateFundsRecord reallocateFundsRecord =
           accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
 
+      final User user =
+          userRepository
+              .findById(CurrentUser.getUserId())
+              .orElseThrow(() -> new RecordNotFoundException(Table.USER, CurrentUser.getUserId()));
+
       accountActivityService.recordReallocationAccountActivity(
           parent, allocation, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(), user);
       accountActivityService.recordReallocationAccountActivity(
@@ -191,14 +195,7 @@ public class AllocationService {
     transactionLimitService.createAllocationSpendLimit(
         businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
 
-    ensureAllocationOwnerPermissions(user, allocation);
-
     return new AllocationRecord(allocation, account);
-  }
-
-  private void ensureAllocationOwnerPermissions(User user, Allocation allocation) {
-    rolesAndPermissionsService.ensureMinimumAllocationPermissions(
-        user, allocation, DefaultRoles.ALLOCATION_MANAGER);
   }
 
   Allocation retrieveAllocation(
@@ -236,9 +233,6 @@ public class AllocationService {
     return new AllocationDetailsRecord(
         allocation,
         account,
-        userRepository
-            .findById(allocation.getOwnerId())
-            .orElseThrow(() -> new RecordNotFoundException(Table.USER, allocation.getOwnerId())),
         transactionLimitService.retrieveSpendLimit(
             business.getId(), TransactionLimitType.ALLOCATION, allocationId.toUuid()));
   }
@@ -250,7 +244,6 @@ public class AllocationService {
       TypedId<AllocationId> allocationId,
       String name,
       TypedId<AllocationId> parentAllocationId,
-      TypedId<UserId> ownerId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
       Set<PaymentType> disabledPaymentTypes) {
@@ -259,13 +252,9 @@ public class AllocationService {
 
     BeanUtils.setNotEmpty(name, allocation::setName);
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
-    BeanUtils.setNotNull(ownerId, allocation::setOwnerId);
 
     transactionLimitService.updateAllocationSpendLimit(
         businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
-
-    ensureAllocationOwnerPermissions(
-        entityManager.getReference(User.class, allocation.getOwnerId()), allocation);
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
