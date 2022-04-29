@@ -184,6 +184,7 @@ public class BusinessBankAccountService {
               });
 
     } catch (PlaidClientException e) {
+      tryReLink(e); // probably not at this early stage, but good to check
       if (!e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
         throw e;
       } else {
@@ -704,6 +705,8 @@ public class BusinessBankAccountService {
             "Institution does not support balance check for plaid account ref ending {}",
             plaidAccountRef.substring(plaidAccountRef.length() - 6));
       }
+      tryReLink(e);
+      log.warn("Balance check exception, skipping", e);
     } catch (IOException e) {
       log.warn("Skipping balance check", e);
     }
@@ -853,11 +856,15 @@ public class BusinessBankAccountService {
       return plaidClient.createLinkToken(
           businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
     } catch (PlaidClientException e) {
-      if (e.isCanReInitialize()) {
-        throw new ReLinkException(e);
-      } else {
-        throw e;
-      }
+      tryReLink(e);
+      throw e;
+    }
+  }
+
+  private static void tryReLink(PlaidClientException e) throws ReLinkException {
+    if (e.isCanReInitialize()) {
+      log.info("Got link error. Attempting re-link. {}", e.getMessage());
+      throw new ReLinkException(e);
     }
   }
 }

@@ -17,6 +17,7 @@ import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidClientTest;
 import com.clearspend.capital.client.plaid.PlaidProperties;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.business.BusinessBankAccountController.LinkTokenResponse;
 import com.clearspend.capital.controller.type.Amount;
@@ -42,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,23 +121,41 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void transact_success() {
+    final BankAccountTransactType transactionType = BankAccountTransactType.DEPOSIT;
+    final BigDecimal amount = BigDecimal.TEN;
+    final TypedId<BusinessBankAccountId> businessBankAccountId = businessBankAccount.getId();
+    final Cookie authCookie = this.authCookie;
+
+    assertThat(transact(transactionType, amount, businessBankAccountId, authCookie).getStatus())
+        .isEqualTo(200);
+  }
+
+  private MockHttpServletResponse transact(
+      BankAccountTransactType transactionType,
+      Number amountNum,
+      TypedId<BusinessBankAccountId> businessBankAccountId,
+      Cookie authCookie)
+      throws Exception {
+    BigDecimal amount =
+        amountNum instanceof BigDecimal
+            ? (BigDecimal) amountNum
+            : new BigDecimal(amountNum.toString());
     TransactBankAccountRequest request =
-        new TransactBankAccountRequest(
-            BankAccountTransactType.DEPOSIT, new Amount(Currency.USD, BigDecimal.TEN));
+        new TransactBankAccountRequest(transactionType, new Amount(Currency.USD, amount));
 
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
         mvc.perform(
                 post(String.format(
-                        "/business-bank-accounts/%s/transactions", businessBankAccount.getId()))
+                        "/business-bank-accounts/%s/transactions", businessBankAccountId))
                     .contentType("application/json")
                     .cookie(authCookie)
                     .content(body))
-            .andExpect(status().isOk())
             .andReturn()
             .getResponse();
     log.info(response.getContentAsString());
+    return response;
   }
 
   @Test
@@ -362,22 +382,20 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     assertNotNull(balances);
     assertNotNull(accounts);
 
-    MockHttpServletResponse response =
-        mvc.perform(
-                get(
-                        "/non-production/test-data/plaid/un-link/{businessBankAccountId}",
-                        linkedAccount.getId().toString())
-                    .header(
-                        HttpHeaders.USER_AGENT,
-                        new Faker(new SecureRandom(new byte[] {0})).internet().userAgentAny())
-                    .cookie(createBusinessRecord.authCookie())
-                    .contentType("application/json"))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
+    MockHttpServletResponse response = invalidateLink(createBusinessRecord, linkedAccount);
 
     Assertions.assertThatExceptionOfType(PlaidClientException.class)
         .isThrownBy(() -> plaidClient.getBalances(businessId, accessToken));
+
+    // invalidateLink(createBusinessRecord, linkedAccount);
+
+    MockHttpServletResponse fundAccountResponse =
+        transact(
+            BankAccountTransactType.DEPOSIT,
+            10,
+            linkedAccount.getId(),
+            createBusinessRecord.authCookie());
+    assertThat(fundAccountResponse.getStatus()).isEqualTo(428);
 
     MockHttpServletResponse response2 =
         mvc.perform(
@@ -397,5 +415,23 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     LinkTokenResponse linkTokenResponse =
         objectMapper.readValue(response2.getContentAsString(), LinkTokenResponse.class);
     assertTrue(linkTokenResponse.linkToken().startsWith("link-sandbox-"));
+  }
+
+  @NotNull
+  private MockHttpServletResponse invalidateLink(
+      CreateBusinessRecord createBusinessRecord, BusinessBankAccount linkedAccount)
+      throws Exception {
+    return mvc.perform(
+            get(
+                    "/non-production/test-data/plaid/un-link/{businessBankAccountId}",
+                    linkedAccount.getId().toString())
+                .header(
+                    HttpHeaders.USER_AGENT,
+                    new Faker(new SecureRandom(new byte[] {0})).internet().userAgentAny())
+                .cookie(createBusinessRecord.authCookie())
+                .contentType("application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
   }
 }
