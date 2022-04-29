@@ -82,6 +82,19 @@ public class BusinessProspectService {
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_PROSPECT, businessOwnerId));
   }
 
+  @RestrictedApi(
+      explanation = "This is used when a 'real' user is not yet available",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
+  void acceptTermsAndConditions(
+      TypedId<BusinessProspectId> businessProspectId, TosAcceptance tosAcceptance) {
+    BusinessProspect businessProspect = getBusinessProspect(businessProspectId);
+    businessProspect.setTosAcceptance(tosAcceptance);
+    businessProspectRepository.save(businessProspect);
+    businessProspectRepository.flush();
+  }
+
   public record BusinessProspectRecord(
       BusinessProspect businessProspect, BusinessProspectStatus businessProspectStatus) {}
 
@@ -486,6 +499,10 @@ public class BusinessProspectService {
       allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
   public BusinessProspect retrieveBusinessProspectById(
       TypedId<BusinessProspectId> businessProspectId) {
+    return getBusinessProspect(businessProspectId);
+  }
+
+  private BusinessProspect getBusinessProspect(TypedId<BusinessProspectId> businessProspectId) {
     return businessProspectRepository
         .findById(businessProspectId)
         .orElseThrow(

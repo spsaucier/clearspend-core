@@ -1,12 +1,15 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
+import com.clearspend.capital.service.BusinessProspectService.OnboardingBusinessProspectMethod;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedReader;
@@ -18,6 +21,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,11 +40,12 @@ public class TermsAndConditionsService {
   private final UserService userService;
   private final BusinessOwnerService businessOwnerService;
   private final BusinessService businessService;
+  private final BusinessProspectService businessProspectService;
   private static final Pattern timestampPattern =
       Pattern.compile("[A-Za-z]+ [A-Za-z]+ [0-9 ]?\\d \\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2}");
 
   public record TermsAndConditionsRecord(
-      TypedId<UserId> userId,
+      TypedId<?> userId,
       LocalDateTime acceptedTimestampByUser,
       boolean isAcceptedTermsAndConditions,
       LocalDateTime maxDocumentTimestamp) {}
@@ -65,19 +70,38 @@ public class TermsAndConditionsService {
       reviewer = "Craig Miller",
       explanation =
           "Terms & Conditions is a part of onboarding, and this just returns public info and when the user accepted them.")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "George Buduianu",
+      explanation = "This can be called during onboarding")
   public TermsAndConditionsRecord userAcceptedTermsAndConditions() {
     LocalDateTime privacyPolicyTimestamp =
         getDocumentTimestamp("https://www.clearspend.com/privacy");
     LocalDateTime termsTimestamp = getDocumentTimestamp("https://www.clearspend.com/terms");
 
-    User user = userService.retrieveUserForService(CurrentUser.getUserId());
+    TosAcceptance tos;
+    TypedId<?> id;
+
+    try {
+      User user = userService.retrieveUserForService(CurrentUser.getUserId());
+      tos = user.getTosAcceptance();
+      id = user.getId();
+    } catch (RecordNotFoundException recordNotFoundException) {
+      // If we don't have a user yet but user accepted the TOS at the start of onboarding.
+      // Reason for this case, if the user don't finish prospect steps and close the page
+      BusinessProspect businessProspect =
+          businessProspectService.retrieveBusinessProspect(
+              new TypedId<>(Objects.requireNonNull(CurrentUser.getUserId()).toUuid()));
+      tos = businessProspect.getTosAcceptance();
+      id = businessProspect.getBusinessOwnerId();
+    }
+
     log.debug(
         "termsAndConditions : {}",
-        Optional.ofNullable(user.getTosAcceptance()).map(TosAcceptance::getDate).orElse(null));
+        Optional.ofNullable(tos).map(TosAcceptance::getDate).orElse(OffsetDateTime.MIN));
 
     LocalDateTime maxDocumentTimestamp = max(termsTimestamp, privacyPolicyTimestamp);
     boolean isAcceptedTermsAndConditions =
-        Optional.ofNullable(user.getTosAcceptance())
+        Optional.ofNullable(tos)
             .map(
                 d ->
                     OffsetDateTime.of(maxDocumentTimestamp, ZoneOffset.UTC)
@@ -86,8 +110,8 @@ public class TermsAndConditionsService {
             .orElse(false);
 
     return new TermsAndConditionsRecord(
-        user.getId(),
-        Optional.ofNullable(user.getTosAcceptance())
+        id,
+        Optional.ofNullable(tos)
             .map(tosAcceptance -> tosAcceptance.getDate().toLocalDateTime())
             .orElse(null),
         isAcceptedTermsAndConditions,
@@ -126,6 +150,9 @@ public class TermsAndConditionsService {
       explanation =
           "This is a part of our onboarding, and it can only accept for the currently authenticated user.",
       reviewer = "Craig Miller")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "George Buduianu",
+      explanation = "This can to be called during onboarding")
   public void acceptTermsAndConditions(
       TypedId<UserId> userId, String clientIp, String clientUserAgent) {
     TosAcceptance tosAcceptance =
@@ -133,16 +160,26 @@ public class TermsAndConditionsService {
             OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS),
             clientIp,
             clientUserAgent);
-    User user = userService.retrieveUser(userId);
-    if (UserType.BUSINESS_OWNER == user.getType()) {
-      Optional<BusinessOwner> businessOwner =
-          businessOwnerService.retrieveBusinessOwnerByEmail(user.getEmail().getEncrypted());
-      if (businessOwner.isPresent()
-          && BooleanUtils.isTrue(businessOwner.get().getRelationshipRepresentative())) {
-        businessService.updateBusinessTosAcceptance(user.getBusinessId(), tosAcceptance);
+    try {
+      User user = userService.retrieveUser(userId);
+      if (UserType.BUSINESS_OWNER == user.getType()) {
+        Optional<BusinessOwner> businessOwner =
+            businessOwnerService.retrieveBusinessOwnerByEmail(user.getEmail().getEncrypted());
+        if (businessOwner.isPresent()
+            && BooleanUtils.isTrue(businessOwner.get().getRelationshipRepresentative())) {
+          businessService.updateBusinessTosAcceptance(user.getBusinessId(), tosAcceptance);
+        }
       }
-    }
 
-    userService.acceptTermsAndConditions(userId, tosAcceptance);
+      userService.acceptTermsAndConditions(userId, tosAcceptance);
+    } catch (RecordNotFoundException userNotFound) {
+      // If we don't have a user yet but user accepted the TOS at the start of onboarding.
+      // Reason for this case, if the user don't finish prospect steps and close the page
+      BusinessProspect businessProspect =
+          businessProspectService.retrieveBusinessProspect(
+              new TypedId<>(Objects.requireNonNull(userId).toUuid()));
+
+      businessProspectService.acceptTermsAndConditions(businessProspect.getId(), tosAcceptance);
+    }
   }
 }

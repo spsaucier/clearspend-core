@@ -376,6 +376,23 @@ public class TestHelper {
   }
 
   public OnboardBusinessRecord onboardBusiness() throws Exception {
+
+    BusinessProspect businessProspect = createProspect().businessProspect;
+
+    // convert the prospect to a business
+    ConvertBusinessProspectResponse convertBusinessProspectResponse =
+        convertBusinessProspect(businessProspect.getId());
+
+    return new OnboardBusinessRecord(
+        serviceHelper.businessService().getBusiness(businessProspect.getBusinessId()).business(),
+        serviceHelper
+            .businessOwnerService()
+            .retrieveBusinessOwner(convertBusinessProspectResponse.getBusinessOwnerId()),
+        businessProspect,
+        defaultAuthCookie);
+  }
+
+  public OnboardBusinessRecord createProspect() throws Exception {
     // create business prospect including setting email (returns email OTP)
     BusinessProspect businessProspect = createBusinessProspect();
 
@@ -394,17 +411,8 @@ public class TestHelper {
     passwords.put(businessProspect.getId(), password);
 
     login(businessProspect.getEmail().getEncrypted(), password);
-    // convert the prospect to a business
-    ConvertBusinessProspectResponse convertBusinessProspectResponse =
-        convertBusinessProspect(businessProspect.getId());
 
-    return new OnboardBusinessRecord(
-        serviceHelper.businessService().getBusiness(businessProspect.getBusinessId()).business(),
-        serviceHelper
-            .businessOwnerService()
-            .retrieveBusinessOwner(convertBusinessProspectResponse.getBusinessOwnerId()),
-        businessProspect,
-        defaultAuthCookie);
+    return new OnboardBusinessRecord(null, null, businessProspect, defaultAuthCookie);
   }
 
   public void testBusinessProspectState(String email, BusinessProspectStatus status) {

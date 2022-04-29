@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.OnboardBusinessRecord;
 import com.clearspend.capital.controller.type.termsAndConditions.TermsAndConditionsResponse;
 import com.github.javafaker.Faker;
 import java.security.SecureRandom;
@@ -15,7 +16,6 @@ import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -30,14 +30,10 @@ class TermsAndConditionsControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private TestHelper.CreateBusinessRecord createBusinessRecord;
 
-  @BeforeEach
-  void init() {
-    createBusinessRecord = testHelper.init();
-  }
-
   @Test
   @SneakyThrows
   void testCheckingTimeStampDetails() {
+    createBusinessRecord = testHelper.init();
     String contentAsString =
         mvc.perform(
                 get("/terms-and-conditions/timestamp-details")
@@ -58,7 +54,31 @@ class TermsAndConditionsControllerTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
+  void testCheckingTimeStampDetailsForAnUserWhoStopsBeforeConvertingBusinessProspect() {
+    OnboardBusinessRecord prospect = testHelper.createProspect();
+
+    String contentAsString =
+        mvc.perform(
+                get("/terms-and-conditions/timestamp-details")
+                    .contentType("application/json")
+                    .cookie(prospect.cookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    log.info(contentAsString, TermsAndConditionsResponse.class);
+    TermsAndConditionsResponse termsAndConditionsResponse =
+        objectMapper.readValue(contentAsString, TermsAndConditionsResponse.class);
+    assertThat(termsAndConditionsResponse.isAcceptedTermsAndConditions()).isTrue();
+    assertThat(termsAndConditionsResponse.getUserId())
+        .isEqualTo(prospect.businessProspect().getBusinessOwnerId());
+    assertThat(termsAndConditionsResponse.getAcceptedTimestampByUser()).isNotNull();
+  }
+
+  @Test
+  @SneakyThrows
   void testAcceptTermsAndConditionForUser() {
+    createBusinessRecord = testHelper.init();
     LocalDateTime localDateTime = LocalDateTime.now();
     String contentAsString =
         mvc.perform(
@@ -78,6 +98,32 @@ class TermsAndConditionsControllerTest extends BaseCapitalTest {
     assertThat(termsAndConditionsResponse.isAcceptedTermsAndConditions()).isTrue();
     assertThat(termsAndConditionsResponse.getUserId())
         .isEqualTo(createBusinessRecord.user().getUserId());
+    assertThat(termsAndConditionsResponse.getAcceptedTimestampByUser()).isAfter(localDateTime);
+  }
+
+  @Test
+  @SneakyThrows
+  void testAcceptTermsAndConditionForUserWhoStopsTheOnboardingBeforeConvert() {
+    OnboardBusinessRecord prospect = testHelper.createProspect();
+    LocalDateTime localDateTime = LocalDateTime.now();
+    String contentAsString =
+        mvc.perform(
+                patch("/terms-and-conditions")
+                    .contentType("application/json")
+                    .header(
+                        HttpHeaders.USER_AGENT,
+                        new Faker(new SecureRandom(new byte[] {0})).internet().userAgentAny())
+                    .cookie(prospect.cookie()))
+            .andExpect(status().isAccepted())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    log.info(contentAsString, TermsAndConditionsResponse.class);
+    TermsAndConditionsResponse termsAndConditionsResponse =
+        objectMapper.readValue(contentAsString, TermsAndConditionsResponse.class);
+    assertThat(termsAndConditionsResponse.isAcceptedTermsAndConditions()).isTrue();
+    assertThat(termsAndConditionsResponse.getUserId())
+        .isEqualTo(prospect.businessProspect().getBusinessOwnerId());
     assertThat(termsAndConditionsResponse.getAcceptedTimestampByUser()).isAfter(localDateTime);
   }
 }
