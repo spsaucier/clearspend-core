@@ -155,7 +155,10 @@ client:
     base-url: ${CODAT_BASE_URL:https://api-uat.codat.io}
     auth-secret: ${CODAT_AUTH_SECRET:eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ}
     quickbooksonline-code: ${CODAT_QBO_CODE:quickbooksonlinesandbox}
-
+    connect-timeout: 2000
+    response-timeout: 15000
+    read-timeout: 15000
+    write-timeout: 10000
 logging:
   level:
     root: INFO

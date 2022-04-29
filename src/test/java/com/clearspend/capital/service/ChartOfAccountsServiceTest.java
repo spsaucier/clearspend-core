@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.servlet.http.Cookie;
 import org.assertj.core.api.Condition;
-import org.assertj.core.data.Index;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -271,7 +270,14 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
         new Condition<ExpenseCategory>(
             category -> category.getCategoryName().equals("New Guy"), "Contains the New Guy");
     assertThat(pre).doNotHave(condition);
-    assertThat(post).hasSize(pre.size() + 1).has(condition, Index.atIndex(pre.size()));
+    assertThat(post)
+        .hasSize(pre.size() + 1)
+        .matches(
+            it ->
+                it.stream()
+                    .filter(acc -> acc.getCategoryName().equals("New Guy"))
+                    .findFirst()
+                    .isPresent());
   }
 
   @Test

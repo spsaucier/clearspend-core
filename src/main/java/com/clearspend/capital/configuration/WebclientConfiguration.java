@@ -1,5 +1,6 @@
 package com.clearspend.capital.configuration;
 
+import com.clearspend.capital.client.codat.types.CodatProperties;
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
@@ -87,16 +88,20 @@ public class WebclientConfiguration {
   }
 
   @Bean
-  WebClient codatWebClient(
-      @Value("${client.codat.auth-token}") String authToken,
-      @Value("${client.codat.base-url}") String codatBaseUrl) {
+  WebClient codatWebClient(CodatProperties codatProperties) {
     return WebClient.builder()
         .exchangeStrategies(exchangeStrategies())
-        .clientConnector(new ReactorClientHttpConnector(httpClient()))
-        .baseUrl(codatBaseUrl)
+        .clientConnector(
+            new ReactorClientHttpConnector(
+                createNewHttpClient(
+                    codatProperties.getConnectTimeout(),
+                    codatProperties.getResponseTimeout(),
+                    codatProperties.getReadTimeout(),
+                    codatProperties.getWriteTimeout())))
+        .baseUrl(codatProperties.getBaseUrl())
         .defaultHeaders(
             headers -> {
-              headers.setBasicAuth(authToken);
+              headers.setBasicAuth(codatProperties.getAuthToken());
               headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
             })
         .build();
