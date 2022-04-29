@@ -24,7 +24,9 @@ import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
+import com.clearspend.capital.client.codat.types.GetAccountsResponsePage;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.HateoasLink;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -183,8 +185,14 @@ public class CodatClient {
   }
 
   public GetAccountsResponse getAccountsForBusiness(String companyRef) {
-    return getFromCodatApi(
-        "/companies/%s/data/accounts?page=1".formatted(companyRef), GetAccountsResponse.class);
+    String uri = "/companies/%s/data/accounts?page=1&pageSize=50".formatted(companyRef);
+    ArrayList<CodatAccount> accounts = new ArrayList<>();
+    do {
+      GetAccountsResponsePage page = getFromCodatApi(uri, GetAccountsResponsePage.class);
+      accounts.addAll(page.getResults());
+      uri = page.getLinks().getOrDefault("next", new HateoasLink()).getHref();
+    } while (StringUtils.hasText(uri));
+    return new GetAccountsResponse(accounts);
   }
 
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(
