@@ -283,6 +283,7 @@ public class TestDataHelper {
     @Nullable private final MerchantDetails merchant;
     @Nullable private final ReceiptDetails receipt;
     @Nullable private final ExpenseDetails expenseDetails;
+    @Nullable private final AccountActivityIntegrationSyncStatus syncStatus;
 
     public static AccountActivityConfigBuilder fromCreateBusinessRecord(
         final TestHelper.CreateBusinessRecord createBusinessRecord) {

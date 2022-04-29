@@ -20,6 +20,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -59,6 +60,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
@@ -458,6 +460,28 @@ public class AccountActivityService {
   public List<AccountActivity> findAllSyncableForBusiness(TypedId<BusinessId> businessId) {
     return accountActivityRepository.findByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);
+  }
+
+  @Transactional
+  public AccountActivity unlockAccountActivityForSync(
+      TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
+    AccountActivity accountActivity = getAccountActivity(accountActivityId);
+    if (accountActivity.getExpenseDetails() != null
+        && accountActivity.getExpenseDetails().getExpenseCategoryId() != null) {
+      Optional<ExpenseCategory> expenseCategory =
+          expenseCategoryService.getExpenseCategoryById(
+              accountActivity.getExpenseDetails().getExpenseCategoryId());
+      if (expenseCategory.isPresent()) {
+        if (chartOfAccountsMappingRepository
+            .findByBusinessIdAndExpenseCategoryId(businessId, expenseCategory.get().getId())
+            .isPresent()) {
+          accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.READY);
+          return accountActivityRepository.save(accountActivity);
+        }
+      }
+    }
+    accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
+    return accountActivityRepository.save(accountActivity);
   }
 
   public record CardAccountActivity(Card card, Page<AccountActivity> activityPage) {}

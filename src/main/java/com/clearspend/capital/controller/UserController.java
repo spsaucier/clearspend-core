@@ -432,6 +432,20 @@ public class UserController {
             request.getExpenseCategoryId()));
   }
 
+  @PostMapping("/account-activity/{accountActivityId}/unlock")
+  AccountActivityResponse unlockAccountActivity(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the account activity record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId) {
+    return new AccountActivityResponse(
+        accountActivityService.unlockAccountActivityForSync(
+            CurrentUser.getBusinessId(), accountActivityId));
+  }
+
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")
   void linkReceipt(
       @PathVariable(value = "accountActivityId")

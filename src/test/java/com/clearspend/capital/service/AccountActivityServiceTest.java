@@ -1287,4 +1287,54 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
         .build()
         .validateServiceMethod(action);
   }
+
+  @Test
+  void unlockSyncedTransaction_whenAssignedCategoryAndNot() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    final AccountActivity activity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(employeeOwner)
+                .syncStatus(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED)
+                .build());
+    accountActivityRepository.save(activity);
+
+    accountActivityService.unlockAccountActivityForSync(
+        createBusinessRecord.businessOwner().getBusinessId(), activity.getId());
+    assertThat(
+            accountActivityService.getAccountActivity(activity.getId()).getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+
+    ExpenseCategory mappedCategory =
+        new ExpenseCategory(
+            createBusinessRecord.user().getBusinessId(),
+            0,
+            "My Category",
+            ExpenseCategoryStatus.ACTIVE,
+            false);
+    expenseCategoryRepository.save(mappedCategory);
+
+    ChartOfAccountsMapping mapping =
+        new ChartOfAccountsMapping(
+            createBusinessRecord.user().getBusinessId(), mappedCategory.getId(), 0, "0");
+    chartOfAccountsMappingRepository.save(mapping);
+
+    final AccountActivity mappedActivity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(employeeOwner)
+                .syncStatus(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED)
+                .expenseDetails(new ExpenseDetails(0, mappedCategory.getId(), "My Category"))
+                .build());
+
+    accountActivityService.unlockAccountActivityForSync(
+        createBusinessRecord.businessOwner().getBusinessId(), mappedActivity.getId());
+    assertThat(
+            accountActivityService
+                .getAccountActivity(mappedActivity.getId())
+                .getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+  }
 }
