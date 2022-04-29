@@ -100,6 +100,8 @@ public class ApplicationReviewService {
       MultipartBodyBuilder builder = new MultipartBodyBuilder();
       builder.part(DEFAULT_FILE_RESOURCE_NAME, multipartFile.getResource());
 
+      documentType.validateDocument(multipartFile);
+
       if (entityToken.startsWith(STRIPE_ACCOUNT_PREFIX)) {
         File file =
             stripeClient.uploadFile(
