@@ -28,6 +28,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
@@ -124,6 +125,7 @@ public class BusinessBankAccountService {
             new RequiredEncryptedStringWithHash(accountNumber),
             new RequiredEncryptedStringWithHash(accessToken),
             new RequiredEncryptedStringWithHash(accountRef),
+            AccountLinkStatus.LINKED,
             false);
     businessBankAccount.setName(accountName);
     businessBankAccount.setBankName(bankName);
@@ -715,6 +717,8 @@ public class BusinessBankAccountService {
       }
     } catch (PlaidClientException e) {
       if (e.isCanReInitialize()) {
+        businessBankAccount.setLinkStatus(AccountLinkStatus.RE_LINK_REQUIRED);
+        businessBankAccountRepository.save(businessBankAccount);
         throw new ReLinkException(e);
       }
       if (e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {

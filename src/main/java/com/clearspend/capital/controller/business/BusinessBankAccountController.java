@@ -101,7 +101,8 @@ public class BusinessBankAccountController {
                     e.getId(),
                     e.getName(),
                     e.getRoutingNumber().getEncrypted(),
-                    e.getAccountNumber().getEncrypted()))
+                    e.getAccountNumber().getEncrypted(),
+                    e.getLinkStatus()))
         .toList();
   }
 

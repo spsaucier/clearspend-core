@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.BusinessRelated;
+import com.vladmihalcea.hibernate.type.basic.PostgreSQLEnumType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
 
 @Entity
 @Data
@@ -27,6 +29,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
+@TypeDef(name = "pgsql_enum", typeClass = PostgreSQLEnumType.class)
 public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
     implements BusinessRelated {
   // TODO CAP-219 persist the plaid Account ID (as plaidAccountRef)
@@ -50,6 +53,10 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
   private String stripeBankAccountRef;
 
   private String stripeSetupIntentRef;
+
+  @NonNull
+  @Type(type = "pgsql_enum")
+  private AccountLinkStatus linkStatus;
 
   @NonNull private Boolean deleted;
 

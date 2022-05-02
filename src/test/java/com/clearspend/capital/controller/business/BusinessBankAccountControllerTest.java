@@ -22,8 +22,10 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.business.BusinessBankAccountController.LinkTokenResponse;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
+import com.clearspend.capital.controller.type.business.bankaccount.BankAccount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
 import com.clearspend.capital.data.model.PendingStripeTransfer;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -33,6 +35,7 @@ import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.ServiceHelper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import com.plaid.client.model.AccountBase;
 import java.math.BigDecimal;
@@ -94,28 +97,28 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
     // Test a new linked account
     String linkToken = testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
-    MockHttpServletResponse response =
-        mvc.perform(
-                get(String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken))
-                    .contentType("application/json")
-                    .cookie(authCookie))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse();
-    log.info(response.getContentAsString());
+    usualGet(String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken));
   }
 
   @SneakyThrows
   @Test
   void accounts_success() {
-    assumeTrue(plaidProperties.isConfigured());
+    getBusinessBankAccounts();
+  }
+
+  @NotNull
+  private MockHttpServletResponse getBusinessBankAccounts() throws Exception {
+    return usualGet("/business-bank-accounts");
+  }
+
+  private MockHttpServletResponse usualGet(String s) throws Exception {
     MockHttpServletResponse response =
-        mvc.perform(
-                get("/business-bank-accounts").contentType("application/json").cookie(authCookie))
+        mvc.perform(get(s).contentType("application/json").cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
     log.info(response.getContentAsString());
+    return response;
   }
 
   @SneakyThrows
@@ -382,12 +385,15 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     assertNotNull(balances);
     assertNotNull(accounts);
 
+    assertThat(getBusinessBankAccountStatus(linkedAccount.getId()))
+        .isEqualTo(AccountLinkStatus.LINKED);
     MockHttpServletResponse response = invalidateLink(createBusinessRecord, linkedAccount);
 
     Assertions.assertThatExceptionOfType(PlaidClientException.class)
         .isThrownBy(() -> plaidClient.getBalances(businessId, accessToken));
 
-    // invalidateLink(createBusinessRecord, linkedAccount);
+    assertThat(getBusinessBankAccountStatus(linkedAccount.getId()))
+        .isEqualTo(AccountLinkStatus.RE_LINK_REQUIRED);
 
     MockHttpServletResponse fundAccountResponse =
         transact(
@@ -415,6 +421,19 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     LinkTokenResponse linkTokenResponse =
         objectMapper.readValue(response2.getContentAsString(), LinkTokenResponse.class);
     assertTrue(linkTokenResponse.linkToken().startsWith("link-sandbox-"));
+  }
+
+  @SneakyThrows
+  private AccountLinkStatus getBusinessBankAccountStatus(TypedId<BusinessBankAccountId> id) {
+    return objectMapper
+        .readValue(
+            getBusinessBankAccounts().getContentAsString(),
+            new TypeReference<List<BankAccount>>() {})
+        .stream()
+        .filter(ba -> ba.getBusinessBankAccountId().equals(id))
+        .findFirst()
+        .map(BankAccount::getAccountLinkStatus)
+        .orElseThrow();
   }
 
   @NotNull

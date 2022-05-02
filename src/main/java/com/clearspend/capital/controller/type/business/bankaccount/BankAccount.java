@@ -3,6 +3,7 @@ package com.clearspend.capital.controller.type.business.bankaccount;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,4 +28,7 @@ public class BankAccount {
   @Sensitive
   @JsonProperty("accountNumber")
   private String accountNumber;
+
+  @JsonProperty("accountLinkStatus")
+  private AccountLinkStatus accountLinkStatus;
 }
