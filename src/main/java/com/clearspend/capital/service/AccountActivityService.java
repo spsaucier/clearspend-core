@@ -47,17 +47,11 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
-import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
 import com.clearspend.capital.service.type.GraphFilterCriteria;
 import com.clearspend.capital.service.type.NetworkCommon;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -66,8 +60,6 @@ import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PostAuthorize;
@@ -132,7 +124,8 @@ public class AccountActivityService {
       Hold hold,
       String bankName,
       String accountNumberLastFour) {
-    BankAccountDetails bankAccountDetails = new BankAccountDetails(bankName);
+    BankAccountDetails bankAccountDetails = new BankAccountDetails();
+    bankAccountDetails.setName(bankName);
     bankAccountDetails.setLastFour(accountNumberLastFour);
 
     recordBankAccountAccountActivity(allocation, type, adjustment, hold, bankAccountDetails, null);
@@ -536,79 +529,6 @@ public class AccountActivityService {
         .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, accountActivityId));
   }
 
-  @SqlPermissionAPI
-  public byte[] createCSVFile(AccountActivityFilterCriteria filterCriteria) {
-
-    Page<AccountActivity> accountActivityPage =
-        accountActivityRepository.find(CurrentUser.get().businessId(), filterCriteria);
-
-    List<String> headerFields =
-        Arrays.asList(
-            "Date & Time",
-            "Card",
-            "Cardholder Name",
-            "Merchant Name",
-            "Merchant Category",
-            "Currency",
-            "Amount",
-            "Status");
-
-    ByteArrayOutputStream csvFile = new ByteArrayOutputStream();
-    try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(csvFile), CSVFormat.DEFAULT)) {
-      csvPrinter.printRecord(headerFields);
-      DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
-      accountActivityPage
-          .getContent()
-          .forEach(
-              record -> {
-                try {
-                  String lastFour = "";
-                  String cardholderName = "";
-                  String merchantName = "";
-                  String merchantCategory = "";
-                  if (record.getCard() != null) {
-                    if (record.getCard().getLastFour() != null) {
-                      lastFour = "**** " + record.getCard().getLastFour();
-                    }
-                    if (record.getCard().getOwnerFirstName() != null) {
-                      cardholderName = record.getCard().getOwnerFirstName().getEncrypted();
-                    }
-                    if (record.getCard().getOwnerLastName() != null) {
-                      cardholderName += " " + record.getCard().getOwnerLastName().getEncrypted();
-                    }
-                  }
-
-                  if (record.getMerchant() != null) {
-                    if (record.getMerchant().getName() != null) {
-                      merchantName = record.getMerchant().getName();
-                    }
-                    if (record.getMerchant().getType() != null) {
-                      merchantCategory = record.getMerchant().getType().getDescription();
-                    }
-                  }
-
-                  csvPrinter.printRecord(
-                      Arrays.asList(
-                          dateFormatter.format(record.getActivityTime()),
-                          lastFour,
-                          cardholderName,
-                          merchantName,
-                          merchantCategory,
-                          record.getAmount().getCurrency(),
-                          String.format("%.2f", record.getAmount().getAmount()),
-                          record.getStatus()));
-                } catch (IOException e) {
-                  throw new RuntimeException(e.getMessage());
-                }
-              });
-      csvPrinter.flush();
-    } catch (IOException e) {
-      throw new RuntimeException(e.getMessage());
-    }
-    return csvFile.toByteArray();
-  }
-
-  @SqlPermissionAPI
   public Page<AccountActivity> find(
       TypedId<BusinessId> businessId, AccountActivityFilterCriteria filterCriteria) {
     return accountActivityRepository.find(businessId, filterCriteria);

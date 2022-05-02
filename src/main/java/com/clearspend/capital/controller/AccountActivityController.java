@@ -19,6 +19,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.service.AccountActivityFilterCriteria;
 import com.clearspend.capital.service.AccountActivityService;
+import com.clearspend.capital.service.ExportCSVService;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.DashboardData;
@@ -49,6 +50,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccountActivityController {
 
   private final AccountActivityService accountActivityService;
+  private final ExportCSVService exportCSVService;
 
   @PostMapping("")
   PagedData<AccountActivityResponse> retrieveAccountActivityPage(
@@ -143,30 +145,54 @@ public class AccountActivityController {
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
 
     byte[] csvFile =
-        accountActivityService.createCSVFile(
-            new AccountActivityFilterCriteria(
-                CurrentUser.get().businessId(),
-                request.getAllocationId(),
-                request.getUserId(),
-                request.getCardId(),
-                request.getTypes(),
-                request.getSearchText(),
-                request.getFrom(),
-                request.getTo(),
-                request.getStatuses(),
-                request.getFilterAmount() == null ? null : request.getFilterAmount().getMin(),
-                request.getFilterAmount() == null ? null : request.getFilterAmount().getMax(),
-                request.getCategories(),
-                request.getWithReceipt(),
-                request.getWithoutReceipt(),
-                request.getSyncStatuses(),
-                request.getMissingExpenseCategory(),
-                PageRequest.toPageToken(request.getPageRequest())));
+        exportCSVService.fromAccountActivity(
+            accountActivityService
+                .find(
+                    CurrentUser.getBusinessId(),
+                    new AccountActivityFilterCriteria(
+                        CurrentUser.get().businessId(),
+                        request.getAllocationId(),
+                        request.getUserId(),
+                        request.getCardId(),
+                        request.getTypes(),
+                        request.getSearchText(),
+                        request.getFrom(),
+                        request.getTo(),
+                        request.getStatuses(),
+                        request.getFilterAmount() == null
+                            ? null
+                            : request.getFilterAmount().getMin(),
+                        request.getFilterAmount() == null
+                            ? null
+                            : request.getFilterAmount().getMax(),
+                        request.getCategories(),
+                        request.getWithReceipt(),
+                        request.getWithoutReceipt(),
+                        request.getSyncStatuses(),
+                        request.getMissingExpenseCategory(),
+                        PageRequest.toPageToken(request.getPageRequest())))
+                .toList());
     HttpHeaders headers = new HttpHeaders();
     headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transactions.csv");
     headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
     headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
     return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
+  }
+
+  @GetMapping("/ledger/{ledgerActivityId}")
+  LedgerActivityResponse getLedgerActivity(
+      @PathVariable(value = "ledgerActivityId")
+          @Parameter(
+              required = true,
+              name = "ledgerActivityId",
+              description = "ID of the ledger activity",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> ledgerActivityId) {
+    AccountActivity accountActivity =
+        accountActivityService.retrieveAccountActivity(
+            CurrentUser.get().businessId(), ledgerActivityId);
+
+    return LedgerActivityResponse.of(accountActivity);
   }
 
   @PostMapping("/ledger")
@@ -201,5 +227,39 @@ public class AccountActivityController {
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(accountActivities, LedgerActivityResponse::of);
+  }
+
+  @PostMapping("/ledger/export-csv")
+  ResponseEntity<byte[]> exportLedgerCsv(@Validated @RequestBody LedgerActivityRequest request) {
+
+    // export must return all records, regardless if pagination is set in "view records" mode
+    request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
+
+    byte[] csvFile =
+        exportCSVService.fromLedgerActivity(
+            retrieveLedgerActivityPage(request).getContent(), false);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ledger.csv");
+    headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
+    headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
+    return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
+  }
+
+  @PostMapping("/ledger/export-csv/transactions")
+  ResponseEntity<byte[]> exportLedgerTransactionsCsv(
+      @Validated @RequestBody LedgerActivityRequest request) {
+
+    // export must return all records, regardless if pagination is set in "view records" mode
+    request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));
+
+    byte[] csvFile =
+        exportCSVService.fromLedgerActivity(retrieveLedgerActivityPage(request).getContent(), true);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ledger-transactions.csv");
+    headers.set(HttpHeaders.CONTENT_TYPE, "text/csv");
+    headers.set(HttpHeaders.CONTENT_LENGTH, String.valueOf(csvFile.length));
+    return new ResponseEntity<>(csvFile, headers, HttpStatus.OK);
   }
 }

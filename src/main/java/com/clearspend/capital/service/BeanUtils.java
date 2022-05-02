@@ -1,7 +1,9 @@
 package com.clearspend.capital.service;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -14,6 +16,10 @@ public class BeanUtils {
     if (value != null) {
       consumer.accept(value);
     }
+  }
+
+  public <T, V> T getOrDefault(V object, Function<V, T> extractor, T defaultValue) {
+    return Optional.ofNullable(object).map(extractor).orElse(defaultValue);
   }
 
   public <T> void setIfTrue(java.lang.Boolean value, Consumer<java.lang.Boolean> consumer) {

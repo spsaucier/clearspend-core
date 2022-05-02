@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
 import lombok.Getter;
@@ -79,6 +80,8 @@ public class LedgerActivityResponse {
 
   @JsonProperty("declineDetails")
   private DeclineDetails declineDetails;
+
+  @JsonIgnore private AccountActivity accountActivity;
 
   public static LedgerActivityResponse of(AccountActivity accountActivity) {
     LedgerHoldInfo holdInfo = LedgerHoldInfo.of(accountActivity.getHold());
@@ -180,6 +183,8 @@ public class LedgerActivityResponse {
     if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
       response.setDeclineDetails(accountActivity.getDeclineDetails().get(0));
     }
+
+    response.setAccountActivity(accountActivity);
 
     return response;
   }
