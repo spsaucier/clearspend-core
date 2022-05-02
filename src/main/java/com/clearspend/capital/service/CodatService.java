@@ -8,9 +8,11 @@ import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
+import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
+import com.clearspend.capital.client.codat.types.CodatError;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
@@ -19,6 +21,7 @@ import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
+import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
@@ -217,17 +220,6 @@ public class CodatService {
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
-  public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
-    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
-
-    CodatBankAccountsResponse bankAccounts =
-        codatClient.getBankAccountsForBusiness(
-            currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
-
-    return bankAccounts;
-  }
-
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
@@ -262,15 +254,66 @@ public class CodatService {
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
+    Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
+
+    CodatBankAccountsResponse bankAccounts =
+        codatClient.getBankAccountsForBusiness(
+            currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
+
+    return bankAccounts;
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CreateCreditCardRequest createBankAccountRequest)
       throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
+    if (codatClient
+            .getBankAccountForBusinessByAccountName(
+                currentBusiness.getCodatCompanyRef(),
+                currentBusiness.getCodatConnectionId(),
+                createBankAccountRequest.getAccountName())
+            .getResults()
+            .size()
+        > 0) {
+      // A Bank Account with this Account Name already exists.
+      log.info(
+          "User attempted to create a QBO Bank Account with an Account Name matching an existing Account: %s",
+          createBankAccountRequest.getAccountName());
+      return new CodatCreateBankAccountResponse(
+          new CodatValidation(
+              List.of(new CodatError("0", "Account with that name already exists"))),
+          "",
+          "Failure");
+    }
+
     return codatClient.createBankAccountForBusiness(
         currentBusiness.getCodatCompanyRef(),
         currentBusiness.getCodatConnectionId(),
         createBankAccountRequest.getAccountName());
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  public Business updateCodatCreditCardForBusiness(
+      TypedId<BusinessId> businessId, String codatCreditCardId) {
+    Business business = businessService.retrieveBusinessForService(businessId, true);
+
+    try {
+      CodatBankAccount account =
+          codatClient.getBankAccountById(
+              business.getCodatCompanyRef(), business.getCodatConnectionId(), codatCreditCardId);
+    } catch (Exception e) {
+      log.info(
+          "User attempted to link to a QBO Bank Account that does not exist: %s",
+          codatCreditCardId);
+      return business;
+    }
+
+    business.setCodatCreditCardId(codatCreditCardId);
+
+    return businessRepository.save(business);
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -533,7 +576,7 @@ public class CodatService {
           .findByCodatCompanyRef(codatCompanyRef)
           .ifPresent(
               business ->
-                  businessService.updateCodatCreditCardForBusiness(
+                  updateCodatCreditCardForBusiness(
                       business.getId(), accountStatus.getData().getId()));
       codatClient.syncDataTypeForCompany(codatCompanyRef, "chartOfAccounts");
     }

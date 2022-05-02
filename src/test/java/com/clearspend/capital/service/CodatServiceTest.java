@@ -1059,7 +1059,7 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Test
   public void canCreateBankAccount() {
     codatService.createBankAccountForBusiness(
-        business.getId(), new CreateCreditCardRequest("My Card"));
+        business.getId(), new CreateCreditCardRequest("testing-1"));
   }
 
   @Test

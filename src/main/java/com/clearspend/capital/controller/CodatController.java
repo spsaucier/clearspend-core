@@ -18,7 +18,6 @@ import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
-import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -43,7 +42,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class CodatController {
   private final CodatService codatService;
-  private final BusinessService businessService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
 
   @PostMapping("/quickbooks-online")
@@ -104,7 +102,7 @@ public class CodatController {
   @PutMapping("/bank-accounts")
   Business setBankAccountForBusiness(@Validated @RequestBody SetCreditCardRequest request) {
     return new Business(
-        businessService.updateCodatCreditCardForBusiness(
+        codatService.updateCodatCreditCardForBusiness(
             CurrentUser.getBusinessId(), request.getAccountId()));
   }
 

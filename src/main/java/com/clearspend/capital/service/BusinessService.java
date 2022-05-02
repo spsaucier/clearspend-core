@@ -158,16 +158,6 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
-  public Business updateCodatCreditCardForBusiness(
-      TypedId<BusinessId> businessId, String codatCreditCardId) {
-    Business business = retrieveBusiness(businessId, true);
-
-    business.setCodatCreditCardId(codatCreditCardId);
-
-    return businessRepository.save(business);
-  }
-
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public Business updateBusinessAccountingSetupStep(

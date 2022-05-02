@@ -5,6 +5,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountStatus;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
+import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatDataIdStub;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
@@ -18,6 +19,8 @@ import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
+import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
+import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
@@ -31,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Profile("test")
 @Component
@@ -180,5 +184,47 @@ public class CodatMockClient extends CodatClient {
   public CodatSyncReceiptResponse syncReceiptsForDirectCost(
       CodatSyncReceiptRequest codatSyncReceiptRequest) {
     return new CodatSyncReceiptResponse("A-OK", "push-key");
+  }
+
+  @Override
+  public CreateCompanyResponse createCodatCompanyForBusiness(String legalName)
+      throws CodatApiCallException {
+    return new CreateCompanyResponse("testing");
+  }
+
+  @Override
+  public CreateIntegrationResponse createQboConnectionForBusiness(String companyRef) {
+    return new CreateIntegrationResponse("testing");
+  }
+
+  private List<CodatBankAccount> bankAccounts =
+      List.of(
+          new CodatBankAccount("1234", "Clearspend Card"),
+          new CodatBankAccount("1", "testing-1"),
+          new CodatBankAccount("2", "testing-2"),
+          new CodatBankAccount("3", "testing-3"));
+
+  @Override
+  public CodatBankAccountsResponse getBankAccountForBusinessByAccountName(
+      String companyRef, String connectionId, String accountName) {
+    return bankAccounts.stream()
+        .filter(it -> it.getAccountName().equals(accountName))
+        .map(it -> new CodatBankAccountsResponse(List.of(it)))
+        .findFirst()
+        .orElseThrow(() -> new WebClientResponseException(0, "", null, null, null));
+  }
+
+  @Override
+  public CodatBankAccount getBankAccountById(String companyRef, String connectionId, String id) {
+    return bankAccounts.stream()
+        .filter(it -> it.getId().equals(id))
+        .findFirst()
+        .orElseThrow(() -> new WebClientResponseException(0, "", null, null, null));
+  }
+
+  @Override
+  public CodatBankAccountsResponse getBankAccountsForBusiness(
+      String companyRef, String connectionId) {
+    return new CodatBankAccountsResponse(bankAccounts);
   }
 }

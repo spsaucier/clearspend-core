@@ -3,8 +3,10 @@ package com.clearspend.capital.client.codat;
 import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountRef;
 import com.clearspend.capital.client.codat.types.CodatAllocation;
+import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
+import com.clearspend.capital.client.codat.types.CodatBankAccountsResponsePage;
 import com.clearspend.capital.client.codat.types.CodatContactRef;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountRequest;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
@@ -251,11 +253,33 @@ public class CodatClient {
     }
   }
 
+  public CodatBankAccountsResponse getBankAccountForBusinessByAccountName(
+      String companyRef, String connectionId, String accountName) {
+    String uri =
+        "/companies/%s/connections/%s/data/bankAccounts?query=accountName=%s"
+            .formatted(companyRef, connectionId, accountName);
+    // No need for paging since we're search for a specific Account
+    return getFromCodatApi(uri, CodatBankAccountsResponse.class);
+  }
+
+  public CodatBankAccount getBankAccountById(String companyRef, String connectionId, String id) {
+    String uri =
+        "/companies/%s/connections/%s/data/bankAccounts/%s".formatted(companyRef, connectionId, id);
+    return getFromCodatApi(uri, CodatBankAccount.class);
+  }
+
   public CodatBankAccountsResponse getBankAccountsForBusiness(
       String companyRef, String connectionId) {
-    return getFromCodatApi(
-        "/companies/%s/connections/%s/data/bankAccounts/".formatted(companyRef, connectionId),
-        CodatBankAccountsResponse.class);
+    String uri =
+        "/companies/%s/connections/%s/data/bankAccounts/".formatted(companyRef, connectionId);
+    ArrayList<CodatBankAccount> accounts = new ArrayList<>();
+    do {
+      CodatBankAccountsResponsePage page =
+          getFromCodatApi(uri, CodatBankAccountsResponsePage.class);
+      accounts.addAll(page.getResults());
+      uri = page.getLinks().getOrDefault("next", new HateoasLink()).getHref();
+    } while (StringUtils.hasText(uri));
+    return new CodatBankAccountsResponse(accounts);
   }
 
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
