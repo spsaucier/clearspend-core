@@ -485,7 +485,12 @@ public class StripeClient {
 
   @SneakyThrows
   public Cardholder updateCardholder(User user) {
-    Cardholder cardholder = Cardholder.retrieve(user.getExternalRef());
+
+    Cardholder cardholder =
+        Cardholder.retrieve(
+            user.getExternalRef(),
+            getRequestOptions(
+                new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId()));
 
     CardholderUpdateParams updateParams =
         CardholderUpdateParams.builder()
