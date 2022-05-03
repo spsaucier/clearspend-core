@@ -494,7 +494,10 @@ public class StripeClient {
 
     CardholderUpdateParams updateParams =
         CardholderUpdateParams.builder()
-            .setPhoneNumber(user.getPhone().getEncrypted())
+            .setPhoneNumber(
+                Optional.ofNullable(user.getPhone())
+                    .map(NullableEncryptedStringWithHash::getEncrypted)
+                    .orElse(null))
             .setStatus(
                 user.isArchived()
                     ? CardholderUpdateParams.Status.INACTIVE
