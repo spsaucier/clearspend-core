@@ -298,11 +298,12 @@ public class UserService {
         new CreateUpdateUserRecord(userRepository.save(user), password);
 
     // Tell the user at the old address that something changed (so they might fix it if necessary)
+    String finalOldEmail = oldEmail;
     Optional.ofNullable(oldEmail)
         .ifPresent(
             e ->
                 twilioService.sendUserDetailsUpdatedEmail(
-                    user.getEmail().getEncrypted(), user.getFirstName().getEncrypted()));
+                    finalOldEmail, user.getFirstName().getEncrypted()));
 
     twilioService.sendUserDetailsUpdatedEmail(
         user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
