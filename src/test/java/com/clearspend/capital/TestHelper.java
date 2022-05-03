@@ -784,11 +784,22 @@ public class TestHelper {
   }
 
   public BusinessBankAccount createBusinessBankAccount(TypedId<BusinessId> businessId) {
+    return createBusinessBankAccount(businessId, true);
+  }
+
+  public BusinessBankAccount createBusinessBankAccount(
+      TypedId<BusinessId> businessId, boolean linkStripe) {
     try {
       String linkToken = plaidClient.createLinkToken(businessId);
-      List<BusinessBankAccount> accounts =
-          businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId);
-      return accounts.get(0);
+      BusinessBankAccount businessBankAccount =
+          businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId).get(0);
+
+      if (linkStripe) {
+        businessBankAccount =
+            businessBankAccountService.registerExternalBank(
+                businessId, businessBankAccount.getId());
+      }
+      return businessBankAccount;
     } catch (IOException e) {
       log.info("Exception initializing with plaid", e);
       throw new RuntimeException(e);

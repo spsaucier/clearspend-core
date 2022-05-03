@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller.business;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -16,6 +17,7 @@ import com.clearspend.capital.client.plaid.PlaidClient;
 import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidClientTest;
 import com.clearspend.capital.client.plaid.PlaidProperties;
+import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -41,11 +43,11 @@ import com.plaid.client.model.AccountBase;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   private final PlaidProperties plaidProperties;
   private final ServiceHelper serviceHelper;
   private final PlaidClient plaidClient;
+  private final StripeClient stripeClient;
 
   private final PendingStripeTransferService pendingStripeTransferService;
   private final BusinessService businessService;
@@ -79,7 +82,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
     createBusinessRecord = testHelper.createBusiness(1000L);
     testHelper.setCurrentUser(createBusinessRecord.user());
     businessBankAccount =
-        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId(), false);
     this.authCookie = createBusinessRecord.authCookie();
   }
 
@@ -371,31 +374,43 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void plaidPasswordReset() {
     assumeTrue(plaidClient.isConfigured());
+    // not using the regular one for this test
     final TypedId<BusinessId> businessId = PlaidClientTest.businessId();
-    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness(businessId);
-    String linkToken = plaidClient.createLinkToken(businessId);
-    String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
-    PlaidClient.AccountsResponse accounts = plaidClient.getAccounts(accessToken, businessId);
+    createBusinessRecord = testHelper.createBusiness(businessId);
+    authCookie = createBusinessRecord.authCookie();
     testHelper.setCurrentUser(createBusinessRecord.user());
     BusinessBankAccount linkedAccount =
-        businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId).stream()
-            .findFirst()
-            .orElseThrow();
+        businessBankAccount =
+            testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+
+    final String accessToken = linkedAccount.getAccessToken().getEncrypted();
     List<AccountBase> balances = plaidClient.getBalances(businessId, accessToken);
+
     assertNotNull(balances);
-    assertNotNull(accounts);
 
     assertThat(getBusinessBankAccountStatus(linkedAccount.getId()))
         .isEqualTo(AccountLinkStatus.LINKED);
     MockHttpServletResponse response = invalidateLink(createBusinessRecord, linkedAccount);
 
-    Assertions.assertThatExceptionOfType(PlaidClientException.class)
-        .isThrownBy(() -> plaidClient.getBalances(businessId, accessToken));
+    // Here we check that an exception is thrown from the client, but the
+    // client doesn't actually flag the account - that responsibility belongs to the service
+    assertThatThrownBy(() -> plaidClient.getBalances(businessId, accessToken))
+        .isInstanceOf(PlaidClientException.class);
+
+    // Trigger the account status change
+    MockHttpServletResponse fundAccountResponse =
+        transact(
+            BankAccountTransactType.DEPOSIT,
+            10,
+            linkedAccount.getId(),
+            createBusinessRecord.authCookie());
+    assertThat(fundAccountResponse.getStatus()).isEqualTo(428);
 
     assertThat(getBusinessBankAccountStatus(linkedAccount.getId()))
         .isEqualTo(AccountLinkStatus.RE_LINK_REQUIRED);
 
-    MockHttpServletResponse fundAccountResponse =
+    // Re-check for good measure
+    fundAccountResponse =
         transact(
             BankAccountTransactType.DEPOSIT,
             10,
@@ -425,15 +440,18 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   private AccountLinkStatus getBusinessBankAccountStatus(TypedId<BusinessBankAccountId> id) {
-    return objectMapper
-        .readValue(
+    final List<BankAccount> bankAccounts =
+        objectMapper.readValue(
             getBusinessBankAccounts().getContentAsString(),
-            new TypeReference<List<BankAccount>>() {})
-        .stream()
+            new TypeReference<List<BankAccount>>() {});
+    if (bankAccounts.isEmpty()) {
+      throw new NoSuchElementException("No bank accounts");
+    }
+    return bankAccounts.stream()
         .filter(ba -> ba.getBusinessBankAccountId().equals(id))
         .findFirst()
         .map(BankAccount::getAccountLinkStatus)
-        .orElseThrow();
+        .orElseThrow(() -> new NoSuchElementException("No matching account"));
   }
 
   @NotNull

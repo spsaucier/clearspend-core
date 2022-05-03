@@ -19,6 +19,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -100,6 +101,7 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
     account.setAccountNumber(new RequiredEncryptedStringWithHash("Account"));
     account.setAccessToken(new RequiredEncryptedStringWithHash(ACCESS_TOKEN));
     account.setPlaidAccountRef(new RequiredEncryptedStringWithHash(plaidAccountRef));
+    account.setLinkStatus(AccountLinkStatus.LINKED);
     account.setDeleted(false);
     return account;
   }

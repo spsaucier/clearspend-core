@@ -135,7 +135,8 @@ public class BusinessBankAccountService {
         businessBankAccount.getId(),
         businessId);
 
-    return businessBankAccountRepository.save(businessBankAccount);
+    BusinessBankAccount savedAccount = businessBankAccountRepository.save(businessBankAccount);
+    return savedAccount;
   }
 
   @PostAuthorize("hasRootPermission(returnObject, 'LINK_BANK_ACCOUNTS')")
@@ -152,7 +153,7 @@ public class BusinessBankAccountService {
         businessBankAccount.setBankName(accounts.institutionName());
         businessBankAccount = businessBankAccountRepository.save(businessBankAccount);
       } catch (PlaidClientException plaidClientException) {
-        tryReLink(plaidClientException);
+        tryReLink(businessBankAccount, plaidClientException);
         log.warn("Failed to fetch institution name", plaidClientException);
       } catch (IOException ioException) {
         log.warn("Failed to fetch institution name", ioException);
@@ -204,7 +205,6 @@ public class BusinessBankAccountService {
               });
 
     } catch (PlaidClientException e) {
-      tryReLink(e); // probably not at this early stage, but good to check
       if (!e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
         throw e;
       } else {
@@ -286,8 +286,11 @@ public class BusinessBankAccountService {
               account.setAccessToken(
                   new RequiredEncryptedStringWithHash(accountsResponse.accessToken()));
               account.setBankName(accountsResponse.institutionName());
+              if (AccountLinkStatus.RE_LINK_REQUIRED.equals(account.getLinkStatus())) {
+                account.setLinkStatus(AccountLinkStatus.LINKED);
+              }
 
-              result.add(account);
+              result.add(businessBankAccountRepository.save(account));
             });
 
     return result;
@@ -716,18 +719,13 @@ public class BusinessBankAccountService {
             "Financial institution", businessBankAccountId, AdjustmentType.DEPOSIT, amount);
       }
     } catch (PlaidClientException e) {
-      if (e.isCanReInitialize()) {
-        businessBankAccount.setLinkStatus(AccountLinkStatus.RE_LINK_REQUIRED);
-        businessBankAccountRepository.save(businessBankAccount);
-        throw new ReLinkException(e);
-      }
       if (e.getErrorCode().equals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED)) {
         String plaidAccountRef = businessBankAccount.getPlaidAccountRef().getEncrypted();
         log.info(
             "Institution does not support balance check for plaid account ref ending {}",
             plaidAccountRef.substring(plaidAccountRef.length() - 6));
       }
-      tryReLink(e);
+      tryReLink(businessBankAccount, e);
       log.warn("Balance check exception, skipping", e);
     } catch (IOException e) {
       log.warn("Skipping balance check", e);
@@ -737,10 +735,12 @@ public class BusinessBankAccountService {
   /**
    * Creates stripe external account with setup intent for further money transfers. Current
    * requirement is to make sure that only one bank account may be configured in Stripe
+   *
+   * @return
    */
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
-  public void registerExternalBank(
+  public BusinessBankAccount registerExternalBank(
       TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId) {
 
     // check that only one bank account is registered in Stripe
@@ -749,7 +749,7 @@ public class BusinessBankAccountService {
 
     if (registeredBankAccount != null) {
       if (registeredBankAccount.getId().equals(businessBankAccountId)) {
-        return;
+        return registeredBankAccount;
       } else {
         throw new RuntimeException("Cannot register additional bank account in Stripe");
       }
@@ -806,7 +806,7 @@ public class BusinessBankAccountService {
                   .getId());
     }
 
-    businessBankAccountRepository.save(businessBankAccount);
+    registeredBankAccount = businessBankAccountRepository.save(businessBankAccount);
 
     String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
     User currentUser = userService.retrieveUserForService(CurrentUser.get().userId());
@@ -819,6 +819,8 @@ public class BusinessBankAccountService {
             currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
         businessBankAccount.getName(),
         accountNumber.substring(accountNumber.length() - 4));
+
+    return registeredBankAccount;
   }
 
   // TODO needs a test
@@ -878,14 +880,17 @@ public class BusinessBankAccountService {
       return plaidClient.createLinkToken(
           businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
     } catch (PlaidClientException e) {
-      tryReLink(e);
+      tryReLink(businessBankAccount, e);
       throw e;
     }
   }
 
-  private static void tryReLink(PlaidClientException e) throws ReLinkException {
+  private void tryReLink(BusinessBankAccount businessBankAccount, PlaidClientException e)
+      throws ReLinkException {
     if (e.isCanReInitialize()) {
       log.info("Got link error. Attempting re-link. {}", e.getMessage());
+      businessBankAccount.setLinkStatus(AccountLinkStatus.RE_LINK_REQUIRED);
+      businessBankAccountRepository.save(businessBankAccount);
       throw new ReLinkException(e);
     }
   }

@@ -18,6 +18,8 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
@@ -28,6 +30,7 @@ import org.hibernate.annotations.TypeDef;
 @NoArgsConstructor
 @RequiredArgsConstructor
 @DynamicUpdate
+@DynamicInsert
 @Slf4j
 @TypeDef(name = "pgsql_enum", typeClass = PostgreSQLEnumType.class)
 public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
@@ -56,6 +59,7 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
 
   @NonNull
   @Type(type = "pgsql_enum")
+  @ColumnDefault("'LINKED'")
   private AccountLinkStatus linkStatus;
 
   @NonNull private Boolean deleted;
