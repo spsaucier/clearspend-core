@@ -45,7 +45,10 @@ public class CardDetailsResponse {
   private Set<MccGroup> disabledMccGroups;
 
   @JsonProperty("disabledPaymentTypes")
-  Set<PaymentType> disabledPaymentTypes;
+  private Set<PaymentType> disabledPaymentTypes;
+
+  @JsonProperty("disableForeign")
+  private Boolean disableForeign;
 
   public static CardDetailsResponse of(CardDetailsRecord cardDetailsRecord) {
     CardDetailsResponse response =
@@ -59,6 +62,7 @@ public class CardDetailsResponse {
     response.setLimits(CurrencyLimit.ofMap(transactionLimit.getLimits()));
     response.setDisabledMccGroups(transactionLimit.getDisabledMccGroups());
     response.setDisabledPaymentTypes(transactionLimit.getDisabledPaymentTypes());
+    response.setDisableForeign(transactionLimit.getDisableForeign());
 
     return response;
   }

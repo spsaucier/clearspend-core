@@ -83,7 +83,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -230,7 +231,8 @@ class AllocationControllerTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.valueOf(10)),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     String body = objectMapper.writeValueAsString(request);
     Cookie authCookie = createBusinessRecord.authCookie();
@@ -270,6 +272,7 @@ class AllocationControllerTest extends BaseCapitalTest {
     updateAllocationRequest.setDisabledMccGroups(EnumSet.allOf(MccGroup.class));
     updateAllocationRequest.setDisabledPaymentTypes(
         Collections.singleton(PaymentType.MANUAL_ENTRY));
+    updateAllocationRequest.setDisableForeign(true);
 
     Cookie authCookie = createBusinessRecord.authCookie();
 
@@ -298,5 +301,6 @@ class AllocationControllerTest extends BaseCapitalTest {
         .isEqualTo(updateAllocationRequest.getDisabledMccGroups());
     assertThat(allocationDetailsResponse.getDisabledPaymentTypes())
         .isEqualTo(updateAllocationRequest.getDisabledPaymentTypes());
+    assertThat(allocationDetailsResponse.getDisableForeign()).isTrue();
   }
 }

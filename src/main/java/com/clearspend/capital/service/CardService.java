@@ -104,6 +104,7 @@ public class CardService {
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
       Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign,
       Address shippingAddress) {
 
     if (cardType == CardType.PHYSICAL) {
@@ -181,7 +182,8 @@ public class CardService {
         card.getId(),
         transactionLimits,
         disabledMccGroups,
-        disabledPaymentTypes);
+        disabledPaymentTypes,
+        disableForeign);
 
     cardRepository.flush();
 
@@ -463,7 +465,8 @@ public class CardService {
       Card card,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     // TODO: When we add permissions to the TransactionLimitService, pass in the Entities not IDs
     transactionLimitService.updateCardSpendLimit(
@@ -471,7 +474,8 @@ public class CardService {
         card.getId(),
         transactionLimits,
         disabledMccGroups,
-        disabledPaymentTypes);
+        disabledPaymentTypes,
+        disableForeign);
   }
 
   @SqlPermissionAPI

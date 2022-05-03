@@ -138,7 +138,8 @@ public class AllocationService {
       Amount amount,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     // create future allocationId so we can create the account first
     TypedId<AllocationId> allocationId = new TypedId<>();
@@ -193,7 +194,12 @@ public class AllocationService {
     }
 
     transactionLimitService.createAllocationSpendLimit(
-        businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
+        businessId,
+        allocationId,
+        transactionLimits,
+        disabledMccGroups,
+        disabledPaymentTypes,
+        disableForeign);
 
     return new AllocationRecord(allocation, account);
   }
@@ -246,7 +252,8 @@ public class AllocationService {
       TypedId<AllocationId> parentAllocationId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     Allocation allocation = retrieveAllocation(businessId, allocationId);
 
@@ -254,7 +261,12 @@ public class AllocationService {
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
 
     transactionLimitService.updateAllocationSpendLimit(
-        businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
+        businessId,
+        allocationId,
+        transactionLimits,
+        disabledMccGroups,
+        disabledPaymentTypes,
+        disableForeign);
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")

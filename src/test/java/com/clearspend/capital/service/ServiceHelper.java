@@ -197,9 +197,15 @@ public class ServiceHelper {
         TypedId<CardId> cardId,
         Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
         Set<MccGroup> disabledMccGroups,
-        Set<PaymentType> disabledTransactionChannels) {
+        Set<PaymentType> disabledTransactionChannels,
+        Boolean disableForeign) {
       return transactionLimitService.updateCardSpendLimit(
-          businessId, cardId, transactionLimits, disabledMccGroups, disabledTransactionChannels);
+          businessId,
+          cardId,
+          transactionLimits,
+          disabledMccGroups,
+          disabledTransactionChannels,
+          disableForeign);
     }
 
     public TransactionLimit updateAllocationSpendLimit(
@@ -207,9 +213,15 @@ public class ServiceHelper {
         TypedId<AllocationId> allocationId,
         Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
         Set<MccGroup> disabledMccGroups,
-        Set<PaymentType> disabledPaymentTypes) {
+        Set<PaymentType> disabledPaymentTypes,
+        Boolean disableForeign) {
       return transactionLimitService.updateAllocationSpendLimit(
-          businessId, allocationId, transactionLimits, disabledMccGroups, disabledPaymentTypes);
+          businessId,
+          allocationId,
+          transactionLimits,
+          disabledMccGroups,
+          disabledPaymentTypes,
+          disableForeign);
     }
   }
 

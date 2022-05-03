@@ -53,5 +53,10 @@ public class CreateAllocationRequest {
   @NonNull
   @NotNull(message = "disabled payment types collection is required")
   @JsonProperty("disabledPaymentTypes")
-  Set<PaymentType> disabledPaymentTypes;
+  private Set<PaymentType> disabledPaymentTypes;
+
+  @NonNull
+  @NotNull(message = "disable foreign is required")
+  @JsonProperty("disableForeign")
+  private Boolean disableForeign;
 }

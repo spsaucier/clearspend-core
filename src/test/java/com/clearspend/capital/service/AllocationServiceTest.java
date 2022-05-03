@@ -345,7 +345,8 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet()));
+                Collections.emptySet(),
+                false));
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     rolesAndPermissionsService.createOrUpdateUserAllocationRole(
@@ -363,7 +364,8 @@ public class AllocationServiceTest extends BaseCapitalTest {
                 new Amount(Currency.USD, new BigDecimal(0)),
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet()));
+                Collections.emptySet(),
+                false));
   }
 
   @FusionAuthRoleAdministrator(reviewer = "jscarbor", explanation = "For testing")

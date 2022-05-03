@@ -207,6 +207,7 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
         Collections.emptyMap(),
         Collections.emptySet(),
         Collections.emptySet(),
+        false,
         newUser.user().getAddress());
 
     String newPassword = twilioServiceMock.getLastUserAccountCreatedPassword();

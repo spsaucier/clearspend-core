@@ -77,7 +77,12 @@ public class IssueCardRequest {
   @NonNull
   @NotNull(message = "disabled payment types collection is required")
   @JsonProperty("disabledPaymentTypes")
-  Set<PaymentType> disabledPaymentTypes;
+  private Set<PaymentType> disabledPaymentTypes;
+
+  @NonNull
+  @NotNull(message = "disable foreign is required")
+  @JsonProperty("disableForeign")
+  private Boolean disableForeign;
 
   @JsonProperty("shippingAddress")
   @Schema(description = "the shipping address (only required for physical cards)")

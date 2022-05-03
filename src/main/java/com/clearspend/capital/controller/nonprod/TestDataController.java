@@ -261,7 +261,8 @@ public class TestDataController {
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
     businessService.reallocateBusinessFunds(
         business.getId(),
         businessRecord.user.getId(),
@@ -278,7 +279,8 @@ public class TestDataController {
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
     businessService.reallocateBusinessFunds(
         business.getId(),
         businessRecord.user.getId(),
@@ -305,6 +307,7 @@ public class TestDataController {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
@@ -336,6 +339,7 @@ public class TestDataController {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             business.getClearAddress().toAddress());
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
@@ -370,6 +374,7 @@ public class TestDataController {
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptySet(),
                 Collections.emptySet(),
+                false,
                 business.getClearAddress().toAddress())
             .card());
     cards.add(
@@ -387,6 +392,7 @@ public class TestDataController {
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptySet(),
                 Collections.emptySet(),
+                false,
                 business.getClearAddress().toAddress())
             .card());
 
@@ -420,6 +426,7 @@ public class TestDataController {
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptySet(),
                 Collections.emptySet(),
+                false,
                 business.getClearAddress().toAddress())
             .card());
 

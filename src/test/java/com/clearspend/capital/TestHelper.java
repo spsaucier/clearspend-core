@@ -834,7 +834,8 @@ public class TestHelper {
             Amount.of(Currency.USD),
             DEFAULT_TRANSACTION_LIMITS,
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
     entityManager.flush();
     return allocationRecord;
   }
@@ -850,7 +851,8 @@ public class TestHelper {
             new com.clearspend.capital.controller.type.Amount(Currency.USD, BigDecimal.ZERO),
             Collections.singletonList(new CurrencyLimit(Currency.USD, new HashMap<>())),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     String body = objectMapper.writeValueAsString(request);
 
@@ -1025,6 +1027,7 @@ public class TestHelper {
                 Map.of(Currency.USD, new HashMap<>()),
                 Collections.emptySet(),
                 Collections.emptySet(),
+                false,
                 business.getClearAddress().toAddress())
             .card();
     if (activateCard) {

@@ -60,13 +60,13 @@ public class CardController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
 
-    return CardDetailsResponse.of(cardService.getCard(CurrentUser.get().businessId(), cardId));
+    return CardDetailsResponse.of(cardService.getCard(CurrentUser.getBusinessId(), cardId));
   }
 
   @PostMapping("")
   List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
     String businessLegalName = businessService.getBusiness(businessId, true).getLegalName();
     request
         .getCardType()
@@ -90,6 +90,7 @@ public class CardController {
                                 CurrencyLimit.toMap(request.getLimits()),
                                 request.getDisabledMccGroups(),
                                 request.getDisabledPaymentTypes(),
+                                request.getDisableForeign(),
                                 request.getShippingAddress() != null
                                     ? request.getShippingAddress().toAddress()
                                     : null)
@@ -111,12 +112,13 @@ public class CardController {
           TypedId<CardId> cardId,
       @RequestBody @Validated UpdateCardRequest request) {
 
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
     cardService.updateCard(
         cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
-        request.getDisabledPaymentTypes());
+        request.getDisabledPaymentTypes(),
+        request.getDisableForeign());
 
     return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
   }
@@ -130,7 +132,7 @@ public class CardController {
   @PostMapping("/reveal")
   RevealCardResponse reveal(@RequestBody @Validated RevealCardRequest request) {
     CardDetailsRecord cardDetailsRecord =
-        cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
+        cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
     String ephemeralKey =
         stripeClient.getEphemeralKey(cardDetailsRecord.card().getExternalRef(), request.getNonce());
     return new RevealCardResponse(cardDetailsRecord.card().getExternalRef(), ephemeralKey);
@@ -156,7 +158,7 @@ public class CardController {
       produces = "application/json")
   String ephemeralKey(@RequestBody @Validated EphemeralKeyRequest request) {
     CardDetailsRecord cardDetailsRecord =
-        cardService.getCard(CurrentUser.get().businessId(), request.getCardId());
+        cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
     EphemeralKey stripeEphemeralKey =
         stripeClient.getEphemeralKeyObjectForCard(
             cardDetailsRecord.card().getExternalRef(), request.getApiVersion());

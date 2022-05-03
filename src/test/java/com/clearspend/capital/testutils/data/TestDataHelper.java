@@ -211,14 +211,10 @@ public class TestDataHelper {
 
   public TransactionLimit createTransactionLimit(
       final TypedId<BusinessId> businessId, final UUID ownerId) {
-    final TransactionLimit transactionLimit = new TransactionLimit();
-    transactionLimit.setBusinessId(businessId);
-    transactionLimit.setType(TransactionLimitType.CARD);
-    transactionLimit.setOwnerId(ownerId);
-    transactionLimit.setLimits(Map.of());
-    transactionLimit.setDisabledMccGroups(Set.of());
-    transactionLimit.setDisabledPaymentTypes(Set.of());
-    return transactionLimitRepo.save(transactionLimit);
+
+    return transactionLimitRepo.save(
+        new TransactionLimit(
+            businessId, TransactionLimitType.CARD, ownerId, Map.of(), Set.of(), Set.of(), false));
   }
 
   public CardAndLimit createCardAndLimit(final CardConfig cardConfig) {

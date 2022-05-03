@@ -32,6 +32,10 @@ public class AllocationDetailsResponse {
   @JsonProperty("disabledPaymentTypes")
   Set<PaymentType> disabledPaymentTypes;
 
+  @NonNull
+  @JsonProperty("disableForeign")
+  private Boolean disableForeign;
+
   public static AllocationDetailsResponse of(AllocationDetailsRecord record) {
     Allocation allocation =
         new Allocation(
@@ -44,6 +48,7 @@ public class AllocationDetailsResponse {
         allocation,
         CurrencyLimit.ofMap(record.transactionLimit().getLimits()),
         record.transactionLimit().getDisabledMccGroups(),
-        record.transactionLimit().getDisabledPaymentTypes());
+        record.transactionLimit().getDisabledPaymentTypes(),
+        record.transactionLimit().getDisableForeign());
   }
 }

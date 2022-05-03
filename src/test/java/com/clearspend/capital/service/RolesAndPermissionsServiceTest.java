@@ -256,7 +256,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                false)
             .allocation();
 
     // otherUser gets Manage permission by default
@@ -289,7 +290,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                false)
             .allocation();
 
     // otherUser inherits Manager permission by default
@@ -362,7 +364,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                false)
             .allocation();
 
     setCurrentUser(otherUser);
@@ -831,7 +834,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                false)
             .allocation();
 
     flush();
@@ -866,7 +870,8 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
                 amt,
                 Collections.emptyMap(),
                 Collections.emptySet(),
-                Collections.emptySet())
+                Collections.emptySet(),
+                false)
             .allocation();
 
     setCurrentUser(rootAllocationOwner);

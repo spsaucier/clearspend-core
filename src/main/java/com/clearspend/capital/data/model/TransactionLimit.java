@@ -77,4 +77,8 @@ public class TransactionLimit extends TypedMutable<TransactionLimitId> {
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private Set<PaymentType> disabledPaymentTypes;
+
+  @NonNull
+  @NotNull(message = "disableForeign required")
+  private Boolean disableForeign;
 }

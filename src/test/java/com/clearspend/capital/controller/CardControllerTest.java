@@ -114,7 +114,8 @@ public class CardControllerTest extends BaseCapitalTest {
                             LimitPeriod.MONTHLY,
                             BigDecimal.TEN)))),
             Collections.emptySet(),
-            Set.of(PaymentType.MANUAL_ENTRY));
+            Set.of(PaymentType.MANUAL_ENTRY),
+            false);
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     entityManager.flush();
@@ -186,6 +187,7 @@ public class CardControllerTest extends BaseCapitalTest {
                         LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
     updateCardRequest.setDisabledMccGroups(Set.of(MccGroup.CHILD_CARE));
     updateCardRequest.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY, PaymentType.ONLINE));
+    updateCardRequest.setDisableForeign(true);
 
     CardDetailsResponse cardDetailsResponse =
         mockMvcHelper.queryObject(
@@ -202,6 +204,7 @@ public class CardControllerTest extends BaseCapitalTest {
         .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledMccGroups());
     assertThat(cardDetailsResponse.getDisabledPaymentTypes())
         .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledPaymentTypes());
+    assertThat(cardDetailsResponse.getDisableForeign()).isTrue();
   }
 
   @SneakyThrows
@@ -246,7 +249,8 @@ public class CardControllerTest extends BaseCapitalTest {
             true,
             CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
             Collections.emptySet(),
-            Set.of(PaymentType.ONLINE));
+            Set.of(PaymentType.ONLINE),
+            false);
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     for (int i = businessLimit.getIssuedPhysicalCardsTotal();

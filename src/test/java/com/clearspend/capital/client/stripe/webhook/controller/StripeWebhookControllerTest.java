@@ -777,7 +777,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 Currency.USD,
                 Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
@@ -813,7 +814,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 Currency.USD,
                 Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(5L)))),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     authorize_decline(allocation, user, card, BigDecimal.TEN, 700);
   }
@@ -835,7 +837,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 Currency.USD,
                 Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(5L)))),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(4L)));
@@ -865,7 +868,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 Currency.USD,
                 Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     testHelper.createNetworkTransaction(
         business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
@@ -897,7 +901,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 Currency.USD,
                 Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(3L)))),
             Collections.emptySet(),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     testHelper.createNetworkTransaction(
         business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
@@ -924,7 +929,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             allocation.getId(),
             Map.of(),
             Set.of(MccGroup.GAMBLING),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     // check that we can make a trx against the card
     testHelper.createNetworkTransaction(
@@ -956,7 +962,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card.getId(),
             Map.of(),
             Set.of(MccGroup.GAMBLING),
-            Collections.emptySet());
+            Collections.emptySet(),
+            false);
 
     // check that we can make a trx against the card
     testHelper.createNetworkTransaction(
@@ -992,7 +999,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             allocation.getId(),
             Map.of(),
             Collections.emptySet(),
-            Set.of(PaymentType.ONLINE));
+            Set.of(PaymentType.ONLINE),
+            false);
 
     // online has to be declined
     authorize_decline(
@@ -1024,7 +1032,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card.getId(),
             Map.of(),
             Collections.emptySet(),
-            Set.of(PaymentType.ONLINE));
+            Set.of(PaymentType.ONLINE),
+            false);
 
     // online has to be declined
     authorize_decline(

@@ -31,5 +31,8 @@ public class UpdateAllocationRequest {
   private Set<MccGroup> disabledMccGroups;
 
   @JsonProperty("disabledPaymentTypes")
-  Set<PaymentType> disabledPaymentTypes;
+  private Set<PaymentType> disabledPaymentTypes;
+
+  @JsonProperty("disableForeign")
+  private Boolean disableForeign;
 }

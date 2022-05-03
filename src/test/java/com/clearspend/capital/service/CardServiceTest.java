@@ -90,7 +90,7 @@ class CardServiceTest extends BaseCapitalTest {
 
     // Test that an Employee invocation results in a Permissions Exception
     testHelper.setCurrentUser(employee);
-    assertThrows(AccessDeniedException.class, () -> issueCard());
+    assertThrows(AccessDeniedException.class, this::issueCard);
   }
 
   @SneakyThrows
@@ -215,7 +215,7 @@ class CardServiceTest extends BaseCapitalTest {
     testHelper.setCurrentUser(employee);
     assertThat(cardService.getCardsForCurrentUser())
         .hasSize(2)
-        .map(it -> it.card())
+        .map(CardDetailsRecord::card)
         .containsExactlyInAnyOrder(card1, card2);
   }
 
@@ -393,7 +393,7 @@ class CardServiceTest extends BaseCapitalTest {
     assertThat(cardService.activateMyCard(card, CardStatusReason.CARDHOLDER_REQUESTED))
         .isNotNull()
         .matches(result -> result.getId().equals(card.getId()))
-        .matches(result -> result.isActivated());
+        .matches(Card::isActivated);
   }
 
   @SneakyThrows
@@ -497,7 +497,7 @@ class CardServiceTest extends BaseCapitalTest {
     assertThat(cardService.blockCard(card, CardStatusReason.CARDHOLDER_REQUESTED)).isNotNull();
 
     assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
-        .extracting(c -> c.getStatus())
+        .extracting(Card::getStatus)
         .isEqualTo(CardStatus.INACTIVE);
 
     // A different employee within the same business also cannot Update the Card Status
@@ -511,7 +511,7 @@ class CardServiceTest extends BaseCapitalTest {
     assertThat(cardService.unblockCard(card, CardStatusReason.CARDHOLDER_REQUESTED)).isNotNull();
 
     assertThat(cardRepository.findByBusinessIdAndId(card.getBusinessId(), card.getId()).get())
-        .extracting(c -> c.getStatus())
+        .extracting(Card::getStatus)
         .isEqualTo(CardStatus.ACTIVE);
   }
 
@@ -621,23 +621,30 @@ class CardServiceTest extends BaseCapitalTest {
             Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
     Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
     Set<PaymentType> disabledPaymentTypes = Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
+    boolean disableForeign = false;
 
     // The Manager should be able to update the Card limits
     testHelper.setCurrentUser(manager);
     assertDoesNotThrow(
-        () -> cardService.updateCard(card, limits, disabledCategories, disabledPaymentTypes));
+        () ->
+            cardService.updateCard(
+                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
 
     // A different employee within the same business also cannot Update the Card limits
     testHelper.setCurrentUser(snooper);
     assertThrows(
         AccessDeniedException.class,
-        () -> cardService.updateCard(card, limits, disabledCategories, disabledPaymentTypes));
+        () ->
+            cardService.updateCard(
+                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
 
     // The Card Owner should NOT be able to update their Card limits
     testHelper.setCurrentUser(employee);
     assertThrows(
         AccessDeniedException.class,
-        () -> cardService.updateCard(card, limits, disabledCategories, disabledPaymentTypes));
+        () ->
+            cardService.updateCard(
+                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
   }
 
   private Card issueCard(User cardOwner) {

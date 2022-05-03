@@ -40,7 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionLimitService {
 
   private final TransactionLimitRepository transactionLimitRepository;
-  private final AdjustmentService adjustmentService;
   private final AccountActivityRepository accountActivityRepository;
 
   @Transactional
@@ -54,7 +53,8 @@ public class TransactionLimitService {
             allocationId.toUuid(),
             Map.of(Currency.USD, new HashMap<>()),
             new HashSet<>(),
-            new HashSet<>()));
+            new HashSet<>(),
+            false));
   }
 
   TransactionLimit retrieveSpendLimit(
@@ -71,7 +71,8 @@ public class TransactionLimitService {
       TypedId<AllocationId> allocationId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     return transactionLimitRepository.save(
         new TransactionLimit(
@@ -80,7 +81,8 @@ public class TransactionLimitService {
             allocationId.toUuid(),
             transactionLimits,
             disabledMccGroups,
-            disabledPaymentTypes));
+            disabledPaymentTypes,
+            disableForeign));
   }
 
   @Transactional
@@ -89,7 +91,8 @@ public class TransactionLimitService {
       TypedId<CardId> cardId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     return transactionLimitRepository.save(
         new TransactionLimit(
@@ -98,7 +101,8 @@ public class TransactionLimitService {
             cardId.toUuid(),
             transactionLimits,
             disabledMccGroups,
-            disabledPaymentTypes));
+            disabledPaymentTypes,
+            disableForeign));
   }
 
   @Transactional
@@ -107,7 +111,8 @@ public class TransactionLimitService {
       TypedId<AllocationId> allocationId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     return updateSpendLimit(
         businessId,
@@ -115,7 +120,8 @@ public class TransactionLimitService {
         allocationId.toUuid(),
         transactionLimits,
         disabledMccGroups,
-        disabledPaymentTypes);
+        disabledPaymentTypes,
+        disableForeign);
   }
 
   @Transactional
@@ -124,7 +130,8 @@ public class TransactionLimitService {
       TypedId<CardId> cardId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledTransactionChannels) {
+      Set<PaymentType> disabledTransactionChannels,
+      Boolean disableForeign) {
 
     return updateSpendLimit(
         businessId,
@@ -132,7 +139,8 @@ public class TransactionLimitService {
         cardId.toUuid(),
         transactionLimits,
         disabledMccGroups,
-        disabledTransactionChannels);
+        disabledTransactionChannels,
+        disableForeign);
   }
 
   private TransactionLimit updateSpendLimit(
@@ -141,13 +149,15 @@ public class TransactionLimitService {
       UUID ownerId,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes) {
+      Set<PaymentType> disabledPaymentTypes,
+      Boolean disableForeign) {
 
     TransactionLimit transactionLimit = retrieveSpendLimit(businessId, limitType, ownerId);
 
     BeanUtils.setNotNull(transactionLimits, transactionLimit::setLimits);
     BeanUtils.setNotNull(disabledMccGroups, transactionLimit::setDisabledMccGroups);
     BeanUtils.setNotNull(disabledPaymentTypes, transactionLimit::setDisabledPaymentTypes);
+    BeanUtils.setNotNull(disableForeign, transactionLimit::setDisableForeign);
 
     return transactionLimitRepository.save(transactionLimit);
   }

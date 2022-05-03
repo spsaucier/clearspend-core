@@ -47,13 +47,14 @@ public class AllocationController {
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
-            CurrentUser.get().businessId(),
+            CurrentUser.getBusinessId(),
             request.getParentAllocationId(),
             request.getName(),
             request.getAmount().toAmount(),
             CurrencyLimit.toMap(request.getLimits()),
             request.getDisabledMccGroups(),
-            request.getDisabledPaymentTypes());
+            request.getDisabledPaymentTypes(),
+            request.getDisableForeign());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
   }
@@ -69,7 +70,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
-            businessService.getBusiness(CurrentUser.get().businessId(), true), allocationId);
+            businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId);
 
     return AllocationDetailsResponse.of(allocationRecord);
   }
@@ -84,7 +85,7 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId,
       @RequestBody @Validated UpdateAllocationRequest request) {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
 
     allocationService.updateAllocation(
         businessId,
@@ -93,7 +94,8 @@ public class AllocationController {
         request.getParentAllocationId(),
         CurrencyLimit.toMap(request.getLimits()),
         request.getDisabledMccGroups(),
-        request.getDisabledPaymentTypes());
+        request.getDisabledPaymentTypes(),
+        request.getDisableForeign());
 
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
@@ -113,7 +115,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     return allocationService
         .getAllocationChildren(
-            businessService.getBusiness(CurrentUser.get().businessId(), true), allocationId)
+            businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId)
         .stream()
         .map(
             e ->
@@ -135,7 +137,7 @@ public class AllocationController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         allocationService.reallocateAllocationFunds(
-            businessService.getBusiness(CurrentUser.get().businessId(), true),
+            businessService.getBusiness(CurrentUser.getBusinessId(), true),
             CurrentUser.getUserId(),
             allocationId,
             request.getAllocationAccountId(),

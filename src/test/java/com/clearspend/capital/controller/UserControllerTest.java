@@ -675,6 +675,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
@@ -731,6 +732,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
@@ -792,6 +794,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
@@ -851,6 +854,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
@@ -929,6 +933,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
@@ -1029,6 +1034,7 @@ class UserControllerTest extends BaseCapitalTest {
             Map.of(Currency.USD, new HashMap<>()),
             Collections.emptySet(),
             Collections.emptySet(),
+            false,
             createBusinessRecord.business().getClearAddress().toAddress());
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
