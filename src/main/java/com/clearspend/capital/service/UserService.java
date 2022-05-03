@@ -247,14 +247,20 @@ public class UserService {
       oldEmail = user.getEmail().getEncrypted();
       user.setEmail(newEmail);
     }
-    if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
+    if (user.getPhone() == null) {
+      // If the current number is null change it to the new thing
+      user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
+    } else if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
       user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
     }
     final Address updatedAddress =
         Optional.ofNullable(updateUserRequest.getAddress())
             .map(com.clearspend.capital.controller.type.Address::toAddress)
             .orElse(null);
-    if (isChanged(updatedAddress, user.getAddress())) {
+    if (user.getAddress() == null) {
+      // If the current address is null change it to the new thing
+      user.setAddress(updatedAddress);
+    } else if (isChanged(updatedAddress, user.getAddress())) {
       user.setAddress(updatedAddress);
     }
 
