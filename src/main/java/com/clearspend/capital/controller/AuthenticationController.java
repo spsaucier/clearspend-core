@@ -348,7 +348,7 @@ public class AuthenticationController {
     User user = userService.retrieveUser(CurrentUser.getUserId());
     FusionAuthService.TwoFactorStartLoggedInResponse response;
     try {
-      response = fusionAuthService.changePassword(request.toFusionAuthRequest(user));
+      response = fusionAuthService.changePassword(user, request.toFusionAuthRequest());
     } catch (InvalidRequestException e) {
       if ("Unauthorized".equals(e.getMessage())) {
         return ResponseEntity.status(401).build();

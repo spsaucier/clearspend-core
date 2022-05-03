@@ -1,7 +1,6 @@
 package com.clearspend.capital.controller.type.user;
 
 import com.clearspend.capital.common.masking.annotation.Sensitive;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -65,8 +64,8 @@ public class ChangePasswordRequest {
   @Nullable
   private String twoFactorCode;
 
-  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest(User user) {
+  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest() {
     return new FusionAuthService.ChangePasswordRequest(
-        user, currentPassword, newPassword, trustChallenge, twoFactorId, twoFactorCode);
+        currentPassword, newPassword, trustChallenge, twoFactorId, twoFactorCode);
   }
 }

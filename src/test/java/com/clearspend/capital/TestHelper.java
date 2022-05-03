@@ -237,6 +237,10 @@ public class TestHelper {
     businessLimitRepository.save(limit);
   }
 
+  public void flush() {
+    entityManager.flush();
+  }
+
   public record OnboardBusinessRecord(
       Business business,
       BusinessOwner businessOwner,

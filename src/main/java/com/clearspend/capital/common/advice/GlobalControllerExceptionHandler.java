@@ -61,8 +61,13 @@ public class GlobalControllerExceptionHandler {
   @ExceptionHandler({FusionAuthException.class})
   public ResponseEntity<Errors> handleLoginException(FusionAuthException exception) {
     Optional.ofNullable(exception.getCause()).ifPresent(e -> log.error(e.getMessage(), e));
-    return new ResponseEntity<>(
-        exception.getErrors(), HttpStatus.valueOf(exception.getHttpStatus()));
+    HttpStatus status;
+    try {
+      status = HttpStatus.valueOf(exception.getHttpStatus());
+    } catch (IllegalArgumentException e) {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+    return new ResponseEntity<>(exception.getErrors(), status);
   }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)

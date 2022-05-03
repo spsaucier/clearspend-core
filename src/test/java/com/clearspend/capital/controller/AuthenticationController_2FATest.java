@@ -22,6 +22,7 @@ import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
+import com.clearspend.capital.service.UserService;
 import com.inversoft.error.Errors;
 import io.fusionauth.client.FusionAuthClient;
 import io.fusionauth.domain.api.TwoFactorResponse;
@@ -50,6 +51,7 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
   private final FusionAuthClient fusionAuthClient;
+  private final UserService userService;
 
   @Test
   @SneakyThrows

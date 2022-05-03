@@ -555,7 +555,6 @@ public class FusionAuthService {
   }
 
   public record ChangePasswordRequest(
-      com.clearspend.capital.data.model.User user,
       String currentPassword,
       String newPassword,
       String trustChallenge,
@@ -581,12 +580,13 @@ public class FusionAuthService {
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
       explanation = "delegating some work within the class")
-  public TwoFactorStartLoggedInResponse changePassword(ChangePasswordRequest request) {
+  public TwoFactorStartLoggedInResponse changePassword(
+      com.clearspend.capital.data.model.User user, ChangePasswordRequest request) {
     LoginResponse twoFactorLogin = null;
     if (twoFactorEnabled()) {
       if (StringUtils.isAnyEmpty(
           request.trustChallenge, request.twoFactorId, request.twoFactorCode)) {
-        return sendCodeToBegin2FA(request.user, Map.of("changeRequest", request));
+        return sendCodeToBegin2FA(user, Map.of("changeRequest", request));
       }
       TwoFactorLoginRequest twoFactorLoginRequest =
           new TwoFactorLoginRequest(getApplicationId(), request.twoFactorCode, request.twoFactorId);
@@ -600,7 +600,6 @@ public class FusionAuthService {
           (ChangePasswordRequest) twoFactorLogin.state.get("changeRequest");
       request =
           new ChangePasswordRequest(
-              request.user,
               oldRequest.currentPassword,
               oldRequest.newPassword,
               request.trustChallenge,
@@ -610,7 +609,7 @@ public class FusionAuthService {
 
     final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
         new io.fusionauth.domain.api.user.ChangePasswordRequest(
-            request.user.getEmail().getEncrypted(), request.currentPassword, request.newPassword);
+            user.getEmail().getEncrypted(), request.currentPassword, request.newPassword);
     changePasswordRequest.trustToken =
         Optional.ofNullable(twoFactorLogin).map(l -> l.trustToken).orElse(null);
     changePasswordRequest.trustChallenge = request.trustChallenge;
