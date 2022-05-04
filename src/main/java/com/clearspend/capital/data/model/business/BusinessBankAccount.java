@@ -11,6 +11,8 @@ import com.vladmihalcea.hibernate.type.basic.PostgreSQLEnumType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -60,6 +62,8 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
   @NonNull
   @Type(type = "pgsql_enum")
   @ColumnDefault("'LINKED'")
+  @Column(columnDefinition = "AccountLinkStatus")
+  @Enumerated(EnumType.STRING)
   private AccountLinkStatus linkStatus;
 
   @NonNull private Boolean deleted;
