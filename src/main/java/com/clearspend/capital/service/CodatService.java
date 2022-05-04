@@ -24,6 +24,7 @@ import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
+import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -45,6 +46,7 @@ import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.service.accounting.CodatSupplierData;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -608,6 +611,75 @@ public class CodatService {
   public Integer getSyncReadyCount(TypedId<BusinessId> businessId) {
     return accountActivityRepository.countByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  public GetSuppliersResponse getAllSuppliersFromQboByBusiness(
+      TypedId<BusinessId> businessId, Integer limit) {
+    Business business = businessService.retrieveBusinessForService(businessId, true);
+    GetSuppliersResponse suppliersFromQbo =
+        codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
+    // 1. return empty list if nothing from QBO.
+    if (suppliersFromQbo == null || CollectionUtils.isEmpty(suppliersFromQbo.getResults())) {
+      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, null);
+      return emptyResponse;
+    }
+
+    List<CodatSupplier> finalResult = null;
+    // 2. if limit null or is greater than the return from qbo, return all
+    if (limit == null || suppliersFromQbo.getResults().size() <= limit) {
+      finalResult = suppliersFromQbo.getResults();
+    } else {
+      // 3. return first limit records
+      finalResult =
+          suppliersFromQbo.getResults().stream()
+              .limit(Long.valueOf(limit))
+              .collect(Collectors.toList());
+    }
+    return new GetSuppliersResponse(finalResult.size(), finalResult);
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  public GetSuppliersResponse getMatchedSuppliersFromQboByBusiness(
+      TypedId<BusinessId> businessId, Integer limit, String targetName) {
+    Business business = businessService.retrieveBusinessForService(businessId, true);
+    GetSuppliersResponse suppliersFromQbo =
+        codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
+    // 1. return empty list if nothing from QBO.
+    if (suppliersFromQbo == null || CollectionUtils.isEmpty(suppliersFromQbo.getResults())) {
+      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, null);
+      return emptyResponse;
+    }
+
+    // 2. calculate the fuzzy score for each supplier
+    List<CodatSupplierData> codatSupplierDataList =
+        suppliersFromQbo.getResults().stream()
+            .map(s -> new CodatSupplierData(s.getId(), s.getSupplierName(), 0))
+            .collect(Collectors.toList());
+    for (CodatSupplierData supplier : codatSupplierDataList) {
+      supplier.calculateAndSetScore(targetName);
+    }
+    // 3. limit the result set
+    List<CodatSupplierData> limitedList =
+        codatSupplierDataList.stream()
+            .sorted(
+                (CodatSupplierData d1, CodatSupplierData d2) ->
+                    Integer.compare(d2.getMatchScore(), d1.getMatchScore()))
+            .limit(limit)
+            .collect(Collectors.toList());
+    // 4. prepare the final result
+    List<CodatSupplier> finalSuppliers =
+        suppliersFromQbo.getResults().stream()
+            .filter(
+                s ->
+                    limitedList.stream()
+                        .anyMatch(
+                            matched ->
+                                matched.getId().equals(s.getId())
+                                    && matched.getName().equals(s.getSupplierName())))
+            .collect(Collectors.toList());
+
+    return new GetSuppliersResponse(finalSuppliers.size(), finalSuppliers);
   }
 
   private static final class Tree<T, R> {

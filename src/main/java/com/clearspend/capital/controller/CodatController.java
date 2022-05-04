@@ -5,6 +5,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
+import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SetCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncCountResponse;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
@@ -24,6 +25,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -129,5 +132,30 @@ public class CodatController {
                 PageRequest.toPageToken(request.getPageRequest())));
 
     return PagedData.of(transactionSyncLogs, SyncLogResponse::new);
+  }
+
+  @GetMapping("/accounting-suppliers")
+  public GetSuppliersResponse getMatchedQboSuppliersByBusiness(
+      @RequestParam(value = "limit", required = false)
+          @Parameter(
+              required = false,
+              name = "limit",
+              description = "number of supplier",
+              example = "50")
+          Integer limit,
+      @RequestParam(value = "target", required = false)
+          @Parameter(
+              required = false,
+              name = "target",
+              description = "target name to match",
+              example = "AMZN")
+          String targetName) {
+
+    if (StringUtils.isBlank(targetName)) {
+      return codatService.getAllSuppliersFromQboByBusiness(CurrentUser.getBusinessId(), limit);
+    } else {
+      return codatService.getMatchedSuppliersFromQboByBusiness(
+          CurrentUser.getBusinessId(), limit, targetName);
+    }
   }
 }

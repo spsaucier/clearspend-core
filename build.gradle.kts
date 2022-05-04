@@ -158,6 +158,7 @@ dependencies {
 //other 3rd party libs
     implementation("com.google.guava:guava:31.0.1-jre")
     implementation("org.apache.commons:commons-csv:1.9.0")
+    implementation("org.apache.commons:commons-text:1.9")
     implementation("org.springdoc:springdoc-openapi-ui:1.6.5")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("com.github.librepdf:openpdf:1.3.26")

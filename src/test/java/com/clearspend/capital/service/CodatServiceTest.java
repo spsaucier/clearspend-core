@@ -14,6 +14,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
+import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SyncLogRequest;
 import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
@@ -1109,6 +1110,80 @@ public class CodatServiceTest extends BaseCapitalTest {
                 CodatAccountSubtype.OTHER_EXPENSE,
                 CodatAccountSubtype.FIXED_ASSET));
     assertThat(response.getResults().size()).isEqualTo(3);
+  }
+
+  @Test
+  public void canGetAllSupplierForBusiness() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    GetSuppliersResponse suppliers =
+        mockMvcHelper.queryObject(
+            "/codat/accounting-suppliers?limit=50",
+            HttpMethod.GET,
+            userCookie,
+            null,
+            GetSuppliersResponse.class);
+
+    assertThat(suppliers.getResults().size() > 0).isTrue();
+
+    for (int i = 0; i < 110; i++) {
+      mockClient.addSupplierToList(
+          new CodatSupplier("supplierlist-" + i, "Mom Store" + i, "Active", "USD"));
+    }
+    GetSuppliersResponse suppliers2 =
+        mockMvcHelper.queryObject(
+            "/codat/accounting-suppliers?limit=50",
+            HttpMethod.GET,
+            userCookie,
+            null,
+            GetSuppliersResponse.class);
+
+    assertThat(suppliers2.getResults().size() == 50).isTrue();
+
+    GetSuppliersResponse suppliers3 =
+        mockMvcHelper.queryObject(
+            "/codat/accounting-suppliers",
+            HttpMethod.GET,
+            userCookie,
+            null,
+            GetSuppliersResponse.class);
+    assertThat(suppliers3.getResults().size() > 100).isTrue();
+  }
+
+  @Test
+  public void canGetMatchedSupplierForBusiness() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    mockClient.addSupplierToList(new CodatSupplier("supplierlist-101", "AMZN", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-102", "Amazon Fullfill", "Active", "USD"));
+    mockClient.addSupplierToList(new CodatSupplier("supplierlist-103", "abcd", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-104", "some random corp", "Active", "USD"));
+    mockClient.addSupplierToList(new CodatSupplier("supplierlist-104", "AMZ", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-104", "supplier-104", "Active", "USD"));
+
+    GetSuppliersResponse suppliers =
+        mockMvcHelper.queryObject(
+            "/codat/accounting-suppliers?limit=2&target=amazon",
+            HttpMethod.GET,
+            userCookie,
+            null,
+            GetSuppliersResponse.class);
+
+    assertThat(suppliers.getResults().size() == 2).isTrue();
+    List<String> matchedStrings = new ArrayList<>();
+    for (CodatSupplier s : suppliers.getResults()) {
+      matchedStrings.add(s.getSupplierName());
+    }
+    assertThat(matchedStrings.contains("AMZN")).isTrue();
+    assertThat(matchedStrings.contains("Amazon Fullfill")).isTrue();
   }
 
   @SneakyThrows

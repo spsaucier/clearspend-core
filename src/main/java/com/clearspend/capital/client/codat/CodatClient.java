@@ -28,6 +28,7 @@ import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetAccountsResponsePage;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.GetSuppliersResponsePage;
 import com.clearspend.capital.client.codat.types.HateoasLink;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
@@ -176,8 +177,14 @@ public class CodatClient {
   }
 
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
-    return getFromCodatApi(
-        "/companies/%s/data/suppliers".formatted(companyRef), GetSuppliersResponse.class);
+    String uri = "/companies/%s/data/suppliers?page=1&pageSize=50".formatted(companyRef);
+    List<CodatSupplier> allSupplier = new ArrayList<>();
+    do {
+      GetSuppliersResponsePage page = getFromCodatApi(uri, GetSuppliersResponsePage.class);
+      allSupplier.addAll(page.getResults());
+      uri = page.getLinks().getOrDefault("next", new HateoasLink()).getHref();
+    } while (StringUtils.hasText(uri));
+    return new GetSuppliersResponse(allSupplier);
   }
 
   public GetSuppliersResponse getSupplierForBusiness(String companyRef, String supplierName) {
