@@ -55,6 +55,8 @@ public class Allocation extends TypedMutable<AllocationId> implements Allocation
 
   @NonNull private String name;
 
+  private boolean archived;
+
   @Override
   public TypedId<AllocationId> getAllocationId() {
     return getId();

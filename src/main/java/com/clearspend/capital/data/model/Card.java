@@ -46,7 +46,6 @@ public class Card extends TypedMutable<CardId> implements Ownable {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<AllocationId> allocationId;

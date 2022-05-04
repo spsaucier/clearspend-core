@@ -146,7 +146,6 @@ public class CardService {
     Card card =
         new Card(
             businessId,
-            allocationId,
             userId,
             cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
             CardStatusReason.NONE,
@@ -158,6 +157,7 @@ public class CardService {
             cardLine3.toString(),
             StringUtils.EMPTY,
             cardType.equals(CardType.PHYSICAL) ? shippingAddress : new Address());
+    card.setAllocationId(allocationId);
     if (cardLine4.length() > 25) {
       cardLine4.setLength(25);
     }

@@ -49,7 +49,6 @@ public class Account extends TypedMutable<AccountId> {
 
   // ideally this column/field would have a referential constraint pointing to allocation but since
   // allocation has the opposite to account that's not possible
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "allocation")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")

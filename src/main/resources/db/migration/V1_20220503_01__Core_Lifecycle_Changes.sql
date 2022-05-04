@@ -1,0 +1,8 @@
+ALTER TABLE allocation
+ADD COLUMN archived BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE account
+ALTER COLUMN allocation_id DROP NOT NULL;
+
+ALTER TABLE card
+ALTER COLUMN allocation_id DROP NOT NULL;

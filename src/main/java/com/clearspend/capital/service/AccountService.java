@@ -75,8 +75,8 @@ public class AccountService {
     LedgerAccount ledgerAccount =
         ledgerService.createLedgerAccount(type.getLedgerAccountType(), currency);
 
-    Account account =
-        new Account(businessId, allocationId, ledgerAccount.getId(), type, Amount.of(currency));
+    Account account = new Account(businessId, ledgerAccount.getId(), type, Amount.of(currency));
+    account.setAllocationId(allocationId);
     account.setCardId(cardId);
 
     return accountRepository.save(account);
