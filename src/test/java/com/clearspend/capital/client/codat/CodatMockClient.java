@@ -78,7 +78,7 @@ public class CodatMockClient extends CodatClient {
             "automobile",
             CodatAccountStatus.ACTIVE,
             "category",
-            "expense.auto.something.auto",
+            "Expense.Expense.auto.something.auto",
             CodatAccountType.EXPENSE));
     accountList.add(
         new CodatAccount(
@@ -86,7 +86,7 @@ public class CodatMockClient extends CodatClient {
             "fuel",
             CodatAccountStatus.ACTIVE,
             "category",
-            "expense.auto.something.fuel",
+            "Expense.Expense.auto.something.fuel",
             CodatAccountType.EXPENSE));
     accountList.add(
         new CodatAccount(

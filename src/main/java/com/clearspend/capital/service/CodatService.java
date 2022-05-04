@@ -7,7 +7,6 @@ import com.clearspend.capital.client.codat.types.CodatAccount;
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
-import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
@@ -231,9 +230,7 @@ public class CodatService {
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
-      TypedId<BusinessId> businessId,
-      CodatAccountType type,
-      List<CodatAccountSubtype> subCategories) {
+      TypedId<BusinessId> businessId, List<CodatAccountSubtype> subCategories) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
     GetAccountsResponse chartOfAccounts =
@@ -243,11 +240,10 @@ public class CodatService {
         chartOfAccounts.getResults().stream()
             .filter(
                 account ->
-                    account.getType().equals(type)
-                        || (subCategories.stream()
-                            .map(category -> category.getName())
-                            .collect(toList())
-                            .contains(account.getQualifiedName().split("\\.")[1])))
+                    (subCategories.stream()
+                        .map(category -> category.getName())
+                        .collect(toList())
+                        .contains(account.getQualifiedName().split("\\.")[1])))
             .collect(toList());
 
     return new CodatAccountNestedResponse(nestCodatAccounts(response));

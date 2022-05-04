@@ -2,7 +2,6 @@ package com.clearspend.capital.controller;
 
 import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
-import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
@@ -115,8 +114,10 @@ public class CodatController {
   CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
     return codatService.getCodatChartOfAccountsForBusiness(
         CurrentUser.getBusinessId(),
-        CodatAccountType.EXPENSE,
-        List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
+        List.of(
+            CodatAccountSubtype.EXPENSE,
+            CodatAccountSubtype.OTHER_EXPENSE,
+            CodatAccountSubtype.FIXED_ASSET));
   }
 
   @PostMapping("/sync-log")

@@ -2,7 +2,6 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
-import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
@@ -73,8 +72,10 @@ public class ChartOfAccountsService {
         codatService
             .getCodatChartOfAccountsForBusiness(
                 businessId,
-                CodatAccountType.EXPENSE,
-                List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET))
+                List.of(
+                    CodatAccountSubtype.EXPENSE,
+                    CodatAccountSubtype.OTHER_EXPENSE,
+                    CodatAccountSubtype.FIXED_ASSET))
             .getResults());
   }
 
@@ -90,8 +91,8 @@ public class ChartOfAccountsService {
                       codatService
                           .getCodatChartOfAccountsForBusiness(
                               business.getBusinessId(),
-                              CodatAccountType.EXPENSE,
                               List.of(
+                                  CodatAccountSubtype.EXPENSE,
                                   CodatAccountSubtype.OTHER_EXPENSE,
                                   CodatAccountSubtype.FIXED_ASSET))
                           .getResults());

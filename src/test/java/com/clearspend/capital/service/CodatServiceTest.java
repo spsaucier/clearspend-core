@@ -1096,8 +1096,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     CodatAccountNestedResponse response =
         codatService.getCodatChartOfAccountsForBusiness(
             business.getId(),
-            CodatAccountType.EXPENSE,
-            List.of(CodatAccountSubtype.OTHER_EXPENSE, CodatAccountSubtype.FIXED_ASSET));
+            List.of(
+                CodatAccountSubtype.EXPENSE,
+                CodatAccountSubtype.OTHER_EXPENSE,
+                CodatAccountSubtype.FIXED_ASSET));
     assertThat(response.getResults().size()).isEqualTo(3);
   }
 

@@ -7,7 +7,10 @@ public enum CodatAccountSubtype {
   @JsonProperty("Fixed Asset")
   FIXED_ASSET("Fixed Asset"),
   @JsonProperty("Other Expense")
-  OTHER_EXPENSE("Other Expense");
+  OTHER_EXPENSE("Other Expense"),
+
+  @JsonProperty("Expense")
+  EXPENSE("Expense");
   @Getter private final String name;
 
   CodatAccountSubtype(String name) {
