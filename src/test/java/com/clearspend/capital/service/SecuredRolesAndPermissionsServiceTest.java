@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
@@ -41,6 +42,24 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
   @BeforeEach
   void setup() {
     createBusinessRecord = testHelper.createBusiness();
+  }
+
+  @Test
+  void getAllRolesAndPermissionsForAllocation_UserPermissions() {
+    final ThrowingRunnable action =
+        () ->
+            secureRolesAndPermissionsService.getAllRolesAndPermissionsForAllocation(
+                createBusinessRecord.allocationRecord().allocation().getId());
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test

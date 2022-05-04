@@ -41,7 +41,7 @@ public class SecuredRolesAndPermissionsService {
         userId, businessId, globalRoles);
   }
 
-  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_USERS|CUSTOMER_SERVICE')")
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_PERMISSIONS|CUSTOMER_SERVICE')")
   public Map<TypedId<UserId>, UserRolesAndPermissions> getAllRolesAndPermissionsForAllocation(
       TypedId<AllocationId> allocationId) {
     CurrentUser currentUser = CurrentUser.get();
