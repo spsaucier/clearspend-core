@@ -1,16 +1,19 @@
 package com.clearspend.capital.configuration;
 
 import com.clearspend.capital.client.codat.types.CodatProperties;
+import com.clearspend.capital.client.mx.types.MxProperties;
 import com.clearspend.capital.client.stripe.StripeProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
@@ -103,6 +106,27 @@ public class WebclientConfiguration {
             headers -> {
               headers.setBasicAuth(codatProperties.getAuthToken());
               headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            })
+        .build();
+  }
+
+  @Bean
+  @Qualifier("mxWebClient")
+  WebClient mxWebClient(MxProperties mxProperties) {
+    return WebClient.builder()
+        .exchangeStrategies(exchangeStrategies())
+        .clientConnector(
+            new ReactorClientHttpConnector(
+                createNewHttpClient(
+                    mxProperties.getConnectTimeout(),
+                    mxProperties.getResponseTimeout(),
+                    mxProperties.getReadTimeout(),
+                    mxProperties.getWriteTimeout())))
+        .baseUrl(mxProperties.getBaseUrl())
+        .defaultHeaders(
+            headers -> {
+              headers.setBasicAuth(mxProperties.getAuthSecret());
+              headers.setAccept(List.of(new MediaType("application", "vnd.mx.api.v1+json")));
             })
         .build();
   }

@@ -8,6 +8,7 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
+import com.clearspend.capital.service.NetworkMessageEnrichmentService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
 import com.stripe.Stripe;
@@ -47,10 +48,9 @@ public class StripeWebhookController {
           StripeEventType.ISSUING_AUTHORIZATION_UPDATED,
           StripeEventType.ISSUING_TRANSACTION_CREATED);
 
+  private final NetworkMessageEnrichmentService networkMessageEnrichmentService;
   private final StripeWebhookLogRepository stripeWebhookLogRepository;
-
   private final StripeProperties stripeProperties;
-
   private final StripeConnectHandler stripeConnectHandler;
   private final StripeDirectHandler stripeDirectHandler;
   private final WebClient authFallbackClient;
@@ -60,12 +60,14 @@ public class StripeWebhookController {
       StripeProperties stripeProperties,
       StripeConnectHandler stripeConnectHandler,
       StripeDirectHandler stripeDirectHandler,
+      NetworkMessageEnrichmentService networkMessageEnrichmentService,
       @Autowired(required = false) @Qualifier("authFallbackClient") WebClient authFallbackClient) {
     this.stripeWebhookLogRepository = stripeWebhookLogRepository;
     this.stripeProperties = stripeProperties;
     this.stripeConnectHandler = stripeConnectHandler;
     this.stripeDirectHandler = stripeDirectHandler;
     this.authFallbackClient = authFallbackClient;
+    this.networkMessageEnrichmentService = networkMessageEnrichmentService;
   }
 
   @PostMapping("/webhook/connect")
@@ -185,6 +187,11 @@ public class StripeWebhookController {
     parseRecord.stripeWebhookLog.setProcessingTimeMs(
         Duration.between(start, Instant.now()).toMillis());
     stripeWebhookLogRepository.save(parseRecord.stripeWebhookLog);
+
+    // Schedule enrichment to run in another thread.
+    if (networkCommon != null) {
+      networkMessageEnrichmentService.scheduleActivityEnrichment(networkCommon);
+    }
 
     return networkCommon;
   }

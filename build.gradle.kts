@@ -152,6 +152,7 @@ dependencies {
     implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
+    implementation("io.netty:netty-resolver-dns-native-macos:4.1.76.Final:osx-aarch_64")
     runtimeOnly("org.postgresql:postgresql")
 
 //other 3rd party libs

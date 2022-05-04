@@ -22,7 +22,6 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
 import com.clearspend.capital.data.model.enums.network.VerificationResultType;
-import com.clearspend.capital.data.model.network.NetworkMerchant;
 import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
 import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
@@ -37,14 +36,12 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Service
 @RequiredArgsConstructor
@@ -146,7 +143,7 @@ public class NetworkMessageService {
   public void processNetworkMessage(NetworkCommon common) {
     retrieveCardAndNetworkMessages(common);
 
-    storeMerchantAsync(common);
+    //    storeMerchantAsync(common);
 
     // TODO(kuchlein): lookup local merchantName table to retrieve logo (needs to be done async and
     //    potentially in a async batch job)
@@ -419,52 +416,5 @@ public class NetworkMessageService {
         .stream()
         .findFirst()
         .orElse(null);
-  }
-
-  private void storeMerchantAsync(NetworkCommon common) {
-    Optional<NetworkMerchant> networkMerchantOptional =
-        networkMerchantRepository.findByMerchantNameAndMerchantCategoryCode(
-            common.getMerchantName(), common.getMerchantCategoryCode());
-    if (networkMerchantOptional.isPresent()) {
-      common
-          .getAccountActivityDetails()
-          .setMerchantLogoUrl(networkMerchantOptional.get().getMerchantLogoUrl());
-
-      return;
-    }
-    // asynchronously store the merchant details so that they can be used to define limits
-    new Thread(
-            () -> {
-              try {
-                NetworkMerchant networkMerchant =
-                    new NetworkMerchant(common.getMerchantName(), common.getMerchantCategoryCode());
-                networkMerchant.setMerchantLogoUrl(
-                    clearbitClient.getLogo(common.getMerchantName()));
-                networkMerchant = networkMerchantRepository.save(networkMerchant);
-                // TODO if the accountActivity is written before the following assignment due to a
-                //   race condition add a batch job to update it
-                common
-                    .getAccountActivityDetails()
-                    .setMerchantLogoUrl(networkMerchant.getMerchantLogoUrl());
-              } catch (org.springframework.dao.DataIntegrityViolationException
-                  | org.hibernate.exception.ConstraintViolationException e) {
-                log.warn(
-                    "NetworkMerchant already present: {} {}",
-                    common.getMerchantName(),
-                    common.getMerchantCategoryCode());
-              } catch (WebClientResponseException.NotFound w) {
-                log.error(
-                    "Merchant Logo not found at Clearbit ({} {})",
-                    common.getMerchantName(),
-                    common.getMerchantCategoryCode());
-              } catch (Exception e) {
-                log.error(
-                    "Unexpected failure to create NetworkMerchant record ({} {})",
-                    common.getMerchantName(),
-                    common.getMerchantCategoryCode(),
-                    e);
-              }
-            })
-        .start();
   }
 }

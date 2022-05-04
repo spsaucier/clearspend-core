@@ -115,6 +115,9 @@ public class NetworkCommon {
   // the type of merchant which is defined by Stripe
   @NonNull private MerchantType merchantType;
 
+  private String merchantStatementDescriptor;
+  private String enhancedMerchantLogo;
+
   @NonNull private OffsetDateTime transactionDate;
 
   // Stripe's identifier for this networkMessage

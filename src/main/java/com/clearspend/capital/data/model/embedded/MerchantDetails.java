@@ -5,6 +5,7 @@ import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import java.math.BigDecimal;
 import javax.persistence.Embeddable;
+import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
@@ -21,7 +22,9 @@ public class MerchantDetails {
 
   private String name;
 
-  private Amount amount;
+  private String statementDescriptor;
+
+  @Embedded private Amount amount;
 
   @Enumerated(EnumType.STRING)
   private MerchantType type;

@@ -328,12 +328,15 @@ public class AccountActivityService {
     accountActivity.setMerchant(
         new MerchantDetails(
             common.getMerchantName(),
+            common.getMerchantStatementDescriptor(),
             common.getMerchantAmount(),
             common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
             MccGroup.fromMcc(common.getMerchantCategoryCode()),
-            common.getAccountActivityDetails().getMerchantLogoUrl(),
+            common.getAccountActivityDetails().getMerchantLogoUrl() != null
+                ? common.getAccountActivityDetails().getMerchantLogoUrl()
+                : "",
             common.getAccountActivityDetails().getMerchantLatitude(),
             common.getAccountActivityDetails().getMerchantLongitude()));
 

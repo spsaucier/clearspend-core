@@ -36,6 +36,6 @@ public class MerchantInfo {
     this.merchantNumber = merchant.getNumber();
     this.name = merchant.getName();
     this.type = merchant.getMerchantType();
-    this.merchantLogoUrl = merchant.getLogoUrl();
+    this.merchantLogoUrl = merchant.getLogoUrl() != null ? merchant.getLogoUrl() : "";
   }
 }
