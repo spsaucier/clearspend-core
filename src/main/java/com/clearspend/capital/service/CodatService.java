@@ -668,16 +668,15 @@ public class CodatService {
             .limit(limit)
             .collect(Collectors.toList());
     // 4. prepare the final result
-    List<CodatSupplier> finalSuppliers =
-        suppliersFromQbo.getResults().stream()
-            .filter(
-                s ->
-                    limitedList.stream()
-                        .anyMatch(
-                            matched ->
-                                matched.getId().equals(s.getId())
-                                    && matched.getName().equals(s.getSupplierName())))
-            .collect(Collectors.toList());
+    List<CodatSupplier> finalSuppliers = new ArrayList<>();
+    for (CodatSupplierData data : limitedList) {
+      finalSuppliers.add(
+          suppliersFromQbo.getResults().stream()
+              .filter(
+                  q -> q.getId().equals(data.getId()) && q.getSupplierName().equals(data.getName()))
+              .findFirst()
+              .get());
+    }
 
     return new GetSuppliersResponse(finalSuppliers.size(), finalSuppliers);
   }

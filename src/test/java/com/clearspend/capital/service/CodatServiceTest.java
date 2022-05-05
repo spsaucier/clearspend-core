@@ -1175,31 +1175,47 @@ public class CodatServiceTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
     business.setCodatCompanyRef("test-codat-ref");
     testHelper.setCurrentUser(createBusinessRecord.user());
-    mockClient.addSupplierToList(new CodatSupplier("supplierlist-101", "AMZN", "Active", "USD"));
     mockClient.addSupplierToList(
-        new CodatSupplier("supplierlist-102", "Amazon Fullfill", "Active", "USD"));
+        new CodatSupplier("supplierlist-101", "Bob's Burger Joint", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-102", "Books by Bessie", "Active", "USD"));
     mockClient.addSupplierToList(new CodatSupplier("supplierlist-103", "abcd", "Active", "USD"));
     mockClient.addSupplierToList(
-        new CodatSupplier("supplierlist-104", "some random corp", "Active", "USD"));
-    mockClient.addSupplierToList(new CodatSupplier("supplierlist-104", "AMZ", "Active", "USD"));
+        new CodatSupplier("supplierlist-104", "Brosnahan Insurance Agency", "Active", "USD"));
     mockClient.addSupplierToList(
-        new CodatSupplier("supplierlist-104", "supplier-104", "Active", "USD"));
+        new CodatSupplier("supplierlist-105", "Cal Telephone", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-106", "Cigna Health Care", "Active", "USD"));
+
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-107", "National Eye Care", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier(
+            "supplierlist-108", "Norton Lumber and Building Materials", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-109", "Robertson & Associates", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-110", "Tony Rondonuwu", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-111", "United States Treasury", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-112", "Squeaky Kleen Car Wash", "Active", "USD"));
 
     GetSuppliersResponse suppliers =
         mockMvcHelper.queryObject(
-            "/codat/accounting-suppliers?limit=2&target=amazon",
+            "/codat/accounting-suppliers?limit=20&target=National",
             HttpMethod.GET,
             userCookie,
             null,
             GetSuppliersResponse.class);
 
-    assertThat(suppliers.getResults().size() == 2).isTrue();
     List<String> matchedStrings = new ArrayList<>();
     for (CodatSupplier s : suppliers.getResults()) {
       matchedStrings.add(s.getSupplierName());
     }
-    assertThat(matchedStrings.contains("AMZN")).isTrue();
-    assertThat(matchedStrings.contains("Amazon Fullfill")).isTrue();
+    assertThat("National Eye Care".equals(matchedStrings.get(0))).isTrue();
+    assertThat(matchedStrings.contains("National Eye Care")).isTrue();
+    assertThat(matchedStrings.contains("Norton Lumber and Building Materials")).isTrue();
   }
 
   @SneakyThrows
