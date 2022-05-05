@@ -1,6 +1,9 @@
 package com.clearspend.capital.controller.security;
 
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inversoft.error.Error;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
@@ -44,10 +47,12 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient {
 
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
 
   private record TwoFactorPending(
-      UUID userId, Map<String, Object> context, String code, String trustChallenge) {}
+      UUID userId, String state, LoginResponse loginResponse, String code, String trustChallenge) {}
 
   private final Map<UUID, TwoFactorEnable> pendingEnable = new HashMap<>();
   private final Map<UUID, UserTwoFactorConfiguration> twoFactorConfiguration = new HashMap<>();
@@ -125,12 +130,23 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       return clientResponseFactory(404);
     }
     UUID userId = findUserResponse.successResponse.user.id;
-    Map<String, Object> state = request.state;
+    String state =
+        Optional.ofNullable(request.state)
+            .map(
+                s -> {
+                  try {
+                    return objectMapper.writeValueAsString(s);
+                  } catch (JsonProcessingException e) {
+                    throw new RuntimeException();
+                  }
+                })
+            .orElse("{}");
 
     TwoFactorId twoFactorId = new TwoFactorId();
     twoFactorPending.put(
         twoFactorId,
-        new TwoFactorPending(userId, state, generateNextTwoFactorCode(), request.trustChallenge));
+        new TwoFactorPending(
+            userId, state, null, generateNextTwoFactorCode(), request.trustChallenge));
 
     List<TwoFactorMethod> methods = twoFactorConfiguration.get(userId).methods;
     String code = RandomStringUtils.randomNumeric(6);
@@ -295,10 +311,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       twoFactorPending.put(
           twoFactorId,
           new TwoFactorPending(
-              response.successResponse.user.id,
-              Map.of("successResponse", response.successResponse),
-              null,
-              null));
+              response.successResponse.user.id, "{}", response.successResponse, null, null));
 
       LoginResponse loginResponse = new LoginResponse();
       loginResponse.twoFactorId = twoFactorId.getTwoFactorId();
@@ -349,7 +362,8 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
         twoFactorId1,
         new TwoFactorPending(
             pending.userId,
-            twoFactorPending.get(twoFactorId1).context,
+            twoFactorPending.get(twoFactorId1).state,
+            twoFactorPending.get(twoFactorId1).loginResponse,
             code,
             pending.trustChallenge));
 
@@ -390,7 +404,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
        * and then dress the user with their mocked 2FA status.
        */
       response.successResponse =
-          Optional.ofNullable((LoginResponse) twoFactorPending.context.get("successResponse"))
+          Optional.ofNullable(twoFactorPending.loginResponse)
               .map(
                   lr -> {
                     apply2FA(lr.user);
@@ -406,7 +420,13 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
                 this.trustTokensToChallenges.put(trustToken, twoFactorPending.trustChallenge);
               });
       response.status = 200;
-      response.successResponse.state = twoFactorPending.context();
+      try {
+        response.successResponse.state =
+            objectMapper.readValue(
+                twoFactorPending.state(), new TypeReference<Map<String, Object>>() {});
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
     } else {
       response.status = 421;
     }

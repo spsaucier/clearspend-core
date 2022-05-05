@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
@@ -49,6 +50,7 @@ import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -95,7 +97,7 @@ public class FusionAuthService {
 
   private final io.fusionauth.client.FusionAuthClient client;
   private final FusionAuthProperties fusionAuthProperties;
-
+  private final ObjectMapper objectMapper;
   private final TwilioService twilioService;
 
   @RestrictedApi(
@@ -580,13 +582,15 @@ public class FusionAuthService {
   @FusionAuthUserModifier(
       reviewer = "jscarbor",
       explanation = "delegating some work within the class")
+  @SneakyThrows
   public TwoFactorStartLoggedInResponse changePassword(
       com.clearspend.capital.data.model.User user, ChangePasswordRequest request) {
     LoginResponse twoFactorLogin = null;
     if (twoFactorEnabled()) {
       if (StringUtils.isAnyEmpty(
           request.trustChallenge, request.twoFactorId, request.twoFactorCode)) {
-        return sendCodeToBegin2FA(user, Map.of("changeRequest", request));
+        return sendCodeToBegin2FA(
+            user, Map.of("changeRequest", objectMapper.writeValueAsString(request)));
       }
       TwoFactorLoginRequest twoFactorLoginRequest =
           new TwoFactorLoginRequest(getApplicationId(), request.twoFactorCode, request.twoFactorId);
@@ -597,7 +601,8 @@ public class FusionAuthService {
       }
       twoFactorLogin = twoFactorLoginResponse.successResponse;
       ChangePasswordRequest oldRequest =
-          (ChangePasswordRequest) twoFactorLogin.state.get("changeRequest");
+          objectMapper.readValue(
+              (String) twoFactorLogin.state.get("changeRequest"), ChangePasswordRequest.class);
       request =
           new ChangePasswordRequest(
               oldRequest.currentPassword,
