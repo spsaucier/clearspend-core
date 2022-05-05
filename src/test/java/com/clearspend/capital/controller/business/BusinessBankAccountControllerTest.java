@@ -30,6 +30,7 @@ import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
@@ -90,6 +91,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void linkToken_success() {
     assumeTrue(plaidProperties.isConfigured());
+    createBusinessRecord.business().setOnboardingStep(BusinessOnboardingStep.LINK_ACCOUNT);
     testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
   }
 
@@ -97,6 +99,7 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   @Test
   void linkedAccounts_success() {
     assumeTrue(plaidProperties.isConfigured());
+    createBusinessRecord.business().setOnboardingStep(BusinessOnboardingStep.LINK_ACCOUNT);
 
     // Test a new linked account
     String linkToken = testHelper.getLinkToken(testHelper.retrieveBusiness().getId());

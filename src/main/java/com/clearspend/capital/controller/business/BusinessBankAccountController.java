@@ -1,5 +1,6 @@
 package com.clearspend.capital.controller.business;
 
+import com.clearspend.capital.common.error.InvalidKycStepException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -53,6 +54,11 @@ public class BusinessBankAccountController {
 
   @GetMapping("/link-token")
   LinkTokenResponse linkToken() throws IOException {
+    Business business = businessService.getBusiness(CurrentUser.get().businessId(), true);
+    // in case we are in steps previous to LINK_ACCOUNT then is not allowed to continue
+    if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT)) {
+      throw new InvalidKycStepException();
+    }
     return new LinkTokenResponse(
         businessBankAccountService.getLinkToken(CurrentUser.get().businessId()));
   }
