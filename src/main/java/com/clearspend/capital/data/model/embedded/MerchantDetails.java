@@ -26,6 +26,10 @@ public class MerchantDetails {
 
   @Embedded private Amount amount;
 
+  private String codatSupplierName;
+
+  private String codatSupplierId;
+
   @Enumerated(EnumType.STRING)
   private MerchantType type;
 

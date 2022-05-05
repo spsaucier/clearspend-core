@@ -1265,4 +1265,22 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 .getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
   }
+
+  @Test
+  public void testCodatSupplierUpdate() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    prepareChartTestData(createBusinessRecord, employeeOwner);
+    final AccountActivityFilterCriteria criteria1 = new AccountActivityFilterCriteria();
+    criteria1.setBusinessId(createBusinessRecord.business().getId());
+    criteria1.setPageToken(new PageToken(0, 10, null));
+    Page<AccountActivity> accountActivity =
+        accountActivityRepository.find(createBusinessRecord.business().getId(), criteria1);
+    AccountActivity firstOne = accountActivity.getContent().get(0);
+    AccountActivity result =
+        accountActivityService.updateCodatSupplier(firstOne.getId(), "10", "Walmart");
+    assertThat(result.getMerchant().getCodatSupplierId().equals("10")).isTrue();
+    assertThat(result.getMerchant().getCodatSupplierName().equals("Walmart")).isTrue();
+  }
 }

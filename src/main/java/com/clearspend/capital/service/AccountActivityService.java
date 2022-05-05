@@ -330,6 +330,8 @@ public class AccountActivityService {
             common.getMerchantName(),
             common.getMerchantStatementDescriptor(),
             common.getMerchantAmount(),
+            null,
+            null,
             common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
@@ -478,6 +480,18 @@ public class AccountActivityService {
     }
     accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
     return accountActivityRepository.save(accountActivity);
+  }
+
+  @Transactional
+  public AccountActivity updateCodatSupplier(
+      TypedId<AccountActivityId> accountActivityId, String supplierId, String supplierName) {
+    AccountActivity accountActivity = getAccountActivity(accountActivityId);
+    if (accountActivity.getMerchant() != null) {
+      accountActivity.getMerchant().setCodatSupplierId(supplierId);
+      accountActivity.getMerchant().setCodatSupplierName(supplierName);
+      return accountActivityRepository.save(accountActivity);
+    }
+    return accountActivity;
   }
 
   public record CardAccountActivity(Card card, Page<AccountActivity> activityPage) {}
