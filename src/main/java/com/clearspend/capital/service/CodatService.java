@@ -378,7 +378,11 @@ public class CodatService {
 
   private CodatAccountNested createNestedAccountFromAccount(CodatAccount account) {
     CodatAccountNested newAccount = new CodatAccountNested(account.getId(), account.getName());
-    newAccount.setUpdateStatus(ChartOfAccountsUpdateStatus.NOT_CHANGED);
+    if (account.getQualifiedName().endsWith("(deleted)")) {
+      newAccount.setUpdateStatus(ChartOfAccountsUpdateStatus.DELETED);
+    } else {
+      newAccount.setUpdateStatus(ChartOfAccountsUpdateStatus.NOT_CHANGED);
+    }
     newAccount.setStatus(account.getStatus().getName());
     newAccount.setCategory(account.getCategory());
     newAccount.setQualifiedName(account.getQualifiedName());

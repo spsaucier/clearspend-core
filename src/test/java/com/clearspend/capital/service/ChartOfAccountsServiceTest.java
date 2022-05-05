@@ -90,7 +90,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
     ChartOfAccounts chartOfAccounts =
         chartOfAccountsService.getChartOfAccountsForBusiness(business.getId());
     assertThat(chartOfAccounts.getNestedAccounts()).isNotNull();
-    assertThat(chartOfAccounts.getNestedAccounts().size()).isEqualTo(30);
+    assertThat(chartOfAccounts.getNestedAccounts().size()).isEqualTo(31);
   }
 
   @Test
@@ -141,7 +141,8 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
         business.getId());
     assertThat(newNestedAccount.size()).isGreaterThan(0);
     chartOfAccountsService.updateChartOfAccountsForBusiness(business.getId(), newNestedAccount);
-    assertThat(chartOfAccountsService.getTotalChangesForBusiness(business.getId())).isEqualTo(7);
+    assertThat(chartOfAccountsService.getTotalChangesForBusiness(business.getId())).isEqualTo(10);
+
     assertThat(businessNotificationRepository.findAllByBusinessId(business.getId()).size())
         .isEqualTo(8);
     assertThat(

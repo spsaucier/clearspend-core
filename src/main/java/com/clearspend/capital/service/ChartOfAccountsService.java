@@ -197,8 +197,14 @@ public class ChartOfAccountsService {
           updateStatusesForCodatAccountNested(match.get(), codatAccountNested, businessId);
         }
       } else {
-        setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.NEW);
-        notifyNewAccountRecursively(codatAccountNested, businessId);
+        // match wasn't found, we need to check that this isn't a category that is
+        // deleted but new as of the last update
+        if (codatAccountNested.getQualifiedName().endsWith("(deleted)")) {
+          setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.DELETED);
+        } else {
+          setUpdateStatusRecursively(codatAccountNested, ChartOfAccountsUpdateStatus.NEW);
+          notifyNewAccountRecursively(codatAccountNested, businessId);
+        }
       }
     }
   }

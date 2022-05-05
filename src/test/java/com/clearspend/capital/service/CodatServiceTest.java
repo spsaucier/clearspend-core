@@ -1313,7 +1313,8 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Other Expense.OtherMiscellaneousExpense.Miscellaneous",
         "Expense.Other Expense.PenaltiesSettlements.Penalties & Settlements",
         "Asset.Fixed Asset.AccumulatedDepreciation.Truck",
-        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation");
+        "Asset.Fixed Asset.AccumulatedDepreciation.Truck.Depreciation",
+        "Expense.Other Expense.PenaltiesSettlements.Deleted Category (deleted)");
   }
 
   public static List<String> getModifiedQualifiedNames() {
@@ -1374,7 +1375,9 @@ public class CodatServiceTest extends BaseCapitalTest {
         "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Retainer",
         "Expense.Expense.LegalProfessionalFees.Legal & Professional Fees.Additional",
         "Expense.Expense.RepairMaintenance.Maintenance and Repair.AC Repairs",
-        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Hardware Repairs");
+        "Expense.Expense.RepairMaintenance.Maintenance and Repair.Hardware Repairs",
+        "Expense.Other Expense.PenaltiesSettlements.Deleted Category (deleted)",
+        "Expense.Other Expense.PenaltiesSettlements.Another Deleted Category (deleted)");
   }
 
   public static String getNameFromQualified(String qualifiedName) {
