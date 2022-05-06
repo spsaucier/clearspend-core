@@ -383,7 +383,6 @@ public class AccountActivityService {
       @Nullable TypedId<ExpenseCategoryId> expenseCategoryId) {
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
-    // FIXME
     if (expenseCategoryId != null) {
       accountActivity.setExpenseDetails(
           expenseCategoryService
@@ -405,6 +404,7 @@ public class AccountActivityService {
       }
     } else {
       accountActivity.setExpenseDetails(null);
+      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
     }
     log.debug(
         "Set expense details {} to accountActivity {}",

@@ -471,6 +471,10 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 accountActivity, "After Update", expenseCategory.getId()))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+
+    assertThat(accountActivityService.updateAccountActivity(accountActivity, "After Update", null))
+        .extracting(it -> it.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
   }
 
   @Test
