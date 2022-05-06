@@ -48,6 +48,12 @@ public class Merchant {
   @JsonProperty("merchantLongitude")
   private BigDecimal longitude;
 
+  @JsonProperty("codatSupplierName")
+  private String codatSupplierName;
+
+  @JsonProperty("codatSupplierId")
+  private String codatSupplierId;
+
   public static Merchant toMerchant(MerchantDetails in) {
     if (in == null) {
       return null;
@@ -62,6 +68,8 @@ public class Merchant {
         in.getMerchantCategoryGroup(),
         in.getLogoUrl(),
         in.getLatitude(),
-        in.getLongitude());
+        in.getLongitude(),
+        in.getCodatSupplierName(),
+        in.getCodatSupplierId());
   }
 }
