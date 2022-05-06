@@ -1,6 +1,7 @@
 package com.clearspend.capital.testutils.data;
 
 import com.clearspend.capital.TestHelper;
+import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
@@ -18,6 +19,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -47,6 +49,7 @@ import com.clearspend.capital.data.model.ledger.Posting;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.data.repository.CardRepository;
+import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.ledger.JournalEntryRepository;
 import com.clearspend.capital.data.repository.ledger.LedgerAccountRepository;
@@ -77,6 +80,7 @@ public class TestDataHelper {
   private final AccountActivityRepository accountActivityRepo;
   private final CardRepository cardRepo;
   private final TransactionLimitRepository transactionLimitRepo;
+  private final ReceiptRepository receiptRepo;
   private final Faker faker = new Faker();
 
   private Amount createAmount() {
@@ -165,10 +169,11 @@ public class TestDataHelper {
     return merchant;
   }
 
-  public ReceiptDetails createReceipt() {
-    final ReceiptDetails receiptDetails = new ReceiptDetails();
-    receiptDetails.setReceiptIds(null);
-    return receiptDetails;
+  public Receipt createReceipt(final ReceiptConfig receiptConfig) {
+    final Receipt receipt =
+        new Receipt(receiptConfig.getBusinessId(), receiptConfig.getUploadUserId());
+    receipt.setPath("");
+    return receiptRepo.save(receipt);
   }
 
   public AccountActivity createAccountActivity(final AccountActivityConfig config) {
@@ -189,7 +194,7 @@ public class TestDataHelper {
     accountActivity.setNotes("");
     accountActivity.setExpenseDetails(config.getExpenseDetails());
 
-    final ReceiptDetails receiptDetails = config.getReceipt().orElse(createReceipt());
+    final ReceiptDetails receiptDetails = config.getReceipt().orElse(new ReceiptDetails());
     accountActivity.setReceipt(receiptDetails);
 
     config.getOwner().ifPresent(owner -> accountActivity.setUser(UserDetails.of(owner)));
@@ -262,6 +267,20 @@ public class TestDataHelper {
           .allocationId(createBusinessRecord.allocationRecord().allocation().getId())
           .accountId(createBusinessRecord.allocationRecord().account().getId())
           .userId(createBusinessRecord.user().getId());
+    }
+  }
+
+  @Data
+  @Builder
+  public static class ReceiptConfig {
+    @NonNull private final TypedId<BusinessId> businessId;
+    @NonNull private final TypedId<UserId> uploadUserId;
+
+    public static ReceiptConfigBuilder fromCreateBusinessRecord(
+        final CreateBusinessRecord createBusinessRecord) {
+      return ReceiptConfig.builder()
+          .businessId(createBusinessRecord.business().getId())
+          .uploadUserId(createBusinessRecord.user().getId());
     }
   }
 

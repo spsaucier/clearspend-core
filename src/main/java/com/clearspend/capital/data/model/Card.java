@@ -38,7 +38,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class Card extends TypedMutable<CardId> implements Ownable {
+public class Card extends TypedMutable<CardId> implements Permissionable {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -132,4 +132,9 @@ public class Card extends TypedMutable<CardId> implements Ownable {
 
   private boolean delivered;
   private OffsetDateTime deliveredDate;
+
+  @Override
+  public TypedId<UserId> getOwnerId() {
+    return getUserId();
+  }
 }

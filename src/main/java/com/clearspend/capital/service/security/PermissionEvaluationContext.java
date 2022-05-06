@@ -6,14 +6,20 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AllocationRelated;
 import com.clearspend.capital.data.model.BusinessRelated;
-import com.clearspend.capital.data.model.Ownable;
-import com.clearspend.capital.data.model.UserRelated;
+import com.clearspend.capital.data.model.MultiOwnerPermissionable;
+import com.clearspend.capital.data.model.MultiOwnerRelated;
+import com.clearspend.capital.data.model.OwnerRelated;
+import com.clearspend.capital.data.model.Permissionable;
+import java.util.Optional;
+import java.util.Set;
+import javax.annotation.Nullable;
+import lombok.NonNull;
 
 public record PermissionEvaluationContext(
-    TypedId<BusinessId> businessId,
-    TypedId<AllocationId> allocationId,
-    TypedId<UserId> userId,
-    AllocationStrategy allocationStrategy) {
+    @Nullable TypedId<BusinessId> businessId,
+    @Nullable TypedId<AllocationId> allocationId,
+    @NonNull Set<TypedId<UserId>> ownerIds,
+    @NonNull AllocationStrategy allocationStrategy) {
 
   public PermissionEvaluationContext {
     if (allocationId != null && AllocationStrategy.ANY_ALLOCATION == allocationStrategy) {
@@ -39,21 +45,38 @@ public record PermissionEvaluationContext(
     return fromTarget(targetObject, AllocationStrategy.SINGLE_ALLOCATION);
   }
 
+  private static Set<TypedId<UserId>> singleOwnerSet(@Nullable final TypedId<UserId> ownerId) {
+    return Optional.ofNullable(ownerId).map(Set::of).orElse(Set.of());
+  }
+
+  private static Set<TypedId<UserId>> nullableOwnerSet(
+      @Nullable final Set<TypedId<UserId>> ownerIds) {
+    return Optional.ofNullable(ownerIds).orElse(Set.of());
+  }
+
   public static PermissionEvaluationContext fromTarget(
       final Object targetObject, final AllocationStrategy allocationStrategy) {
     if (targetObject == null) {
-      return new PermissionEvaluationContext(null, null, null, allocationStrategy);
+      return new PermissionEvaluationContext(null, null, Set.of(), allocationStrategy);
     }
 
     if (targetObject instanceof PermissionEvaluationContext context) {
       return context;
     }
 
-    if (targetObject instanceof Ownable ownable) {
+    if (targetObject instanceof Permissionable permissionable) {
       return new PermissionEvaluationContext(
-          ownable.getBusinessId(),
-          ownable.getAllocationId(),
-          ownable.getUserId(),
+          permissionable.getBusinessId(),
+          permissionable.getAllocationId(),
+          singleOwnerSet(permissionable.getOwnerId()),
+          allocationStrategy);
+    }
+
+    if (targetObject instanceof MultiOwnerPermissionable multiOwnerPermissionable) {
+      return new PermissionEvaluationContext(
+          multiOwnerPermissionable.getBusinessId(),
+          multiOwnerPermissionable.getAllocationId(),
+          nullableOwnerSet(multiOwnerPermissionable.getOwnerIds()),
           allocationStrategy);
     }
 
@@ -61,18 +84,29 @@ public record PermissionEvaluationContext(
       return new PermissionEvaluationContext(
           allocationRelated.getBusinessId(),
           allocationRelated.getAllocationId(),
-          null,
+          Set.of(),
           allocationStrategy);
     }
 
-    if (targetObject instanceof UserRelated userRelated) {
+    if (targetObject instanceof OwnerRelated ownerRelated) {
       return new PermissionEvaluationContext(
-          userRelated.getBusinessId(), null, userRelated.getUserId(), allocationStrategy);
+          ownerRelated.getBusinessId(),
+          null,
+          singleOwnerSet(ownerRelated.getOwnerId()),
+          allocationStrategy);
+    }
+
+    if (targetObject instanceof MultiOwnerRelated multiOwnerRelated) {
+      return new PermissionEvaluationContext(
+          multiOwnerRelated.getBusinessId(),
+          null,
+          nullableOwnerSet(multiOwnerRelated.getOwnerIds()),
+          allocationStrategy);
     }
 
     if (targetObject instanceof BusinessRelated businessRelated) {
       return new PermissionEvaluationContext(
-          businessRelated.getBusinessId(), null, null, allocationStrategy);
+          businessRelated.getBusinessId(), null, Set.of(), allocationStrategy);
     }
 
     throw new IllegalArgumentException(

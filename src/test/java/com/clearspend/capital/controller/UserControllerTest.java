@@ -2,6 +2,7 @@ package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,8 +36,10 @@ import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
+import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ExpenseCategory;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
@@ -47,8 +50,10 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
+import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -56,6 +61,9 @@ import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.data.TestDataHelper;
+import com.clearspend.capital.testutils.data.TestDataHelper.AccountActivityConfig;
+import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -96,9 +104,12 @@ class UserControllerTest extends BaseCapitalTest {
   private final NetworkMessageService networkMessageService;
   private final UserService userService;
   private final CardRepository cardRepository;
+  private final TestDataHelper testDataHelper;
   private final ExpenseCategoryRepository expenseCategoryRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final PermissionValidationHelper permissionValidationHelper;
+  private final AccountActivityRepository accountActivityRepo;
+  private final ReceiptRepository receiptRepo;
   private final StripeMockClient stripeMockClient;
 
   private final Faker faker = new Faker();
@@ -1173,11 +1184,101 @@ class UserControllerTest extends BaseCapitalTest {
             .getExpenseDetails());
   }
 
-  void linkReceipt() {}
+  @Test
+  @SneakyThrows
+  void linkReceipt() {
+    final AccountActivity accountActivity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(createBusinessRecord.user())
+                .build());
+    final Receipt receipt =
+        testDataHelper.createReceipt(
+            ReceiptConfig.fromCreateBusinessRecord(createBusinessRecord).build());
 
-  void unlinkReceipt() {}
+    mvc.perform(
+            post("/users/account-activity/%s/receipts/%s/link"
+                    .formatted(
+                        accountActivity.getId().toUuid().toString(),
+                        receipt.getId().toUuid().toString()))
+                .cookie(createBusinessRecord.authCookie()))
+        .andExpect(status().isOk());
 
-  void deleteReceipt() {}
+    final AccountActivity resultActivity =
+        accountActivityRepo.findById(accountActivity.getId()).orElseThrow();
+    final Receipt resultReceipt = receiptRepo.findById(receipt.getId()).orElseThrow();
+
+    assertThat(resultReceipt)
+        .hasFieldOrPropertyWithValue("linkUserIds", Set.of(accountActivity.getUserDetailsId()));
+    assertThat(resultActivity.getReceipt())
+        .hasFieldOrPropertyWithValue("receiptIds", Set.of(receipt.getId()));
+  }
+
+  @Test
+  @SneakyThrows
+  void unlinkReceipt() {
+    AccountActivity accountActivity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(createBusinessRecord.user())
+                .build());
+    Receipt receipt =
+        testDataHelper.createReceipt(
+            ReceiptConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+
+    accountActivity.getReceipt().getReceiptIds().add(receipt.getId());
+    accountActivity = accountActivityRepo.save(accountActivity);
+
+    receipt.addLinkUserId(createBusinessRecord.user().getId());
+    receipt.setLinked(true);
+    receipt = receiptRepo.save(receipt);
+
+    mvc.perform(
+            post("/users/account-activity/%s/receipts/%s/unlink"
+                    .formatted(
+                        accountActivity.getId().toUuid().toString(),
+                        receipt.getId().toUuid().toString()))
+                .cookie(createBusinessRecord.authCookie()))
+        .andExpect(status().isOk());
+
+    final AccountActivity resultActivity =
+        accountActivityRepo.findById(accountActivity.getId()).orElseThrow();
+    final Receipt resultReceipt = receiptRepo.findById(receipt.getId()).orElseThrow();
+
+    assertThat(resultReceipt).hasFieldOrPropertyWithValue("linkUserIds", Set.of());
+    assertThat(resultActivity.getReceipt()).hasFieldOrPropertyWithValue("receiptIds", Set.of());
+  }
+
+  @Test
+  @SneakyThrows
+  void deleteReceipt() {
+    AccountActivity accountActivity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(createBusinessRecord.user())
+                .build());
+    Receipt receipt =
+        testDataHelper.createReceipt(
+            ReceiptConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+
+    accountActivity.getReceipt().getReceiptIds().add(receipt.getId());
+    accountActivity = accountActivityRepo.save(accountActivity);
+
+    receipt.addLinkUserId(createBusinessRecord.user().getId());
+    receipt.setLinked(true);
+    receipt = receiptRepo.save(receipt);
+
+    mvc.perform(
+            delete("/users/receipts/%s/delete".formatted(receipt.getId().toUuid().toString()))
+                .cookie(createBusinessRecord.authCookie()))
+        .andExpect(status().isOk());
+
+    final AccountActivity resultActivity =
+        accountActivityRepo.findById(accountActivity.getId()).orElseThrow();
+    assertThat(receiptRepo.findById(receipt.getId())).isEmpty();
+
+    assertThat(resultActivity.getReceipt()).hasFieldOrPropertyWithValue("receiptIds", Set.of());
+  }
 
   @SneakyThrows
   @Test

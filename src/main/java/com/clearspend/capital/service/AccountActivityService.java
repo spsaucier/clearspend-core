@@ -22,6 +22,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Hold;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -32,6 +33,7 @@ import com.clearspend.capital.data.model.embedded.ExpenseDetails;
 import com.clearspend.capital.data.model.embedded.HoldDetails;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
+import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -43,6 +45,7 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.type.ChartData;
@@ -76,6 +79,7 @@ public class AccountActivityService {
   private final ChartOfAccountsMappingRepository chartOfAccountsMappingRepository;
   private final ExpenseCategoryService expenseCategoryService;
   private final UserRepository userRepository;
+  private final ReceiptRepository receiptRepository;
 
   @Transactional(TxType.REQUIRES_NEW)
   void recordBankAccountAccountActivityDecline(
@@ -361,6 +365,17 @@ public class AccountActivityService {
       accountActivity.setExpenseDetails(common.getPriorAccountActivity().getExpenseDetails());
       accountActivity.setNotes(common.getPriorAccountActivity().getNotes());
       accountActivity.setReceipt(common.getPriorAccountActivity().getReceipt());
+      Optional.ofNullable(accountActivity.getReceipt())
+          .map(ReceiptDetails::getReceiptIds)
+          .filter(receiptIds -> !receiptIds.isEmpty())
+          .ifPresent(
+              receiptIds -> {
+                final List<Receipt> receipts = receiptRepository.findAllByIdIn(receiptIds);
+                // Null user IDs are ignored when added
+                receipts.forEach(
+                    receipt -> receipt.addLinkUserId(accountActivity.getUserDetailsId()));
+                receiptRepository.saveAllAndFlush(receipts);
+              });
     }
 
     AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();

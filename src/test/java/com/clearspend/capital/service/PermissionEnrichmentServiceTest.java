@@ -85,7 +85,7 @@ public class PermissionEnrichmentServiceTest {
           serviceForLogWatching.evaluatePermission(
               SecurityContextHolder.getContext().getAuthentication(),
               new PermissionEvaluationContext(
-                  BUSINESS_ID, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                  BUSINESS_ID, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
               "MANAGE_PERMISSIONS|CUSTOMER_SERVICE");
 
       assertTrue(hasPermission);
@@ -138,7 +138,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                BUSINESS_ID, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(1))
@@ -161,7 +161,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, USER_ID, AllocationStrategy.ANY_ALLOCATION),
+                BUSINESS_ID, null, Set.of(USER_ID), AllocationStrategy.ANY_ALLOCATION),
             "MANAGE_USERS"));
 
     verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -185,7 +185,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, new TypedId<>(), AllocationStrategy.ANY_ALLOCATION),
+                BUSINESS_ID, null, Set.of(new TypedId<>()), AllocationStrategy.ANY_ALLOCATION),
             "VIEW_OWN|MANAGE_USERS"));
 
     verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -206,7 +206,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, new TypedId<>(), AllocationStrategy.ANY_ALLOCATION),
+                BUSINESS_ID, null, Set.of(new TypedId<>()), AllocationStrategy.ANY_ALLOCATION),
             "CUSTOMER_SERVICE"));
 
     verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -228,7 +228,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, USER_ID, AllocationStrategy.ANY_ALLOCATION),
+                BUSINESS_ID, null, Set.of(USER_ID), AllocationStrategy.ANY_ALLOCATION),
             "MANAGE_USERS"));
 
     verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -245,7 +245,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                BUSINESS_ID, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(0))
@@ -269,7 +269,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+                BUSINESS_ID, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -291,7 +291,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                BUSINESS_ID, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+                BUSINESS_ID, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -311,7 +311,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                null, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                null, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(1))
@@ -329,7 +329,7 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                null, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                null, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(0))
@@ -348,13 +348,41 @@ public class PermissionEnrichmentServiceTest {
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                null, ALLOCATION_ID, null, AllocationStrategy.SINGLE_ALLOCATION),
+                null, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "VIEW_OWN"));
     assertTrue(
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
             new PermissionEvaluationContext(
-                null, ALLOCATION_ID, USER_ID, AllocationStrategy.SINGLE_ALLOCATION),
+                null, ALLOCATION_ID, Set.of(USER_ID), AllocationStrategy.SINGLE_ALLOCATION),
+            "VIEW_OWN"));
+
+    verify(rolesAndPermissionsService, times(0))
+        .findAllByUserIdAndAllocationId(any(), any(), any());
+  }
+
+  @Test
+  void evaluatePermissions_ViewOwn_MultiOwner() {
+    CurrentUserSwitcher.setCurrentUser(createCurrentUser(Set.of()));
+    final UserRolesAndPermissions permissions =
+        createEmptyPermissions()
+            .withAllocationPermissions(EnumSet.of(AllocationPermission.VIEW_OWN));
+    getCurrentContextCache().cachePermissionsForAllocation(ALLOCATION_ID, permissions);
+    // UserId must be provided or ownership cannot be evaluated
+    assertFalse(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationContext(
+                null, ALLOCATION_ID, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
+            "VIEW_OWN"));
+    assertTrue(
+        permissionEnrichmentService.evaluatePermission(
+            SecurityContextHolder.getContext().getAuthentication(),
+            new PermissionEvaluationContext(
+                null,
+                ALLOCATION_ID,
+                Set.of(new TypedId<>(), USER_ID),
+                AllocationStrategy.SINGLE_ALLOCATION),
             "VIEW_OWN"));
 
     verify(rolesAndPermissionsService, times(0))
@@ -373,7 +401,8 @@ public class PermissionEnrichmentServiceTest {
     assertTrue(
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
-            new PermissionEvaluationContext(null, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+            new PermissionEvaluationContext(
+                null, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "CUSTOMER_SERVICE"));
     // This scenario should validate global permissions only and reject allocation permissions even
     // if the user technically has them
@@ -382,7 +411,8 @@ public class PermissionEnrichmentServiceTest {
     assertFalse(
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
-            new PermissionEvaluationContext(null, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+            new PermissionEvaluationContext(
+                null, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(1)).findAllByUserIdAndBusinessId(any(), any(), any());
@@ -399,7 +429,8 @@ public class PermissionEnrichmentServiceTest {
     assertTrue(
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
-            new PermissionEvaluationContext(null, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+            new PermissionEvaluationContext(
+                null, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "CUSTOMER_SERVICE"));
     // This scenario should validate global permissions only and reject allocation permissions even
     // if the user technically has them
@@ -408,7 +439,8 @@ public class PermissionEnrichmentServiceTest {
     assertFalse(
         permissionEnrichmentService.evaluatePermission(
             SecurityContextHolder.getContext().getAuthentication(),
-            new PermissionEvaluationContext(null, null, null, AllocationStrategy.SINGLE_ALLOCATION),
+            new PermissionEvaluationContext(
+                null, null, Set.of(), AllocationStrategy.SINGLE_ALLOCATION),
             "READ"));
 
     verify(rolesAndPermissionsService, times(0)).findAllByUserIdAndBusinessId(any(), any(), any());

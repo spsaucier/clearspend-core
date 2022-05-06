@@ -48,7 +48,7 @@ class TermsAndConditionsControllerTest extends BaseCapitalTest {
         objectMapper.readValue(contentAsString, TermsAndConditionsResponse.class);
     assertThat(termsAndConditionsResponse.isAcceptedTermsAndConditions()).isTrue();
     assertThat(termsAndConditionsResponse.getUserId())
-        .isEqualTo(createBusinessRecord.user().getUserId());
+        .isEqualTo(createBusinessRecord.user().getId());
     assertThat(termsAndConditionsResponse.getAcceptedTimestampByUser()).isNotNull();
   }
 
@@ -97,7 +97,7 @@ class TermsAndConditionsControllerTest extends BaseCapitalTest {
         objectMapper.readValue(contentAsString, TermsAndConditionsResponse.class);
     assertThat(termsAndConditionsResponse.isAcceptedTermsAndConditions()).isTrue();
     assertThat(termsAndConditionsResponse.getUserId())
-        .isEqualTo(createBusinessRecord.user().getUserId());
+        .isEqualTo(createBusinessRecord.user().getId());
     assertThat(termsAndConditionsResponse.getAcceptedTimestampByUser()).isAfter(localDateTime);
   }
 

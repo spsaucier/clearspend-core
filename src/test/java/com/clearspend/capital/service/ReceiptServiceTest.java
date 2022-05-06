@@ -27,12 +27,18 @@ import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.data.TestDataHelper;
+import com.clearspend.capital.testutils.data.TestDataHelper.AccountActivityConfig;
+import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,6 +56,8 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AdjustmentService adjustmentService;
   @Autowired private TransactionSyncLogRepository transactionSyncLogRepository;
+  @Autowired private PermissionValidationHelper permissionValidationHelper;
+  @Autowired private TestDataHelper testDataHelper;
 
   private CreateUpdateUserRecord userRecord;
   private String fileContents;
@@ -63,29 +71,26 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (userRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      Business business = createBusinessRecord.business();
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      userRecord =
-          testHelper.createUserWithRole(
-              createBusinessRecord.allocationRecord().allocation(),
-              DefaultRoles.ALLOCATION_EMPLOYEE);
-      fileContents = "Hello world " + UUID.randomUUID();
-      contentType = "application/pdf";
-      receipt =
-          receiptService.storeReceiptImage(
-              userRecord.user().getBusinessId(),
-              userRecord.user().getId(),
-              fileContents.getBytes(),
-              contentType);
-      unlinkedReceipt = new Receipt(userRecord.user().getBusinessId(), userRecord.user().getId());
-      unlinkedReceipt.setPath(
-          receiptImageService.getReceiptPath(
-              userRecord.user().getBusinessId(), userRecord.user().getId(), receipt.getId()));
-      receiptRepository.save(unlinkedReceipt);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    userRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    fileContents = "Hello world " + UUID.randomUUID();
+    contentType = "application/pdf";
+    receipt =
+        receiptService.storeReceiptImage(
+            userRecord.user().getBusinessId(),
+            userRecord.user().getId(),
+            fileContents.getBytes(),
+            contentType);
+    unlinkedReceipt = new Receipt(userRecord.user().getBusinessId(), userRecord.user().getId());
+    unlinkedReceipt.setPath(
+        receiptImageService.getReceiptPath(
+            userRecord.user().getBusinessId(), userRecord.user().getId(), receipt.getId()));
+    receiptRepository.save(unlinkedReceipt);
   }
 
   @SneakyThrows
@@ -112,6 +117,50 @@ class ReceiptServiceTest extends BaseCapitalTest {
   void getReceipt_success() {
     Receipt foundReceipt = receiptService.getReceipt(receipt.getId());
     assertThat(foundReceipt.getPath()).isEqualTo(receipt.getPath());
+  }
+
+  @Test
+  void getReceipt_UserPermissions() {
+    final User uploadOwnerEmployee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final User activityOwnerEmployee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+
+    final Receipt receipt =
+        testDataHelper.createReceipt(
+            ReceiptConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    receipt.setUploadUserId(uploadOwnerEmployee.getId());
+
+    final AccountActivity accountActivity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(activityOwnerEmployee)
+                .build());
+    accountActivity.getReceipt().getReceiptIds().add(receipt.getId());
+    accountActivityRepository.save(accountActivity);
+    receipt.addLinkUserId(activityOwnerEmployee.getId());
+    receiptRepository.save(receipt);
+    final ThrowingRunnable action = () -> receiptService.getReceipt(receipt.getId());
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowUser(uploadOwnerEmployee)
+        .allowUser(activityOwnerEmployee)
+        .build()
+        .validateServiceMethod(action);
   }
 
   @Test

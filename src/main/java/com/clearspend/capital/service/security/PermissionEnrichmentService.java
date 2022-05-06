@@ -98,7 +98,6 @@ public class PermissionEnrichmentService {
       @NonNull final UserRolesAndPermissionsCache cache,
       @NonNull final List<UserRolesAndPermissions> userPermissions,
       @NonNull final String permissions) {
-    final TypedId<UserId> userId = permissionEvaluationContext.userId();
     log.trace("User Permissions: {}", userPermissions);
     final OverlapPermissions resolvedPermissions = resolvePermission(permissions);
     log.trace("Resolved Permissions: {}", resolvedPermissions);
@@ -127,7 +126,8 @@ public class PermissionEnrichmentService {
     // retrieved and it determines ownership
     final boolean result =
         (overlapPermissions.hasPermissions() && !isOnlyPermissionViewOwn(overlapPermissions))
-            || (isOnlyPermissionViewOwn(overlapPermissions) && isAllowedViewOwn(userId))
+            || (isOnlyPermissionViewOwn(overlapPermissions)
+                && isAllowedViewOwn(permissionEvaluationContext.ownerIds()))
             || hasApplicationPermission(userPermissions);
     if (!result) {
       cache.storeFailedPermissions(
@@ -153,8 +153,21 @@ public class PermissionEnrichmentService {
         && overlapPermissions.allocationPermissions().contains(AllocationPermission.VIEW_OWN);
   }
 
-  private boolean isAllowedViewOwn(@Nullable final TypedId<UserId> userId) {
-    return Optional.ofNullable(CurrentUser.getUserId()).filter(id -> id.equals(userId)).isPresent();
+  private boolean isAllowedViewOwn(@Nullable final Set<TypedId<UserId>> ownerIds) {
+    return Optional.ofNullable(CurrentUser.getUserId())
+        .flatMap(
+            currentUserId ->
+                Optional.ofNullable(ownerIds)
+                    .map(ownerUserIds -> new IsAllowedViewOwnIds(currentUserId, ownerUserIds)))
+        .filter(IsAllowedViewOwnIds::isCurrentUserOwner)
+        .isPresent();
+  }
+
+  private record IsAllowedViewOwnIds(
+      @NonNull TypedId<UserId> currentUserId, @NonNull Set<TypedId<UserId>> ownerUserIds) {
+    public boolean isCurrentUserOwner() {
+      return ownerUserIds.contains(currentUserId);
+    }
   }
 
   private List<UserRolesAndPermissions> getPermissions(

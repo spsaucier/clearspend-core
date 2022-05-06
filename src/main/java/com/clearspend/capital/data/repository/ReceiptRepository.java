@@ -7,16 +7,21 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Receipt;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ReceiptRepository extends JpaRepository<Receipt, TypedId<ReceiptId>> {
 
   Optional<Receipt> findReceiptByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<ReceiptId> id);
 
-  List<Receipt> findReceiptByBusinessIdAndUserIdAndLinked(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, boolean linked);
+  @Query(
+      "SELECT r FROM Receipt r WHERE r.businessId = :businessId AND r.uploadUserId = :userId AND r.linked = false")
+  List<Receipt> findReceiptByBusinessIdAndUserIdAndUnLinked(
+      @Param("businessId") final TypedId<BusinessId> businessId,
+      @Param("userId") final TypedId<UserId> userId);
 
-  Optional<Receipt> findReceiptByBusinessIdAndUserIdAndId(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<ReceiptId> id);
+  List<Receipt> findAllByIdIn(final Set<TypedId<ReceiptId>> receiptIds);
 }

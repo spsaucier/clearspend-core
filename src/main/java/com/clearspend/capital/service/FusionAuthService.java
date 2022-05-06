@@ -367,7 +367,7 @@ public class FusionAuthService {
   UUID updateUser(com.clearspend.capital.data.model.User user, @Nullable String password) {
     return updateUser(
         user.getBusinessId(),
-        user.getUserId(),
+        user.getId(),
         user.getEmail().getEncrypted(),
         password,
         user.getType(),

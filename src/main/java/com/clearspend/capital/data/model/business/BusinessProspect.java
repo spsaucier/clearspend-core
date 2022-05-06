@@ -10,7 +10,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
-import com.clearspend.capital.data.model.UserRelated;
+import com.clearspend.capital.data.model.OwnerRelated;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -34,7 +34,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class BusinessProspect extends TypedMutable<BusinessProspectId> implements UserRelated {
+public class BusinessProspect extends TypedMutable<BusinessProspectId> implements OwnerRelated {
 
   // This field is what the businessId will be when it's created. Needed so that we can correctly
   // create the businessOwner in FusionAuth
@@ -79,7 +79,7 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> implement
   @Embedded @NonNull private TosAcceptance tosAcceptance;
 
   @Override
-  public TypedId<UserId> getUserId() {
+  public TypedId<UserId> getOwnerId() {
     // We query this by passing the UUID from UserId to BusinessOwnerId, so they're clearly
     // interchangeable
     return new TypedId<>(getBusinessOwnerId().toUuid());

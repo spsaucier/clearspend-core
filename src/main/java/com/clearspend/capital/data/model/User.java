@@ -38,7 +38,7 @@ import org.hibernate.annotations.TypeDefs;
 @Table(name = "users")
 @TypeDefs({@TypeDef(name = "enum-array", typeClass = EnumArrayType.class)})
 @Slf4j
-public class User extends TypedMutable<UserId> implements BusinessRelated, UserRelated {
+public class User extends TypedMutable<UserId> implements BusinessRelated, OwnerRelated {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -71,7 +71,7 @@ public class User extends TypedMutable<UserId> implements BusinessRelated, UserR
   private TosAcceptance tosAcceptance;
 
   @Override
-  public TypedId<UserId> getUserId() {
+  public TypedId<UserId> getOwnerId() {
     return getId();
   }
 }

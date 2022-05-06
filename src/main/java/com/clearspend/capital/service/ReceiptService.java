@@ -71,8 +71,8 @@ public class ReceiptService {
 
   @PostFilter("isSelfOwned(filterObject)")
   public List<Receipt> getReceiptsForCurrentUser() {
-    return receiptRepository.findReceiptByBusinessIdAndUserIdAndLinked(
-        CurrentUser.getBusinessId(), CurrentUser.getUserId(), false);
+    return receiptRepository.findReceiptByBusinessIdAndUserIdAndUnLinked(
+        CurrentUser.getBusinessId(), CurrentUser.getUserId());
   }
 
   private String getReceiptPath(
@@ -85,7 +85,6 @@ public class ReceiptService {
       "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
           + "(hasPermission(#accountActivity, 'LINK_RECEIPTS') and hasPermission(#receipt, 'READ'))")
   public void linkReceipt(Receipt receipt, AccountActivity accountActivity) {
-
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.isLinked()) {
       AccountActivity previousAccountActivity =
@@ -93,6 +92,7 @@ public class ReceiptService {
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
       receipt.setLinked(true);
+      receipt.removeLinkUserId(previousAccountActivity.getUserDetailsId());
       previousAccountActivity.getReceipt().getReceiptIds().remove(receipt.getId());
       accountActivityRepository.save(previousAccountActivity);
     }
@@ -104,6 +104,7 @@ public class ReceiptService {
     receipt.setAllocationId(accountActivity.getAllocationId());
     receipt.setAccountId(accountActivity.getAccountId());
     receipt.setLinked(true);
+    receipt.addLinkUserId(accountActivity.getUserDetailsId());
 
     receipt = receiptRepository.save(receipt);
     accountActivity = accountActivityRepository.save(accountActivity);
@@ -120,7 +121,6 @@ public class ReceiptService {
       "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
           + "(hasAllocationPermission(#accountActivity.allocationId, 'LINK_RECEIPTS') and hasAllocationPermission(#receipt.allocationId, 'READ'))")
   public void unlinkReceipt(Receipt receipt, AccountActivity accountActivity) {
-
     if (!receipt.isLinked()) {
       throw new InvalidRequestException("Receipt not linked");
     }
@@ -131,6 +131,7 @@ public class ReceiptService {
     receipt.setAllocationId(null);
     receipt.setAccountId(null);
     receipt.setLinked(false);
+    receipt.removeLinkUserId(accountActivity.getUserDetailsId());
     receiptRepository.save(receipt);
     log.debug(
         "Unlinked receipt {} to accountActivity {} ({})",

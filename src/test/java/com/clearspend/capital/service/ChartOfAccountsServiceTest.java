@@ -95,8 +95,7 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
 
   @Test
   public void canGenerateChartOfAccountsDiff() {
-    businessNotificationService.acceptChartOfAccountChangesForUser(
-        business.getId(), user.getUserId());
+    businessNotificationService.acceptChartOfAccountChangesForUser(business.getId(), user.getId());
     List<CodatAccount> accounts = new ArrayList<>();
     IntStream.range(0, CodatServiceTest.getQualifiedNames().size())
         .forEach(
@@ -147,22 +146,20 @@ public class ChartOfAccountsServiceTest extends BaseCapitalTest {
         .isEqualTo(8);
     assertThat(
             businessNotificationService
-                .getUnseenNotificationsForUser(business.getId(), user.getUserId())
+                .getUnseenNotificationsForUser(business.getId(), user.getId())
                 .size())
         .isEqualTo(7);
-    businessNotificationService.acceptChartOfAccountChangesForUser(
-        business.getId(), user.getUserId());
+    businessNotificationService.acceptChartOfAccountChangesForUser(business.getId(), user.getId());
     assertThat(
             businessNotificationService
-                .getUnseenNotificationsForUser(business.getId(), user.getUserId())
+                .getUnseenNotificationsForUser(business.getId(), user.getId())
                 .size())
         .isEqualTo(0);
   }
 
   @Test
   public void canUpdateExistingMappingOnChartOfAccountsChange() {
-    businessNotificationService.acceptChartOfAccountChangesForUser(
-        business.getId(), user.getUserId());
+    businessNotificationService.acceptChartOfAccountChangesForUser(business.getId(), user.getId());
     business.setAutoCreateExpenseCategories(true);
     List<CodatAccount> accounts = new ArrayList<>();
     IntStream.range(0, CodatServiceTest.getQualifiedNames().size())

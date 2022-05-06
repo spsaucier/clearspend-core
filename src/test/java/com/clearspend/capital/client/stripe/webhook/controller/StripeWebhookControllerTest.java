@@ -1,6 +1,7 @@
 package com.clearspend.capital.client.stripe.webhook.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.clearspend.capital.AssertionHelper;
 import com.clearspend.capital.AssertionHelper.AuthorizationRecord;
@@ -20,11 +21,14 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.PendingStripeTransfer;
+import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
@@ -43,6 +47,7 @@ import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
+import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
@@ -51,6 +56,8 @@ import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
+import com.clearspend.capital.testutils.data.TestDataHelper;
+import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
 import com.samskivert.mustache.Template;
@@ -65,6 +72,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -84,6 +92,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   @Autowired private AssertionHelper assertionHelper;
   @Autowired private TestHelper testHelper;
+  @Autowired private TestDataHelper testDataHelper;
+  @Autowired private ReceiptRepository receiptRepository;
 
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private AccountRepository accountRepository;
@@ -550,6 +560,68 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     capture(authorize, allocation, user, card, captureAmount, closingBalance);
   }
 
+  @Test
+  void processCompletion_ExactAmount_LinkedToReceipt() {
+    final BigDecimal openingBalance = BigDecimal.TEN;
+    final UserRecord userRecord = createUser(openingBalance);
+    final Allocation allocation = userRecord.allocation;
+    final User user = userRecord.user;
+    final Card card = userRecord.card;
+
+    final long authAmount = 1000L;
+    final AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            authAmount,
+            true);
+    final AccountActivity authActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(activity -> AccountActivityType.NETWORK_AUTHORIZATION == activity.getType())
+            .findFirst()
+            .orElseThrow();
+    final Receipt receipt =
+        testDataHelper.createReceipt(
+            ReceiptConfig.fromCreateBusinessRecord(createBusinessRecord).build());
+    // Normally the receipt would have the User ID from the Auth, but the point of this test is to
+    // make sure that if it doesn't, capture updates it
+
+    final ReceiptDetails authReceiptDetails =
+        Optional.ofNullable(authActivity.getReceipt()).orElse(new ReceiptDetails());
+    authActivity.setReceipt(authReceiptDetails);
+
+    authReceiptDetails.getReceiptIds().add(receipt.getId());
+    accountActivityRepository.save(authActivity);
+
+    final long captureAmount = -authAmount;
+    final BigDecimal closingBalance = BigDecimal.ZERO;
+    final Transaction transaction = createCaptureTransaction(authorize, card, captureAmount);
+    final StripeWebhookLog stripeWebhookLog = createCaptureLog();
+
+    NetworkCommon networkCommon =
+        stripeWebhookController.handleDirectRequest(
+            Instant.now(),
+            new ParseRecord(
+                stripeWebhookLog,
+                transaction,
+                transaction,
+                StripeEventType.ISSUING_TRANSACTION_CREATED),
+            true);
+
+    final AccountActivity captureActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(activity -> AccountActivityType.NETWORK_CAPTURE == activity.getType())
+            .findFirst()
+            .orElseThrow();
+    assertEquals(Set.of(receipt.getId()), captureActivity.getReceipt().getReceiptIds());
+
+    final Receipt postCaptureReceipt = receiptRepository.findById(receipt.getId()).orElseThrow();
+    assertEquals(Set.of(captureActivity.getUserDetailsId()), postCaptureReceipt.getLinkUserIds());
+  }
+
   @SneakyThrows
   @Test
   void processCompletion_overAuthAmount() {
@@ -603,14 +675,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     capture(null, allocation, user, card, captureAmount, closingBalance);
   }
 
-  private void capture(
-      AuthorizationRecord authorize,
-      Allocation allocation,
-      User user,
-      Card card,
-      long amount,
-      BigDecimal ledgerBalance) {
-
+  private Transaction createCaptureTransaction(
+      final AuthorizationRecord authorize, final Card card, final long amount) {
     Transaction transaction = new Transaction();
     transaction.setId(generateStripeId("ipi_"));
     transaction.setLivemode(false);
@@ -640,9 +706,24 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     //    PurchaseDetails purchaseDetails;
     transaction.setType(amount < 0 ? "capture" : "refund");
     transaction.setWallet(null);
+    return transaction;
+  }
 
-    StripeWebhookLog stripeWebhookLog = new StripeWebhookLog();
+  private StripeWebhookLog createCaptureLog() {
+    final StripeWebhookLog stripeWebhookLog = new StripeWebhookLog();
     stripeWebhookLog.setRequest("{}");
+    return stripeWebhookLog;
+  }
+
+  private void capture(
+      AuthorizationRecord authorize,
+      Allocation allocation,
+      User user,
+      Card card,
+      long amount,
+      BigDecimal ledgerBalance) {
+    final Transaction transaction = createCaptureTransaction(authorize, card, amount);
+    final StripeWebhookLog stripeWebhookLog = createCaptureLog();
 
     NetworkCommon networkCommon =
         stripeWebhookController.handleDirectRequest(

@@ -5,7 +5,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.data.model.Ownable;
+import com.clearspend.capital.data.model.Permissionable;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.UserType;
@@ -26,7 +26,7 @@ public record UserRolesAndPermissions(
     String allocationRole,
     EnumSet<AllocationPermission> allocationPermissions,
     EnumSet<GlobalUserPermission> globalUserPermissions)
-    implements Ownable {
+    implements Permissionable {
 
   /*
    * Lombok @With actually works on Records but IntelliJ doesn't recognize that it does, which makes the code harder to work with
@@ -106,7 +106,7 @@ public record UserRolesAndPermissions(
   }
 
   @Override
-  public TypedId<UserId> getUserId() {
+  public TypedId<UserId> getOwnerId() {
     return userId();
   }
 }

@@ -8,7 +8,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
-import com.clearspend.capital.data.model.UserRelated;
+import com.clearspend.capital.data.model.OwnerRelated;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -20,7 +20,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class UpdateUserRequest implements UserRelated {
+public class UpdateUserRequest implements OwnerRelated {
 
   @JsonIgnore private TypedId<UserId> userId;
   @JsonIgnore private TypedId<BusinessId> businessId;
@@ -58,4 +58,9 @@ public class UpdateUserRequest implements UserRelated {
   @JsonProperty("generatePassword")
   @Schema(title = "Flag to indicate whether a password should be created for the user")
   private boolean generatePassword;
+
+  @Override
+  public TypedId<UserId> getOwnerId() {
+    return getUserId();
+  }
 }

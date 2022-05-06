@@ -2,11 +2,9 @@ package com.clearspend.capital.service.security;
 
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AllocationRelated;
 import com.clearspend.capital.data.model.BusinessRelated;
-import com.clearspend.capital.data.model.UserRelated;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.service.security.PermissionEvaluationContext.AllocationStrategy;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -152,12 +150,5 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
   @RequiredArgsConstructor
   private static class BusinessContainer implements BusinessRelated {
     TypedId<BusinessId> businessId;
-  }
-
-  @Value
-  @RequiredArgsConstructor
-  private static class UserContainer implements UserRelated {
-    TypedId<BusinessId> businessId = null;
-    TypedId<UserId> userId;
   }
 }

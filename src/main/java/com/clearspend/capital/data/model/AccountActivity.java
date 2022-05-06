@@ -26,6 +26,8 @@ import com.clearspend.capital.data.model.enums.AccountActivityType;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -50,7 +52,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
-public class AccountActivity extends TypedMutable<AccountActivityId> implements Ownable {
+public class AccountActivity extends TypedMutable<AccountActivityId> implements Permissionable {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -131,12 +133,17 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   private BigDecimal interchange;
 
   @Override
-  public TypedId<UserId> getUserId() {
-    return user == null ? null : user.getId();
+  public TypedId<UserId> getOwnerId() {
+    return Optional.ofNullable(user).map(UserDetails::getId).orElse(null);
   }
 
   @Override
   public TypedId<AllocationId> getAllocationId() {
     return allocation.getId();
+  }
+
+  @Nullable
+  public TypedId<UserId> getUserDetailsId() {
+    return Optional.ofNullable(user).map(UserDetails::getId).orElse(null);
   }
 }
