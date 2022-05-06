@@ -380,9 +380,13 @@ public class AccountActivityService {
   public AccountActivity updateAccountActivity(
       AccountActivity accountActivity,
       String notes,
-      @Nullable TypedId<ExpenseCategoryId> expenseCategoryId) {
+      @Nullable TypedId<ExpenseCategoryId> expenseCategoryId,
+      @Nullable String supplierId,
+      @Nullable String supplierName) {
     String note = StringUtils.isNotEmpty(notes) ? notes : "";
     accountActivity.setNotes(note);
+    accountActivity.getMerchant().setCodatSupplierId(supplierId);
+    accountActivity.getMerchant().setCodatSupplierName(supplierName);
     if (expenseCategoryId != null) {
       accountActivity.setExpenseDetails(
           expenseCategoryService
@@ -392,24 +396,33 @@ public class AccountActivityService {
                       new ExpenseDetails(
                           category.getIconRef(), category.getId(), category.getCategoryName()))
               .orElse(null));
-      if (accountActivity
-              .getIntegrationSyncStatus()
-              .equals(AccountActivityIntegrationSyncStatus.NOT_READY)
-          && chartOfAccountsMappingRepository.existsByBusinessIdAndExpenseCategoryId(
-              accountActivity.getBusinessId(), expenseCategoryId)) {
-        accountActivity.setIntegrationSyncStatus(
-            accountActivity
-                .getIntegrationSyncStatus()
-                .validTransition(AccountActivityIntegrationSyncStatus.READY));
-      }
     } else {
       accountActivity.setExpenseDetails(null);
       accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
     }
+
+    if (supplierId == null || supplierName == null) {
+      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
+    }
+
     log.debug(
         "Set expense details {} to accountActivity {}",
         accountActivity.getExpenseDetails(),
         accountActivity.getId());
+
+    if (accountActivity
+            .getIntegrationSyncStatus()
+            .equals(AccountActivityIntegrationSyncStatus.NOT_READY)
+        && expenseCategoryId != null
+        && supplierId != null
+        && supplierName != null
+        && chartOfAccountsMappingRepository.existsByBusinessIdAndExpenseCategoryId(
+            accountActivity.getBusinessId(), expenseCategoryId)) {
+      accountActivity.setIntegrationSyncStatus(
+          accountActivity
+              .getIntegrationSyncStatus()
+              .validTransition(AccountActivityIntegrationSyncStatus.READY));
+    }
 
     return accountActivityRepository.save(accountActivity);
   }

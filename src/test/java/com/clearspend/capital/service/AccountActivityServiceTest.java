@@ -385,7 +385,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     final ThrowingSupplier<AccountActivity> action =
         () ->
             accountActivityService.updateAccountActivity(
-                accountActivity, "I am updating this activity", null);
+                accountActivity, "I am updating this activity", null, "0", "Test Supplier");
 
     permissionValidationHelper
         .buildValidator(primaryBusinessRecord)
@@ -449,6 +449,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountActivity.setNotes("");
     accountActivity.setUser(UserDetails.of(businessRecord.user()));
     accountActivity = accountActivityRepository.save(accountActivity);
+    accountActivity.setMerchant(new MerchantDetails());
     testHelper.setCurrentUser(businessRecord.user());
 
     // Add an Expense Category
@@ -468,11 +469,13 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     assertThat(
             accountActivityService.updateAccountActivity(
-                accountActivity, "After Update", expenseCategory.getId()))
+                accountActivity, "After Update", expenseCategory.getId(), "0", "Test Supplier"))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
 
-    assertThat(accountActivityService.updateAccountActivity(accountActivity, "After Update", null))
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "After Update", null, "0", "Test Supplier"))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
   }
@@ -496,6 +499,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountActivity.setNotes("");
     accountActivity.setUser(UserDetails.of(businessRecord.user()));
     accountActivity = accountActivityRepository.save(accountActivity);
+    accountActivity.setMerchant(new MerchantDetails());
     testHelper.setCurrentUser(businessRecord.user());
 
     // Add an Expense Category
@@ -509,7 +513,56 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     // transitively update the Integration Sync Status
     assertThat(
             accountActivityService.updateAccountActivity(
-                accountActivity, "After Update", expenseCategory.getId()))
+                accountActivity, "After Update", expenseCategory.getId(), "0", "Test Supplier"))
+        .extracting(it -> it.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
+  }
+
+  @Test
+  void updateAccountActivity_settingExpenseCategoryUpdatesIntegrationStatusWhenSupplierRemoved() {
+    CreateBusinessRecord businessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(businessRecord.user());
+    AccountActivity accountActivity =
+        new AccountActivity(
+            businessRecord.business().getId(),
+            businessRecord.allocationRecord().account().getId(),
+            AccountActivityType.BANK_DEPOSIT_STRIPE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(businessRecord.allocationRecord().allocation()),
+            OffsetDateTime.now(),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setNotes("");
+    accountActivity.setMerchant(new MerchantDetails());
+    accountActivity.setUser(UserDetails.of(businessRecord.user()));
+    accountActivity = accountActivityRepository.save(accountActivity);
+    testHelper.setCurrentUser(businessRecord.user());
+
+    // Add an Expense Category
+    ExpenseCategory expenseCategory =
+        new ExpenseCategory(
+            businessRecord.business().getId(), 0, "Fuel", ExpenseCategoryStatus.ACTIVE, false);
+    expenseCategory = expenseCategoryRepository.save(expenseCategory);
+
+    // Make sure that the Expense Category is 'mapped' to a QBO Account
+    testHelper.setCurrentUser(businessRecord.user());
+    ChartOfAccountsMapping mapping = new ChartOfAccountsMapping();
+    mapping.setBusinessId(businessRecord.businessOwner().getBusinessId());
+    mapping.setExpenseCategoryId(expenseCategory.getId());
+    mapping.setAccountRefId("Testing");
+    mapping.setExpenseCategoryIconRef(42);
+    chartOfAccountsMappingRepository.saveAndFlush(mapping);
+
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "After Update", expenseCategory.getId(), "0", "Test Supplier"))
+        .extracting(it -> it.getIntegrationSyncStatus())
+        .isEqualTo(AccountActivityIntegrationSyncStatus.READY);
+
+    assertThat(
+            accountActivityService.updateAccountActivity(
+                accountActivity, "After Update", expenseCategory.getId(), null, null))
         .extracting(it -> it.getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
   }

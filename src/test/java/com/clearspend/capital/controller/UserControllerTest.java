@@ -945,7 +945,8 @@ class UserControllerTest extends BaseCapitalTest {
     expenseCategoryRepository.save(expenseCategory);
 
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
+        new UpdateAccountActivityRequest(
+            "notesTest", expenseCategory.getId(), "0", "Test Supplier");
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -1024,7 +1025,8 @@ class UserControllerTest extends BaseCapitalTest {
     expenseCategoryRepository.save(expenseCategory);
 
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
+        new UpdateAccountActivityRequest(
+            "notesTest", expenseCategory.getId(), "0", "Test Supplier");
 
     MockHttpServletResponse response =
         mvc.perform(
@@ -1048,7 +1050,8 @@ class UserControllerTest extends BaseCapitalTest {
             .getExpenseCategoryId());
 
     // For case when iconRef will be Optional.empty the values should be deleted
-    updateAccountActivityRequest = new UpdateAccountActivityRequest("notesTest", null);
+    updateAccountActivityRequest =
+        new UpdateAccountActivityRequest("notesTest", null, "0", "Test Supplier");
 
     response =
         mvc.perform(
@@ -1125,7 +1128,8 @@ class UserControllerTest extends BaseCapitalTest {
     expenseCategoryRepository.save(expenseCategory);
 
     UpdateAccountActivityRequest updateAccountActivityRequest =
-        new UpdateAccountActivityRequest("notesTest", expenseCategory.getId());
+        new UpdateAccountActivityRequest(
+            "notesTest", expenseCategory.getId(), "0", "Test Supplier");
 
     MockHttpServletResponse response =
         mvc.perform(

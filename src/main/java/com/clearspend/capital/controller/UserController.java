@@ -429,7 +429,9 @@ public class UserController {
         accountActivityService.updateAccountActivity(
             accountActivityService.getAccountActivity(accountActivityId),
             request.getNotes(),
-            request.getExpenseCategoryId()));
+            request.getExpenseCategoryId(),
+            request.getSupplierId(),
+            request.getSupplierName()));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/unlock")

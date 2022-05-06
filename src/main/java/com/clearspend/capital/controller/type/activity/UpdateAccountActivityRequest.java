@@ -22,4 +22,12 @@ public class UpdateAccountActivityRequest {
   @JsonProperty("expenseCategoryId")
   @Nullable
   private TypedId<ExpenseCategoryId> expenseCategoryId;
+
+  @JsonProperty("supplierId")
+  @Nullable
+  private String supplierId;
+
+  @JsonProperty("supplierName")
+  @Nullable
+  private String supplierName;
 }
