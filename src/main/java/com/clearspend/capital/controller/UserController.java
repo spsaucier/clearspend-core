@@ -277,8 +277,8 @@ public class UserController {
             request.getStatusReason()));
   }
 
-  @PatchMapping("/cards/{cardId}/retire")
-  Card retireCard(
+  @PatchMapping("/cards/{cardId}/cancel")
+  Card cancelCard(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
@@ -288,7 +288,7 @@ public class UserController {
           TypedId<CardId> cardId,
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
-        cardService.retireCard(
+        cardService.cancelCard(
             cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
             request.getStatusReason()));
   }

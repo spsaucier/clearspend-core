@@ -211,7 +211,7 @@ public class PermissionValidator {
         user -> {
           final Cookie cookie = testHelper.login(user);
           final ResultActions resultActions = assertDoesNotThrow(() -> action.apply(cookie));
-          return resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+          return resultActions.andExpect(MockMvcResultMatchers.status().is2xxSuccessful());
         };
     testAllocationRoles(deniedAssertion, allowedAssertion);
     testCustomUsers(deniedAssertion, allowedAssertion);

@@ -54,6 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -492,8 +493,16 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Card updateCard(String stripeCardId, CardStatus cardStatus) {
-    return generateEntityWithId(Card.class, stripeCardId);
+  public Card updateCard(final String stripeCardId, final CardStatus cardStatus) {
+    final Card card = generateEntityWithId(Card.class, stripeCardId);
+    card.setStatus(cardStatus.name());
+    createdObjects.put(stripeCardId, card);
+    return card;
+  }
+
+  @Nullable
+  public Object getCreatedObject(@NonNull final String id) {
+    return createdObjects.get(id);
   }
 
   private <T> T generateEntityWithId(Class<T> entityClass) {

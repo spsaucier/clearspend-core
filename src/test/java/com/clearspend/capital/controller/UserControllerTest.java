@@ -11,6 +11,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -56,6 +57,7 @@ import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -67,11 +69,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,6 +83,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
@@ -94,6 +99,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final ExpenseCategoryRepository expenseCategoryRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final PermissionValidationHelper permissionValidationHelper;
+  private final StripeMockClient stripeMockClient;
 
   private final Faker faker = new Faker();
 
@@ -107,35 +113,37 @@ class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.init();
-      business = createBusinessRecord.business();
-      user =
-          testHelper.createUserWithRole(
-              createBusinessRecord.allocationRecord().allocation(),
-              DefaultRoles.ALLOCATION_EMPLOYEE);
-      userCookie = testHelper.login(user.user());
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      card =
-          testHelper.issueCard(
-              business,
-              createBusinessRecord.allocationRecord().allocation(),
-              user.user(),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.PHYSICAL,
-              false);
-      card2 =
-          testHelper.issueCard(
-              business,
-              createBusinessRecord.allocationRecord().allocation(),
-              user.user(),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.VIRTUAL,
-              false);
-    }
+    createBusinessRecord = testHelper.init();
+    business = createBusinessRecord.business();
+    user =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    userCookie = testHelper.login(user.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
+    card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card2 =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+  }
+
+  @AfterEach
+  public void cleanup() {
+    stripeMockClient.reset();
   }
 
   @Test
@@ -562,7 +570,7 @@ class UserControllerTest extends BaseCapitalTest {
   }
 
   @Test
-  void retireCard() {
+  void cancelCard() {
     // given
     Card card =
         testHelper.issueCard(
@@ -577,7 +585,7 @@ class UserControllerTest extends BaseCapitalTest {
     // when
     com.clearspend.capital.controller.type.card.Card blockedCard =
         mockMvcHelper.queryObject(
-            "/users/cards/%s/retire".formatted(card.getId()),
+            "/users/cards/%s/cancel".formatted(card.getId()),
             HttpMethod.PATCH,
             userCookie,
             new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
@@ -587,6 +595,60 @@ class UserControllerTest extends BaseCapitalTest {
     assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
     assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.CANCELLED);
     assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+  }
+
+  @Test
+  @SneakyThrows
+  void cancelCard_UserPermissions() {
+    final com.clearspend.capital.data.model.User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            employee,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    final String content =
+        objectMapper.writeValueAsString(
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED));
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> {
+          final Card cardToReset = cardRepository.findById(card.getId()).orElseThrow();
+          cardToReset.setStatus(CardStatus.ACTIVE);
+          cardRepository.flush();
+          return mvc.perform(
+              patch("/users/cards/%s/cancel".formatted(card.getId()))
+                  .cookie(cookie)
+                  .content(content)
+                  .contentType("application/json"));
+        };
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .allowUser(employee)
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @Test

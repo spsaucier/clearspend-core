@@ -262,8 +262,7 @@ public class CardService {
         .orElseThrow(() -> new RecordNotFoundException(Table.CARD, businessId, cardId));
   }
 
-  @PostAuthorize(
-      "isSelfOwned(returnObject.card()) or hasAllocationPermission(returnObject.allocation().id, 'MANAGE_CARDS')")
+  @PostAuthorize("hasPermission(returnObject.card(), 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
   public CardDetailsRecord getCard(
       TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
     return cardRepository
@@ -344,7 +343,7 @@ public class CardService {
     }
 
     if (card.getStatus() == CardStatus.CANCELLED) {
-      throw new InvalidRequestException("Retired card cannot be activated");
+      throw new InvalidRequestException("Cancelled card cannot be activated");
     }
 
     card.setActivated(true);
@@ -368,10 +367,9 @@ public class CardService {
   }
 
   @Transactional
-  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
-  public Card retireCard(Card card, CardStatusReason reason) {
-    return updateCardStatus(
-        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.CANCELLED, reason, false);
+  @PreAuthorize("hasPermission(#card, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public Card cancelCard(Card card, CardStatusReason reason) {
+    return updateCardStatus(card, CardStatus.CANCELLED, reason, false);
   }
 
   private Card updateCardStatus(
@@ -386,29 +384,29 @@ public class CardService {
 
     card.setStatus(card.getStatus().validTransition(cardStatus));
     card.setStatusReason(statusReason);
-
-    cardRepository.flush();
+    cardRepository.saveAndFlush(card);
 
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
-    User cardOwner = userService.retrieveUserForService(card.getUserId());
-    if (cardStatus == CardStatus.ACTIVE) {
+    if (cardStatus == CardStatus.ACTIVE || cardStatus == CardStatus.INACTIVE) {
+      User cardOwner = userService.retrieveUserForService(card.getUserId());
+
       // We need to use separate email templates for initial physical card activation,
       // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
-      if (isInitialActivation) {
+      if (cardStatus == CardStatus.ACTIVE && isInitialActivation) {
         twilioService.sendCardActivationCompletedEmail(
             cardOwner.getEmail().getEncrypted(), cardOwner.getFirstName().getEncrypted());
-      } else {
+      } else if (cardStatus == CardStatus.ACTIVE) {
         twilioService.sendCardUnfrozenEmail(
             cardOwner.getEmail().getEncrypted(),
             cardOwner.getFirstName().getEncrypted(),
             card.getLastFour());
+      } else {
+        twilioService.sendCardFrozenEmail(
+            cardOwner.getEmail().getEncrypted(),
+            cardOwner.getFirstName().getEncrypted(),
+            card.getLastFour());
       }
-    } else if (cardStatus == CardStatus.INACTIVE) {
-      twilioService.sendCardFrozenEmail(
-          cardOwner.getEmail().getEncrypted(),
-          cardOwner.getFirstName().getEncrypted(),
-          card.getLastFour());
     }
 
     return card;

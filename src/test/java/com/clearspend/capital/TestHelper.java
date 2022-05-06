@@ -1050,8 +1050,6 @@ public class TestHelper {
       card = cardService.activateMyCard(card, CardStatusReason.NONE);
     }
     entityManager.flush();
-
-    entityManager.flush();
     return card;
   }
 

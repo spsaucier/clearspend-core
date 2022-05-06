@@ -83,6 +83,9 @@ public class CardStatementControllerTest extends BaseCapitalTest {
         .buildValidator(createBusinessRecord)
         .allowRolesOnAllocation(
             Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
         .build()
         .validateMockMvcCall(action);
   }
