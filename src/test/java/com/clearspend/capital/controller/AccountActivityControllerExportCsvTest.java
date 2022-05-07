@@ -296,13 +296,16 @@ public class AccountActivityControllerExportCsvTest extends BaseCapitalTest {
     assertThat(lines)
         .containsExactlyInAnyOrder(
             "Date & Time,Transaction,User,Initiating Account,Target Account,Currency,Amount,Status,Expense Category,Receipt",
-            "%s,NETWORK_AUTHORIZATION,SYSTEM,**** %s,Tuscon Bakery,USD,-100.00,PENDING,false,false"
+            "%s,NETWORK_AUTHORIZATION,%s %s %s,**** %s,Tuscon Bakery,USD,-100.00,PENDING,false,false"
                 .formatted(
                     ExportCSVService.DATE_TIME_FORMATTER.format(
                         networkCommonAuthorization
                             .networkCommon()
                             .getAccountActivity()
                             .getActivityTime()),
+                    user.getFirstName().getEncrypted(),
+                    user.getLastName().getEncrypted(),
+                    user.getEmail().getEncrypted(),
                     card.getLastFour()));
   }
 }

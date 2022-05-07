@@ -178,6 +178,10 @@ public class AccountActivityService {
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
       holdAccountActivity.setHold(HoldDetails.of(hold));
 
+      if (user != null) {
+        holdAccountActivity.setUser(UserDetails.of(user));
+      }
+
       accountActivityRepository.save(holdAccountActivity);
     }
 

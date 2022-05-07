@@ -153,7 +153,7 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getAccountActivityId()).isNotNull();
     assertThat(response.getActivityTime()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
-    assertThat(response.getUser()).isEqualTo(LedgerUser.SYSTEM_USER);
+    assertThat(response.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(response.getHold()).isEqualTo(LedgerHoldInfo.of(adjustmentAndHoldRecord.hold()));
     assertThat(response.getSourceAccount()).isNull();
     assertThat(response.getTargetAccount())
@@ -246,9 +246,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(from.getHold()).isNull();
 
     assertThat(from.getSourceAccount())
-        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(from.getTargetAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
+    assertThat(from.getTargetAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(from.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
 
     assertThat(from.getRequestedAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));

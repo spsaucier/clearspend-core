@@ -104,17 +104,11 @@ public class LedgerActivityResponse {
       }
       case REALLOCATE -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
-        if (accountActivity.getAmount().isLessThanZero()) {
-          sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-          targetAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
-        } else {
-          sourceAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
-          targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-        }
+        sourceAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
+        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
       case BANK_DEPOSIT_STRIPE -> {
-        ledgerUser =
-            holdInfo != null ? LedgerUser.SYSTEM_USER : new LedgerUser(accountActivity.getUser());
+        ledgerUser = new LedgerUser(accountActivity.getUser());
         sourceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
         targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
@@ -134,8 +128,7 @@ public class LedgerActivityResponse {
         targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
       case NETWORK_AUTHORIZATION, NETWORK_CAPTURE -> {
-        ledgerUser =
-            holdInfo != null ? LedgerUser.SYSTEM_USER : new LedgerUser(accountActivity.getUser());
+        ledgerUser = new LedgerUser(accountActivity.getUser());
         sourceAccount =
             LedgerCardAccount.of(
                 accountActivity.getAllocation().getName(), accountActivity.getCard());
