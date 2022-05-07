@@ -879,6 +879,7 @@ public class TestDataController {
     stripeAuthorization.setId("stripe_" + UUID.randomUUID());
     stripeAuthorization.setMerchantAmount(amount.toStripeAmount());
     stripeAuthorization.setMerchantData(merchantData);
+    stripeAuthorization.setMerchantCurrency(amount.getCurrency().name());
     stripeAuthorization.setPendingRequest(pendingRequest);
     stripeAuthorization.setStatus("pending");
 

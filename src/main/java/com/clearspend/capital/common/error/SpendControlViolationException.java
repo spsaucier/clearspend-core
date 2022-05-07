@@ -19,6 +19,8 @@ public class SpendControlViolationException extends OperationDeclinedException {
   private final MccGroup mccGroup;
   private final PaymentType paymentType;
 
+  private final Boolean foreignDisabled;
+
   public <T> SpendControlViolationException(
       TypedId<T> id, TransactionLimitType transactionLimitType, MccGroup mccGroup) {
     super(
@@ -30,6 +32,7 @@ public class SpendControlViolationException extends OperationDeclinedException {
     this.transactionLimitType = transactionLimitType;
     this.mccGroup = mccGroup;
     this.paymentType = null;
+    this.foreignDisabled = null;
   }
 
   public <T> SpendControlViolationException(
@@ -43,5 +46,19 @@ public class SpendControlViolationException extends OperationDeclinedException {
     this.transactionLimitType = transactionLimitType;
     this.mccGroup = null;
     this.paymentType = paymentType;
+    this.foreignDisabled = null;
+  }
+
+  public <T> SpendControlViolationException(
+      TypedId<T> id, TransactionLimitType transactionLimitType) {
+    super(
+        String.format(
+            "Entity id=%s, type=%s violates foreign transactions", id, transactionLimitType));
+
+    this.entityId = id.toUuid();
+    this.transactionLimitType = transactionLimitType;
+    this.mccGroup = null;
+    this.paymentType = null;
+    this.foreignDisabled = true;
   }
 }

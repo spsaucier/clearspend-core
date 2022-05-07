@@ -168,7 +168,8 @@ public class TransactionLimitService {
       TypedId<CardId> cardId,
       Amount amount,
       Integer mccCode,
-      AuthorizationMethod authorizationMethod) {
+      AuthorizationMethod authorizationMethod,
+      boolean foreign) {
 
     MccGroup mccGroup = MccGroup.fromMcc(mccCode);
     PaymentType paymentType = PaymentType.from(authorizationMethod);
@@ -183,16 +184,8 @@ public class TransactionLimitService {
       throw new SpendControlViolationException(cardId, TransactionLimitType.CARD, paymentType);
     }
 
-    // allocation mcc groups and payment types
-    TransactionLimit allocationTransactionLimits =
-        retrieveSpendLimit(businessId, TransactionLimitType.ALLOCATION, allocationId.toUuid());
-    if (allocationTransactionLimits.getDisabledMccGroups().contains(mccGroup)) {
-      throw new SpendControlViolationException(
-          allocationId, TransactionLimitType.ALLOCATION, mccGroup);
-    }
-    if (allocationTransactionLimits.getDisabledPaymentTypes().contains(paymentType)) {
-      throw new SpendControlViolationException(
-          allocationId, TransactionLimitType.ALLOCATION, paymentType);
+    if (cardTransactionLimits.getDisableForeign() && foreign) {
+      throw new SpendControlViolationException(cardId, TransactionLimitType.CARD);
     }
 
     // spend limits
@@ -207,16 +200,6 @@ public class TransactionLimitService {
         amount,
         cardAllocationSpendingDaily.getCardSpendings().getOrDefault(amount.getCurrency(), Map.of()),
         cardTransactionLimits);
-
-    // check allocation limits
-    withinLimit(
-        allocationId,
-        TransactionLimitType.ALLOCATION,
-        amount,
-        cardAllocationSpendingDaily
-            .getAllocationSpendings()
-            .getOrDefault(amount.getCurrency(), Map.of()),
-        allocationTransactionLimits);
   }
 
   private void withinLimit(

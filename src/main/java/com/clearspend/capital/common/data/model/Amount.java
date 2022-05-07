@@ -108,6 +108,10 @@ public class Amount {
         this.amount.multiply(amount).setScale(currency.getDecimalScale(), RoundingMode.HALF_UP));
   }
 
+  public Amount percents(BigDecimal amount) {
+    return mul(amount.divide(BigDecimal.valueOf(100), 2, RoundingMode.UNNECESSARY));
+  }
+
   public boolean isLessThan(@NonNull Amount that) {
     return amount.compareTo(that.amount) < 0;
   }

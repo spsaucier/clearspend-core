@@ -76,6 +76,9 @@ public class AccountActivityResponse {
   @JsonProperty("declineDetails")
   private DeclineDetails declineDetails;
 
+  @JsonProperty("paymentDetails")
+  private PaymentDetails paymentDetails;
+
   public AccountActivityResponse(@NonNull AccountActivity accountActivity) {
     this.accountActivityId = accountActivity.getId();
     this.activityTime = accountActivity.getActivityTime();
@@ -96,5 +99,7 @@ public class AccountActivityResponse {
     if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
       this.declineDetails = accountActivity.getDeclineDetails().get(0);
     }
+
+    this.paymentDetails = PaymentDetails.from(accountActivity.getPaymentDetails());
   }
 }

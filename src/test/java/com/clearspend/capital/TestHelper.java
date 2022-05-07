@@ -1079,6 +1079,7 @@ public class TestHelper {
       User user,
       Card card,
       MerchantType merchantType,
+      Country merchantCountry,
       long authorizationAmount,
       AuthorizationMethod authorizationMethod,
       long pendingAmount,
@@ -1099,7 +1100,7 @@ public class TestHelper {
     authorization.setCurrency(business.getCurrency().toStripeCurrency());
     authorization.setMerchantAmount(0L);
     authorization.setMerchantCurrency(business.getCurrency().toStripeCurrency());
-    MerchantData merchantData = getMerchantData(merchantType);
+    MerchantData merchantData = getMerchantData(merchantType, merchantCountry);
     authorization.setMerchantData(merchantData);
     authorization.setAuthorizationMethod(authorizationMethod.name().toLowerCase());
     authorization.setMetadata(new HashMap<>());
@@ -1130,12 +1131,12 @@ public class TestHelper {
   }
 
   @org.jetbrains.annotations.NotNull
-  public MerchantData getMerchantData(MerchantType merchantType) {
+  public MerchantData getMerchantData(MerchantType merchantType, Country merchantCountry) {
     MerchantData merchantData = new MerchantData();
     merchantData.setCategory(merchantType.getStripeMerchantType());
     merchantData.setCategoryCode(String.valueOf(merchantType.getMcc()));
     merchantData.setCity("San Francisco");
-    merchantData.setCountry("US");
+    merchantData.setCountry(merchantCountry.getTwoCharacterCode());
     merchantData.setName("Tim's Balance");
     merchantData.setNetworkId("1234567890");
     merchantData.setPostalCode("94103");

@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.clearbit.ClearbitClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.LimitViolationException;
@@ -58,8 +57,6 @@ public class NetworkMessageService {
   private final TransactionLimitService transactionLimitService;
   private final UserService userService;
 
-  private final ClearbitClient clearbitClient;
-
   private void retrieveCardAndNetworkMessages(NetworkCommon common) {
     // update common with data we have locally
     CardRecord cardRecord;
@@ -71,7 +68,8 @@ public class NetworkMessageService {
       throw e;
     }
 
-    common.setBusinessId(cardRecord.card().getBusinessId());
+    common.setBusiness(
+        businessService.retrieveBusinessForService(cardRecord.card().getBusinessId(), true));
     common.setCard(cardRecord.card());
     common.setUser(userService.retrieveUserForService(cardRecord.card().getUserId()));
 
@@ -88,7 +86,7 @@ public class NetworkMessageService {
           accountService.retrieveAccountById(common.earliestNetworkMessage.getAccountId(), true));
       common.setAllocation(
           allocationService.retrieveAllocation(
-              common.getBusinessId(), common.earliestNetworkMessage.getAllocationId()));
+              common.getBusiness().getId(), common.earliestNetworkMessage.getAllocationId()));
 
       // get the most recently created Hold if any
       List<TypedId<HoldId>> holdIds =
@@ -113,7 +111,7 @@ public class NetworkMessageService {
       common.setAccount(cardRecord.account());
       common.setAllocation(
           allocationService.retrieveAllocation(
-              common.getBusinessId(), cardRecord.card().getAllocationId()));
+              common.getBusiness().getId(), cardRecord.card().getAllocationId()));
     }
   }
 
@@ -260,6 +258,12 @@ public class NetworkMessageService {
       }
     }
 
+    if (common.getForeign()) {
+      Amount foreignFee =
+          common.getRequestedAmount().percents(common.getBusiness().getForeignTransactionFee());
+      common.setPaddedAmount(common.getPaddedAmount().add(foreignFee));
+    }
+
     common.getPaddedAmount().ensureNegative();
   }
 
@@ -291,6 +295,12 @@ public class NetworkMessageService {
   private void processTransactionCreated(NetworkCommon common) {
     common.setApprovedAmount(common.getRequestedAmount());
 
+    if (common.getForeign()) {
+      Amount foreignFee =
+          common.getApprovedAmount().percents(common.getBusiness().getForeignTransactionFee());
+      common.setApprovedAmount(common.getApprovedAmount().add(foreignFee));
+    }
+
     AccountActivityType accountActivityType = common.getAccountActivityType();
 
     common
@@ -307,8 +317,7 @@ public class NetworkMessageService {
   private void processAuthorizationRequest(NetworkCommon common) {
     setPaddedAmountAndHoldPeriod(common);
 
-    if (businessService.getBusiness(common.getBusinessId()).business().getStatus()
-        == BusinessStatus.SUSPENDED) {
+    if (common.getBusiness().getStatus() == BusinessStatus.SUSPENDED) {
       common.getDeclineDetails().add(new DeclineDetails(DeclineReason.BUSINESS_SUSPENSION));
       common.setPostDecline(true);
     }
@@ -374,12 +383,13 @@ public class NetworkMessageService {
     // Card spending limits and settings checks
     try {
       transactionLimitService.ensureWithinLimit(
-          common.getBusinessId(),
+          common.getBusiness().getId(),
           common.getAllocation().getId(),
           common.getCard().getId(),
           common.getApprovedAmount(),
           common.getMerchantCategoryCode(),
-          common.getAuthorizationMethod());
+          common.getAuthorizationMethod(),
+          common.getForeign());
     } catch (LimitViolationException | SpendControlViolationException e) {
       log.warn("Failed to accept a transaction due to a decline: {}", e.getMessage());
       if (e instanceof LimitViolationException limitViolationException) {

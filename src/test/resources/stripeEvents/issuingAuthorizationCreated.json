@@ -1,0 +1,211 @@
+{
+  "id": "evt_1KUaNk4g2Xo63Nb8Uw7dvKNz",
+  "data": {
+    "object": {
+      "id": "iauth_1KvTVM4g2Xo63Nb8wzjimvYy",
+      "object": "issuing.authorization",
+      "amount": 2014,
+      "amount_details": {
+        "atm_fee": null
+      },
+      "approved": true,
+      "authorization_method": "online",
+      "balance_transactions": [
+      ],
+      "card": {
+        "id": "{{cardExternalRef}}",
+        "object": "issuing.card",
+        "brand": "Visa",
+        "cancellation_reason": null,
+        "cardholder": {
+          "id": "ich_1KvQw34g2Xo63Nb8fBT8NGEE",
+          "object": "issuing.cardholder",
+          "billing": {
+            "address": {
+              "city": "DAPHNE",
+              "country": "US",
+              "line1": "31711 KESTREL LOOP",
+              "line2": null,
+              "postal_code": "36527",
+              "state": "AL"
+            }
+          },
+          "company": null,
+          "created": 1651604339,
+          "email": "patrick.morton+001@clearspend.com",
+          "individual": null,
+          "livemode": false,
+          "metadata": {
+            "user_id": "{{userId}}",
+            "stripe_account_id": "{{stripeAccountId}}",
+            "business_id": "{{businessId}}"
+          },
+          "name": "Patrick Morton",
+          "phone_number": "+14076878524",
+          "requirements": {
+            "disabled_reason": null,
+            "past_due": [
+            ]
+          },
+          "spending_controls": {
+            "allowed_categories": [
+            ],
+            "blocked_categories": [
+            ],
+            "spending_limits": [
+            ],
+            "spending_limits_currency": null
+          },
+          "status": "active",
+          "type": "individual"
+        },
+        "created": 1651604340,
+        "currency": "usd",
+        "exp_month": 4,
+        "exp_year": 2025,
+        "last4": "2324",
+        "livemode": false,
+        "metadata": {
+          "user_id": "{{userId}}",
+          "stripe_account_id": "{{stripeAccountId}}",
+          "business_id": "{{businessId}}"
+        },
+        "replaced_by": null,
+        "replacement_for": null,
+        "replacement_reason": null,
+        "shipping": null,
+        "spending_controls": {
+          "allowed_categories": null,
+          "blocked_categories": null,
+          "spending_limits": [
+            {
+              "amount": 1000000,
+              "categories": [
+              ],
+              "interval": "daily"
+            }
+          ],
+          "spending_limits_currency": "usd"
+        },
+        "status": "active",
+        "type": "virtual",
+        "wallets": {
+          "apple_pay": {
+            "eligible": true,
+            "ineligible_reason": null
+          },
+          "google_pay": {
+            "eligible": true,
+            "ineligible_reason": null
+          },
+          "primary_account_identifier": null
+        },
+        "financial_account": "fa_1KPLzt4g2Xo63Nb8uaQvsdmO"
+      },
+      "cardholder": "ich_1KvQw34g2Xo63Nb8fBT8NGEE",
+      "created": 1651614216,
+      "currency": "usd",
+      "livemode": false,
+      "merchant_amount": 2014,
+      "merchant_currency": "usd",
+      "merchant_data": {
+        "category": "computers_peripherals_and_software",
+        "category_code": "5045",
+        "city": "San Francisco",
+        "country": "US",
+        "name": "UberEats ChucksFish47850",
+        "network_id": "1234567890",
+        "postal_code": "94103",
+        "state": "CA"
+      },
+      "metadata": {
+      },
+      "pending_request": null,
+      "request_history": [
+        {
+          "amount": 2014,
+          "amount_details": {
+            "atm_fee": null
+          },
+          "approved": true,
+          "created": 1651614217,
+          "currency": "usd",
+          "merchant_amount": 2014,
+          "merchant_currency": "usd",
+          "reason": "card_active"
+        }
+      ],
+      "status": "pending",
+      "transactions": [
+        {
+          "id": "ipi_1KvTVO4g2Xo63Nb8IFCXqWHx",
+          "object": "issuing.transaction",
+          "amount": -2014,
+          "amount_details": {
+            "atm_fee": null
+          },
+          "authorization": "iauth_1KvTVM4g2Xo63Nb8wzjimvYy",
+          "balance_transaction": null,
+          "card": "ic_1KvQw44g2Xo63Nb8LMmBJrLH",
+          "cardholder": "ich_1KvQw34g2Xo63Nb8fBT8NGEE",
+          "created": 1651614218,
+          "currency": "usd",
+          "dispute": null,
+          "livemode": false,
+          "merchant_amount": -2014,
+          "merchant_currency": "usd",
+          "merchant_data": {
+            "category": "computers_peripherals_and_software",
+            "category_code": "5045",
+            "city": "San Francisco",
+            "country": "US",
+            "name": "UberEats ChucksFish47850",
+            "network_id": "1234567890",
+            "postal_code": "94103",
+            "state": "CA"
+          },
+          "metadata": {
+          },
+          "type": "capture",
+          "wallet": null,
+          "flow_transaction": "trxn_1KvTVP4g2Xo63Nb8D0CpupI7",
+          "interchange": {
+            "amount_decimal": "40.28"
+          },
+          "treasury": {
+            "received_credit": null,
+            "received_debit": "rd_1KvTVO4g2Xo63Nb84MNjoNuJ"
+          }
+        }
+      ],
+      "verification_data": {
+        "address_line1_check": "not_provided",
+        "address_postal_code_check": "not_provided",
+        "cvc_check": "not_provided",
+        "expiry_check": "match",
+        "postal_code": "94103"
+      },
+      "wallet": null,
+      "flow_transaction": "trxn_1KvTVN4g2Xo63Nb8SvKJrv47",
+      "treasury": {
+        "received_credits": [
+        ],
+        "received_debits": [
+          "rd_1KvTVO4g2Xo63Nb84MNjoNuJ"
+        ],
+        "transaction": "trxn_1KvTVN4g2Xo63Nb8SvKJrv47"
+      }
+    }
+  },
+  "type": "issuing_authorization.request",
+  "object": "event",
+  "account": "{{stripeAccountId}}",
+  "created": 1645205796,
+  "request": {
+    "id": "req_fXCaykmwqh6YpA",
+    "idempotency_key": "bbdd11d9-1026-4f9f-a49f-de73a828eza9"
+  },
+  "livemode": false,
+  "api_version": "2020-08-27; financial_accounts_beta=v3; issuing_flows_beta=v1; money_flows_beta=v2",
+  "pending_webhooks": 1
+}

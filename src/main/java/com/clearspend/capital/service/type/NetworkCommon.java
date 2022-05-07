@@ -5,14 +5,13 @@ import com.clearspend.capital.client.stripe.types.TransactionType;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeEventType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
-import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -41,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -138,9 +138,11 @@ public class NetworkCommon {
 
   private AuthorizationMethod authorizationMethod;
 
+  private Boolean foreign;
+
   private String stripeAuthorizationExternalRef;
 
-  private TypedId<BusinessId> businessId;
+  private Business business;
 
   private Allocation allocation;
 
@@ -222,6 +224,12 @@ public class NetworkCommon {
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
       merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
+
+      foreign =
+          !Objects.equals(Country.of(merchantData.getCountry()), Country.USA)
+              || !Objects.equals(Currency.of(authorization.getMerchantCurrency()), Currency.USD);
+    } else {
+      foreign = !Objects.equals(Currency.of(authorization.getMerchantCurrency()), Currency.USD);
     }
 
     transactionDate =
@@ -269,6 +277,12 @@ public class NetworkCommon {
       merchantAddress = getMerchantAddress(merchantData);
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
       merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
+
+      foreign =
+          !Objects.equals(Country.of(merchantData.getCountry()), Country.USA)
+              || !Objects.equals(Currency.of(transaction.getMerchantCurrency()), Currency.USD);
+    } else {
+      foreign = !Objects.equals(Currency.of(transaction.getMerchantCurrency()), Currency.USD);
     }
 
     transactionDate =
@@ -301,7 +315,7 @@ public class NetworkCommon {
   public NetworkMessage toNetworkMessage() {
     NetworkMessage networkMessage =
         new NetworkMessage(
-            businessId,
+            business.getId(),
             allocation.getId(),
             account.getId(),
             networkMessageGroupId,
@@ -324,8 +338,8 @@ public class NetworkCommon {
   public Map<String, String> getMetadata() {
     Map<String, String> metadata = new HashMap<>();
 
-    if (getBusinessId() != null) {
-      metadata.put(StripeMetadataEntry.BUSINESS_ID.getKey(), getBusinessId().toString());
+    if (business != null && business.getId() != null) {
+      metadata.put(StripeMetadataEntry.BUSINESS_ID.getKey(), business.getId().toString());
     }
     if (getAllocation() != null && getAllocation().getId() != null) {
       metadata.put(StripeMetadataEntry.ALLOCATION_ID.getKey(), getAllocation().getId().toString());

@@ -6,6 +6,7 @@ import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import lombok.Data;
@@ -89,6 +90,10 @@ public class Business {
   @JsonProperty("codatCreditCardId")
   private String codatCreditCardId;
 
+  @JsonProperty("foreignTransactionFee")
+  @NonNull
+  private BigDecimal foreignTransactionFee;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -102,7 +107,8 @@ public class Business {
         business.getStatus(),
         business.getAccountingSetupStep(),
         business.getAutoCreateExpenseCategories(),
-        business.getMcc());
+        business.getMcc(),
+        business.getForeignTransactionFee());
 
     this.businessName = business.getBusinessName();
     this.description = business.getDescription();

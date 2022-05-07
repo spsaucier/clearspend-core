@@ -23,7 +23,6 @@ import com.clearspend.capital.data.model.embedded.UserDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -129,8 +128,6 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @Type(type = "json")
   @Column(columnDefinition = "jsonb")
   private List<DeclineDetails> declineDetails;
-
-  private BigDecimal interchange;
 
   @Override
   public TypedId<UserId> getOwnerId() {

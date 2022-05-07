@@ -314,7 +314,7 @@ public class AccountActivityService {
 
     AccountActivity accountActivity =
         new AccountActivity(
-            common.getBusinessId(),
+            common.getBusiness().getId(),
             common.getAccount().getId(),
             accountActivityType,
             common.getAccountActivityDetails().getAccountActivityStatus(),
@@ -348,7 +348,8 @@ public class AccountActivityService {
                 ? common.getAccountActivityDetails().getMerchantLogoUrl()
                 : "",
             common.getAccountActivityDetails().getMerchantLatitude(),
-            common.getAccountActivityDetails().getMerchantLongitude()));
+            common.getAccountActivityDetails().getMerchantLongitude(),
+            common.getMerchantAddress().getCountry()));
 
     accountActivity.setCard(
         new CardDetails(
@@ -365,10 +366,12 @@ public class AccountActivityService {
       accountActivity.setHold(HoldDetails.of(hold));
       accountActivity.setHideAfter(hold.getExpirationDate());
     }
-    if (common.getPriorAccountActivity() != null) {
-      accountActivity.setExpenseDetails(common.getPriorAccountActivity().getExpenseDetails());
-      accountActivity.setNotes(common.getPriorAccountActivity().getNotes());
-      accountActivity.setReceipt(common.getPriorAccountActivity().getReceipt());
+    // merging data from the previous account activity record
+    AccountActivity priorAccountActivity = common.getPriorAccountActivity();
+    if (priorAccountActivity != null) {
+      accountActivity.setExpenseDetails(priorAccountActivity.getExpenseDetails());
+      accountActivity.setNotes(priorAccountActivity.getNotes());
+      accountActivity.setReceipt(priorAccountActivity.getReceipt());
       Optional.ofNullable(accountActivity.getReceipt())
           .map(ReceiptDetails::getReceiptIds)
           .filter(receiptIds -> !receiptIds.isEmpty())
@@ -380,15 +383,24 @@ public class AccountActivityService {
                     receipt -> receipt.addLinkUserId(accountActivity.getUserDetailsId()));
                 receiptRepository.saveAllAndFlush(receipts);
               });
-    }
 
-    AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();
-    if (authorizationMethod != null) {
-      accountActivity.setPaymentDetails(
-          new PaymentDetails(authorizationMethod, PaymentType.from(authorizationMethod)));
-    }
+      PaymentDetails paymentDetails =
+          PaymentDetails.clone(priorAccountActivity.getPaymentDetails());
+      paymentDetails.setInterchange(common.getInterchange());
+      accountActivity.setPaymentDetails(paymentDetails);
 
-    accountActivity.setInterchange(common.getInterchange());
+    } else {
+      AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();
+      if (authorizationMethod != null) {
+        accountActivity.setPaymentDetails(
+            new PaymentDetails(
+                authorizationMethod,
+                PaymentType.from(authorizationMethod),
+                common.getBusiness().getForeignTransactionFee(),
+                common.getInterchange(),
+                common.getForeign()));
+      }
+    }
 
     common.setAccountActivity(accountActivityRepository.save(accountActivity));
   }

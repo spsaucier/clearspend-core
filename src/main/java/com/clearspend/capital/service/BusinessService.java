@@ -28,6 +28,7 @@ import com.google.errorprone.annotations.RestrictedApi;
 import com.stripe.model.Account.BusinessProfile;
 import com.stripe.model.Account.Company;
 import com.stripe.model.Address;
+import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -45,6 +46,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BusinessService {
 
+  private static final BigDecimal DEFAULT_FOREIGN_TRANSACTION_FEE = new BigDecimal(3);
+
   public @interface OnboardingBusinessOp {
     String reviewer();
 
@@ -56,8 +59,6 @@ public class BusinessService {
 
     String explanation();
   }
-
-  public static final String ACTIVE = "active";
 
   private final BusinessRepository businessRepository;
 
@@ -96,7 +97,8 @@ public class BusinessService {
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
             false,
-            AccountingSetupStep.AWAITING_SYNC);
+            AccountingSetupStep.AWAITING_SYNC,
+            DEFAULT_FOREIGN_TRANSACTION_FEE);
     if (businessId != null) {
       business.setId(businessId);
     }

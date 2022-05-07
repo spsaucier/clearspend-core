@@ -3,6 +3,7 @@ package com.clearspend.capital.controller.type.ledger;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.controller.type.activity.PaymentDetails;
 import com.clearspend.capital.controller.type.activity.ReceiptDetails;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -80,6 +81,9 @@ public class LedgerActivityResponse {
 
   @JsonProperty("declineDetails")
   private DeclineDetails declineDetails;
+
+  @JsonProperty("paymentDetails")
+  private PaymentDetails paymentDetails;
 
   @JsonIgnore private AccountActivity accountActivity;
 
@@ -178,6 +182,7 @@ public class LedgerActivityResponse {
     }
 
     response.setAccountActivity(accountActivity);
+    response.setPaymentDetails(PaymentDetails.from(accountActivity.getPaymentDetails()));
 
     return response;
   }

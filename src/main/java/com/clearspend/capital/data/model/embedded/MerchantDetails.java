@@ -1,6 +1,7 @@
 package com.clearspend.capital.data.model.embedded;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import java.math.BigDecimal;
@@ -46,4 +47,7 @@ public class MerchantDetails {
   private BigDecimal latitude;
 
   private BigDecimal longitude;
+
+  @Enumerated(EnumType.STRING)
+  private Country country;
 }

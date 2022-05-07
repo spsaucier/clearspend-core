@@ -45,6 +45,7 @@ import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -169,7 +170,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
@@ -222,7 +224,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     newAccountActivity = accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
@@ -272,7 +275,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
 
@@ -484,7 +488,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
 
@@ -578,7 +583,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
 
@@ -620,7 +626,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
     secondAccountActivity.setExpenseDetails(
         new ExpenseDetails(
             0, expenseCategories.get(1).getId(), expenseCategories.get(1).getCategoryName()));
@@ -694,7 +701,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
 
     AccountActivity secondAccountActivity =
         new AccountActivity(
@@ -721,7 +729,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             MccGroup.EDUCATION,
             "test.com",
             BigDecimal.ZERO,
-            BigDecimal.ZERO));
+            BigDecimal.ZERO,
+            Country.USA));
 
     List<ExpenseCategory> expenseCategories =
         expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());

@@ -21,18 +21,30 @@ public class SpendControlViolated extends DeclineDetails {
   private MccGroup mccGroup;
   private PaymentType paymentType;
 
+  private Boolean foreignDisabled;
+
   @JsonCreator
   public SpendControlViolated(
-      TransactionLimitType transactionLimitType, MccGroup mccGroup, PaymentType paymentType) {
+      UUID entityId,
+      TransactionLimitType transactionLimitType,
+      MccGroup mccGroup,
+      PaymentType paymentType,
+      Boolean foreignDisabled) {
     super(DeclineReason.SPEND_CONTROL_VIOLATED);
 
+    this.entityId = entityId;
     this.entityType = EntityType.from(transactionLimitType);
     this.mccGroup = mccGroup;
     this.paymentType = paymentType;
+    this.foreignDisabled = foreignDisabled;
   }
 
-  public static DeclineDetails from(SpendControlViolationException e) {
+  public static DeclineDetails from(SpendControlViolationException exception) {
     return new SpendControlViolated(
-        e.getTransactionLimitType(), e.getMccGroup(), e.getPaymentType());
+        exception.getEntityId(),
+        exception.getTransactionLimitType(),
+        exception.getMccGroup(),
+        exception.getPaymentType(),
+        exception.getForeignDisabled());
   }
 }

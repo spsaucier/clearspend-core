@@ -2,6 +2,7 @@ package com.clearspend.capital.controller.type.activity;
 
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -48,6 +49,9 @@ public class Merchant {
   @JsonProperty("merchantLongitude")
   private BigDecimal longitude;
 
+  @JsonProperty("merchantCountry")
+  private Country country;
+
   @JsonProperty("codatSupplierName")
   private String codatSupplierName;
 
@@ -69,6 +73,7 @@ public class Merchant {
         in.getLogoUrl(),
         in.getLatitude(),
         in.getLongitude(),
+        in.getCountry(),
         in.getCodatSupplierName(),
         in.getCodatSupplierId());
   }

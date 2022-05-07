@@ -85,6 +85,7 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
                 user,
                 card,
                 merchantType,
+                business.getClearAddress().getCountry(),
                 authAmount.toStripeAmount(),
                 AuthorizationMethod.CONTACTLESS,
                 0,

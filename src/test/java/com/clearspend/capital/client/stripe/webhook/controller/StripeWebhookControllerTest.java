@@ -26,12 +26,14 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -64,6 +66,7 @@ import com.samskivert.mustache.Template;
 import com.stripe.model.issuing.Authorization;
 import com.stripe.model.issuing.Authorization.RequestHistory;
 import com.stripe.model.issuing.Transaction;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -178,6 +181,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       Card card,
       BigDecimal openingBalance,
       MerchantType merchantType,
+      Country merchantCountry,
       long amount,
       boolean approved) {
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
@@ -188,6 +192,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             user,
             card,
             merchantType,
+            merchantCountry,
             0L,
             AuthorizationMethod.CONTACTLESS,
             amount,
@@ -199,9 +204,13 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorization, authorization, stripeEventType),
             true);
+    if (networkCommon.getForeign()) {
+      amount += (amount / 100) * business.getForeignTransactionFee().longValue();
+    }
     if (approved) {
       testHelper.assertPost(networkCommon, false, false, true);
       amount = merchantType == MerchantType.AUTOMATED_FUEL_DISPENSERS ? 10000L : amount;
+
       assertionHelper.assertBalance(
           business,
           allocation,
@@ -231,6 +240,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         openingBalance,
         amount,
         MerchantType.ADVERTISING_SERVICES,
+        Country.USA,
         AuthorizationMethod.ONLINE);
   }
 
@@ -241,12 +251,21 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
       BigDecimal openingBalance,
       long amount,
       MerchantType merchantType,
+      Country merchantCountry,
       AuthorizationMethod authorizationMethod) {
     StripeEventType stripeEventType = StripeEventType.ISSUING_AUTHORIZATION_REQUEST;
     String stripeId = generateStripeId("iauth_");
     Authorization authorization =
         testHelper.getAuthorization(
-            business, user, card, merchantType, 0L, authorizationMethod, amount, stripeId);
+            business,
+            user,
+            card,
+            merchantType,
+            merchantCountry,
+            0L,
+            authorizationMethod,
+            amount,
+            stripeId);
 
     NetworkCommon networkCommon =
         stripeWebhookController.handleDirectRequest(
@@ -293,6 +312,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             amount,
             false);
     Authorization authorization = x.authorization();
@@ -306,6 +326,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             user,
             card,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             amount,
             AuthorizationMethod.CONTACTLESS,
             0L,
@@ -408,7 +429,44 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     authorize(
-        allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
+        allocation,
+        user,
+        card,
+        openBalance,
+        MerchantType.TRANSPORTATION_SERVICES,
+        Country.USA,
+        1000L,
+        true);
+  }
+
+  @SneakyThrows
+  @Test
+  void processAuthorization_foreignFee() {
+    BigDecimal openBalance = BigDecimal.valueOf(100);
+    UserRecord userRecord = createUser(openBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    authorize(
+        allocation,
+        user,
+        card,
+        openBalance,
+        MerchantType.TRANSPORTATION_SERVICES,
+        Country.CAN,
+        1000L,
+        true);
+
+    AccountActivity latestActivity = getLatestActivity();
+    assertThat(latestActivity.getPaymentDetails())
+        .isEqualTo(
+            new PaymentDetails(
+                AuthorizationMethod.CONTACTLESS,
+                PaymentType.from(AuthorizationMethod.CONTACTLESS),
+                business.getForeignTransactionFee(),
+                null,
+                true));
   }
 
   @SneakyThrows
@@ -421,7 +479,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     authorize(
-        allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 927L, true);
+        allocation,
+        user,
+        card,
+        openBalance,
+        MerchantType.TRANSPORTATION_SERVICES,
+        Country.USA,
+        927L,
+        true);
   }
 
   @SneakyThrows
@@ -434,7 +499,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     authorize(
-        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, false);
+        allocation,
+        user,
+        card,
+        openBalance,
+        MerchantType.AUTOMATED_FUEL_DISPENSERS,
+        Country.USA,
+        100L,
+        false);
   }
 
   @SneakyThrows
@@ -453,6 +525,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openBalance,
             MerchantType.AUTOMATED_FUEL_DISPENSERS,
+            Country.USA,
             100L,
             true);
 
@@ -473,7 +546,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     Card card = userRecord.card;
 
     authorize(
-        allocation, user, card, openBalance, MerchantType.AUTOMATED_FUEL_DISPENSERS, 100L, true);
+        allocation,
+        user,
+        card,
+        openBalance,
+        MerchantType.AUTOMATED_FUEL_DISPENSERS,
+        Country.USA,
+        100L,
+        true);
   }
 
   @SneakyThrows
@@ -487,7 +567,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     AuthorizationRecord authorizationRecord =
         authorize(
-            allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
+            allocation,
+            user,
+            card,
+            openBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
+            1000L,
+            true);
 
     NetworkCommon networkCommon =
         authorizeUpdate(allocation, authorizationRecord, 900L, BigDecimal.TEN, BigDecimal.ONE);
@@ -504,7 +591,14 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     AuthorizationRecord authorizationRecord =
         authorize(
-            allocation, user, card, openBalance, MerchantType.TRANSPORTATION_SERVICES, 1000L, true);
+            allocation,
+            user,
+            card,
+            openBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
+            1000L,
+            true);
 
     NetworkCommon networkCommon =
         authorizeUpdate(allocation, authorizationRecord, 0L, BigDecimal.TEN, BigDecimal.TEN);
@@ -527,6 +621,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             authAmount,
             true);
 
@@ -552,12 +647,51 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             authAmount,
             true);
 
     long captureAmount = -authAmount;
     BigDecimal closingBalance = BigDecimal.ZERO;
     capture(authorize, allocation, user, card, captureAmount, closingBalance);
+  }
+
+  @SneakyThrows
+  @Test
+  void processCompletion_foreignFee() {
+    BigDecimal openingBalance = BigDecimal.valueOf(100);
+    UserRecord userRecord = createUser(openingBalance);
+    Allocation allocation = userRecord.allocation;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    long authAmount = 1000L;
+    AuthorizationRecord authorize =
+        authorize(
+            allocation,
+            user,
+            card,
+            openingBalance,
+            MerchantType.TRANSPORTATION_SERVICES,
+            Country.CAN,
+            authAmount,
+            true);
+
+    long captureAmount = -authAmount;
+    BigDecimal closingBalance =
+        BigDecimal.valueOf(
+            100 - 10 - 10 / 100d * business.getForeignTransactionFee().doubleValue());
+    capture(authorize, allocation, user, card, captureAmount, closingBalance);
+
+    AccountActivity latestActivity = getLatestActivity();
+    assertThat(latestActivity.getPaymentDetails())
+        .isEqualTo(
+            new PaymentDetails(
+                AuthorizationMethod.CONTACTLESS,
+                PaymentType.from(AuthorizationMethod.CONTACTLESS),
+                business.getForeignTransactionFee(),
+                null,
+                true));
   }
 
   @Test
@@ -576,6 +710,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             authAmount,
             true);
     final AccountActivity authActivity =
@@ -639,6 +774,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             authAmount,
             true);
 
@@ -695,7 +831,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     transaction.setMerchantData(
         authorize != null
             ? authorize.authorization().getMerchantData()
-            : testHelper.getMerchantData(MerchantType.ADVERTISING_SERVICES));
+            : testHelper.getMerchantData(MerchantType.ADVERTISING_SERVICES, Country.USA));
     transaction.setCreated(OffsetDateTime.now().toEpochSecond());
     transaction.setCurrency(business.getCurrency().toStripeCurrency());
     transaction.setDispute(null);
@@ -764,6 +900,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             card,
             openingBalance,
             MerchantType.TRANSPORTATION_SERVICES,
+            Country.USA,
             amount,
             true);
 
@@ -930,105 +1067,6 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   }
 
   @Test
-  public void spendControl_exceedAllocationDailyLimit() {
-    UserRecord userRecord = createUser(BigDecimal.TEN);
-    Allocation allocation = userRecord.allocation;
-    Account account = userRecord.account;
-    User user = userRecord.user;
-    Card card1 = userRecord.card;
-    Card card2 =
-        testHelper.issueCard(
-            business, allocation, user, Currency.USD, FundingType.POOLED, CardType.VIRTUAL, false);
-
-    serviceHelper
-        .transactionLimitService()
-        .updateAllocationSpendLimit(
-            business.getId(),
-            allocation.getId(),
-            Map.of(
-                Currency.USD,
-                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false);
-
-    testHelper.createNetworkTransaction(
-        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-    testHelper.createNetworkTransaction(
-        business, account, user, card2, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-    testHelper.createNetworkTransaction(
-        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-
-    authorize_decline(allocation, user, card2, BigDecimal.valueOf(7), 100);
-  }
-
-  @Test
-  public void spendControl_exceedAllocationMonthlyLimit() {
-    UserRecord userRecord = createUser(BigDecimal.TEN);
-    Allocation allocation = userRecord.allocation;
-    Account account = userRecord.account;
-    User user = userRecord.user;
-    Card card1 = userRecord.card;
-    Card card2 =
-        testHelper.issueCard(
-            business, allocation, user, Currency.USD, FundingType.POOLED, CardType.VIRTUAL, false);
-
-    serviceHelper
-        .transactionLimitService()
-        .updateAllocationSpendLimit(
-            business.getId(),
-            allocation.getId(),
-            Map.of(
-                Currency.USD,
-                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(3L)))),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false);
-
-    testHelper.createNetworkTransaction(
-        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-    testHelper.createNetworkTransaction(
-        business, account, user, card2, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-    testHelper.createNetworkTransaction(
-        business, account, user, card1, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-
-    authorize_decline(allocation, user, card2, BigDecimal.valueOf(7), 100);
-  }
-
-  @Test
-  public void spendControl_allocationViolateMccGroup() {
-    UserRecord userRecord = createUser(BigDecimal.TEN);
-    Allocation allocation = userRecord.allocation;
-    Account account = userRecord.account;
-    User user = userRecord.user;
-    Card card = userRecord.card;
-
-    serviceHelper
-        .transactionLimitService()
-        .updateAllocationSpendLimit(
-            business.getId(),
-            allocation.getId(),
-            Map.of(),
-            Set.of(MccGroup.GAMBLING),
-            Collections.emptySet(),
-            false);
-
-    // check that we can make a trx against the card
-    testHelper.createNetworkTransaction(
-        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-
-    // gambling has to be declined
-    authorize_decline(
-        allocation,
-        user,
-        card,
-        BigDecimal.valueOf(9),
-        1,
-        MerchantType.BETTING_CASINO_GAMBLING,
-        AuthorizationMethod.CONTACTLESS);
-  }
-
-  @Test
   public void spendControl_cardViolateMccGroup() {
     UserRecord userRecord = createUser(BigDecimal.TEN);
     Allocation allocation = userRecord.allocation;
@@ -1058,40 +1096,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         BigDecimal.valueOf(9),
         1,
         MerchantType.BETTING_CASINO_GAMBLING,
+        Country.USA,
         AuthorizationMethod.CONTACTLESS);
-  }
-
-  @Test
-  public void spendControl_allocationViolatePaymentType() {
-    UserRecord userRecord = createUser(BigDecimal.TEN);
-    Allocation allocation = userRecord.allocation;
-    Account account = userRecord.account;
-    User user = userRecord.user;
-    Card card = userRecord.card;
-
-    // check that we can make a trx against the card
-    testHelper.createNetworkTransaction(
-        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
-
-    serviceHelper
-        .transactionLimitService()
-        .updateAllocationSpendLimit(
-            business.getId(),
-            allocation.getId(),
-            Map.of(),
-            Collections.emptySet(),
-            Set.of(PaymentType.ONLINE),
-            false);
-
-    // online has to be declined
-    authorize_decline(
-        allocation,
-        user,
-        card,
-        BigDecimal.valueOf(9),
-        1,
-        MerchantType.AIRLINES_AIR_CARRIERS,
-        AuthorizationMethod.ONLINE);
   }
 
   @Test
@@ -1124,6 +1130,41 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         BigDecimal.valueOf(9),
         1,
         MerchantType.AIRLINES_AIR_CARRIERS,
+        Country.USA,
+        AuthorizationMethod.ONLINE);
+  }
+
+  @Test
+  public void spendControl_cardForeignTransaction() {
+    UserRecord userRecord = createUser(BigDecimal.TEN);
+    Allocation allocation = userRecord.allocation;
+    Account account = userRecord.account;
+    User user = userRecord.user;
+    Card card = userRecord.card;
+
+    // check that we can make a trx against the card
+    testHelper.createNetworkTransaction(
+        business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
+
+    serviceHelper
+        .transactionLimitService()
+        .updateCardSpendLimit(
+            business.getId(),
+            card.getId(),
+            Map.of(),
+            Collections.emptySet(),
+            Collections.emptySet(),
+            true);
+
+    // foreign has to be declined
+    authorize_decline(
+        allocation,
+        user,
+        card,
+        BigDecimal.valueOf(9),
+        1,
+        MerchantType.AIRLINES_AIR_CARRIERS,
+        Country.CAN,
         AuthorizationMethod.ONLINE);
   }
 
@@ -1191,12 +1232,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     stripeWebhookController.directWebhook(new StripeMockEventRequest(json));
 
-    AccountActivity accountActivity =
-        accountActivityRepository.findAll().stream()
-            .max(
-                (a1, a2) ->
-                    OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
-            .orElseThrow();
+    AccountActivity accountActivity = getLatestActivity();
 
     assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.DECLINED);
     assertThat(accountActivity.getDeclineDetails())
@@ -1204,7 +1240,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   }
 
   @Test
-  void interchangeShouldBeSaved() {
+  void paymentDataShouldBeSaved() {
     Card card =
         testHelper.issueCard(
             business,
@@ -1215,24 +1251,39 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             CardType.VIRTUAL,
             false);
 
-    Template template = MustacheResourceLoader.load("stripeEvents/issuingTransactionCreated.json");
-    String json =
-        template.execute(
-            Map.of(
-                "cardExternalRef", card.getExternalRef(),
-                "interchange", new BigDecimal("38.4"),
-                "stripeAccountId", business.getStripeData().getAccountRef()));
+    Map<String, Serializable> mustacheContext =
+        Map.of(
+            "businessId", business.getBusinessId(),
+            "userId", user.getId(),
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "interchange", new BigDecimal("38.4"));
 
-    stripeWebhookController.directWebhook(new StripeMockEventRequest(json));
+    stripeWebhookController.directWebhook(
+        new StripeMockEventRequest(
+            MustacheResourceLoader.load("stripeEvents/issuingAuthorizationCreated.json")
+                .execute(mustacheContext)));
+    stripeWebhookController.directWebhook(
+        new StripeMockEventRequest(
+            MustacheResourceLoader.load("stripeEvents/issuingTransactionCreated.json")
+                .execute(mustacheContext)));
 
-    AccountActivity accountActivity =
-        accountActivityRepository.findAll().stream()
-            .max(
-                (a1, a2) ->
-                    OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
-            .orElseThrow();
+    AccountActivity accountActivity = getLatestActivity();
 
     assertThat(accountActivity.getStatus()).isEqualTo(AccountActivityStatus.APPROVED);
-    assertThat(accountActivity.getInterchange()).isEqualTo(new BigDecimal("38.4"));
+    assertThat(accountActivity.getPaymentDetails())
+        .isEqualTo(
+            new PaymentDetails(
+                AuthorizationMethod.ONLINE,
+                PaymentType.ONLINE,
+                new BigDecimal(3),
+                new BigDecimal("38.4"),
+                false));
+  }
+
+  private AccountActivity getLatestActivity() {
+    return accountActivityRepository.findAll().stream()
+        .max((a1, a2) -> OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
+        .orElseThrow();
   }
 }
