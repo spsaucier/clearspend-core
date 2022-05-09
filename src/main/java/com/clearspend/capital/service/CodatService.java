@@ -12,13 +12,16 @@ import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatError;
+import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
+import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatValidation;
+import com.clearspend.capital.client.codat.types.CreateAssignSupplierResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
@@ -383,7 +386,7 @@ public class CodatService {
             if (accountActivity.getReceipt() != null
                 && accountActivity.getReceipt().getReceiptIds() != null
                 && !accountActivity.getReceipt().getReceiptIds().isEmpty()) {
-              syncReceiptsForAccountActivity(accountActivity, status.getDataId().getId());
+              syncReceiptsForAccountActivity(accountActivity, status.getData().getId());
               transactionSyncLog.setStatus(TransactionSyncStatus.UPLOADED_RECEIPTS);
             }
           });
@@ -421,7 +424,7 @@ public class CodatService {
       CodatPushStatusResponse status =
           codatClient.getPushStatus(
               transaction.getDirectCostPushOperationKey(), transaction.getCodatCompanyRef());
-      syncIndividualReceipt(receipt, business, status.getDataId().getId());
+      syncIndividualReceipt(receipt, business, status.getData().getId());
 
       transaction.setStatus(TransactionSyncStatus.UPLOADED_RECEIPTS);
       transactionSyncLogRepository.save(transaction);
@@ -575,6 +578,52 @@ public class CodatService {
     }
 
     return new GetSuppliersResponse(finalSuppliers.size(), finalSuppliers);
+  }
+
+  public CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
+      TypedId<BusinessId> businessId,
+      TypedId<AccountActivityId> accountActivityId,
+      String supplierName) {
+    Business business = businessService.retrieveBusinessForService(businessId, true);
+    CodatPushDataResponse response =
+        codatClient.syncSupplierToCodat(
+            business.getCodatCompanyRef(),
+            business.getCodatConnectionId(),
+            new CodatSupplierRequest(supplierName, "Active", business.getCurrency().toString()));
+    User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
+    transactionSyncLogRepository.save(
+        new TransactionSyncLog(
+            businessId,
+            accountActivityId,
+            "",
+            TransactionSyncStatus.AWAITING_SUPPLIER,
+            response.getPushOperationKey(),
+            business.getCodatCompanyRef(),
+            currentUserDetails.getFirstName(),
+            currentUserDetails.getLastName()));
+    return new CreateAssignSupplierResponse(accountActivityId);
+  }
+
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
+  public void updateSupplierForWaitingActivity(String companyId, String pushOperationKey) {
+    Optional<TransactionSyncLog> syncForKey =
+        transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
+
+    if (syncForKey.isEmpty()) {
+      return;
+    }
+
+    Optional<AccountActivity> loggedActivity =
+        accountActivityRepository.findById(syncForKey.get().getAccountActivityId());
+    if (loggedActivity.isPresent()) {
+      CodatPushStatusResponse pushStatus = codatClient.getPushStatus(pushOperationKey, companyId);
+
+      AccountActivity updatedActivity = loggedActivity.get();
+      updatedActivity.getMerchant().setCodatSupplierName(pushStatus.getData().getSupplierName());
+      updatedActivity.getMerchant().setCodatSupplierId(pushStatus.getData().getId());
+
+      accountActivityRepository.save(updatedActivity);
+    }
   }
 
   private static final class Tree<T, R> {

@@ -7,7 +7,7 @@ import com.clearspend.capital.client.codat.types.CodatBankAccount;
 import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
-import com.clearspend.capital.client.codat.types.CodatDataIdStub;
+import com.clearspend.capital.client.codat.types.CodatPushData;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
@@ -156,7 +156,8 @@ public class CodatMockClient extends CodatClient {
 
   public CodatPushStatusResponse getPushStatus(String pushOperationKey, String companyRef) {
     CodatPushStatusResponse success = new CodatPushStatusResponse("Success");
-    success.setDataId(new CodatDataIdStub("123"));
+    success.setData(new CodatPushData("123"));
+    success.getData().setSupplierName("supplier-1");
     return success;
   }
 

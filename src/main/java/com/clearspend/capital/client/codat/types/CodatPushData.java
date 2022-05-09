@@ -9,8 +9,11 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CodatDataIdStub {
+public class CodatPushData {
   @JsonProperty("id")
   @NonNull
   private String id;
+
+  @JsonProperty("supplierName")
+  private String supplierName;
 }

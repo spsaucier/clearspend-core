@@ -4,6 +4,8 @@ import com.clearspend.capital.client.codat.types.CodatAccountNestedResponse;
 import com.clearspend.capital.client.codat.types.CodatAccountSubtype;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
+import com.clearspend.capital.client.codat.types.CreateAssignSupplierRequest;
+import com.clearspend.capital.client.codat.types.CreateAssignSupplierResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SetCreditCardRequest;
@@ -157,5 +159,14 @@ public class CodatController {
       return codatService.getMatchedSuppliersFromQboByBusiness(
           CurrentUser.getBusinessId(), limit, targetName);
     }
+  }
+
+  @PostMapping("/create-assign-vendor")
+  public CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
+      @Validated @RequestBody CreateAssignSupplierRequest createAssignSupplierRequest) {
+    return codatService.createVendorAssignedToAccountActivity(
+        CurrentUser.getBusinessId(),
+        createAssignSupplierRequest.getAccountActivityId(),
+        createAssignSupplierRequest.getSupplierName());
   }
 }

@@ -1111,6 +1111,62 @@ public class CodatServiceTest extends BaseCapitalTest {
     List<CodatAccountNested> result = codatService.nestCodatAccounts(accounts);
   }
 
+  @Test
+  void canCreateSupplierAndAssignToAccountActivityWhenReady() throws Exception {
+    AccountActivity newAccountActivity =
+        new AccountActivity(
+            business.getId(),
+            allocation.getAccountId(),
+            AccountActivityType.NETWORK_CAPTURE,
+            AccountActivityStatus.APPROVED,
+            AllocationDetails.of(allocation),
+            OffsetDateTime.now(),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            new Amount(Currency.USD, BigDecimal.TEN),
+            AccountActivityIntegrationSyncStatus.READY);
+
+    newAccountActivity.setMerchant(
+        new MerchantDetails(
+            "Test Store",
+            "",
+            new Amount(Currency.USD, BigDecimal.TEN),
+            null,
+            null,
+            MerchantType.AC_REFRIGERATION_REPAIR,
+            "999777",
+            6012,
+            MccGroup.EDUCATION,
+            "test.com",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            Country.USA));
+
+    accountActivityRepository.save(newAccountActivity);
+
+    codatService.createVendorAssignedToAccountActivity(
+        business.getId(), newAccountActivity.getId(), "My New Supplier");
+
+    CodatWebhookPushStatusChangedRequest codatWebhookPushStatusChangedRequest =
+        new CodatWebhookPushStatusChangedRequest(
+            business.getCodatCompanyRef(),
+            new CodatWebhookPushStatusData(
+                "suppliers", "Success", "test-push-operation-key-supplier"));
+    mvc.perform(
+            MockMvcRequestBuilders.post("/codat-webhook/push-status-changed")
+                .contentType("application/json")
+                .header(
+                    "Authorization",
+                    "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
+                .content(objectMapper.writeValueAsString(codatWebhookPushStatusChangedRequest)))
+        .andReturn()
+        .getResponse();
+
+    AccountActivity updatedAccountActivity =
+        accountActivityRepository.findById(newAccountActivity.getId()).get();
+    assertThat(updatedAccountActivity.getMerchant().getCodatSupplierId()).isEqualTo("123");
+    assertThat(updatedAccountActivity.getMerchant().getCodatSupplierName()).isEqualTo("supplier-1");
+  }
+
   public class CodatAccountBuilder {
     public static CodatAccountShard builder() {
       return new CodatAccountBuilder.CodatAccountShard();

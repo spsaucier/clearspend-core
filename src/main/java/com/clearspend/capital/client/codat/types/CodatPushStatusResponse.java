@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 public class CodatPushStatusResponse {
 
   @JsonProperty("data")
-  private CodatDataIdStub dataId;
+  private CodatPushData data;
 
   @JsonProperty("status")
   @NonNull
