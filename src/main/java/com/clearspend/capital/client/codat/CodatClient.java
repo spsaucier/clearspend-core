@@ -209,7 +209,6 @@ public class CodatClient {
       String connectionId,
       AccountActivity transaction,
       String currency,
-      CodatSupplier supplier,
       CodatAccount expenseAccount,
       String expenseCategoryRef)
       throws RuntimeException {
@@ -232,7 +231,8 @@ public class CodatClient {
             new CodatTaxRateRef("NON"),
             transaction.getNotes()));
 
-    CodatContactRef contactRef = new CodatContactRef(supplier.getId(), "suppliers");
+    CodatContactRef contactRef =
+        new CodatContactRef(transaction.getMerchant().getCodatSupplierId(), "suppliers");
 
     DirectCostRequest request =
         new DirectCostRequest(

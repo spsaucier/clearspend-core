@@ -41,11 +41,6 @@ public class CodatWebhookController {
 
   private final Map<String, Consumer<CodatWebhookPushStatusChangedRequest>> bearerFunctions =
       Map.of(
-          "suppliers",
-          (request) ->
-              getCodatService()
-                  .syncTransactionAwaitingSupplier(
-                      request.getCompanyId(), request.getData().getPushOperationKey()),
           "directCosts",
           (request) ->
               getCodatService()

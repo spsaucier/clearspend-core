@@ -137,115 +137,6 @@ public class CodatServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void syncSupplierWhenDoesNotExist() {
-    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    Business business = createBusinessRecord.business();
-    business.setCodatCompanyRef("test-codat-ref");
-
-    testHelper.setCurrentUser(createBusinessRecord.user());
-
-    AccountActivity newAccountActivity =
-        new AccountActivity(
-            business.getId(),
-            createBusinessRecord.allocationRecord().allocation().getAccountId(),
-            AccountActivityType.NETWORK_CAPTURE,
-            AccountActivityStatus.APPROVED,
-            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()),
-            OffsetDateTime.now(),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.READY);
-
-    // This merchant does not exist in the suppliers
-    newAccountActivity.setMerchant(
-        new MerchantDetails(
-            "Test Restaurant",
-            "",
-            new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
-            MerchantType.AC_REFRIGERATION_REPAIR,
-            "999777",
-            6012,
-            MccGroup.EDUCATION,
-            "test.com",
-            BigDecimal.ZERO,
-            BigDecimal.ZERO,
-            Country.USA));
-    accountActivityRepository.save(newAccountActivity);
-
-    codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
-    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
-
-    assertThat(loggedTransactions.size() > 0).isTrue();
-    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER)
-        .isTrue();
-  }
-
-  @Test
-  void syncSupplierWhenExists() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-
-    AccountActivity newAccountActivity =
-        new AccountActivity(
-            business.getId(),
-            allocation.getAccountId(),
-            AccountActivityType.NETWORK_CAPTURE,
-            AccountActivityStatus.APPROVED,
-            AllocationDetails.of(allocation),
-            OffsetDateTime.now(),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.READY);
-    List<ExpenseCategory> expenseCategories =
-        expenseCategoryRepository.findByBusinessId(createBusinessRecord.business().getId());
-
-    newAccountActivity.setExpenseDetails(
-        new ExpenseDetails(
-            0, expenseCategories.get(0).getId(), expenseCategories.get(0).getCategoryName()));
-
-    chartOfAccountsMappingRepository.save(
-        new ChartOfAccountsMapping(
-            createBusinessRecord.business().getId(),
-            newAccountActivity.getExpenseDetails().getExpenseCategoryId(),
-            0,
-            "1"));
-
-    newAccountActivity.setMerchant(
-        new MerchantDetails(
-            "Test Business",
-            "",
-            new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
-            MerchantType.AC_REFRIGERATION_REPAIR,
-            "999777",
-            6012,
-            MccGroup.EDUCATION,
-            "test.com",
-            BigDecimal.ZERO,
-            BigDecimal.ZERO,
-            Country.USA));
-    newAccountActivity = accountActivityRepository.save(newAccountActivity);
-
-    codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
-    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
-
-    assertThat(loggedTransactions.size() > 0).isTrue();
-    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.IN_PROGRESS).isTrue();
-
-    PagedData<SyncLogResponse> syncLog =
-        mockMvcHelper.queryObject(
-            "/codat/sync-log",
-            HttpMethod.POST,
-            userCookie,
-            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
-            PagedData.class);
-
-    assertThat(syncLog.getTotalElements() > 0).isTrue();
-  }
-
-  @Test
   void fullSyncWithWebhook() throws Exception {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
@@ -267,8 +158,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             "Test Store",
             "",
             new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
+            "Test Supplier",
+            "1",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -294,35 +185,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     newAccountActivity = accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
-    List<TransactionSyncLog> loggedTransactions = transactionSyncLogRepository.findAll();
 
-    assertThat(loggedTransactions.size() > 0).isTrue();
-    assertThat(loggedTransactions.get(0).getStatus() == TransactionSyncStatus.AWAITING_SUPPLIER)
-        .isTrue();
-    assertThat(
-            accountActivityRepository
-                .findById(newAccountActivity.getId())
-                .get()
-                .getIntegrationSyncStatus())
-        .isEqualTo(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
-
-    mockClient.addSupplierToList(new CodatSupplier("supplier-123", "Test Store", "Active", "USD"));
-
-    CodatWebhookPushStatusChangedRequest request =
-        new CodatWebhookPushStatusChangedRequest(
-            business.getCodatCompanyRef(),
-            new CodatWebhookPushStatusData(
-                "suppliers", "Success", "test-push-operation-key-supplier"));
-    MockHttpServletResponse result =
-        mvc.perform(
-                MockMvcRequestBuilders.post("/codat-webhook/push-status-changed")
-                    .contentType("application/json")
-                    .header(
-                        "Authorization",
-                        "Bearer eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY0NTY0NDAzMiwiaWF0IjoxNjQ1NjQ0MDMyfQ")
-                    .content(objectMapper.writeValueAsString(request)))
-            .andReturn()
-            .getResponse();
     Page<TransactionSyncLog> syncLog =
         transactionSyncLogRepository.find(
             business.getId(),
@@ -575,8 +438,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             "Test Business",
             "",
             new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
+            "Test Supplier",
+            "1",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -618,8 +481,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             "Test Business 2",
             "",
             new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
+            "Test Supplier",
+            "1",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -693,8 +556,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             "Test Business",
             "",
             new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
+            "Test Supplier",
+            "1",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,
@@ -721,8 +584,8 @@ public class CodatServiceTest extends BaseCapitalTest {
             "Test Business 2",
             "",
             new Amount(Currency.USD, BigDecimal.TEN),
-            null,
-            null,
+            "Test Supplier",
+            "1",
             MerchantType.AC_REFRIGERATION_REPAIR,
             "999777",
             6012,

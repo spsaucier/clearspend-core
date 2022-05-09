@@ -12,10 +12,8 @@ import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatError;
-import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
-import com.clearspend.capital.client.codat.types.CodatSupplierRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
@@ -126,99 +124,61 @@ public class CodatService {
     if (business.getCodatCompanyRef() == null) {
       return null;
     }
+
     String connectionId = business.getCodatConnectionId();
 
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(
             CurrentUser.getBusinessId(), accountActivityId);
 
-    Optional<CodatSupplier> supplier =
-        codatClient
-            .getSupplierForBusiness(
-                business.getCodatCompanyRef(), accountActivity.getMerchant().getName())
-            .getResults()
-            .stream()
+    if (accountActivity.getMerchant().getCodatSupplierId() == null) {
+      return null;
+    }
+
+    GetAccountsResponse accountsResponse =
+        codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
+    Optional<CodatAccount> expenseAccount =
+        accountsResponse.getResults().stream()
+            .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
             .findFirst();
 
-    if (supplier.isPresent()) {
-
-      // TODO there could be more than one page of accounts. Fix when we filter for the actual
-      // account.
-      GetAccountsResponse accountsResponse =
-          codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
-      Optional<CodatAccount> expenseAccount =
-          accountsResponse.getResults().stream()
-              .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
-              .findFirst();
-
-      if (expenseAccount.isEmpty()) {
-        return new SyncTransactionResponse("FAILED (No expense account)");
-      }
-
-      Optional<ChartOfAccountsMapping> expenseCategoryMapping =
-          chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
-              businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
-
-      if (expenseCategoryMapping.isEmpty()) {
-        return new SyncTransactionResponse("FAILED (Expense category for transaction is unmapped");
-      }
-
-      CodatSyncDirectCostResponse directCostSyncResponse =
-          codatClient.syncTransactionAsDirectCost(
-              business.getCodatCompanyRef(),
-              connectionId,
-              accountActivity,
-              business.getCurrency().name(),
-              supplier.get(),
-              expenseAccount.get(),
-              expenseCategoryMapping.get().getAccountRefId());
-
-      User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
-      transactionSyncLogRepository.save(
-          new TransactionSyncLog(
-              business.getId(),
-              accountActivityId,
-              supplier.get().getId(),
-              TransactionSyncStatus.IN_PROGRESS,
-              directCostSyncResponse.getPushOperationKey(),
-              business.getCodatCompanyRef(),
-              currentUserDetails.getFirstName(),
-              currentUserDetails.getLastName()));
-
-      accountActivityService.updateAccountActivitySyncStatus(
-          business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
-
-      return new SyncTransactionResponse("IN_PROGRESS", directCostSyncResponse);
-    } else {
-      // if supplier does not exist, create it
-
-      CodatPushDataResponse response =
-          codatClient.syncSupplierToCodat(
-              business.getCodatCompanyRef(),
-              connectionId,
-              new CodatSupplierRequest(
-                  accountActivity.getMerchant().getName(),
-                  "ACTIVE",
-                  business.getCurrency().name()));
-
-      User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
-
-      transactionSyncLogRepository.save(
-          new TransactionSyncLog(
-              business.getId(),
-              accountActivityId,
-              "",
-              TransactionSyncStatus.AWAITING_SUPPLIER,
-              response.getPushOperationKey(),
-              business.getCodatCompanyRef(),
-              currentUserDetails.getFirstName(),
-              currentUserDetails.getLastName()));
-
-      accountActivityService.updateAccountActivitySyncStatus(
-          business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
-
-      return new SyncTransactionResponse("WAITING_FOR_SUPPLIER");
+    if (expenseAccount.isEmpty()) {
+      return new SyncTransactionResponse("FAILED (No expense account)");
     }
+
+    Optional<ChartOfAccountsMapping> expenseCategoryMapping =
+        chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
+            businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
+
+    if (expenseCategoryMapping.isEmpty()) {
+      return new SyncTransactionResponse("FAILED (Expense category for transaction is unmapped");
+    }
+
+    CodatSyncDirectCostResponse directCostSyncResponse =
+        codatClient.syncTransactionAsDirectCost(
+            business.getCodatCompanyRef(),
+            connectionId,
+            accountActivity,
+            business.getCurrency().name(),
+            expenseAccount.get(),
+            expenseCategoryMapping.get().getAccountRefId());
+
+    User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
+    transactionSyncLogRepository.save(
+        new TransactionSyncLog(
+            business.getId(),
+            accountActivityId,
+            accountActivity.getMerchant().getCodatSupplierId(),
+            TransactionSyncStatus.IN_PROGRESS,
+            directCostSyncResponse.getPushOperationKey(),
+            business.getCodatCompanyRef(),
+            currentUserDetails.getFirstName(),
+            currentUserDetails.getLastName()));
+
+    accountActivityService.updateAccountActivitySyncStatus(
+        business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
+
+    return new SyncTransactionResponse("IN_PROGRESS", directCostSyncResponse);
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -390,62 +350,6 @@ public class CodatService {
     return newAccount;
   }
 
-  private void syncTransactionIfSupplierExists(
-      TransactionSyncLog transaction, TypedId<BusinessId> businessId) {
-    Business business = businessService.retrieveBusinessForService(businessId, true);
-
-    AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivityForService(
-            businessId, transaction.getAccountActivityId());
-
-    Optional<CodatSupplier> supplier =
-        codatClient
-            .getSupplierForBusiness(
-                business.getCodatCompanyRef(), accountActivity.getMerchant().getName())
-            .getResults()
-            .stream()
-            .findFirst();
-
-    if (supplier.isPresent()) {
-      GetAccountsResponse accountsResponse =
-          codatClient.getAccountsForBusiness(business.getCodatCompanyRef());
-      Optional<CodatAccount> expenseAccount =
-          accountsResponse.getResults().stream()
-              .filter(account -> account.getId().equals(business.getCodatCreditCardId()))
-              .findFirst();
-
-      Optional<ChartOfAccountsMapping> expenseCategoryMapping =
-          chartOfAccountsMappingRepository.findByBusinessIdAndExpenseCategoryId(
-              businessId, accountActivity.getExpenseDetails().getExpenseCategoryId());
-
-      if (expenseAccount.isPresent()) {
-        CodatSyncDirectCostResponse directCostSyncResponse =
-            codatClient.syncTransactionAsDirectCost(
-                business.getCodatCompanyRef(),
-                business.getCodatConnectionId(),
-                accountActivity,
-                business.getCurrency().name(),
-                supplier.get(),
-                expenseAccount.get(),
-                expenseCategoryMapping.get().getAccountRefId());
-
-        Optional<TransactionSyncLog> transactionSyncLogOptional =
-            transactionSyncLogRepository.findById(transaction.getId());
-
-        if (transactionSyncLogOptional.isEmpty()) {
-          return;
-        }
-
-        TransactionSyncLog transactionSyncLog = transactionSyncLogOptional.get();
-
-        transactionSyncLog.setStatus(TransactionSyncStatus.IN_PROGRESS);
-        transactionSyncLog.setDirectCostPushOperationKey(
-            directCostSyncResponse.getPushOperationKey());
-        transactionSyncLogRepository.saveAndFlush(transactionSyncLog);
-      }
-    }
-  }
-
   private void updateSyncStatusIfComplete(TransactionSyncLog transaction) {
     Business business =
         businessService.retrieveBusinessForService(transaction.getBusinessId(), true);
@@ -534,18 +438,6 @@ public class CodatService {
             receiptImageService.getReceiptImage(receipt.getPath()),
             receipt.getContentType(),
             receipt.getId()));
-  }
-
-  @PreAuthorize("hasGlobalPermission('APPLICATION')")
-  public void syncTransactionAwaitingSupplier(String companyId, String pushOperationKey) {
-    Optional<TransactionSyncLog> syncForKey =
-        transactionSyncLogRepository.findByDirectCostPushOperationKey(pushOperationKey);
-
-    if (syncForKey.isEmpty()) {
-      return;
-    }
-
-    syncTransactionIfSupplierExists(syncForKey.get(), syncForKey.get().getBusinessId());
   }
 
   @PreAuthorize("hasGlobalPermission('APPLICATION')")

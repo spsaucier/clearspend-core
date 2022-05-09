@@ -84,23 +84,6 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
   /** Currently focused on preventing permission changes from breaking webhooks. */
   @Test
   @SneakyThrows
-  void handleWebhookCall_PushStatusChanged_Suppliers() {
-    final CodatWebhookPushStatusChangedRequest request =
-        new CodatWebhookPushStatusChangedRequest(
-            createBusinessRecord.business().getCodatCompanyRef(),
-            new CodatWebhookPushStatusData("suppliers", "Success", TXN_SYNC_KEY));
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post(URI.create("/codat-webhook/push-status-changed"))
-                .header("Authorization", codatAuthSecret)
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(request)))
-        .andExpect(MockMvcResultMatchers.status().isOk());
-  }
-
-  /** Currently focused on preventing permission changes from breaking webhooks. */
-  @Test
-  @SneakyThrows
   void handleWebhookCall_PushStatusChanged_DirectCosts() {
     final CodatWebhookPushStatusChangedRequest request =
         new CodatWebhookPushStatusChangedRequest(
