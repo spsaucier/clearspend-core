@@ -131,9 +131,10 @@ public class ChartOfAccountsMappingService {
   void deleteChartOfAccountsMapping(TypedId<BusinessId> businessId, String externalId) {
     Optional<ChartOfAccountsMapping> potentialMapping =
         mappingRepository.findByBusinessIdAndAccountRefId(businessId, externalId);
-
     if (potentialMapping.isPresent()) {
       mappingRepository.delete(potentialMapping.get());
+      expenseCategoryService.disableExpenseCategories(
+          businessId, List.of(potentialMapping.get().getExpenseCategoryId()));
     }
   }
 

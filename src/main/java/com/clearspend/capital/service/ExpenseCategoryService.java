@@ -97,7 +97,9 @@ public class ExpenseCategoryService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CATEGORIES')")
+  @PreAuthorize(
+      "hasRootPermission(#businessId, 'MANAGE_CATEGORIES') OR"
+          + " hasGlobalPermission('APPLICATION')")
   public List<ExpenseCategory> disableExpenseCategories(
       final TypedId<BusinessId> businessId, final List<TypedId<ExpenseCategoryId>> categoryIds) {
     final List<ExpenseCategory> categories =

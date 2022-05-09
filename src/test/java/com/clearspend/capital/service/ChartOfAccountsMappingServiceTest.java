@@ -210,6 +210,7 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   void deleteChartOfAccountsMapping_doesNotDeleteIfRecordIsNotFound() {
     long totalCount = mappingRepository.count();
 
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
     mappingService.deleteChartOfAccountsMapping(
         createBusinessRecord.business().getBusinessId(), "zzz-Test");
 
@@ -219,25 +220,36 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void deleteChartOfAccountsMapping_removesMappingWhenFound() {
-    Optional<String> targetId =
-        mappingRepository
-            .findAllByBusinessId(createBusinessRecord.business().getBusinessId())
-            .stream()
-            .findAny()
-            .map(ChartOfAccountsMapping::getAccountRefId);
 
-    if (targetId.isPresent()) {
-      mappingService.deleteChartOfAccountsMapping(
-          createBusinessRecord.business().getBusinessId(), targetId.get());
-    }
+    Optional<ExpenseCategory> activeCategory =
+        expenseCategoryRepository
+            .findByBusinessIdAndStatus(
+                createBusinessRecord.business().getBusinessId(), ExpenseCategoryStatus.ACTIVE)
+            .stream()
+            .findFirst();
+
+    ChartOfAccountsMapping targetMapping =
+        mappingRepository.save(
+            new ChartOfAccountsMapping(
+                createBusinessRecord.business().getBusinessId(),
+                activeCategory.get().getId(),
+                123,
+                "target-ref"));
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+    mappingService.deleteChartOfAccountsMapping(
+        createBusinessRecord.business().getBusinessId(), targetMapping.getAccountRefId());
 
     List<ChartOfAccountsMapping> allMappings =
         mappingRepository.findAllByBusinessId(createBusinessRecord.business().getBusinessId());
 
     Condition<ChartOfAccountsMapping> missingTarget =
         new Condition<ChartOfAccountsMapping>(
-            mapping -> mapping.getAccountRefId().equals(targetId.get()),
+            mapping -> mapping.getAccountRefId().equals(targetMapping.getAccountRefId()),
             "Contains an element that should be deleted");
     assertThat(allMappings).doNotHave(missingTarget);
+    assertThat(expenseCategoryRepository.findById(activeCategory.get().getId()))
+        .isPresent()
+        .matches(it -> it.get().getStatus().equals(ExpenseCategoryStatus.DISABLED));
   }
 }
