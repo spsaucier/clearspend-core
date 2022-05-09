@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +27,7 @@ import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
@@ -37,6 +39,7 @@ import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Receipt;
@@ -658,6 +661,130 @@ class UserControllerTest extends BaseCapitalTest {
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
         .allowUser(employee)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void updateCardAccount() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId())
+            .allocation();
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    final UpdateCardAccountRequest request =
+        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
+
+    final String response =
+        mvc.perform(
+                patch("/users/cards/%s/account".formatted(card.getId()))
+                    .cookie(createBusinessRecord.authCookie())
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    final com.clearspend.capital.controller.type.card.Card responseCard =
+        objectMapper.readValue(response, com.clearspend.capital.controller.type.card.Card.class);
+
+    final com.clearspend.capital.controller.type.card.Card expectedResponseCard =
+        new com.clearspend.capital.controller.type.card.Card(card);
+    expectedResponseCard.setAccountId(allocation.getAccountId());
+    expectedResponseCard.setAllocationId(allocation.getAllocationId());
+
+    assertEquals(expectedResponseCard, responseCard);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("accountId", allocation.getAccountId())
+        .hasFieldOrPropertyWithValue("allocationId", allocation.getAllocationId());
+  }
+
+  @Test
+  @SneakyThrows
+  void updateCardAccount_CancelledCard() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId())
+            .allocation();
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card.setStatus(CardStatus.CANCELLED);
+    card = cardRepository.save(card);
+    final UpdateCardAccountRequest request =
+        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
+
+    mvc.perform(
+            patch("/users/cards/%s/account".formatted(card.getId()))
+                .cookie(createBusinessRecord.authCookie())
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateCardAccount_UserPermissions() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Allocation allocation =
+        testHelper
+            .createAllocation(
+                createBusinessRecord.business().getId(),
+                "Child",
+                createBusinessRecord.allocationRecord().allocation().getId())
+            .allocation();
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    final UpdateCardAccountRequest request =
+        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mvc.perform(
+                patch("/users/cards/%s/account".formatted(card.getId()))
+                    .cookie(cookie)
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
         .build()
         .validateMockMvcCall(action);
   }

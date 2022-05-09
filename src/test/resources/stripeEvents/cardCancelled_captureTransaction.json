@@ -1,0 +1,56 @@
+{
+  "id": "evt_1KUaNk4g2Xo63Nb8Uw7dvKNz",
+  "data": {
+    "object": {
+      "id": "ipi_1Kvpws4g2Xo63Nb8zOiFyICz",
+      "object": "issuing.transaction",
+      "amount": -100,
+      "amount_details": {
+        "atm_fee": null
+      },
+      "authorization": "iauth_1Kvpwq4g2Xo63Nb83veTeJrW",
+      "balance_transaction": null,
+      "card": "{{cardExternalRef}}",
+      "cardholder": "ich_1KlILA4g2Xo63Nb8vaY0Tpfr",
+      "created": 1651700490,
+      "currency": "usd",
+      "dispute": null,
+      "flow_transaction": "trxn_1Kvpwt4g2Xo63Nb8XEgmjvLY",
+      "interchange": {
+        "amount_decimal": "2.0"
+      },
+      "livemode": false,
+      "merchant_amount": -100,
+      "merchant_currency": "usd",
+      "merchant_data": {
+        "category": "hotels_motels_and_resorts",
+        "category_code": "7011",
+        "city": "San Francisco",
+        "country": "US",
+        "name": "UBER *TRI",
+        "network_id": "1234567890",
+        "postal_code": "94103",
+        "state": "CA"
+      },
+      "metadata": {
+      },
+      "treasury": {
+        "received_credit": null,
+        "received_debit": "rd_1Kvpws4g2Xo63Nb8BQ5oHZ8K"
+      },
+      "type": "capture",
+      "wallet": null
+    }
+  },
+  "type": "issuing_transaction.created",
+  "object": "event",
+  "account": "{{stripeAccountId}}",
+  "created": 1645205796,
+  "request": {
+    "id": "req_fXCaykmwqh6YpA",
+    "idempotency_key": "bbdd11d9-1026-4f9f-a49f-de73a828eza9"
+  },
+  "livemode": false,
+  "api_version": "2020-08-27; financial_accounts_beta=v3; issuing_flows_beta=v1; money_flows_beta=v2",
+  "pending_webhooks": 1
+}

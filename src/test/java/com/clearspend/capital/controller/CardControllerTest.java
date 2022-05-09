@@ -2,6 +2,8 @@ package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
@@ -20,6 +22,7 @@ import com.clearspend.capital.controller.type.card.RevealCardResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -28,8 +31,14 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.data.model.enums.TransactionLimitType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
-import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
+import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.CardRepository;
+import com.clearspend.capital.data.repository.TransactionLimitRepository;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
@@ -48,6 +57,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -57,8 +68,11 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
+  private final MockMvc mockMvc;
   private final EntityManager entityManager;
-  private final BusinessLimitRepository businessLimitRepository;
+  private final TransactionLimitRepository transactionLimitRepository;
+  private final PermissionValidationHelper permissionValidationHelper;
+  private final CardRepository cardRepository;
 
   private final Faker faker = new Faker();
 
@@ -158,6 +172,150 @@ public class CardControllerTest extends BaseCapitalTest {
 
     assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
     assertThat(cardDetailsResponse.getDisabledPaymentTypes()).isEmpty();
+  }
+
+  @Test
+  @SneakyThrows
+  void updateCard() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
+    final Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
+    final Set<PaymentType> disabledPaymentTypes =
+        Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
+    final boolean disableForeign = false;
+    final UpdateCardRequest request = new UpdateCardRequest();
+    request.setLimits(CurrencyLimit.ofMap(limits));
+    request.setDisabledMccGroups(disabledCategories);
+    request.setDisabledPaymentTypes(disabledPaymentTypes);
+    request.setDisableForeign(disableForeign);
+
+    final String content =
+        mockMvc
+            .perform(
+                patch("/cards/%s".formatted(card.getId()))
+                    .cookie(createBusinessRecord.authCookie())
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final CardDetailsResponse response = objectMapper.readValue(content, CardDetailsResponse.class);
+    assertThat(response)
+        .hasFieldOrPropertyWithValue("limits", CurrencyLimit.ofMap(limits))
+        .hasFieldOrPropertyWithValue("disabledMccGroups", disabledCategories)
+        .hasFieldOrPropertyWithValue("disabledPaymentTypes", disabledPaymentTypes)
+        .hasFieldOrPropertyWithValue("disableForeign", disableForeign)
+        .hasFieldOrPropertyWithValue(
+            "card", new com.clearspend.capital.controller.type.card.Card(card));
+
+    final TransactionLimit transactionLimit =
+        transactionLimitRepository
+            .findByBusinessIdAndTypeAndOwnerId(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                card.getId().toUuid())
+            .orElseThrow();
+    assertThat(transactionLimit)
+        .hasFieldOrPropertyWithValue("limits", limits)
+        .hasFieldOrPropertyWithValue("disabledMccGroups", disabledCategories)
+        .hasFieldOrPropertyWithValue("disabledPaymentTypes", disabledPaymentTypes)
+        .hasFieldOrPropertyWithValue("disableForeign", disableForeign);
+  }
+
+  @Test
+  @SneakyThrows
+  void updateCard_CancelledCard() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setStatus(CardStatus.CANCELLED);
+    card = cardRepository.saveAndFlush(card);
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
+    final Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
+    final Set<PaymentType> disabledPaymentTypes =
+        Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
+    final boolean disableForeign = false;
+    final UpdateCardRequest request = new UpdateCardRequest();
+    request.setLimits(CurrencyLimit.ofMap(limits));
+    request.setDisabledMccGroups(disabledCategories);
+    request.setDisabledPaymentTypes(disabledPaymentTypes);
+    request.setDisableForeign(disableForeign);
+
+    mockMvc
+        .perform(
+            patch("/cards/%s".formatted(card.getId()))
+                .cookie(createBusinessRecord.authCookie())
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateCard_UserPermissions() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
+        Map.of(
+            Currency.USD,
+            Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
+    final Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
+    final Set<PaymentType> disabledPaymentTypes =
+        Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
+    final boolean disableForeign = false;
+    final UpdateCardRequest request = new UpdateCardRequest();
+    request.setLimits(CurrencyLimit.ofMap(limits));
+    request.setDisabledMccGroups(disabledCategories);
+    request.setDisabledPaymentTypes(disabledPaymentTypes);
+    request.setDisableForeign(disableForeign);
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvc.perform(
+                patch("/cards/%s".formatted(card.getId()))
+                    .cookie(cookie)
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @Test

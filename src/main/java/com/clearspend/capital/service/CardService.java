@@ -254,8 +254,7 @@ public class CardService {
     return new CardRecord(card, account);
   }
 
-  @PostAuthorize(
-      "isSelfOwned(returnObject) or hasAllocationPermission(returnObject.allocationId, 'MANAGE_CARDS')")
+  @PostAuthorize("hasPermission(returnObject, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
   public Card retrieveCard(TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId) {
     return cardRepository
         .findByBusinessIdAndId(businessId, cardId)
@@ -306,31 +305,25 @@ public class CardService {
   @Transactional
   @PreAuthorize("isSelfOwned(#card)")
   public Card activateMyCard(Card card, CardStatusReason statusReason) {
-    return activateCard(cardRepository.findById(card.getId()).orElseThrow(), statusReason);
+    return activateCard(card, statusReason);
   }
 
   @Transactional
   @PreFilter(filterTarget = "cards", value = "isSelfOwned(filterObject)")
   public Card activateMyCards(List<Card> cards, CardStatusReason statusReason) {
-
     if (cards.isEmpty()) {
       throw new RecordNotFoundException(
           Table.CARD, CurrentUser.getBusinessId(), CurrentUser.getUserId());
     }
 
-    Card activatedCard =
-        activateMyCard(cardRepository.findById(cards.get(0).getId()).orElseThrow(), statusReason);
+    Card activatedCard = activateMyCard(cards.get(0), statusReason);
 
     if (cards.size() > 1) {
       log.warn(
           "Found a card collision during card activation for businessId={}. Total activated cards: {}",
           CurrentUser.getBusinessId(),
           cards.size());
-      cards
-          .subList(1, cards.size())
-          .forEach(
-              card ->
-                  activateCard(cardRepository.findById(card.getId()).orElseThrow(), statusReason));
+      cards.subList(1, cards.size()).forEach(card -> activateCard(card, statusReason));
     }
 
     return activatedCard;
@@ -342,10 +335,6 @@ public class CardService {
       throw new InvalidRequestException("Card is already activated");
     }
 
-    if (card.getStatus() == CardStatus.CANCELLED) {
-      throw new InvalidRequestException("Cancelled card cannot be activated");
-    }
-
     card.setActivated(true);
     card.setActivationDate(OffsetDateTime.now(ZoneOffset.UTC));
 
@@ -353,17 +342,15 @@ public class CardService {
   }
 
   @Transactional
-  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  @PreAuthorize("hasPermission(#card, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
   public Card blockCard(Card card, CardStatusReason reason) {
-    return updateCardStatus(
-        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.INACTIVE, reason, false);
+    return updateCardStatus(card, CardStatus.INACTIVE, reason, false);
   }
 
   @Transactional
-  @PreAuthorize("isSelfOwned(#card) or hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  @PreAuthorize("hasPermission(#card, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
   public Card unblockCard(Card card, CardStatusReason reason) {
-    return updateCardStatus(
-        cardRepository.findById(card.getId()).orElseThrow(), CardStatus.ACTIVE, reason, false);
+    return updateCardStatus(card, CardStatus.ACTIVE, reason, false);
   }
 
   @Transactional
@@ -382,6 +369,8 @@ public class CardService {
       throw new InvalidRequestException("Cannot update status for non activated cards");
     }
 
+    // validTransition will return the new status but will throw an exception if the status change
+    // is not allowed
     card.setStatus(card.getStatus().validTransition(cardStatus));
     card.setStatusReason(statusReason);
     cardRepository.saveAndFlush(card);
@@ -439,32 +428,32 @@ public class CardService {
   }
 
   @Transactional
-  @PreAuthorize("hasAllocationPermission(#allocation.id, 'MANAGE_CARDS')")
+  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
   public Card updateCardAccount(@NonNull Card card, @NonNull Allocation allocation) {
-    final Account account = accountService.retrieveAccountById(allocation.getAccountId(), false);
-    // make sure we can look up the business
-    Business business =
-        businessRepository
-            .findById(card.getBusinessId())
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, card.getBusinessId()));
+    if (card.getStatus() == CardStatus.CANCELLED) {
+      throw new InvalidRequestException("Cannot update account for cancelled card");
+    }
 
-    Card refetch = cardRepository.findById(card.getId()).orElseThrow();
+    final Account account = accountService.retrieveAccountById(allocation.getAccountId(), false);
 
     // update the card with the new allocation and accounts
-    refetch.setAllocationId(allocation.getId());
-    refetch.setAccountId(account.getId());
+    card.setAllocationId(allocation.getId());
+    card.setAccountId(account.getId());
 
-    return cardRepository.save(refetch);
+    return cardRepository.save(card);
   }
 
   @Transactional
-  @PreAuthorize("hasAllocationPermission(#card.allocationId, 'MANAGE_CARDS')")
+  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
   public void updateCard(
       Card card,
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
       Set<MccGroup> disabledMccGroups,
       Set<PaymentType> disabledPaymentTypes,
       Boolean disableForeign) {
+    if (card.getStatus() == CardStatus.CANCELLED) {
+      throw new InvalidRequestException("Cannot update account for cancelled card");
+    }
 
     // TODO: When we add permissions to the TransactionLimitService, pass in the Entities not IDs
     transactionLimitService.updateCardSpendLimit(
@@ -527,6 +516,11 @@ public class CardService {
       card = cardRecord.card();
       if (card.getType() != CardType.PHYSICAL) {
         log.error("Unexpected card type containing shipping information for card " + card.getId());
+        return;
+      }
+
+      if (card.getStatus() == CardStatus.CANCELLED) {
+        log.error("Card with shipping information has already been cancelled: " + card.getId());
         return;
       }
     } catch (RecordNotFoundException e) {

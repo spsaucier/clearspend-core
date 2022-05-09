@@ -46,6 +46,8 @@ import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonUpdateParams.Verification.Document;
 import java.io.FileReader;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -101,6 +103,8 @@ public class StripeMockClient extends StripeClient {
   private final Resource individualDetailsRequired;
   private final Resource ivalidAddressPoBoxesDisallowed;
   private final Resource LLC_ownersRequired;
+  private final List<MockAuthorization> mockAuthorizations =
+      Collections.synchronizedList(new ArrayList<>());
 
   public StripeMockClient(
       StripeProperties stripeProperties,
@@ -173,6 +177,10 @@ public class StripeMockClient extends StripeClient {
     this.individualDetailsRequired = individualDetailsRequired;
     this.ivalidAddressPoBoxesDisallowed = ivalidAddressPoBoxesDisallowed;
     this.LLC_ownersRequired = LLC_ownersRequired;
+  }
+
+  public List<MockAuthorization> getMockAuthorizations() {
+    return mockAuthorizations;
   }
 
   @Override
@@ -762,6 +770,7 @@ public class StripeMockClient extends StripeClient {
 
   public void reset() {
     createdObjects.clear();
+    mockAuthorizations.clear();
   }
 
   public long countCreatedObjectsByType(Class<?> clazz) {
@@ -780,6 +789,8 @@ public class StripeMockClient extends StripeClient {
             ? networkCommon.getNetworkMessage().getId()
             : "n/a",
         networkCommon.getRequestedAmount());
+    mockAuthorizations.add(
+        new MockAuthorization(MockAuthorizationStatus.DECLINED, authorization, networkCommon));
   }
 
   @Override
@@ -792,10 +803,20 @@ public class StripeMockClient extends StripeClient {
         networkCommon.getNetworkMessage().getId(),
         // amounts going back to Stripe for authorizations should be positive
         networkCommon.getRequestedAmount().abs());
+    mockAuthorizations.add(
+        new MockAuthorization(MockAuthorizationStatus.APPROVED, authorization, networkCommon));
   }
 
   @Override
   public Account updateAccountTosAcceptance(Business business) {
     return new Account();
   }
+
+  public enum MockAuthorizationStatus {
+    APPROVED,
+    DECLINED
+  }
+
+  public record MockAuthorization(
+      MockAuthorizationStatus status, Authorization authorization, NetworkCommon networkCommon) {}
 }

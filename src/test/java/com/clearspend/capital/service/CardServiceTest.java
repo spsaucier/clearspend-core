@@ -1,12 +1,13 @@
 package com.clearspend.capital.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.common.error.InvalidStateTransitionException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
@@ -15,23 +16,16 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
-import com.clearspend.capital.data.model.enums.LimitPeriod;
-import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.MccGroup;
-import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
-import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.google.common.collect.Lists;
-import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -168,6 +162,77 @@ class CardServiceTest extends BaseCapitalTest {
     testHelper.setCurrentUser(snooper);
     assertThrows(
         AccessDeniedException.class, () -> cardService.getCard(business.getId(), card.getId()));
+  }
+
+  @Test
+  void cannotChangeStatusOfCancelledCard() {
+    final String expectedMessage = "Invalid state transition from %s but have %s";
+
+    final InvalidStateTransitionException activateMyCardException =
+        assertThrows(
+            InvalidStateTransitionException.class,
+            () ->
+                cardService.activateMyCard(
+                    createCancelledCard(false), CardStatusReason.CARDHOLDER_REQUESTED));
+    assertEquals(
+        expectedMessage.formatted(CardStatus.CANCELLED, CardStatus.ACTIVE),
+        activateMyCardException.getMessage());
+
+    final List<Card> myCards = new ArrayList<>();
+    myCards.add(createCancelledCard(false));
+
+    final InvalidStateTransitionException activateMyCardsException =
+        assertThrows(
+            InvalidStateTransitionException.class,
+            () -> cardService.activateMyCards(myCards, CardStatusReason.CARDHOLDER_REQUESTED));
+    assertEquals(
+        expectedMessage.formatted(CardStatus.CANCELLED, CardStatus.ACTIVE),
+        activateMyCardsException.getMessage());
+
+    final InvalidStateTransitionException blockCardException =
+        assertThrows(
+            InvalidStateTransitionException.class,
+            () ->
+                cardService.blockCard(
+                    createCancelledCard(true), CardStatusReason.CARDHOLDER_REQUESTED));
+    assertEquals(
+        expectedMessage.formatted(CardStatus.CANCELLED, CardStatus.INACTIVE),
+        blockCardException.getMessage());
+
+    final InvalidStateTransitionException unblockCardException =
+        assertThrows(
+            InvalidStateTransitionException.class,
+            () ->
+                cardService.unblockCard(
+                    createCancelledCard(true), CardStatusReason.CARDHOLDER_REQUESTED));
+    assertEquals(
+        expectedMessage.formatted(CardStatus.CANCELLED, CardStatus.ACTIVE),
+        unblockCardException.getMessage());
+
+    final InvalidStateTransitionException retireCardException =
+        assertThrows(
+            InvalidStateTransitionException.class,
+            () ->
+                cardService.cancelCard(
+                    createCancelledCard(true), CardStatusReason.CARDHOLDER_REQUESTED));
+    assertEquals(
+        expectedMessage.formatted(CardStatus.CANCELLED, CardStatus.CANCELLED),
+        retireCardException.getMessage());
+  }
+
+  private Card createCancelledCard(final boolean setActivated) {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            allocation,
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card.setActivated(setActivated);
+    card.setStatus(CardStatus.CANCELLED);
+    return cardRepository.saveAndFlush(card);
   }
 
   @SneakyThrows
@@ -552,101 +617,6 @@ class CardServiceTest extends BaseCapitalTest {
     assertThat(cardService.getCardAccounts(card, null)).isNotNull();
   }
 
-  @SneakyThrows
-  @Tag("PERMISSIONS")
-  @Test
-  void updateCardAccount_requiresCardManagement() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    User manager =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_MANAGER).user();
-    User employee =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-    User snooper =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-
-    // Issue a card to the Employee
-    testHelper.setCurrentUser(manager);
-    Card card =
-        testHelper.issueCard(
-            business,
-            allocation,
-            employee,
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            true);
-    Account account = accountService.retrieveAccountById(allocation.getAccountId(), false);
-
-    // The Manager should be able to update the card account
-    testHelper.setCurrentUser(manager);
-    assertThat(cardService.updateCardAccount(card, allocation)).isNotNull();
-
-    // A different employee within the same business also cannot Update the Card Account
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class, () -> cardService.updateCardAccount(card, allocation));
-
-    // The Card Owner should NOT be able to update their Card Account
-    testHelper.setCurrentUser(employee);
-    assertThrows(
-        AccessDeniedException.class, () -> cardService.updateCardAccount(card, allocation));
-  }
-
-  @SneakyThrows
-  @Tag("PERMISSIONS")
-  @Test
-  void updateCard_requiresCardManagement() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    User manager =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_MANAGER).user();
-    User employee =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-    User snooper =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-
-    // Issue a card to the Employee
-    testHelper.setCurrentUser(manager);
-    Card card =
-        testHelper.issueCard(
-            business,
-            allocation,
-            employee,
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            true);
-    Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
-        Map.of(
-            Currency.USD,
-            Map.of(LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, BigDecimal.ZERO)));
-    Set<MccGroup> disabledCategories = Set.of(MccGroup.CHILD_CARE, MccGroup.FOOD_BEVERAGE);
-    Set<PaymentType> disabledPaymentTypes = Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
-    boolean disableForeign = false;
-
-    // The Manager should be able to update the Card limits
-    testHelper.setCurrentUser(manager);
-    assertDoesNotThrow(
-        () ->
-            cardService.updateCard(
-                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
-
-    // A different employee within the same business also cannot Update the Card limits
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class,
-        () ->
-            cardService.updateCard(
-                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
-
-    // The Card Owner should NOT be able to update their Card limits
-    testHelper.setCurrentUser(employee);
-    assertThrows(
-        AccessDeniedException.class,
-        () ->
-            cardService.updateCard(
-                card, limits, disabledCategories, disabledPaymentTypes, disableForeign));
-  }
-
   private Card issueCard(User cardOwner) {
     return testHelper.issueCard(
         business,
@@ -677,18 +647,5 @@ class CardServiceTest extends BaseCapitalTest {
     Card card = issueCard();
     List<Account> accounts = cardService.getCardAccounts(card, null);
     assertThat(accounts).hasSize(1);
-  }
-
-  @Test
-  void updateCardAccount() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    Card card = issueCard();
-    AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            business.getId(), testHelper.generateBusinessName(), allocation.getId());
-
-    Card updatedCard = cardService.updateCardAccount(card, allocationRecord.allocation());
-    assertThat(updatedCard.getAllocationId()).isEqualTo(allocationRecord.allocation().getId());
-    assertThat(updatedCard.getAccountId()).isEqualTo(allocationRecord.account().getId());
   }
 }

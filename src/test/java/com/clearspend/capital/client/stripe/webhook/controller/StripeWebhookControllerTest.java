@@ -2,6 +2,8 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.AssertionHelper;
 import com.clearspend.capital.AssertionHelper.AuthorizationRecord;
@@ -9,6 +11,8 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.StripeMockEventRequest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.client.stripe.StripeMockClient.MockAuthorizationStatus;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
@@ -26,6 +30,7 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -44,7 +49,9 @@ import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
@@ -54,6 +61,7 @@ import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.TransactionLimitService;
@@ -72,6 +80,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,9 +91,11 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.web.servlet.MockMvc;
 
 @SuppressWarnings("JavaTimeDefaultTimeZone")
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
@@ -104,10 +115,13 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private StripeWebhookLogRepository stripeWebhookLogRepository;
 
   @Autowired private AccountService accountService;
+  @Autowired private StripeMockClient stripeMockClient;
   @Autowired private AllocationService allocationService;
   @Autowired private TransactionLimitService transactionLimitService;
   @Autowired private PendingStripeTransferService pendingStripeTransferService;
   @Autowired private ServiceHelper serviceHelper;
+  @Autowired private CardService cardService;
+  @Autowired private MockMvc mvc;
 
   @Autowired StripeWebhookController stripeWebhookController;
   @Autowired StripeDirectHandler stripeDirectHandler;
@@ -122,25 +136,28 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   // create business, root allocation, fund account with $1,000,000
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      user = createBusinessRecord.user();
-      business = createBusinessRecord.business();
-      rootAllocation = createBusinessRecord.allocationRecord().allocation();
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
-      testHelper.transactBankAccount(
-          businessBankAccount,
-          BankAccountTransactType.DEPOSIT,
-          createBusinessRecord.user(),
-          BigDecimal.valueOf(100L),
-          false);
-      // nasty hack to update the accounts balance
-      Account account = createBusinessRecord.allocationRecord().account();
-      account.setLedgerBalance(
-          account.getLedgerBalance().add(Amount.of(Currency.USD, BigDecimal.valueOf(1000000L))));
-      accountRepository.save(account);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    user = createBusinessRecord.user();
+    business = createBusinessRecord.business();
+    rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
+    testHelper.transactBankAccount(
+        businessBankAccount,
+        BankAccountTransactType.DEPOSIT,
+        createBusinessRecord.user(),
+        BigDecimal.valueOf(100L),
+        false);
+    // nasty hack to update the accounts balance
+    Account account = createBusinessRecord.allocationRecord().account();
+    account.setLedgerBalance(
+        account.getLedgerBalance().add(Amount.of(Currency.USD, BigDecimal.valueOf(1000000L))));
+    accountRepository.save(account);
+  }
+
+  @AfterEach
+  public void cleanup() {
+    stripeMockClient.reset();
   }
 
   private String generateStripeId(String prefix) {
@@ -1285,5 +1302,117 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     return accountActivityRepository.findAll().stream()
         .max((a1, a2) -> OffsetDateTime.timeLineOrder().compare(a1.getCreated(), a2.getCreated()))
         .orElseThrow();
+  }
+
+  @Test
+  @SneakyThrows
+  void processAuthorization_CardCancelled() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    cardService.cancelCard(card, CardStatusReason.CARDHOLDER_REQUESTED);
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String json = authorizationTemplate.execute(params);
+    sendStripeJson(json);
+
+    final List<AccountActivity> allActivities =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivities.size());
+    assertThat(allActivities.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.DECLINED)
+        .hasFieldOrPropertyWithValue(
+            "declineDetails", List.of(new DeclineDetails(DeclineReason.INVALID_CARD_STATUS)));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.DECLINED);
+  }
+
+  @SneakyThrows
+  private void sendStripeJson(final String json) {
+    mvc.perform(
+            post("/stripe/webhook/issuing")
+                .content(json)
+                .header("skip-stripe-header-verification", "true")
+                .contentType("application/json"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  @SneakyThrows
+  void processCompletion_CardCancelledAfterAuthorization() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Template captureTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_captureTransaction.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String authorizationJson = authorizationTemplate.execute(params);
+    final String captureJson = captureTemplate.execute(params);
+    sendStripeJson(authorizationJson);
+
+    final List<AccountActivity> allActivitiesPostAuth =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivitiesPostAuth.size());
+    assertThat(allActivitiesPostAuth.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    cardService.cancelCard(card, CardStatusReason.CARDHOLDER_REQUESTED);
+
+    sendStripeJson(captureJson);
+
+    final List<AccountActivity> allActivitiesPostCapture =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup, 3rd is authorization
+    assertEquals(4, allActivitiesPostCapture.size());
+
+    assertThat(allActivitiesPostCapture.get(3))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED);
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
   }
 }
