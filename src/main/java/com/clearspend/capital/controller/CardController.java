@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -68,6 +69,13 @@ public class CardController {
     List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
     TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
     String businessLegalName = businessService.getBusiness(businessId, true).getLegalName();
+
+    // Keeping this at the controller level so as not to break some great test logic we have in
+    // place for individual cards
+    if (request.getFundingType() == FundingType.INDIVIDUAL) {
+      throw new InvalidRequestException("Individual card issuing is not currently supported");
+    }
+
     request
         .getCardType()
         .forEach(
