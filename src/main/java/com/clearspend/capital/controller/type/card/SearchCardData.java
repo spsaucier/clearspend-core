@@ -32,11 +32,9 @@ public class SearchCardData {
   @JsonProperty("user")
   private UserData user;
 
-  @NonNull
   @JsonProperty("allocation")
   private Item<TypedId<AllocationId>> allocation;
 
-  @NonNull
   @JsonProperty("balance")
   private Amount balance;
 

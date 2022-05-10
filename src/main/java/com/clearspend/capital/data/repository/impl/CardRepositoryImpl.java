@@ -6,6 +6,7 @@ import com.blazebit.persistence.JoinType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.SqlResourceLoader;
 import com.clearspend.capital.common.typedid.data.AccountId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -31,6 +32,7 @@ import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
+import com.clearspend.capital.util.function.ThrowableFunctions;
 import com.clearspend.capital.util.function.TypeFunctions;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
@@ -42,6 +44,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -90,6 +93,28 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
   private SearchCardData cardFilterRowMapper(final ResultSet resultSet, final int rowNum)
       throws SQLException {
+    final Currency currency =
+        TypeFunctions.nullableStringToEnum(
+            resultSet.getString("ledger_balance_currency"), Currency::valueOf);
+    final BigDecimal amount =
+        Optional.ofNullable(resultSet.getBigDecimal("ledger_balance_amount"))
+            .map(
+                ThrowableFunctions.sneakyThrows(
+                    value -> value.add(resultSet.getBigDecimal("hold_total"))))
+            .orElse(null);
+    // These should both either be null or non-null
+    final com.clearspend.capital.controller.type.Amount ledgerAmount =
+        Optional.ofNullable(currency)
+            .map(cur -> new com.clearspend.capital.controller.type.Amount(currency, amount))
+            .orElse(null);
+
+    final TypedId<AllocationId> allocationId =
+        TypeFunctions.nullableUuidToTypedId(resultSet.getObject("allocation_id", UUID.class));
+    final String allocationName = resultSet.getString("allocation_name");
+    // These should both either be null or non-null
+    final Item<TypedId<AllocationId>> allocationItem =
+        Optional.ofNullable(allocationId).map(id -> new Item<>(id, allocationName)).orElse(null);
+
     return new SearchCardData(
         new TypedId<>(resultSet.getObject("card_id", UUID.class)),
         resultSet.getString("card_number"),
@@ -98,14 +123,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             UserType.valueOf(resultSet.getString("user_type")),
             new String(crypto.decrypt(resultSet.getBytes("user_first_name_enc"))),
             new String(crypto.decrypt(resultSet.getBytes("user_last_name_enc")))),
-        new Item<>(
-            new TypedId<>(resultSet.getObject("allocation_id", UUID.class)),
-            resultSet.getString("allocation_name")),
-        new com.clearspend.capital.controller.type.Amount(
-            Currency.valueOf(resultSet.getString("ledger_balance_currency")),
-            resultSet
-                .getBigDecimal("ledger_balance_amount")
-                .add(resultSet.getBigDecimal("hold_total"))),
+        allocationItem,
+        ledgerAmount,
         CardStatus.valueOf(resultSet.getString("card_status")),
         CardType.valueOf(resultSet.getString("card_type")),
         resultSet.getBoolean("card_activated"),
@@ -189,7 +208,12 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             .map(r -> new CardDetailsRecord(r.card, r.allocation, r.account, r.transactionLimit))
             .collect(Collectors.toList());
 
-    calculateAvailableBalance(result.stream().map(CardDetailsRecord::account).distinct().toList());
+    calculateAvailableBalance(
+        result.stream()
+            .map(CardDetailsRecord::account)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList());
 
     return result;
   }
@@ -224,8 +248,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     CriteriaBuilder<Tuple> builder =
         criteriaBuilderFactory.create(entityManager, Tuple.class).from(Card.class, "card");
 
-    BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Allocation.class, JoinType.INNER);
-    BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Account.class, JoinType.INNER);
+    BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Allocation.class, JoinType.LEFT);
+    BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Account.class, JoinType.LEFT);
     BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, User.class, JoinType.INNER);
 
     BlazePersistenceUtils.joinOnPrimaryKey(

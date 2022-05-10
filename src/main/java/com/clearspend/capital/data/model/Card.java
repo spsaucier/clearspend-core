@@ -137,4 +137,8 @@ public class Card extends TypedMutable<CardId> implements Permissionable {
   public TypedId<UserId> getOwnerId() {
     return getUserId();
   }
+
+  public boolean isLinkedToAllocation() {
+    return allocationId != null;
+  }
 }

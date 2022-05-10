@@ -27,7 +27,6 @@ public class Card {
   private TypedId<CardId> cardId;
 
   @JsonProperty("allocationId")
-  @NonNull
   private TypedId<AllocationId> allocationId;
 
   @JsonProperty("userId")
@@ -35,7 +34,6 @@ public class Card {
   private TypedId<UserId> userId;
 
   @JsonProperty("accountId")
-  @NonNull
   private TypedId<AccountId> accountId;
 
   @JsonProperty("status")

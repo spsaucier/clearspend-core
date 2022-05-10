@@ -17,21 +17,27 @@ SELECT
     Account.Ledger_Balance_Currency AS ledger_balance_currency,
     SUM(CASE WHEN Hold.Id IS NOT NULL THEN Hold.Amount_Amount ELSE 0.00 END) AS hold_total
     {{/count}}
-FROM Card INNER JOIN Allocation
-    ON Card.Allocation_Id = Allocation.Id
-    LEFT OUTER JOIN get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') AS Self_Permission
-        ON (Allocation.Id = Self_Permission.Allocation_Id AND Card.User_Id = :invokingUser)
-    LEFT OUTER JOIN get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_CARDS') AS Card_Manager_Permission
-        ON Allocation.Id = Card_Manager_Permission.Allocation_Id
-    INNER JOIN Account
-        ON Card.Account_Id = Account.Id
-    INNER JOIN Users
-        ON Card.User_Id = Users.Id
-    {{^count}}
-    LEFT OUTER JOIN Hold
-        ON (Account.Id = Hold.Account_Id AND Hold.Status = 'PLACED' AND Hold.Expiration_Date > :javaNow)
-    {{/count}}
-WHERE (Self_Permission.Allocation_Id IS NOT NULL OR Card_Manager_Permission.Allocation_Id IS NOT NULL)
+FROM Card
+LEFT JOIN Allocation ON Card.Allocation_Id = Allocation.Id
+LEFT JOIN LATERAL (
+    SELECT permissions.*
+    -- If Allocation.id is null, then all possible allocation permissions are returned
+    FROM get_all_allocation_permissions(:businessId, :invokingUser, Card.Allocation_Id, CAST(:globalRoles AS VARCHAR[])) permissions
+    WHERE (Card.Allocation_Id IS NOT NULL AND Card.Allocation_Id = permissions.allocation_id)
+    OR permissions.parent_allocation_id IS NULL
+) all_permissions ON true
+LEFT JOIN Account
+    ON Card.Account_Id = Account.Id
+INNER JOIN Users
+    ON Card.User_Id = Users.Id
+{{^count}}
+LEFT OUTER JOIN Hold
+    ON (Account.Id = Hold.Account_Id AND Hold.Status = 'PLACED' AND Hold.Expiration_Date > :javaNow)
+{{/count}}
+WHERE (
+    (all_permissions.permissions @> ARRAY['VIEW_OWN']::allocationpermission[] AND Card.User_Id = :invokingUser)
+    OR all_permissions.permissions @> ARRAY['MANAGE_CARDS']::allocationpermission[]
+)
     AND (Card.Expiration_Date > :javaNow
         OR Card.Expiration_Date IS NULL)
     AND Card.Business_Id = :businessId

@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequ
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardAccount;
+import com.clearspend.capital.controller.type.card.CardAndAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
@@ -232,7 +233,7 @@ public class UserController {
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
         cardService.blockCard(
-            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
+            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
             request.getStatusReason()));
   }
 
@@ -273,7 +274,7 @@ public class UserController {
 
     return new Card(
         cardService.unblockCard(
-            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
+            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
             request.getStatusReason()));
   }
 
@@ -289,8 +290,21 @@ public class UserController {
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
         cardService.cancelCard(
-            cardService.getCard(CurrentUser.getBusinessId(), cardId).card(),
+            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
             request.getStatusReason()));
+  }
+
+  @PatchMapping("/cards/{cardId}/unlink")
+  CardAndAccount unlinkCard(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<CardId> cardId) {
+    return CardAndAccount.of(
+        cardService.unlinkCard(cardService.retrieveCard(CurrentUser.getBusinessId(), cardId)));
   }
 
   @GetMapping("/cards/{cardId}/accounts")

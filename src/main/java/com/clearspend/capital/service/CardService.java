@@ -359,6 +359,38 @@ public class CardService {
     return updateCardStatus(card, CardStatus.CANCELLED, reason, false);
   }
 
+  @Transactional
+  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public CardRecord unlinkCard(final Card card) {
+    if (card.getType() == CardType.VIRTUAL) {
+      throw new InvalidRequestException("Cannot unlink a virtual card");
+    }
+
+    if (!card.isLinkedToAllocation()) {
+      throw new InvalidRequestException("Cannot unlink a card that is already unlinked");
+    }
+
+    final Account cardAccount;
+    if (card.getFundingType() == FundingType.POOLED) {
+      card.setAllocationId(null);
+      card.setAccountId(null);
+      cardAccount = null;
+    } else {
+      card.setAllocationId(null);
+      final Account accountFromDb =
+          accountRepository
+              .findById(card.getAccountId())
+              .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT, card.getAccountId()));
+      // This is being done to support unlinking individual cards. However, individual cards
+      // shouldn't be linked to an allocation to begin with
+      // The intent is to refactor this in the future to streamline individual card behavior.
+      accountFromDb.setAllocationId(null);
+      cardAccount = accountRepository.save(accountFromDb);
+    }
+    final Card unlinkedCard = cardRepository.save(card);
+    return new CardRecord(unlinkedCard, cardAccount);
+  }
+
   private Card updateCardStatus(
       Card card,
       CardStatus cardStatus,

@@ -31,8 +31,6 @@ public class Account {
   private TypedId<BusinessId> businessId;
 
   @JsonProperty("allocationId")
-  @NonNull
-  @NotNull(message = "allocationId required")
   private TypedId<AllocationId> allocationId;
 
   @JsonProperty("ledgerAccountId")

@@ -18,6 +18,7 @@ import javax.annotation.Nullable;
 import lombok.NonNull;
 
 public interface TypeFunctions {
+  @Nullable
   static UUID nullableTypedIdToUUID(@Nullable final TypedId<?> typedId) {
     return Optional.ofNullable(typedId).map(TypedId::toUuid).orElse(null);
   }
@@ -29,15 +30,18 @@ public interface TypeFunctions {
         .orElse(generator.apply(0));
   }
 
+  @Nullable
   static <T extends Enum<T>> T nullableStringToEnum(
       @Nullable final String value, @NonNull final Function<String, T> valueOf) {
     return Optional.ofNullable(value).map(valueOf).orElse(null);
   }
 
+  @Nullable
   static <T> TypedId<T> nullableUuidToTypedId(@Nullable final UUID uuid) {
     return Optional.ofNullable(uuid).map(id -> new TypedId<T>(id)).orElse(null);
   }
 
+  @Nullable
   static <T extends Enum<T>> List<String> nullableEnumListToStringList(
       @Nullable final List<T> enumList) {
     return Optional.ofNullable(enumList)
@@ -45,6 +49,7 @@ public interface TypeFunctions {
         .orElse(null);
   }
 
+  @Nullable
   static <T> List<UUID> nullableTypedIdListToUuidList(
       @Nullable final List<TypedId<T>> typedIdList) {
     return Optional.ofNullable(typedIdList)
@@ -71,6 +76,7 @@ public interface TypeFunctions {
         .collect(Collectors.toCollection(() -> EnumSet.noneOf(enumType)));
   }
 
+  @Nullable
   static String nullableBytesToDecryptedString(
       @Nullable final byte[] bytes, @NonNull final Crypto crypto) {
     return Optional.ofNullable(bytes).map(crypto::decrypt).map(String::new).orElse(null);

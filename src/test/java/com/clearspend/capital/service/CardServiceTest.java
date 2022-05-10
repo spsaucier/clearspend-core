@@ -87,6 +87,34 @@ class CardServiceTest extends BaseCapitalTest {
     assertThrows(AccessDeniedException.class, this::issueCard);
   }
 
+  @Test
+  void viewOwnPermissionStillWorksWithUnlinkedCard() {
+    final User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            business,
+            allocation,
+            employee,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    cardService.unlinkCard(card);
+
+    // AccessDeniedException would be thrown here if the employee couldn't access the unlinked card
+    testHelper.setCurrentUser(employee);
+    final Card resultCard =
+        cardService.retrieveCard(createBusinessRecord.business().getId(), card.getId());
+    assertThat(resultCard)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("userId", employee.getId());
+  }
+
   @SneakyThrows
   @Tag("PERMISSIONS")
   @Test

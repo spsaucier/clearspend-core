@@ -16,7 +16,6 @@ import lombok.NonNull;
 public class CardAccount {
 
   @JsonProperty("allocationId")
-  @NonNull
   @Schema(example = "c9609768-647d-4f00-b755-e474cc761c33")
   private TypedId<AllocationId> allocationId;
 

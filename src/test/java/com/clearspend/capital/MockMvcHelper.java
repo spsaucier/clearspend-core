@@ -3,6 +3,7 @@ package com.clearspend.capital;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import javax.servlet.http.Cookie;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
@@ -25,14 +27,48 @@ public class MockMvcHelper {
   @SneakyThrows
   public <T> T queryObject(
       String uri, HttpMethod httpMethod, Cookie userCookie, Object body, Class<T> responseClass) {
-    MockHttpServletResponse response = queryBackend(uri, httpMethod, userCookie, body);
+    MockHttpServletResponse response = queryBackendFor200(uri, httpMethod, userCookie, body);
 
     return objectMapper.readValue(response.getContentAsString(), responseClass);
   }
 
+  @SneakyThrows
+  public <T> T queryObject(
+      final String uri,
+      final HttpMethod httpMethod,
+      final Cookie userCookie,
+      final Object body,
+      final JavaType responseType) {
+    MockHttpServletResponse response = queryBackendFor200(uri, httpMethod, userCookie, body);
+
+    return objectMapper.readValue(response.getContentAsString(), responseType);
+  }
+
+  @SneakyThrows
   public <T> T queryObject(
       String uri, HttpMethod httpMethod, Cookie userCookie, Class<T> responseClass) {
     return queryObject(uri, httpMethod, userCookie, null, responseClass);
+  }
+
+  @SneakyThrows
+  public <T> T queryObject(
+      final String uri,
+      final HttpMethod httpMethod,
+      final Cookie userCookie,
+      final JavaType responseType) {
+    return queryObject(uri, httpMethod, userCookie, null, responseType);
+  }
+
+  @SneakyThrows
+  public ResultActions query(
+      final String uri, final HttpMethod httpMethod, final Cookie userCookie) {
+    return queryBackend(uri, httpMethod, userCookie, null);
+  }
+
+  @SneakyThrows
+  public ResultActions query(
+      final String uri, final HttpMethod httpMethod, final Cookie userCookie, final Object body) {
+    return queryBackend(uri, httpMethod, userCookie, body);
   }
 
   @SneakyThrows
@@ -42,12 +78,21 @@ public class MockMvcHelper {
       Cookie userCookie,
       Object body,
       TypeReference<List<T>> typeReference) {
-    MockHttpServletResponse response = queryBackend(uri, httpMethod, userCookie, body);
+    MockHttpServletResponse response = queryBackendFor200(uri, httpMethod, userCookie, body);
 
     return objectMapper.readValue(response.getContentAsString(), typeReference);
   }
 
-  private MockHttpServletResponse queryBackend(
+  private MockHttpServletResponse queryBackendFor200(
+      final String uri, final HttpMethod httpMethod, final Cookie userCookie, final Object body)
+      throws Exception {
+    return queryBackend(uri, httpMethod, userCookie, body)
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
+  }
+
+  private ResultActions queryBackend(
       String uri, HttpMethod httpMethod, Cookie userCookie, Object body) throws Exception {
     final MockHttpServletRequestBuilder builder =
         switch (httpMethod) {
@@ -66,6 +111,6 @@ public class MockMvcHelper {
       builder.content(objectMapper.writeValueAsString(body));
     }
 
-    return mvc.perform(builder).andExpect(status().isOk()).andReturn().getResponse();
+    return mvc.perform(builder);
   }
 }

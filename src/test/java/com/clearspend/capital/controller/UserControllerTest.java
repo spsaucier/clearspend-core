@@ -26,6 +26,8 @@ import com.clearspend.capital.controller.type.activity.AccountActivityRequest;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
+import com.clearspend.capital.controller.type.card.CardAccount;
+import com.clearspend.capital.controller.type.card.CardAndAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
@@ -38,6 +40,7 @@ import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.controller.type.user.UpdateUserResponse;
 import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -54,10 +57,12 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.service.AllocationService;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.NetworkMessageService;
@@ -70,6 +75,7 @@ import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -105,6 +111,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final CardService cardService;
   private final NetworkMessageService networkMessageService;
+  private final AccountRepository accountRepository;
   private final UserService userService;
   private final CardRepository cardRepository;
   private final TestDataHelper testDataHelper;
@@ -904,6 +911,144 @@ class UserControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
     log.info(response.getContentAsString());
+  }
+
+  @Test
+  @SneakyThrows
+  void unlinkCard_PooledCard() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    final String response =
+        mvc.perform(
+                patch("/users/cards/%s/unlink".formatted(card.getId()))
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final CardAndAccount cardAndAccount = objectMapper.readValue(response, CardAndAccount.class);
+
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    assertThat(cardAndAccount)
+        .hasFieldOrPropertyWithValue(
+            "card", new com.clearspend.capital.controller.type.card.Card(card))
+        .hasFieldOrPropertyWithValue("account", null);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard).isEqualTo(card);
+  }
+
+  @Test
+  @SneakyThrows
+  void unlinkCard_IndividualCard() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL,
+            false);
+    final Account cardAccount = accountRepository.findById(card.getAccountId()).orElseThrow();
+    final String response =
+        mvc.perform(
+                patch("/users/cards/%s/unlink".formatted(card.getId()))
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final CardAndAccount cardAndAccount = objectMapper.readValue(response, CardAndAccount.class);
+
+    card.setAllocationId(null);
+    cardAccount.setAllocationId(null);
+    assertThat(cardAndAccount)
+        .hasFieldOrPropertyWithValue(
+            "card", new com.clearspend.capital.controller.type.card.Card(card))
+        .hasFieldOrPropertyWithValue(
+            "account", com.clearspend.capital.controller.type.account.Account.of(cardAccount));
+  }
+
+  @Test
+  @SneakyThrows
+  void unlinkCard_IsVirtualCard() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    mvc.perform(
+            patch("/users/cards/%s/unlink".formatted(card.getId()))
+                .cookie(createBusinessRecord.authCookie()))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @SneakyThrows
+  void unlinkCard_IsAlreadyUnlinked() {
+    Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    card = cardRepository.saveAndFlush(card);
+
+    mvc.perform(
+            patch("/users/cards/%s/unlink".formatted(card.getId()))
+                .cookie(createBusinessRecord.authCookie()))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void unlinkCard_UserPermissions() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> {
+          final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+          dbCard.setAllocationId(createBusinessRecord.allocationRecord().allocation().getId());
+          dbCard.setAccountId(createBusinessRecord.allocationRecord().account().getId());
+          cardRepository.saveAndFlush(dbCard);
+
+          return mvc.perform(
+              patch("/users/cards/%s/unlink".formatted(card.getId())).cookie(cookie));
+        };
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @SneakyThrows
@@ -1993,5 +2138,356 @@ class UserControllerTest extends BaseCapitalTest {
             .orElseThrow()
             .getUserData()
             .getFirstName());
+  }
+
+  @Test
+  void getCardAccounts_AllocationAccount_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    final JavaType responseType =
+        objectMapper.getTypeFactory().constructParametricType(List.class, CardAccount.class);
+    final List<CardAccount> response =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/accounts?type=ALLOCATION".formatted(card.getId()),
+            HttpMethod.GET,
+            createBusinessRecord.authCookie(),
+            responseType);
+    final Account account = createBusinessRecord.allocationRecord().account();
+    assertThat(response)
+        .hasSize(1)
+        .contains(
+            new CardAccount(
+                account.getAllocationId(),
+                account.getId(),
+                account.getType(),
+                com.clearspend.capital.controller.type.Amount.of(account.getLedgerBalance())));
+  }
+
+  @Test
+  void getCardAccounts_CardAccount_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL,
+            true);
+    final Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
+    account.setAllocationId(null);
+    card.setAllocationId(null);
+    cardRepository.saveAndFlush(card);
+    accountRepository.saveAndFlush(account);
+
+    final JavaType responseType =
+        objectMapper.getTypeFactory().constructParametricType(List.class, CardAccount.class);
+    final List<CardAccount> response =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/accounts?type=CARD".formatted(card.getId()),
+            HttpMethod.GET,
+            createBusinessRecord.authCookie(),
+            responseType);
+    assertThat(response)
+        .hasSize(1)
+        .contains(
+            new CardAccount(
+                account.getAllocationId(),
+                account.getId(),
+                account.getType(),
+                com.clearspend.capital.controller.type.Amount.of(account.getLedgerBalance())));
+  }
+
+  @Test
+  void updateCardAccount_CardIsUnlinked() {
+    final AllocationRecord allocationRecord =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+
+    com.clearspend.capital.controller.type.card.Card result =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/account".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardAccountRequest(
+                allocationRecord.allocation().getId(), allocationRecord.account().getId()),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("allocationId", allocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", allocationRecord.account().getId());
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("allocationId", allocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", allocationRecord.account().getId());
+  }
+
+  @Test
+  @SneakyThrows
+  void blockCard_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    com.clearspend.capital.controller.type.card.Card result =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/block".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.INACTIVE)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.INACTIVE)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void unblockCard_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    card.setStatus(CardStatus.INACTIVE);
+    cardRepository.saveAndFlush(card);
+    com.clearspend.capital.controller.type.card.Card result =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/unblock".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void cancelCard_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    com.clearspend.capital.controller.type.card.Card result =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/cancel".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            com.clearspend.capital.controller.type.card.Card.class);
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
+  }
+
+  @Test
+  void getUserCards_OneCardIsUnlinked() {
+    final Card linkedCard =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    final Card unlinkedCArd =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    unlinkedCArd.setAllocationId(null);
+    unlinkedCArd.setAccountId(null);
+    cardRepository.saveAndFlush(unlinkedCArd);
+
+    final JavaType responseType =
+        objectMapper
+            .getTypeFactory()
+            .constructParametricType(List.class, CardDetailsResponse.class);
+    final List<CardDetailsResponse> response =
+        mockMvcHelper.queryObject(
+            "/users/cards", HttpMethod.GET, createBusinessRecord.authCookie(), responseType);
+    assertThat(response).hasSize(2);
+    final List<CardDetailsResponse> unlinkedCards =
+        response.stream().filter(item -> item.getCard().getAllocationId() == null).toList();
+    assertThat(unlinkedCards).hasSize(1);
+    assertThat(unlinkedCards.get(0).getCard())
+        .hasFieldOrPropertyWithValue("cardId", unlinkedCArd.getId())
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null);
+  }
+
+  @Test
+  void getUserCard_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    final CardDetailsResponse result =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s".formatted(card.getId()),
+            HttpMethod.GET,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
+            CardDetailsResponse.class);
+
+    assertThat(result.getCard())
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("cardId", card.getId());
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("ledgerBalance", null)
+        .hasFieldOrPropertyWithValue("availableBalance", null)
+        .hasFieldOrPropertyWithValue("allocationName", null);
+  }
+
+  @Test
+  void activateMyCard_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    assertThat(card).hasFieldOrPropertyWithValue("status", CardStatus.INACTIVE);
+
+    final ActivateCardRequest request =
+        new ActivateCardRequest(card.getLastFour(), CardStatusReason.CARDHOLDER_REQUESTED);
+    final com.clearspend.capital.controller.type.card.Card response =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/activate".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            request,
+            com.clearspend.capital.controller.type.card.Card.class);
+    assertThat(response)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null);
+  }
+
+  @Test
+  void activateMyCards_CardIsUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.saveAndFlush(card);
+    assertThat(card).hasFieldOrPropertyWithValue("status", CardStatus.INACTIVE);
+
+    final ActivateCardRequest request =
+        new ActivateCardRequest(card.getLastFour(), CardStatusReason.CARDHOLDER_REQUESTED);
+    final com.clearspend.capital.controller.type.card.Card response =
+        mockMvcHelper.queryObject(
+            "/users/cards/activate",
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            request,
+            com.clearspend.capital.controller.type.card.Card.class);
+    assertThat(response)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null);
   }
 }
