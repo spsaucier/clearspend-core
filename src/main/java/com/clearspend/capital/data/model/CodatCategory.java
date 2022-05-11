@@ -36,8 +36,8 @@ public class CodatCategory extends TypedMutable<CodatCategoryId> implements Busi
   private TypedId<BusinessId> businessId;
 
   @NonNull
-  @Column(name = "codat_category_id")
-  private String codatCategoryId;
+  @Column(name = "codat_id")
+  private String codatId;
 
   @NonNull
   @Column(name = "original_name")
