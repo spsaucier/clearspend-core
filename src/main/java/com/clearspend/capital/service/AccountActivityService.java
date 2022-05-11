@@ -608,4 +608,15 @@ public class AccountActivityService {
       TypedId<BusinessId> businessId, ChartFilterCriteria filterCriteria) {
     return accountActivityRepository.findDataForChart(businessId, filterCriteria);
   }
+
+  @Transactional
+  public void updateMerchantData(
+      TypedId<BusinessId> businessId,
+      TypedId<AccountActivityId> accountActivityId,
+      String merchantName,
+      String logoPath,
+      String statementDescriptor) {
+    accountActivityRepository.updateMerchantData(
+        businessId, accountActivityId, merchantName, logoPath, statementDescriptor);
+  }
 }

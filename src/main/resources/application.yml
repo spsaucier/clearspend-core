@@ -187,3 +187,8 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+async:
+  core-pool-size: 2
+  max-pool-size: 2
+  queue-capacity: 500
+  thread-name-prefix: async-executor-

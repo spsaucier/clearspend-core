@@ -16,12 +16,13 @@ import com.clearspend.capital.client.mx.types.EnhanceTransactionResponse;
 import com.clearspend.capital.client.mx.types.TransactionRecordResponse;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
-import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.service.type.NetworkCommon;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -39,32 +40,28 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class NetworkMessageEnrichmentServiceTest {
 
-  private AccountActivityRepository mockAccountActivityRepository;
+  private AccountActivityService mockAccountActivityService;
   private MxClient mockMxClient;
   private ClearbitClient mockClearbitClient;
-  private ExecutorService mockExecutor;
-
   private NetworkMessageEnrichmentService underTest;
 
   @BeforeEach
   public void setup() {
-    mockAccountActivityRepository = Mockito.mock(AccountActivityRepository.class);
+    mockAccountActivityService = Mockito.mock(AccountActivityService.class);
     mockMxClient = Mockito.mock(MxClient.class);
     mockClearbitClient = Mockito.mock(ClearbitClient.class);
-    mockExecutor = new MyInLineExecutor();
 
     // The final boolean parameter is a switch to allow us to revert back to Clearbit for logo urls.
     // If we decide to keep this functionality clean this up using polymorphism
     underTest =
         new NetworkMessageEnrichmentService(
-            mockAccountActivityRepository, mockMxClient, mockClearbitClient, mockExecutor, true);
+            mockAccountActivityService, mockMxClient, mockClearbitClient, true);
   }
 
   @Test
@@ -76,7 +73,7 @@ public class NetworkMessageEnrichmentServiceTest {
     underTest.scheduleActivityEnrichment(buildCommon("test", 123));
 
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
-    verifyNoInteractions(mockAccountActivityRepository);
+    verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockClearbitClient);
   }
 
@@ -89,7 +86,7 @@ public class NetworkMessageEnrichmentServiceTest {
     underTest.scheduleActivityEnrichment(buildCommon("test", 123));
 
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
-    verifyNoInteractions(mockAccountActivityRepository);
+    verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockClearbitClient);
   }
 
@@ -108,7 +105,7 @@ public class NetworkMessageEnrichmentServiceTest {
     underTest.scheduleActivityEnrichment(common);
 
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
-    verifyNoInteractions(mockAccountActivityRepository);
+    verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockClearbitClient);
     assertThat(common)
         .matches(it -> "test".equals(it.getMerchantStatementDescriptor()))
@@ -120,6 +117,10 @@ public class NetworkMessageEnrichmentServiceTest {
   @SneakyThrows
   public void
       scheduleActivityEnrichment_whenValidMxResultUsingClearbitLogos_clearbitIsQueriedForLogos() {
+    underTest =
+        new NetworkMessageEnrichmentService(
+            mockAccountActivityService, mockMxClient, mockClearbitClient, false);
+
     when(mockMxClient.getCleansedMerchantName(anyString(), anyInt()))
         .thenReturn(
             new EnhanceTransactionResponse(
@@ -129,12 +130,11 @@ public class NetworkMessageEnrichmentServiceTest {
 
     NetworkCommon common = buildCommon("test", 123);
     common.setAccountActivity(null);
-    underTest.setUseMxLogos(false);
     underTest.scheduleActivityEnrichment(common);
 
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
     verify(mockMxClient, never()).getMerchantLogo(anyString());
-    verifyNoInteractions(mockAccountActivityRepository);
+    verifyNoInteractions(mockAccountActivityService);
     assertThat(common)
         .matches(it -> "test".equals(it.getMerchantStatementDescriptor()))
         .matches(it -> "enh-name".equals(it.getMerchantName()))
@@ -152,19 +152,28 @@ public class NetworkMessageEnrichmentServiceTest {
     when(mockMxClient.getMerchantLogo(eq("guid"))).thenReturn("logo-path");
 
     NetworkCommon common = buildCommon("test", 123);
+
+    Business business = new Business();
+    business.setId(new TypedId<>());
+
     AccountActivity entity = new AccountActivity();
     entity.setMerchant(new MerchantDetails());
     common.setAccountActivity(entity);
+    common.setBusiness(business);
+
     underTest.scheduleActivityEnrichment(common);
 
-    ArgumentCaptor<AccountActivity> activityCaptor = ArgumentCaptor.forClass(AccountActivity.class);
+    AccountActivity accountActivity = common.getAccountActivity();
+
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
-    verify(mockAccountActivityRepository, times(1)).save(activityCaptor.capture());
+    verify(mockAccountActivityService, times(1))
+        .updateMerchantData(
+            business.getId(), accountActivity.getId(), "enh-name", "logo-path", "test");
     verifyNoInteractions(mockClearbitClient);
-    assertThat(activityCaptor.getValue())
-        .matches(it -> "test".equals(it.getMerchant().getStatementDescriptor()))
-        .matches(it -> "enh-name".equals(it.getMerchant().getName()))
-        .matches(it -> "logo-path".equals(it.getMerchant().getLogoUrl()));
+
+    assertThat(accountActivity.getMerchant().getStatementDescriptor()).isEqualTo("test");
+    assertThat(accountActivity.getMerchant().getName()).isEqualTo("enh-name");
+    assertThat(accountActivity.getMerchant().getLogoUrl()).isEqualTo("logo-path");
   }
 
   private NetworkCommon buildCommon(String merchantName, Integer merchantCategoryCode) {

@@ -12,7 +12,9 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AccountActivityRepository
     extends JpaRepository<AccountActivity, TypedId<AccountActivityId>>,
@@ -52,4 +54,21 @@ public interface AccountActivityRepository
 
   int countByIntegrationSyncStatusAndBusinessId(
       AccountActivityIntegrationSyncStatus ready, TypedId<BusinessId> businessId);
+
+  @Modifying
+  @Query(
+      """
+        update AccountActivity a set
+          a.merchant.name = :name,
+          a.merchant.statementDescriptor = :statementDescriptor,
+          a.merchant.logoUrl = :logoUrl
+        where a.businessId = :businessId
+          and a.id = :activityId
+      """)
+  int updateMerchantData(
+      @Param("businessId") TypedId<BusinessId> businessId,
+      @Param("activityId") TypedId<AccountActivityId> activityId,
+      @Param("name") String name,
+      @Param("logoUrl") String logoUrl,
+      @Param("statementDescriptor") String statementDescriptor);
 }
