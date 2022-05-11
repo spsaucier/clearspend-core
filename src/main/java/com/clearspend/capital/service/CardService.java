@@ -76,16 +76,17 @@ public class CardService {
   private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
+  private final UserWelcomeService userWelcomeService;
 
   private final AccountService accountService;
   private final BusinessLimitService businessLimitService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
   private final TwilioService twilioService;
-  private final UserService userService;
 
   private final EntityManager entityManager;
   private final StripeClient stripeClient;
+  private final RetrievalService retrievalService;
 
   public record CardRecord(Card card, Account account) {}
 
@@ -120,7 +121,7 @@ public class CardService {
       }
     }
 
-    User user = userService.retrieveUserForService(userId);
+    User user = retrievalService.retrieveUser(userId);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
@@ -206,7 +207,7 @@ public class CardService {
     // If FusionAuth record was never created for the current user, we will create it now
     // This usually happens for new employees, created after the main user was created,
     // for whom the cards were not issued yet
-    user = userService.sendWelcomeEmailIfNeeded(user);
+    user = userWelcomeService.sendWelcomeEmailIfNeeded(user);
 
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {
@@ -273,6 +274,11 @@ public class CardService {
   public List<CardDetailsRecord> getCardsForCurrentUser() {
     return cardRepository.findDetailsByBusinessIdAndUserId(
         CurrentUser.getBusinessId(), CurrentUser.getUserId());
+  }
+
+  List<Card> getNotCancelledCardsForUser(
+      final TypedId<BusinessId> businessId, final TypedId<UserId> userId) {
+    return cardRepository.findAllNotCancelledForUser(businessId, userId);
   }
 
   @PostAuthorize("isSelfOwned(returnObject.card())")
@@ -404,7 +410,7 @@ public class CardService {
 
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
-    User cardOwner = userService.retrieveUserForService(card.getUserId());
+    User cardOwner = retrievalService.retrieveUser(card.getUserId());
     // We need to use separate email templates for initial physical card activation,
     // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
     if (cardStatus == CardStatus.ACTIVE && isInitialActivation) {
@@ -566,7 +572,7 @@ public class CardService {
                 Instant.ofEpochSecond(stripeCard.getShipping().getEta()), ZoneOffset.UTC));
         card.setCarrier(stripeCard.getShipping().getCarrier());
         cardRepository.save(card);
-        User user = userService.retrieveUserForService(card.getUserId());
+        User user = retrievalService.retrieveUser(card.getUserId());
         twilioService.sendCardShippedNotifyUserEmail(
             user.getEmail().getEncrypted(), user.getFirstName().getEncrypted());
       }

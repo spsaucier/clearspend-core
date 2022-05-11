@@ -17,11 +17,10 @@ import com.clearspend.capital.crypto.data.model.embedded.WithEncryptedString;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
-import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
-import com.clearspend.capital.service.FusionAuthService.CapitalChangePasswordReason;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import com.google.errorprone.annotations.RestrictedApi;
@@ -65,49 +64,13 @@ public class UserService {
     String explanation();
   }
 
-  private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
 
-  private final FusionAuthService fusionAuthService;
   private final TwilioService twilioService;
+  private final FusionAuthService fusionAuthService;
   private final BusinessOwnerService businessOwnerService;
+  private final CardService cardService;
   private final StripeClient stripeClient;
-
-  /**
-   * If the user has not already been assigned a subjectRef, generate a random password and send
-   * them a welcome email to get started. This happens in some scenarios assigning a card to a user.
-   * If there is already a subjectRef on the User, this call has no effect.
-   *
-   * @param user The user to welcome
-   * @return The new User object reloaded from the repository, or the same if unchanged
-   */
-  @FusionAuthUserCreator(
-      reviewer = "jscarbor",
-      explanation = "User Service manages the sync between users and FA users")
-  User sendWelcomeEmailIfNeeded(User user) {
-    if (StringUtils.isEmpty(user.getSubjectRef())) {
-      String password = PasswordUtil.generatePassword();
-      user.setSubjectRef(
-          fusionAuthService
-              .createUser(
-                  user.getBusinessId(),
-                  user.getId(),
-                  user.getEmail().getEncrypted(),
-                  password,
-                  UserType.EMPLOYEE,
-                  Optional.of(CapitalChangePasswordReason.Validation))
-              .toString());
-
-      user = userRepository.save(user);
-
-      twilioService.sendUserAccountCreatedEmail(
-          user.getEmail().getEncrypted(),
-          user.getFirstName().getEncrypted(),
-          businessRepository.getById(user.getBusinessId()).getLegalName(),
-          password);
-    }
-    return user;
-  }
 
   public record CreateUpdateUserRecord(User user, String password) {}
 
@@ -354,14 +317,27 @@ public class UserService {
     return userRepository.find(businessId, userFilterCriteria);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS')")
-  public boolean archiveUser(TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-    User user =
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS|CUSTOMER_SERVICE')")
+  public boolean archiveUser(final TypedId<BusinessId> businessId, final TypedId<UserId> userId) {
+    final User user =
         userRepository
             .findByBusinessIdAndId(businessId, userId)
             .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+
+    cardService
+        .getNotCancelledCardsForUser(businessId, userId)
+        // We do not want to risk a DB rollback once a card is cancelled in Stripe, so doing it
+        // this way ensures a committed transaction for each card that is cancelled
+        .forEach(card -> cardService.cancelCard(card, CardStatusReason.USER_ARCHIVED));
+
     user.setArchived(true);
-    return userRepository.save(user).isArchived();
+    userRepository.save(user);
+
+    // If it has a subject ref, that means the user is in FusionAuth and we need to remove it
+    Optional.ofNullable(user.getSubjectRef())
+        .filter(StringUtils::isNotBlank)
+        .ifPresent(s -> fusionAuthService.deleteUser(user));
+    return true;
   }
 
   @SqlPermissionAPI

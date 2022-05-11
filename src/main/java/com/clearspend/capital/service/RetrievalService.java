@@ -46,4 +46,10 @@ class RetrievalService {
         .findByBusinessIdAndId(businessId, userId)
         .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId, businessId));
   }
+
+  User retrieveUser(TypedId<UserId> userId) {
+    return userRepository
+        .findById(userId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+  }
 }

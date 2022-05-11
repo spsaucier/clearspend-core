@@ -550,20 +550,6 @@ class UserServiceTest extends BaseCapitalTest {
   }
 
   @Test
-  void archiveUser_UserPermissions() {
-    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final User archive = testHelper.createUser(createBusinessRecord.business()).user();
-    final ThrowingRunnable action =
-        () -> userService.archiveUser(createBusinessRecord.business().getId(), archive.getId());
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
-        .build()
-        .validateServiceMethod(action);
-  }
-
-  @Test
   void retrieveUser_UserPermissions() {
     final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
     testHelper.setCurrentUser(createBusinessRecord.user());

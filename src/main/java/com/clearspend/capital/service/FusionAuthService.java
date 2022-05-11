@@ -374,6 +374,13 @@ public class FusionAuthService {
         user.getSubjectRef());
   }
 
+  @FusionAuthUserModifier(reviewer = "Craig Miller", explanation = "Delegation")
+  void deleteUser(com.clearspend.capital.data.model.User user) {
+    final ClientResponse<Void, Errors> response =
+        client.deleteUser(UUID.fromString(user.getSubjectRef()));
+    validateResponse(response);
+  }
+
   /**
    * @param businessId the user's business
    * @param userId capital's number
@@ -444,11 +451,12 @@ public class FusionAuthService {
     return validateResponse(userResponseErrorsClientResponse).user;
   }
 
+  // TODO making this method public is an issue for the permissions system
   /**
    * @param user the ClearSpend user of interest
    * @return the FusionAuth user record
    */
-  User getUser(com.clearspend.capital.data.model.User user) {
+  public User getUser(com.clearspend.capital.data.model.User user) {
     return getUser(UUID.fromString(user.getSubjectRef()));
   }
 

@@ -1,7 +1,10 @@
 package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,7 +18,9 @@ import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.nonprod.TestDataController;
@@ -61,10 +66,12 @@ import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
+import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
+import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
@@ -121,8 +128,10 @@ class UserControllerTest extends BaseCapitalTest {
   private final AccountActivityRepository accountActivityRepo;
   private final ReceiptRepository receiptRepo;
   private final StripeMockClient stripeMockClient;
+  private final UserRepository userRepository;
 
   private final Faker faker = new Faker();
+  private final FusionAuthService fusionAuthService;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -1929,6 +1938,104 @@ class UserControllerTest extends BaseCapitalTest {
     Assertions.assertEquals(
         user1.user().getFirstName().getEncrypted(),
         userPageData.getContent().get(0).getUserData().getFirstName());
+  }
+
+  @Test
+  void archiveUser() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final com.clearspend.capital.data.model.User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    // Confirming the user is in FusionAuth prior to test logic
+    assertDoesNotThrow(() -> fusionAuthService.getUser(employee));
+
+    final TypedId<CardId> virtualCardId =
+        testHelper
+            .issueCard(
+                createBusinessRecord.business(),
+                createBusinessRecord.allocationRecord().allocation(),
+                employee,
+                Currency.USD,
+                FundingType.POOLED,
+                CardType.VIRTUAL,
+                false)
+            .getId();
+    final TypedId<CardId> physicalCardId =
+        testHelper
+            .issueCard(
+                createBusinessRecord.business(),
+                createBusinessRecord.allocationRecord().allocation(),
+                employee,
+                Currency.USD,
+                FundingType.POOLED,
+                CardType.PHYSICAL,
+                true)
+            .getId();
+
+    final boolean result =
+        mockMvcHelper.queryObject(
+            "/users/%s/archive".formatted(employee.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            Boolean.class);
+    assertTrue(result);
+
+    final com.clearspend.capital.data.model.User dbEmployee =
+        userRepository.findById(employee.getId()).orElseThrow();
+    assertThat(dbEmployee).hasFieldOrPropertyWithValue("archived", true);
+
+    final Card dbVirtualCard = cardRepository.findById(virtualCardId).orElseThrow();
+    assertThat(dbVirtualCard)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.USER_ARCHIVED);
+
+    final Card dbPhysicalCard = cardRepository.findById(physicalCardId).orElseThrow();
+    assertThat(dbPhysicalCard)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.USER_ARCHIVED);
+
+    final com.stripe.model.issuing.Card stripeVirtualCard =
+        (com.stripe.model.issuing.Card)
+            stripeMockClient.getCreatedObject(dbVirtualCard.getExternalRef());
+    assertThat(stripeVirtualCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+
+    final com.stripe.model.issuing.Card stripePhysicalCard =
+        (com.stripe.model.issuing.Card)
+            stripeMockClient.getCreatedObject(dbPhysicalCard.getExternalRef());
+    assertThat(stripePhysicalCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+
+    assertThrows(FusionAuthException.class, () -> fusionAuthService.getUser(employee));
+  }
+
+  @Test
+  void archiveUser_UserPermissions() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> {
+          final com.clearspend.capital.data.model.User employee =
+              testHelper.runWithCurrentUser(
+                  createBusinessRecord.user(),
+                  () ->
+                      testHelper
+                          .createUserWithRole(
+                              createBusinessRecord.allocationRecord().allocation(),
+                              DefaultRoles.ALLOCATION_EMPLOYEE)
+                          .user());
+          return mockMvcHelper.query(
+              "/users/%s/archive".formatted(employee.getId()), HttpMethod.PATCH, cookie);
+        };
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @SneakyThrows

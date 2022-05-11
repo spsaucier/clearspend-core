@@ -19,6 +19,12 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
   Optional<Card> findByBusinessIdAndIdAndLastFour(
       TypedId<BusinessId> businessId, TypedId<CardId> id, String lastFour);
 
+  @Query(
+      "SELECT c FROM Card c WHERE c.businessId = :businessId AND c.userId = :userId AND c.status <> 'CANCELLED'")
+  List<Card> findAllNotCancelledForUser(
+      @Param("businessId") final TypedId<BusinessId> businessId,
+      @Param("userId") final TypedId<UserId> userId);
+
   Optional<Card> findByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId, TypedId<CardId> id);
 
