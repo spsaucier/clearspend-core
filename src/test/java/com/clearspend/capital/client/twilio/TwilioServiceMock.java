@@ -148,6 +148,9 @@ public class TwilioServiceMock extends TwilioService {
   public void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {}
 
   @Override
+  protected void sendCardCancelledEmail(String to, String firstName, String lastFour) {}
+
+  @Override
   public void sendUserAccountCreatedEmail(
       String to, String firstName, String companyName, String password) {
     lastUserAccountCreatedPassword = password;

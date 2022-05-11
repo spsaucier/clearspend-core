@@ -486,6 +486,16 @@ public class TwilioService {
     send(mail);
   }
 
+  /* Card: Card Cancel email */
+  protected void sendCardCancelledEmail(
+      final String to, final String firstName, final String lastFour) {
+    final Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
+    send(
+        initMailWithTemplate(sendGridProperties.getCardCancelledTemplateId(), to, personalization));
+  }
+
   /* Card : Card Unfreeze email */
   protected void sendCardUnfrozenEmail(String to, String firstName, String lastFour) {
     Personalization personalization = new Personalization();

@@ -396,11 +396,6 @@ public class CardService {
       CardStatus cardStatus,
       CardStatusReason statusReason,
       boolean isInitialActivation) {
-
-    if (!card.isActivated()) {
-      throw new InvalidRequestException("Cannot update status for non activated cards");
-    }
-
     // validTransition will return the new status but will throw an exception if the status change
     // is not allowed
     card.setStatus(card.getStatus().validTransition(cardStatus));
@@ -409,25 +404,27 @@ public class CardService {
 
     stripeClient.updateCard(card.getExternalRef(), cardStatus);
 
-    if (cardStatus == CardStatus.ACTIVE || cardStatus == CardStatus.INACTIVE) {
-      User cardOwner = userService.retrieveUserForService(card.getUserId());
-
-      // We need to use separate email templates for initial physical card activation,
-      // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
-      if (cardStatus == CardStatus.ACTIVE && isInitialActivation) {
-        twilioService.sendCardActivationCompletedEmail(
-            cardOwner.getEmail().getEncrypted(), cardOwner.getFirstName().getEncrypted());
-      } else if (cardStatus == CardStatus.ACTIVE) {
-        twilioService.sendCardUnfrozenEmail(
-            cardOwner.getEmail().getEncrypted(),
-            cardOwner.getFirstName().getEncrypted(),
-            card.getLastFour());
-      } else {
-        twilioService.sendCardFrozenEmail(
-            cardOwner.getEmail().getEncrypted(),
-            cardOwner.getFirstName().getEncrypted(),
-            card.getLastFour());
-      }
+    User cardOwner = userService.retrieveUserForService(card.getUserId());
+    // We need to use separate email templates for initial physical card activation,
+    // and for all later re-activations (unfreeze) events, that's why an extra parameter is needed
+    if (cardStatus == CardStatus.ACTIVE && isInitialActivation) {
+      twilioService.sendCardActivationCompletedEmail(
+          cardOwner.getEmail().getEncrypted(), cardOwner.getFirstName().getEncrypted());
+    } else if (cardStatus == CardStatus.ACTIVE) {
+      twilioService.sendCardUnfrozenEmail(
+          cardOwner.getEmail().getEncrypted(),
+          cardOwner.getFirstName().getEncrypted(),
+          card.getLastFour());
+    } else if (cardStatus == CardStatus.INACTIVE) {
+      twilioService.sendCardFrozenEmail(
+          cardOwner.getEmail().getEncrypted(),
+          cardOwner.getFirstName().getEncrypted(),
+          card.getLastFour());
+    } else {
+      twilioService.sendCardCancelledEmail(
+          cardOwner.getEmail().getEncrypted(),
+          cardOwner.getFirstName().getEncrypted(),
+          card.getLastFour());
     }
 
     return card;

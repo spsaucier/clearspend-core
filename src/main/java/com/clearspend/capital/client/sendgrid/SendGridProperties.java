@@ -66,6 +66,8 @@ public class SendGridProperties {
 
   @NotBlank private String cardFrozenTemplateId;
 
+  @NotBlank private String cardCancelledTemplateId;
+
   @NotBlank private String cardUnfrozenTemplateId;
 
   @NotBlank private String userDetailsUpdatedTemplateId;
