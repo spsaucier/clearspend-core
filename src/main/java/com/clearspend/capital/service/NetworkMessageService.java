@@ -7,6 +7,8 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.SpendControlViolationException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.data.model.Account;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -35,6 +37,7 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -109,9 +112,13 @@ public class NetworkMessageService {
       }
     } else {
       common.setAccount(cardRecord.account());
-      common.setAllocation(
-          allocationService.retrieveAllocation(
-              common.getBusiness().getId(), cardRecord.card().getAllocationId()));
+      Optional.ofNullable(cardRecord.card().getAllocationId())
+          .ifPresent(
+              allocationId -> {
+                common.setAllocation(
+                    allocationService.retrieveAllocation(
+                        common.getBusiness().getId(), allocationId));
+              });
     }
   }
 
@@ -184,7 +191,10 @@ public class NetworkMessageService {
   private void postAdjustment(NetworkCommon common, NetworkMessage networkMessage) {
     if (common.isPostAdjustment()) {
       AdjustmentRecord adjustmentRecord =
-          accountService.recordNetworkAdjustment(common.getAccount(), common.getApprovedAmount());
+          accountService.recordNetworkAdjustment(
+              common.getAllocation().getAllocationId(),
+              common.getAccount(),
+              common.getApprovedAmount());
       common.setAdjustmentRecord(adjustmentRecord);
       networkMessage.setAdjustmentId(adjustmentRecord.adjustment().getId());
       common
@@ -206,8 +216,9 @@ public class NetworkMessageService {
     if (common.isPostDecline()) {
       Decline decline =
           accountService.recordNetworkDecline(
-              common.getAccount(),
-              common.getCard(),
+              common.getBusiness().getId(),
+              common.getCard().getId(),
+              Optional.ofNullable(common.getAccount()).map(Account::getId).orElse(null),
               common.getPaddedAmount(),
               common.getDeclineDetails());
       common.setDecline(decline);
@@ -215,14 +226,22 @@ public class NetworkMessageService {
       common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.DECLINED);
       common.getAccountActivityDetails().setActivityTime(decline.getCreated());
       accountActivityService.recordNetworkDeclineAccountActivity(common);
+      final AccountAmounts accountAmounts =
+          Optional.ofNullable(common.getAccount())
+              .map(
+                  account ->
+                      new AccountAmounts(account.getAvailableBalance(), account.getLedgerBalance()))
+              .orElse(new AccountAmounts(null, null));
       log.warn(
           "networkMessage {} for {} declined (available {} / ledger {})",
           networkMessage.getId(),
           common.getPaddedAmount(),
-          common.getAccount().getAvailableBalance(),
-          common.getAccount().getLedgerBalance());
+          accountAmounts.availableBalance(),
+          accountAmounts.ledgerBalance());
     }
   }
+
+  private record AccountAmounts(Amount availableBalance, Amount ledgerBalance) {}
 
   @VisibleForTesting
   void setPaddedAmountAndHoldPeriod(@NonNull NetworkCommon common) {
@@ -342,8 +361,14 @@ public class NetworkMessageService {
       common.setPostDecline(true);
     }
 
+    if (common.getAccount() == null || common.getAllocation() == null) {
+      common.getDeclineDetails().add(new DeclineDetails(DeclineReason.UNLINKED_CARD));
+      common.setPostDecline(true);
+    }
+
     // account has no money at all
-    if (common.getAccount().getAvailableBalance().isLessThanOrEqualToZero()) {
+    if (common.getAccount() != null
+        && common.getAccount().getAvailableBalance().isLessThanOrEqualToZero()) {
       common.getDeclineDetails().add(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
       common.setPostDecline(true);
     }
@@ -384,7 +409,7 @@ public class NetworkMessageService {
     try {
       transactionLimitService.ensureWithinLimit(
           common.getBusiness().getId(),
-          common.getAllocation().getId(),
+          Optional.ofNullable(common.getAllocation()).map(Allocation::getId).orElse(null),
           common.getCard().getId(),
           common.getApprovedAmount(),
           common.getMerchantCategoryCode(),

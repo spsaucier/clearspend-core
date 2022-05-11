@@ -16,6 +16,7 @@ import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
@@ -92,7 +93,6 @@ public class AccountActivityService {
     AccountActivity accountActivity =
         new AccountActivity(
             allocation.getBusinessId(),
-            allocation.getAccountId(),
             type,
             AccountActivityStatus.DECLINED,
             AllocationDetails.of(allocation),
@@ -102,6 +102,7 @@ public class AccountActivityService {
             AccountActivityIntegrationSyncStatus.NOT_READY);
 
     accountActivity.setBankAccount(BankAccountDetails.of(businessBankAccount));
+    accountActivity.setAccountId(allocation.getAccountId());
     accountActivity.setUser(UserDetails.of(user));
     accountActivity.setDeclineDetails(List.of(declineDetails));
 
@@ -145,7 +146,6 @@ public class AccountActivityService {
     AccountActivity adjustmentAccountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            adjustment.getAccountId(),
             type,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
@@ -154,7 +154,7 @@ public class AccountActivityService {
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     adjustmentAccountActivity.setAdjustmentId(adjustment.getId());
-
+    adjustmentAccountActivity.setAccountId(adjustment.getAccountId());
     adjustmentAccountActivity.setBankAccount(bankAccountDetails);
 
     if (user != null) {
@@ -167,7 +167,6 @@ public class AccountActivityService {
       AccountActivity holdAccountActivity =
           new AccountActivity(
               adjustment.getBusinessId(),
-              adjustment.getAccountId(),
               type,
               AccountActivityStatus.PENDING,
               AllocationDetails.of(allocation),
@@ -176,6 +175,7 @@ public class AccountActivityService {
               adjustment.getAmount(),
               AccountActivityIntegrationSyncStatus.NOT_READY);
       holdAccountActivity.setHideAfter(hold.getExpirationDate());
+      holdAccountActivity.setAccountId(adjustment.getAccountId());
       holdAccountActivity.setHold(HoldDetails.of(hold));
 
       if (user != null) {
@@ -194,7 +194,6 @@ public class AccountActivityService {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            adjustment.getAccountId(),
             AccountActivityType.REALLOCATE,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
@@ -203,6 +202,7 @@ public class AccountActivityService {
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setAccountId(adjustment.getAccountId());
 
     if (flipAllocation != null) {
       accountActivity.setFlipAllocation(AllocationDetails.of(flipAllocation));
@@ -221,7 +221,6 @@ public class AccountActivityService {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            adjustment.getAccountId(),
             AccountActivityType.FEE,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
@@ -230,6 +229,7 @@ public class AccountActivityService {
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setAccountId(adjustment.getAccountId());
     accountActivity.setNotes(notes);
 
     return accountActivityRepository.save(accountActivity);
@@ -240,7 +240,6 @@ public class AccountActivityService {
     AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            adjustment.getAccountId(),
             AccountActivityType.CARD_FUND_RETURN,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
@@ -249,6 +248,7 @@ public class AccountActivityService {
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setAccountId(adjustment.getAccountId());
 
     return accountActivityRepository.save(accountActivity);
   }
@@ -275,7 +275,6 @@ public class AccountActivityService {
     final AccountActivity accountActivity =
         new AccountActivity(
             adjustment.getBusinessId(),
-            adjustment.getAccountId(),
             AccountActivityType.MANUAL,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
@@ -284,6 +283,7 @@ public class AccountActivityService {
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
     accountActivity.setAdjustmentId(adjustment.getId());
+    accountActivity.setAccountId(adjustment.getAccountId());
     accountActivity.setNotes(notes);
 
     return accountActivityRepository.save(accountActivity);
@@ -315,7 +315,6 @@ public class AccountActivityService {
     AccountActivity accountActivity =
         new AccountActivity(
             common.getBusiness().getId(),
-            common.getAccount().getId(),
             accountActivityType,
             common.getAccountActivityDetails().getAccountActivityStatus(),
             AllocationDetails.of(allocation),
@@ -323,6 +322,9 @@ public class AccountActivityService {
             amount,
             common.getRequestedAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    Optional.ofNullable(common.getAccount())
+        .map(Account::getId)
+        .ifPresent(accountActivity::setAccountId);
 
     if (accountActivityType != AccountActivityType.NETWORK_REFUND) {
       accountActivity.setUser(UserDetails.of(cardOwner));

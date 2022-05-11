@@ -12,11 +12,11 @@ import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
@@ -28,7 +28,7 @@ import org.hibernate.annotations.Type;
 @EqualsAndHashCode(callSuper = true)
 @SuppressWarnings("MissingOverride")
 @NoArgsConstructor
-@RequiredArgsConstructor
+@AllArgsConstructor
 @DynamicUpdate
 @Slf4j
 public class Decline extends TypedImmutable<DeclineId> {
@@ -39,7 +39,6 @@ public class Decline extends TypedImmutable<DeclineId> {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")

@@ -59,7 +59,6 @@ public class AccountActivity extends TypedMutable<AccountActivityId> implements 
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<BusinessId> businessId;
 
-  @NonNull
   @JoinColumn(referencedColumnName = "id", table = "account")
   @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")

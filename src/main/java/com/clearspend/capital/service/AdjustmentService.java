@@ -1,6 +1,7 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
@@ -17,6 +18,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -187,7 +189,10 @@ public class AdjustmentService {
   }
 
   @Transactional(TxType.REQUIRED)
-  AdjustmentRecord recordNetworkAdjustment(Account account, Amount amount) {
+  AdjustmentRecord recordNetworkAdjustment(
+      @NonNull final TypedId<AllocationId> allocationId,
+      @NonNull final Account account,
+      @NonNull final Amount amount) {
     NetworkJournalEntry networkJournalEntry =
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
@@ -195,7 +200,7 @@ public class AdjustmentService {
         adjustmentRepository.save(
             new Adjustment(
                 account.getBusinessId(),
-                account.getAllocationId(),
+                allocationId,
                 account.getId(),
                 account.getLedgerAccountId(),
                 networkJournalEntry.journalEntry().getId(),

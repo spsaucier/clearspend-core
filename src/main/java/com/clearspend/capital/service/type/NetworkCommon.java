@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -316,8 +317,6 @@ public class NetworkCommon {
     NetworkMessage networkMessage =
         new NetworkMessage(
             business.getId(),
-            allocation.getId(),
-            account.getId(),
             networkMessageGroupId,
             networkMessageType,
             requestedAmount,
@@ -331,6 +330,10 @@ public class NetworkCommon {
 
     networkMessage.setSubType(networkMessageSubType);
     networkMessage.setInterchange(interchange);
+    Optional.ofNullable(allocation)
+        .map(Allocation::getId)
+        .ifPresent(networkMessage::setAllocationId);
+    Optional.ofNullable(account).map(Account::getId).ifPresent(networkMessage::setAccountId);
 
     return networkMessage;
   }

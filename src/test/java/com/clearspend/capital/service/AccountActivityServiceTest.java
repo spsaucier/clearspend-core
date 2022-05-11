@@ -295,7 +295,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity approvedAccountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -303,6 +302,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    approvedAccountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
 
     accountActivityRepository.saveAndFlush(approvedAccountActivity);
 
@@ -403,7 +403,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -411,6 +410,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
     log.info("AccountActivity: {}", accountActivity);
     accountActivity.setNotes("");
     Integer iconRef = 0;
@@ -438,7 +438,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -446,6 +445,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
     accountActivity.setNotes("");
     accountActivity.setUser(UserDetails.of(businessRecord.user()));
     accountActivity = accountActivityRepository.save(accountActivity);
@@ -488,7 +488,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -496,6 +495,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
     accountActivity.setNotes("");
     accountActivity.setUser(UserDetails.of(businessRecord.user()));
     accountActivity = accountActivityRepository.save(accountActivity);
@@ -525,7 +525,6 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -533,6 +532,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
     accountActivity.setNotes("");
     accountActivity.setMerchant(new MerchantDetails());
     accountActivity.setUser(UserDetails.of(businessRecord.user()));

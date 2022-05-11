@@ -16,10 +16,13 @@ FROM account_activity activity
 {{#isEmployee}}
     LEFT JOIN users ON activity.user_id = users.id
 {{/isEmployee}}
-LEFT JOIN get_allocation_permissions(:businessId, :owningUserId, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') as Self_Permission
-    ON (activity.allocation_id = Self_Permission.Allocation_id AND activity.user_id = :owningUserId)
-LEFT JOIN get_allocation_permissions(:businessId, :owningUserId, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_FUNDS') AS Manage_Funds_Permission
-    ON activity.allocation_id = Manage_Funds_Permission.Allocation_id
+LEFT JOIN LATERAL (
+    SELECT permissions.*
+    -- If Allocation.id is null, then all possible allocation permissions are returned
+    FROM get_all_allocation_permissions(:businessId, :owningUserId, activity.Allocation_Id, CAST(:globalRoles AS VARCHAR[])) permissions
+    WHERE (activity.allocation_id IS NOT NULL AND activity.allocation_id = permissions.allocation_id)
+    OR permissions.parent_allocation_id IS NULL
+) all_permissions ON true
 WHERE activity.business_id = :businessId
 AND activity.type = :type
 AND activity.activity_time >= :from
@@ -30,7 +33,10 @@ AND activity.activity_time < :to
 {{#userId}}
     AND activity.user_id = :userId
 {{/userId}}
-AND (Self_Permission.Allocation_Id IS NOT NULL OR Manage_Funds_Permission.Allocation_Id IS NOT NULL)
+AND (
+    (all_permissions.permissions @> ARRAY['VIEW_OWN']::allocationpermission[] AND activity.user_id = :owningUserId)
+    OR all_permissions.permissions @> ARRAY['MANAGE_FUNDS']::allocationpermission[]
+)
 GROUP BY
 {{#isAllocation}}
     activity.amount_currency, activity.allocation_id, activity.allocation_name

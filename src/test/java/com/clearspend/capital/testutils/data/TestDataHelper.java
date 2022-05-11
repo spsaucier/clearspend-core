@@ -183,7 +183,6 @@ public class TestDataHelper {
     final AccountActivity accountActivity =
         new AccountActivity(
             config.getBusiness().getId(),
-            config.getAccountId(),
             type,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(config.getAllocation()),
@@ -191,6 +190,7 @@ public class TestDataHelper {
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             Amount.of(config.getBusiness().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(config.getAccountId());
     accountActivity.setNotes("");
     accountActivity.setExpenseDetails(config.getExpenseDetails());
 

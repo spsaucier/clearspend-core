@@ -463,7 +463,6 @@ class ReceiptServiceTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             createBusinessRecord.business().getId(),
-            createBusinessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()),
@@ -471,6 +470,7 @@ class ReceiptServiceTest extends BaseCapitalTest {
             Amount.of(createBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(createBusinessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(createBusinessRecord.allocationRecord().account().getId());
     accountActivity.setNotes("");
     accountActivity.setUser(UserDetails.of(user));
     accountActivity.setAdjustmentId(

@@ -34,7 +34,6 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
     AccountActivity accountActivity =
         new AccountActivity(
             businessRecord.business().getId(),
-            businessRecord.allocationRecord().account().getId(),
             AccountActivityType.BANK_DEPOSIT_STRIPE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(businessRecord.allocationRecord().allocation()),
@@ -42,6 +41,7 @@ class AccountActivityRepositoryTest extends BaseCapitalTest {
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             Amount.of(businessRecord.business().getCurrency(), BigDecimal.ONE),
             AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity.setAccountId(businessRecord.allocationRecord().account().getId());
     accountActivity.setReceipt(null);
     accountActivity = accountActivityRepository.save(accountActivity);
     accountActivity = accountActivityRepository.findById(accountActivity.getId()).orElseThrow();

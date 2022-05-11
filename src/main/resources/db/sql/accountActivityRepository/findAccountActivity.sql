@@ -1,8 +1,11 @@
 select {{#count}}count(*){{/count}}{{^count}}*{{/count}} from account_activity
-left outer join get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'VIEW_OWN') as Self_Permission
-    on (account_activity.allocation_id = Self_Permission.Allocation_Id and account_activity.user_id = :invokingUser)
-left outer join get_allocation_permissions(:businessId, :invokingUser, CAST(:globalRoles AS VARCHAR[]), 'MANAGE_FUNDS') as Manage_Funds_Permission
-    on account_activity.allocation_id = Manage_Funds_Permission.Allocation_Id
+LEFT JOIN LATERAL (
+    SELECT permissions.*
+    -- If Allocation.id is null, then all possible allocation permissions are returned
+    FROM get_all_allocation_permissions(:businessId, :invokingUser, account_activity.Allocation_Id, CAST(:globalRoles AS VARCHAR[])) permissions
+    WHERE (account_activity.allocation_id IS NOT NULL AND account_activity.allocation_id = permissions.allocation_id)
+    OR permissions.parent_allocation_id IS NULL
+) all_permissions ON true
 where
     ( account_activity.hide_after >= clock_timestamp() or account_activity.hide_after is null )
     and ( account_activity.visible_after <= clock_timestamp() or account_activity.visible_after is null)
@@ -34,9 +37,11 @@ where
     {{/searchText}}
     {{#syncStatuses.0}} AND account_activity.integration_sync_status in :syncStatuses {{/syncStatuses.0}}
     {{#missingExpenseCategory}} AND account_activity.expense_details_expense_category_id IS NULL {{/missingExpenseCategory}}
-    AND (Self_Permission.Allocation_Id IS NOT NULL
-        OR Manage_Funds_Permission.Allocation_Id IS NOT NULL
-        OR has_global_permission(:invokingUser, CAST(:globalRoles AS VARCHAR[]), CAST('APPLICATION' AS globaluserpermission)) )
+    AND (
+        (all_permissions.permissions @> CAST(ARRAY['VIEW_OWN'] AS allocationpermission[]) AND account_activity.user_id = :invokingUser)
+        OR all_permissions.permissions @> CAST(ARRAY['MANAGE_FUNDS'] AS allocationpermission[])
+        OR all_permissions.global_permissions @> CAST(ARRAY['APPLICATION'] AS globaluserpermission[])
+    )
 {{^count}}
     order by
         account_activity.activity_time desc nulls last,

@@ -144,7 +144,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -152,6 +151,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    newAccountActivity.setAccountId(allocation.getAccountId());
     // Supplier does not exist, will need to be made
     newAccountActivity.setMerchant(
         new MerchantDetails(
@@ -329,7 +329,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity firstAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -337,6 +336,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    firstAccountActivity.setAccountId(allocation.getAccountId());
 
     firstAccountActivity.setMerchant(
         new MerchantDetails(
@@ -424,7 +424,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity firstAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -432,6 +431,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    firstAccountActivity.setAccountId(allocation.getAccountId());
 
     firstAccountActivity.setMerchant(
         new MerchantDetails(
@@ -467,7 +467,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity secondAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -475,6 +474,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    secondAccountActivity.setAccountId(allocation.getAccountId());
 
     secondAccountActivity.setMerchant(
         new MerchantDetails(
@@ -542,7 +542,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity firstAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -550,6 +549,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    firstAccountActivity.setAccountId(allocation.getAccountId());
 
     firstAccountActivity.setMerchant(
         new MerchantDetails(
@@ -570,7 +570,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity secondAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -578,6 +577,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    secondAccountActivity.setAccountId(allocation.getAccountId());
 
     secondAccountActivity.setMerchant(
         new MerchantDetails(
@@ -662,7 +662,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -670,6 +669,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    newAccountActivity.setAccountId(allocation.getAccountId());
 
     String myFileContents = "My file contents!!!";
 
@@ -961,29 +961,32 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @Test
   public void canGetSyncableCount() {
-    accountActivityRepository.save(
+    final AccountActivity accountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.READY));
+            AccountActivityIntegrationSyncStatus.READY);
+    accountActivity.setAccountId(allocation.getAccountId());
+    accountActivityRepository.save(accountActivity);
 
-    accountActivityRepository.save(
+    final AccountActivity accountActivity2 =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
             OffsetDateTime.now(),
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
-            AccountActivityIntegrationSyncStatus.NOT_READY));
+            AccountActivityIntegrationSyncStatus.NOT_READY);
+    accountActivity2.setAccountId(allocation.getAccountId());
+
+    accountActivityRepository.save(accountActivity2);
 
     assertThat(codatService.getSyncReadyCount(business.getId())).isEqualTo(1);
   }
@@ -1116,7 +1119,6 @@ public class CodatServiceTest extends BaseCapitalTest {
     AccountActivity newAccountActivity =
         new AccountActivity(
             business.getId(),
-            allocation.getAccountId(),
             AccountActivityType.NETWORK_CAPTURE,
             AccountActivityStatus.APPROVED,
             AllocationDetails.of(allocation),
@@ -1124,6 +1126,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             new Amount(Currency.USD, BigDecimal.TEN),
             new Amount(Currency.USD, BigDecimal.TEN),
             AccountActivityIntegrationSyncStatus.READY);
+    newAccountActivity.setAccountId(allocation.getAccountId());
 
     newAccountActivity.setMerchant(
         new MerchantDetails(

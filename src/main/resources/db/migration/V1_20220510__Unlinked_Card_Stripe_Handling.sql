@@ -1,0 +1,5 @@
+ALTER TABLE decline
+ALTER COLUMN account_id DROP NOT NULL;
+
+ALTER TABLE account_activity
+ALTER COLUMN account_id DROP NOT NULL;

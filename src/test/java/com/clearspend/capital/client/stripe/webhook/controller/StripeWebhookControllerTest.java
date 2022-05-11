@@ -30,7 +30,9 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
+import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.PaymentDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
@@ -52,11 +54,15 @@ import com.clearspend.capital.data.model.enums.PendingStripeTransferState;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
+import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
+import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
+import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
+import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
@@ -113,6 +119,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private AccountRepository accountRepository;
   @Autowired private HoldRepository holdRepository;
   @Autowired private StripeWebhookLogRepository stripeWebhookLogRepository;
+  @Autowired private NetworkMessageRepository networkMessageRepository;
+  @Autowired private DeclineRepository declineRepository;
 
   @Autowired private AccountService accountService;
   @Autowired private StripeMockClient stripeMockClient;
@@ -1339,7 +1347,12 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
         .hasFieldOrPropertyWithValue("status", AccountActivityStatus.DECLINED)
         .hasFieldOrPropertyWithValue(
-            "declineDetails", List.of(new DeclineDetails(DeclineReason.INVALID_CARD_STATUS)));
+            "declineDetails", List.of(new DeclineDetails(DeclineReason.INVALID_CARD_STATUS)))
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
 
     assertThat(stripeMockClient.getMockAuthorizations())
         .hasSize(1)
@@ -1392,7 +1405,12 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     assertEquals(3, allActivitiesPostAuth.size());
     assertThat(allActivitiesPostAuth.get(2))
         .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
-        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING);
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING)
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
 
     testHelper.setCurrentUser(createBusinessRecord.user());
     cardService.cancelCard(card, CardStatusReason.CARDHOLDER_REQUESTED);
@@ -1408,11 +1426,330 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
     assertThat(allActivitiesPostCapture.get(3))
         .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
-        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED);
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED)
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
 
     assertThat(stripeMockClient.getMockAuthorizations())
         .hasSize(1)
         .first()
         .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
+  }
+
+  @Test
+  void processAuthorization_PooledFunding_CardUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    cardService.unlinkCard(card);
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String json = authorizationTemplate.execute(params);
+    sendStripeJson(json);
+
+    final List<AccountActivity> allActivities =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivities.size());
+    assertThat(allActivities.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.DECLINED)
+        .hasFieldOrPropertyWithValue(
+            "declineDetails", List.of(new DeclineDetails(DeclineReason.UNLINKED_CARD)))
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("allocation", new AllocationDetails(null, null));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.DECLINED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).hasSize(1);
+    assertThat(declines.get(0))
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("accountId", null);
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(1);
+
+    assertThat(networkMessages.get(0))
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", declines.get(0).getId());
+  }
+
+  @Test
+  void processCompletion_PooledFunding_CardUnlinkedAfterAuthorization() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Template captureTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_captureTransaction.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String authorizationJson = authorizationTemplate.execute(params);
+    final String captureJson = captureTemplate.execute(params);
+    sendStripeJson(authorizationJson);
+
+    final List<AccountActivity> allActivitiesPostAuth =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivitiesPostAuth.size());
+    assertThat(allActivitiesPostAuth.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING)
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    cardService.unlinkCard(card);
+
+    sendStripeJson(captureJson);
+
+    final List<AccountActivity> allActivitiesPostCapture =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup, 3rd is authorization
+    assertEquals(4, allActivitiesPostCapture.size());
+
+    assertThat(allActivitiesPostCapture.get(3))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED)
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).isEmpty();
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(2);
+    networkMessages.sort(Comparator.comparing(NetworkMessage::getCreated));
+
+    assertThat(networkMessages.get(0))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessages.get(1))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
+  }
+
+  @Test
+  void processAuthorization_IndividualFunding_CardUnlinked() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL,
+            true);
+    final Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
+    serviceHelper
+        .accountService()
+        .reallocateFunds(
+            createBusinessRecord.allocationRecord().account().getId(),
+            account.getId(),
+            Amount.of(Currency.USD, 10));
+    cardService.unlinkCard(card);
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String json = authorizationTemplate.execute(params);
+    sendStripeJson(json);
+
+    final List<AccountActivity> allActivities =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivities.size());
+    assertThat(allActivities.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.DECLINED)
+        .hasFieldOrPropertyWithValue(
+            "declineDetails", List.of(new DeclineDetails(DeclineReason.UNLINKED_CARD)))
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue("allocation", new AllocationDetails(null, null));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.DECLINED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).hasSize(1);
+    assertThat(declines.get(0))
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("accountId", account.getId());
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(1);
+
+    assertThat(networkMessages.get(0))
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", declines.get(0).getId());
+  }
+
+  @Test
+  void processCompletion_IndividualFunding_CardUnlinkedAfterAuthorization() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            rootAllocation,
+            user,
+            Currency.USD,
+            FundingType.INDIVIDUAL,
+            CardType.PHYSICAL,
+            true);
+    final Account account = accountRepository.findById(card.getAccountId()).orElseThrow();
+    serviceHelper
+        .accountService()
+        .reallocateFunds(
+            createBusinessRecord.allocationRecord().account().getId(),
+            account.getId(),
+            Amount.of(Currency.USD, 10));
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Template captureTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_captureTransaction.json");
+    final Map<String, String> params =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String authorizationJson = authorizationTemplate.execute(params);
+    final String captureJson = captureTemplate.execute(params);
+    sendStripeJson(authorizationJson);
+
+    final List<AccountActivity> allActivitiesPostAuth =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+    // First 2 activities are from setup logic
+    assertEquals(3, allActivitiesPostAuth.size());
+    assertThat(allActivitiesPostAuth.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING)
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    cardService.unlinkCard(card);
+
+    sendStripeJson(captureJson);
+    final List<AccountActivity> allActivitiesPostCapture =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+
+    // First 2 activities are from setup, 3rd is authorization
+    assertEquals(4, allActivitiesPostCapture.size());
+
+    assertThat(allActivitiesPostCapture.get(3))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED)
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).isEmpty();
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(2);
+    networkMessages.sort(Comparator.comparing(NetworkMessage::getCreated));
+
+    assertThat(networkMessages.get(0))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessages.get(1))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", account.getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
   }
 }

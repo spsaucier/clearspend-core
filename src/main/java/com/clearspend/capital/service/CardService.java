@@ -584,11 +584,16 @@ public class CardService {
 
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public CardRecord getCardByExternalRef(@NonNull String externalRef) {
-    Card card =
+    final Card card =
         cardRepository
             .findByExternalRef(externalRef)
             .orElseThrow(() -> new RecordNotFoundException(Table.CARD, externalRef));
 
-    return new CardRecord(card, accountService.retrieveAccountById(card.getAccountId(), true));
+    final Account account =
+        Optional.ofNullable(card.getAccountId())
+            .map(accountId -> accountService.retrieveAccountById(accountId, true))
+            .orElse(null);
+
+    return new CardRecord(card, account);
   }
 }

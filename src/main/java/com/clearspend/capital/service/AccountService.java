@@ -14,7 +14,6 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Adjustment;
-import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -200,25 +199,31 @@ public class AccountService {
   }
 
   @Transactional(TxType.REQUIRED)
-  AdjustmentRecord recordNetworkAdjustment(Account account, @NonNull Amount amount) {
-    AdjustmentService.AdjustmentRecord adjustmentRecord =
-        adjustmentService.recordNetworkAdjustment(account, amount);
+  AdjustmentRecord recordNetworkAdjustment(
+      @NonNull final TypedId<AllocationId> allocationId,
+      @NonNull final Account account,
+      @NonNull final Amount amount) {
+    final AdjustmentService.AdjustmentRecord adjustmentRecord =
+        adjustmentService.recordNetworkAdjustment(allocationId, account, amount);
     account.setLedgerBalance(
         account.getLedgerBalance().add(adjustmentRecord.adjustment().getAmount()));
-    account = accountRepository.save(account);
-    account.recalculateAvailableBalance();
+    final Account savedAccount = accountRepository.save(account);
+    savedAccount.recalculateAvailableBalance();
 
     return new AdjustmentRecord(
-        account, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());
+        savedAccount, adjustmentRecord.adjustment(), adjustmentRecord.journalEntry());
   }
 
   @SneakyThrows
   @Transactional(TxType.REQUIRED)
   Decline recordNetworkDecline(
-      Account account, Card card, Amount amount, List<DeclineDetails> declineDetails) {
+      final TypedId<BusinessId> businessId,
+      final TypedId<CardId> cardId,
+      final TypedId<AccountId> accountId,
+      final Amount amount,
+      List<DeclineDetails> declineDetails) {
     return declineRepository.save(
-        new Decline(
-            account.getBusinessId(), account.getId(), card.getId(), amount, declineDetails));
+        new Decline(businessId, accountId, cardId, amount, declineDetails));
   }
 
   private Account retrieveAccount(TypedId<AccountId> accountId, boolean fetchHolds) {
