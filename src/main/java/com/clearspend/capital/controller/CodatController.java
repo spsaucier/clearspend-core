@@ -18,7 +18,9 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.TransactionSyncLog;
+import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
@@ -137,7 +139,7 @@ public class CodatController {
   }
 
   @GetMapping("/accounting-suppliers")
-  public GetSuppliersResponse getMatchedQboSuppliersByBusiness(
+  GetSuppliersResponse getMatchedQboSuppliersByBusiness(
       @RequestParam(value = "limit", required = false)
           @Parameter(
               required = false,
@@ -162,11 +164,23 @@ public class CodatController {
   }
 
   @PostMapping("/create-assign-vendor")
-  public CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
+  CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
       @Validated @RequestBody CreateAssignSupplierRequest createAssignSupplierRequest) {
     return codatService.createVendorAssignedToAccountActivity(
         CurrentUser.getBusinessId(),
         createAssignSupplierRequest.getAccountActivityId(),
         createAssignSupplierRequest.getSupplierName());
+  }
+
+  @GetMapping("/classes")
+  List<CodatCategory> getClassCategories() {
+    return codatService.getCodatCategoriesByType(
+        CurrentUser.getBusinessId(), CodatCategoryType.CLASS);
+  }
+
+  @GetMapping("/locations")
+  List<CodatCategory> getLocationCategories() {
+    return codatService.getCodatCategoriesByType(
+        CurrentUser.getBusinessId(), CodatCategoryType.LOCATION);
   }
 }

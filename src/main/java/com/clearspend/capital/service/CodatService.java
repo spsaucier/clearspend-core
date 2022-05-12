@@ -587,6 +587,7 @@ public class CodatService {
     return new GetSuppliersResponse(finalSuppliers.size(), finalSuppliers);
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
   public CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
       TypedId<BusinessId> businessId,
       TypedId<AccountActivityId> accountActivityId,
@@ -662,6 +663,12 @@ public class CodatService {
         }
       }
     }
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  public List<CodatCategory> getCodatCategoriesByType(
+      TypedId<BusinessId> businessId, CodatCategoryType type) {
+    return codatCategoryRepository.findByBusinessIdAndType(businessId, type);
   }
 
   private static final class Tree<T, R> {

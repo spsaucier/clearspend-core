@@ -39,6 +39,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -236,5 +237,18 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
                 .get(0)
                 .getType())
         .isEqualTo(CodatCategoryType.CLASS);
+
+    AssertionsForClassTypes.assertThat(
+            codatCategoryRepository
+                .findByBusinessIdAndType(
+                    createBusinessRecord.business().getBusinessId(), CodatCategoryType.CLASS)
+                .size())
+        .isEqualTo(1);
+    AssertionsForClassTypes.assertThat(
+            codatCategoryRepository
+                .findByBusinessIdAndType(
+                    createBusinessRecord.business().getBusinessId(), CodatCategoryType.LOCATION)
+                .size())
+        .isEqualTo(1);
   }
 }
