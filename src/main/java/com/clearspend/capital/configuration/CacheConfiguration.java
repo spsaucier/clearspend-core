@@ -28,6 +28,9 @@ public class CacheConfiguration {
     return (builder) ->
         builder
             .withCacheConfiguration(
+                "globalRole",
+                RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10)))
+            .withCacheConfiguration(
                 "mx-merchant-name",
                 RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(60)))
             .withCacheConfiguration(

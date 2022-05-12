@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -326,6 +327,7 @@ public class CodatClient {
     }
   }
 
+  @CacheEvict(value = "codat-suppliers", key = "#companyRef")
   public CodatPushDataResponse syncSupplierToCodat(
       String companyRef, String connectionId, CodatSupplierRequest supplier) {
     try {
