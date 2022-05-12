@@ -78,6 +78,7 @@ import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -111,6 +112,8 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired ReceiptService receiptService;
   @Autowired EntityManager entityManager;
 
+  @Autowired CacheManager cacheManager;
+
   @BeforeEach
   public void setup() {
     createBusinessRecord = testHelper.createBusiness();
@@ -134,6 +137,10 @@ public class CodatServiceTest extends BaseCapitalTest {
     // these accounts, but because the Mock Client is a @Component it retains changes between
     // test.
     mockClient.createDefaultAccountList();
+
+    cacheManager.getCacheNames().stream()
+        .map(it -> cacheManager.getCache(it))
+        .forEach(it -> it.clear());
   }
 
   @Test
@@ -1033,6 +1040,10 @@ public class CodatServiceTest extends BaseCapitalTest {
             GetSuppliersResponse.class);
 
     assertThat(suppliers2.getResults().size() == 50).isTrue();
+
+    cacheManager.getCacheNames().stream()
+        .map(it -> cacheManager.getCache(it))
+        .forEach(it -> it.clear());
 
     GetSuppliersResponse suppliers3 =
         mockMvcHelper.queryObject(

@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
@@ -39,9 +40,14 @@ public class SecuredRolesAndPermissionsServiceTest extends BaseCapitalTest {
   private final SecuredRolesAndPermissionsService secureRolesAndPermissionsService;
   private CreateBusinessRecord createBusinessRecord;
 
+  private final CacheManager cacheManager;
+
   @BeforeEach
   void setup() {
     createBusinessRecord = testHelper.createBusiness();
+    cacheManager.getCacheNames().stream()
+        .map(it -> cacheManager.getCache(it))
+        .forEach(it -> it.clear());
   }
 
   @Test

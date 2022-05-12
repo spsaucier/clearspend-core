@@ -118,6 +118,8 @@ public class NetworkCommon {
 
   private String merchantStatementDescriptor;
   private String enhancedMerchantLogo;
+  private String codatMerchantId;
+  private String codatMerchantName;
 
   @NonNull private OffsetDateTime transactionDate;
 

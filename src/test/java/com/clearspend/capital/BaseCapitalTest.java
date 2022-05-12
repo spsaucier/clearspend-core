@@ -37,4 +37,7 @@ public abstract class BaseCapitalTest {
   @Container
   private static final SharedFusionAuthContainer fusionauthContainer =
       SharedFusionAuthContainer.getInstance();
+
+  @Container
+  private static final SharedRedisContainer redisContainer = SharedRedisContainer.getInstance();
 }

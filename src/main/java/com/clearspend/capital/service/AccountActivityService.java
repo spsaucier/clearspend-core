@@ -340,8 +340,8 @@ public class AccountActivityService {
             common.getMerchantName(),
             common.getMerchantStatementDescriptor(),
             common.getMerchantAmount(),
-            null,
-            null,
+            common.getCodatMerchantName(),
+            common.getCodatMerchantId(),
             common.getMerchantType(),
             common.getMerchantNumber(),
             common.getMerchantCategoryCode(),
@@ -615,8 +615,16 @@ public class AccountActivityService {
       TypedId<AccountActivityId> accountActivityId,
       String merchantName,
       String logoPath,
-      String statementDescriptor) {
+      String statementDescriptor,
+      String codatId,
+      String codatName) {
     accountActivityRepository.updateMerchantData(
-        businessId, accountActivityId, merchantName, logoPath, statementDescriptor);
+        businessId,
+        accountActivityId,
+        merchantName,
+        logoPath,
+        statementDescriptor,
+        codatId,
+        codatName);
   }
 }

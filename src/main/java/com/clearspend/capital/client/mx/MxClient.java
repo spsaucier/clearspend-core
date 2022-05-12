@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,7 @@ public class MxClient {
     this.objectMapper = objectMapper;
   }
 
+  @Cacheable("mx-merchant-name")
   public EnhanceTransactionResponse getCleansedMerchantName(
       String merchantName, Integer categoryCode) {
     try {
@@ -52,6 +54,7 @@ public class MxClient {
     return null;
   }
 
+  @Cacheable("mx-merchant-logo")
   public String getMerchantLogo(String merchantGuid) {
     return get("/merchants/%s".formatted(merchantGuid), GetMerchantDetailsResponse.class)
         .getDetails()

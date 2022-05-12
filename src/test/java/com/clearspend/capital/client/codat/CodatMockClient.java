@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -162,6 +163,7 @@ public class CodatMockClient extends CodatClient {
     return new CodatSyncDirectCostResponse("Started", "test-push-operation-key-cost");
   }
 
+  @CacheEvict(value = "codat-suppliers", allEntries = true)
   public void addSupplierToList(CodatSupplier supplier) {
     this.supplierList.add(supplier);
   }

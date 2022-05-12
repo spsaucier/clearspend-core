@@ -61,7 +61,9 @@ public interface AccountActivityRepository
         update AccountActivity a set
           a.merchant.name = :name,
           a.merchant.statementDescriptor = :statementDescriptor,
-          a.merchant.logoUrl = :logoUrl
+          a.merchant.logoUrl = :logoUrl,
+          a.merchant.codatSupplierId = :codatSupplierId,
+          a.merchant.codatSupplierName = :codatSupplierName
         where a.businessId = :businessId
           and a.id = :activityId
       """)
@@ -70,5 +72,7 @@ public interface AccountActivityRepository
       @Param("activityId") TypedId<AccountActivityId> activityId,
       @Param("name") String name,
       @Param("logoUrl") String logoUrl,
-      @Param("statementDescriptor") String statementDescriptor);
+      @Param("statementDescriptor") String statementDescriptor,
+      @Param("codatSupplierId") String codatId,
+      @Param("codatSupplierName") String codatName);
 }

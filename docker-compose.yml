@@ -67,6 +67,17 @@ services:
     ports:
       - '3000:3000'
 
+  redis:
+    image: redis:6.2.7
+    restart: always
+    container_name: redis
+    command:
+      - redis-server --requirepass password
+    ports:
+      - '6379:6379'
+    environment:
+      - REDIS_PASSWORD=password
+
   capital-ui:
     build: ./../capital-ui
     image: capital-ui:latest

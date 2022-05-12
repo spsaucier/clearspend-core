@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -179,6 +180,7 @@ public class CodatClient {
         "/companies/%s/connections/%s".formatted(companyRef, connectionId), Boolean.class);
   }
 
+  @Cacheable("codat-suppliers")
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
     String uri = "/companies/%s/data/suppliers?page=1&pageSize=50".formatted(companyRef);
     List<CodatSupplier> allSupplier = new ArrayList<>();

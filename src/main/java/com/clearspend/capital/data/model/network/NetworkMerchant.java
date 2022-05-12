@@ -2,6 +2,7 @@ package com.clearspend.capital.data.model.network;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.network.NetworkMerchantId;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -31,4 +32,13 @@ public class NetworkMerchant extends TypedMutable<NetworkMerchantId> {
   @NonNull private Integer merchantCategoryCode;
 
   private String merchantLogoUrl;
+
+  @Column(name = "category_description")
+  private String category;
+
+  @Column(name = "external_merchant_id")
+  private String mxMerchantId;
+
+  @Column(name = "external_merchant_location_id")
+  private String mxLocationId;
 }

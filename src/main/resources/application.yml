@@ -33,6 +33,12 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${client.fusionauth.base-url}
+  redis:
+    database: 0
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:16379}
+    password: ${REDIS_PASSWORD:}
+    timeout: ${REDIS_TIMEOUT:60000}
 
 clearspend:
   business:
