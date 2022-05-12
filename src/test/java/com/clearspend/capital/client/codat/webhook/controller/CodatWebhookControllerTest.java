@@ -231,7 +231,7 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
     assertThat(savedCategories.size()).isEqualTo(2);
     assertThat(
             savedCategories.stream()
-                .filter(category -> category.getCodatId() == "1")
+                .filter(category -> category.getCodatCategoryId() == "1")
                 .toList()
                 .get(0)
                 .getType())

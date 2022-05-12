@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CodatCategoryRepository
     extends JpaRepository<CodatCategory, TypedId<CodatCategoryId>> {
 
-  Optional<CodatCategory> findByCodatId(String codatId);
+  Optional<CodatCategory> findByCodatCategoryId(String codatId);
 
   List<CodatCategory> findByBusinessId(TypedId<BusinessId> businessId);
 }
