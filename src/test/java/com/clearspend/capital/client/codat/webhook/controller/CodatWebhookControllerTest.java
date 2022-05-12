@@ -19,8 +19,11 @@ import com.clearspend.capital.client.codat.webhook.types.CodatWebhookSyncData;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.ChartOfAccounts;
+import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.TransactionSyncLog;
+import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import com.clearspend.capital.data.repository.ChartOfAccountsRepository;
+import com.clearspend.capital.data.repository.CodatCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.CodatService;
@@ -56,6 +59,7 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
   private final CodatMockClient codatClient;
   private final ChartOfAccountsRepository chartOfAccountsRepository;
   private final ServiceHelper serviceHelper;
+  private final CodatCategoryRepository codatCategoryRepository;
   private Faker faker = new Faker();
 
   @Value("${client.codat.auth-secret}")
@@ -204,5 +208,33 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
                 .getChildren()
                 .size())
         .isEqualTo(5);
+  }
+
+  @Test
+  @SneakyThrows
+  void handleWebhookCall_TrackingCategoriesSynced() {
+    final CodatWebhookDataSyncCompleteRequest request =
+        new CodatWebhookDataSyncCompleteRequest(
+            createBusinessRecord.business().getCodatCompanyRef(),
+            new CodatWebhookSyncData("trackingCategories"));
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post(URI.create("/codat-webhook/data-sync-complete"))
+                .header("Authorization", codatAuthSecret)
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(MockMvcResultMatchers.status().isOk());
+
+    List<CodatCategory> savedCategories =
+        codatCategoryRepository.findByBusinessId(createBusinessRecord.business().getBusinessId());
+    assertThat(savedCategories.size()).isEqualTo(2);
+    assertThat(
+            savedCategories.stream()
+                .filter(category -> category.getCodatId() == "1")
+                .toList()
+                .get(0)
+                .getType())
+        .isEqualTo(CodatCategoryType.CLASS);
   }
 }

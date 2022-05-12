@@ -20,12 +20,14 @@ import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
+import com.clearspend.capital.client.codat.types.CodatTrackingCategory;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.CreateAssignSupplierResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -34,6 +36,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.User;
@@ -41,9 +44,11 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncStatus;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.ChartOfAccountsUpdateStatus;
+import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.CodatCategoryRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -82,6 +87,8 @@ public class CodatService {
 
   private final ExpenseCategoryService expenseCategoryService;
   private final ChartOfAccountsMappingService chartOfAccountsMappingService;
+
+  private final CodatCategoryRepository codatCategoryRepository;
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
@@ -623,6 +630,37 @@ public class CodatService {
       updatedActivity.getMerchant().setCodatSupplierId(pushStatus.getData().getId());
 
       accountActivityRepository.save(updatedActivity);
+    }
+  }
+
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
+  public void updateCodatCategories(String companyRef) {
+    Optional<Business> business = businessRepository.findByCodatCompanyRef(companyRef);
+    if (business.isPresent()) {
+      GetTrackingCategoriesResponse categories =
+          codatClient.getTrackingCategoriesForBusiness(business.get().getCodatCompanyRef());
+      for (CodatTrackingCategory category : categories.getResults()) {
+        if (codatCategoryRepository.findByCodatId(category.getId()).isEmpty()) {
+          if ("DEPARTMENTS".equals(category.getParentId())) {
+            codatCategoryRepository.save(
+                new CodatCategory(
+                    business.get().getId(),
+                    category.getId(),
+                    category.getName(),
+                    category.getName(),
+                    CodatCategoryType.LOCATION));
+          }
+          if ("CLASSES".equals(category.getParentId())) {
+            codatCategoryRepository.save(
+                new CodatCategory(
+                    business.get().getId(),
+                    category.getId(),
+                    category.getName(),
+                    category.getName(),
+                    CodatCategoryType.CLASS));
+          }
+        }
+      }
     }
   }
 

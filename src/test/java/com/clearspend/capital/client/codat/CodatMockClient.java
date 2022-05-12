@@ -16,6 +16,7 @@ import com.clearspend.capital.client.codat.types.CodatSyncDirectCostResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
+import com.clearspend.capital.client.codat.types.CodatTrackingCategory;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.ConnectionStatus;
 import com.clearspend.capital.client.codat.types.ConnectionStatusResponse;
@@ -24,6 +25,7 @@ import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,11 +44,17 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class CodatMockClient extends CodatClient {
   private List<CodatSupplier> supplierList;
   private List<CodatAccount> accountList;
+  private List<CodatTrackingCategory> trackingCategoriesList;
 
   public CodatMockClient(WebClient codatWebClient, ObjectMapper objectMapper) {
     super(codatWebClient, objectMapper, "quickbooksonlinesandbox");
     supplierList = new ArrayList<>();
     supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
+    trackingCategoriesList = new ArrayList<>();
+    trackingCategoriesList.add(new CodatTrackingCategory("1", "CLASSES", "Class One", "Active"));
+    trackingCategoriesList.add(
+        new CodatTrackingCategory("2", "DEPARTMENTS", "Class Two", "Active"));
+    trackingCategoriesList.add(new CodatTrackingCategory("3", null, "DEPARTMENTS", "Active"));
     createDefaultAccountList();
   }
 
@@ -114,6 +122,10 @@ public class CodatMockClient extends CodatClient {
 
   public GetSuppliersResponse getSuppliersForBusiness(String companyRef) {
     return new GetSuppliersResponse(supplierList);
+  }
+
+  public GetTrackingCategoriesResponse getTrackingCategoriesForBusiness(String companyRef) {
+    return new GetTrackingCategoriesResponse(trackingCategoriesList);
   }
 
   public GetSuppliersResponse getSupplierForBusiness(String companyRef, String supplierName) {

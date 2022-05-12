@@ -22,6 +22,7 @@ import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
+import com.clearspend.capital.client.codat.types.CodatTrackingCategory;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
@@ -29,6 +30,8 @@ import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetAccountsResponsePage;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponsePage;
+import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
+import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponsePage;
 import com.clearspend.capital.client.codat.types.HateoasLink;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
@@ -202,6 +205,18 @@ public class CodatClient {
       uri = page.getLinks().getOrDefault("next", new HateoasLink()).getHref();
     } while (StringUtils.hasText(uri));
     return new GetAccountsResponse(accounts);
+  }
+
+  public GetTrackingCategoriesResponse getTrackingCategoriesForBusiness(String companyRef) {
+    String uri = "/companies/%s/data/trackingCategories?page=1&pageSize=50".formatted(companyRef);
+    List<CodatTrackingCategory> allCategories = new ArrayList<>();
+    do {
+      GetTrackingCategoriesResponsePage page =
+          getFromCodatApi(uri, GetTrackingCategoriesResponsePage.class);
+      allCategories.addAll(page.getResults());
+      uri = page.getLinks().getOrDefault("next", new HateoasLink()).getHref();
+    } while (StringUtils.hasText(uri));
+    return new GetTrackingCategoriesResponse(allCategories);
   }
 
   public CodatSyncDirectCostResponse syncTransactionAsDirectCost(

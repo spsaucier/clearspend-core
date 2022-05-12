@@ -89,6 +89,9 @@ public class CodatWebhookController {
       if ("bankAccounts".equals(request.getData().getDataType())) {
         codatService.updateBusinessStatusOnSync(request.getCompanyId());
       }
+      if ("trackingCategories".equals(request.getData().getDataType())) {
+        codatService.updateCodatCategories(request.getCompanyId());
+      }
     }
   }
 }
