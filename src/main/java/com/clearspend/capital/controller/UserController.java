@@ -112,7 +112,6 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId,
       @RequestBody UpdateUserRequest request) {
-
     try {
       request.setBusinessId(CurrentUser.getBusinessId());
       request.setUserId(userId);
@@ -536,7 +535,6 @@ public class UserController {
               description = "ID of the user record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
-
     return userService.archiveUser(CurrentUser.get().businessId(), userId);
   }
 

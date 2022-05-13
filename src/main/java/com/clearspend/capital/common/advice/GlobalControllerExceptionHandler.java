@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @Slf4j
 public class GlobalControllerExceptionHandler {
 
-  record ControllerError(String message, String param) {
+  public record ControllerError(String message, String param) {
 
     public ControllerError(String message) {
       this(message, "");

@@ -32,10 +32,14 @@ public class UserData {
   @NonNull
   private String lastName;
 
+  @JsonProperty("archived")
+  private boolean archived;
+
   public UserData(User user) {
     this.userId = user.getId();
     this.type = user.getType();
     this.firstName = user.getFirstName().getEncrypted();
     this.lastName = user.getLastName().getEncrypted();
+    this.archived = user.isArchived();
   }
 }

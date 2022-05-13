@@ -56,7 +56,8 @@ public class UserRolesAndPermissionsRecord {
             permissions.userId(),
             permissions.userType(),
             permissions.firstName(),
-            permissions.lastName());
+            permissions.lastName(),
+            false);
     inherited = permissions.inherited();
     allocationPermissions = List.copyOf(permissions.allocationPermissions());
     globalUserPermissions = List.copyOf(permissions.globalUserPermissions());

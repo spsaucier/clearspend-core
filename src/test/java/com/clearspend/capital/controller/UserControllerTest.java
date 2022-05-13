@@ -17,6 +17,7 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -236,6 +237,40 @@ class UserControllerTest extends BaseCapitalTest {
         .ifPresentOrElse((f) -> {}, () -> fail("User was not found"));
 
     log.info(response.getContentAsString());
+  }
+
+  @Test
+  @SneakyThrows
+  void updateUser_UserHasBeenArchived() {
+    final CreateUpdateUserRecord createdUser =
+        testHelper.createUser(createBusinessRecord.business());
+    createdUser.user().setArchived(true);
+    userRepository.saveAndFlush(createdUser.user());
+    final UpdateUserRequest userRecord =
+        new UpdateUserRequest(
+            null,
+            null,
+            faker.name().firstName(),
+            createdUser.user().getLastName().toString(),
+            new Address(createdUser.user().getAddress()),
+            faker.internet().emailAddress(), // Ensure non-duplicate email address
+            createdUser.user().getPhone().toString(),
+            true);
+
+    final String body = objectMapper.writeValueAsString(userRecord);
+
+    final MockHttpServletResponse response =
+        mvc.perform(
+                patch("/users/" + createdUser.user().getId())
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse();
+    final ControllerError error =
+        objectMapper.readValue(response.getContentAsString(), ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "User has been archived");
   }
 
   @SneakyThrows
@@ -2092,6 +2127,34 @@ class UserControllerTest extends BaseCapitalTest {
     Assertions.assertEquals(1, userPageData.getTotalElements());
   }
 
+  @Test
+  @SneakyThrows
+  void archiveUser_UserAlreadyArchived() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final com.clearspend.capital.data.model.User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    employee.setArchived(true);
+    userRepository.saveAndFlush(employee);
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/users/%s/archive".formatted(employee.getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "User is already archived");
+  }
+
   @SneakyThrows
   @Test
   void searchForUsersIncludeArchivedUsers() {
@@ -2564,6 +2627,34 @@ class UserControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
         .hasFieldOrPropertyWithValue("allocationId", null)
         .hasFieldOrPropertyWithValue("accountId", null);
+  }
+
+  @Test
+  @SneakyThrows
+  void activateMyCards_UserHasBeenArchived() {
+    final CreateUpdateUserRecord employeeRecord =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    employeeRecord.user().setArchived(true);
+    userRepository.saveAndFlush(employeeRecord.user());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    final ActivateCardRequest request =
+        new ActivateCardRequest(card.getLastFour(), CardStatusReason.CARDHOLDER_REQUESTED);
+    final Cookie cookie = testHelper.login(employeeRecord.user());
+
+    // An archived user has no permissions, so PreFilter removes all cards from request, which
+    // results in RecordNotFound, ie 404
+    mockMvcHelper
+        .query("/users/cards/activate", HttpMethod.PATCH, cookie, request)
+        .andExpect(status().is(404));
   }
 
   @Test

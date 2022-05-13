@@ -188,8 +188,11 @@ public class UserService {
   public CreateUpdateUserRecord updateUser(@NonNull final UpdateUserRequest updateUserRequest) {
 
     User user = retrieveUser(updateUserRequest.getUserId());
+    if (user.isArchived()) {
+      throw new InvalidRequestException("User has been archived");
+    }
     if (!updateUserRequest.getBusinessId().equals(user.getBusinessId())) {
-      throw new IllegalArgumentException("businessId");
+      throw new InvalidRequestException("Invalid Business ID");
     }
     if (isChanged(updateUserRequest.getFirstName(), user.getFirstName())) {
       user.setFirstName(new RequiredEncryptedStringWithHash(updateUserRequest.getFirstName()));
@@ -323,6 +326,9 @@ public class UserService {
         userRepository
             .findByBusinessIdAndId(businessId, userId)
             .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+    if (user.isArchived()) {
+      throw new InvalidRequestException("User is already archived");
+    }
 
     cardService
         .getNotCancelledCardsForUser(businessId, userId)

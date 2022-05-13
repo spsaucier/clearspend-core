@@ -7,6 +7,7 @@ SELECT
     Users.Type AS user_type,
     Users.First_Name_Encrypted AS user_first_name_enc,
     Users.Last_Name_Encrypted AS user_last_name_enc,
+    Users.Archived AS user_archived,
     Allocation.Id AS allocation_id,
     Allocation.Name AS allocation_name,
     Card.Status AS card_status,

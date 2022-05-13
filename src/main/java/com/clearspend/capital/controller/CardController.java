@@ -23,6 +23,7 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.stripe.model.EphemeralKey;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +50,7 @@ public class CardController {
 
   private final CardService cardService;
   private final BusinessService businessService;
+  private final UserService userService;
   private final StripeClient stripeClient;
 
   @GetMapping("/{cardId}")
@@ -74,6 +76,10 @@ public class CardController {
     // place for individual cards
     if (request.getFundingType() == FundingType.INDIVIDUAL) {
       throw new InvalidRequestException("Individual card issuing is not currently supported");
+    }
+
+    if (userService.retrieveUser(request.getUserId()).isArchived()) {
+      throw new InvalidRequestException("User has been archived");
     }
 
     request
