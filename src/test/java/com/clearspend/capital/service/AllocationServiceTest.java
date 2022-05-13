@@ -207,7 +207,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
         testHelper.createUserWithRole(child2, DefaultRoles.ALLOCATION_VIEW_ONLY).user();
     final ThrowingSupplier<List<AllocationRecord>> action =
         () ->
-            allocationService.getAllocationChildren(
+            allocationService.getAllocationChildrenRecords(
                 createBusinessRecord.business(),
                 createBusinessRecord.allocationRecord().allocation().getId());
     permissionValidationHelper

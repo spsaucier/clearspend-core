@@ -1,5 +1,6 @@
 package com.clearspend.capital.data.repository;
 
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -46,4 +47,10 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
       @Param("lastFour") String lastFour);
 
   int countByBusinessIdAndType(TypedId<BusinessId> businessId, CardType cardType);
+
+  @Query(
+      "SELECT c FROM Card c WHERE c.status <> 'CANCELLED' AND c.allocationId = :allocationId AND c.type = :type")
+  List<Card> findAllNonCancelledByAllocationIdAndType(
+      @Param("allocationId") final TypedId<AllocationId> allocationId,
+      @Param("type") final CardType type);
 }

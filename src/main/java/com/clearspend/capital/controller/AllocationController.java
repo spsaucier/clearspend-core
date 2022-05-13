@@ -11,6 +11,8 @@ import com.clearspend.capital.controller.type.allocation.AllocationFundCardReque
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardResponse;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationResponse;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsResponse;
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -75,6 +77,19 @@ public class AllocationController {
     return AllocationDetailsResponse.of(allocationRecord);
   }
 
+  @PatchMapping("/{allocationId}/cards/stop")
+  StopAllCardsResponse stopAllCards(
+      @PathVariable("allocationId")
+          @Parameter(
+              required = true,
+              name = "allocationId",
+              description = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<AllocationId> allocationId,
+      @RequestBody StopAllCardsRequest request) {
+    return allocationService.stopAllCards(allocationId, request);
+  }
+
   @PatchMapping("/{allocationId}")
   AllocationDetailsResponse updateAllocation(
       @PathVariable(value = "allocationId")
@@ -114,7 +129,7 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId) {
     return allocationService
-        .getAllocationChildren(
+        .getAllocationChildrenRecords(
             businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId)
         .stream()
         .map(

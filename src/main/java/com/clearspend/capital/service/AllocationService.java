@@ -17,8 +17,11 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsResponse;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -31,6 +34,8 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
+import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -38,6 +43,7 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
+import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
@@ -48,10 +54,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -75,6 +83,7 @@ public class AllocationService {
   private final RetrievalService retrievalService;
 
   private final EntityManager entityManager;
+  private final CardService cardService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
 
@@ -286,7 +295,7 @@ public class AllocationService {
   }
 
   @PostFilter("hasPermission(filterObject?.allocation, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")
-  public List<AllocationRecord> getAllocationChildren(
+  public List<AllocationRecord> getAllocationChildrenRecords(
       Business business, TypedId<AllocationId> allocationId) {
     // Retrieve list of allocations which have the parentAllocationId equal to allocationId
     List<Allocation> allocations;
@@ -318,6 +327,74 @@ public class AllocationService {
     return allocations.stream()
         .map(e -> new AllocationRecord(e, accountMap.get(e.getId())))
         .collect(Collectors.toList());
+  }
+
+  private record PhysicalCardIds(Set<TypedId<CardId>> cancelled, Set<TypedId<CardId>> unlinked) {}
+
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS|CUSTOMER_SERVICE')")
+  public StopAllCardsResponse stopAllCards(
+      final TypedId<AllocationId> allocationId, final StopAllCardsRequest request) {
+    final Set<TypedId<CardId>> cancelledVirtualCardIds;
+    if (request.cancelVirtualCards()) {
+      cancelledVirtualCardIds =
+          cardRepository
+              .findAllNonCancelledByAllocationIdAndType(allocationId, CardType.VIRTUAL)
+              .stream()
+              .map(card -> cardService.cancelCard(card, CardStatusReason.CARDHOLDER_REQUESTED))
+              .map(Card::getId)
+              .collect(Collectors.toSet());
+    } else {
+      cancelledVirtualCardIds = Set.of();
+    }
+
+    final PhysicalCardIds physicalCardIds =
+        switch (request.stopPhysicalCardsType()) {
+          case CANCEL -> new PhysicalCardIds(
+              cardRepository
+                  .findAllNonCancelledByAllocationIdAndType(allocationId, CardType.PHYSICAL)
+                  .stream()
+                  .map(card -> cardService.cancelCard(card, CardStatusReason.CARDHOLDER_REQUESTED))
+                  .map(Card::getId)
+                  .collect(Collectors.toSet()),
+              Set.of());
+          case UNLINK -> new PhysicalCardIds(
+              Set.of(),
+              cardRepository
+                  .findAllNonCancelledByAllocationIdAndType(allocationId, CardType.PHYSICAL)
+                  .stream()
+                  .map(cardService::unlinkCard)
+                  .map(CardRecord::card)
+                  .map(Card::getId)
+                  .collect(Collectors.toSet()));
+          default -> new PhysicalCardIds(Set.of(), Set.of());
+        };
+
+    final StopAllCardsResponse currentResponse =
+        new StopAllCardsResponse(
+            SetUtils.union(cancelledVirtualCardIds, physicalCardIds.cancelled()),
+            physicalCardIds.unlinked());
+
+    final Stream<StopAllCardsResponse> childResponses;
+    if (request.applyToChildAllocations()) {
+      childResponses =
+          getAllocationChildren(CurrentUser.getBusinessId(), allocationId).stream()
+              .map(allocation -> stopAllCards(allocation.getId(), request));
+    } else {
+      childResponses = Stream.empty();
+    }
+
+    return childResponses.reduce(
+        currentResponse,
+        (res1, res2) ->
+            new StopAllCardsResponse(
+                SetUtils.union(res1.cancelledCards(), res2.cancelledCards()),
+                SetUtils.union(res1.unlinkedCards(), res2.unlinkedCards())));
+  }
+
+  private List<Allocation> getAllocationChildren(
+      final TypedId<BusinessId> businessId, final TypedId<AllocationId> parentAllocationId) {
+    return allocationRepository.findByBusinessIdAndParentAllocationId(
+        businessId, parentAllocationId);
   }
 
   @PostFilter("hasPermission(filterObject?.allocation, 'READ|CUSTOMER_SERVICE|GLOBAL_READ')")

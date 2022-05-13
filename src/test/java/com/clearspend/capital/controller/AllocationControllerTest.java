@@ -7,12 +7,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest.StopPhysicalCardsType;
+import com.clearspend.capital.controller.type.allocation.StopAllCardsResponse;
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.card.limits.Limit;
@@ -30,37 +37,53 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
+import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ServiceHelper;
+import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import javax.annotation.Nullable;
 import javax.servlet.http.Cookie;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
 class AllocationControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
+  private final MockMvcHelper mockMvcHelper;
   private final TestHelper testHelper;
   private final AccountService accountService;
   private final AllocationService allocationService;
+  private final PermissionValidationHelper permissionValidationHelper;
+  private final StripeMockClient stripeMockClient;
+  private final CardRepository cardRepository;
   private final ServiceHelper serviceHelper;
 
   private final Faker faker = new Faker();
@@ -69,6 +92,232 @@ class AllocationControllerTest extends BaseCapitalTest {
   @BeforeEach
   void init() {
     createBusinessRecord = testHelper.init();
+  }
+
+  @AfterEach
+  void cleanup() {
+    stripeMockClient.reset();
+  }
+
+  private Card issueCardForStopAll(final Allocation allocation, final CardType cardType) {
+    return testHelper.issueCard(
+        createBusinessRecord.business(),
+        allocation,
+        createBusinessRecord.user(),
+        Currency.USD,
+        FundingType.POOLED,
+        cardType,
+        false);
+  }
+
+  @Test
+  void stopAllCards_CancelPhysicalAndVirtual() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card rootPhysical1 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootPhysical2 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootVirtual1 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card rootVirtual2 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card childPhysical1 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childPhysical2 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childVirtual1 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+    final Card childVirtual2 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+
+    final StopAllCardsRequest request =
+        new StopAllCardsRequest(false, true, StopPhysicalCardsType.CANCEL);
+    final StopAllCardsResponse response =
+        mockMvcHelper.queryObject(
+            "/allocations/%s/cards/stop"
+                .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            request,
+            StopAllCardsResponse.class);
+    assertThat(response.cancelledCards())
+        .containsExactlyInAnyOrder(
+            rootPhysical1.getId(),
+            rootPhysical2.getId(),
+            rootVirtual1.getId(),
+            rootVirtual2.getId());
+    assertThat(response.unlinkedCards()).isEmpty();
+
+    validateCardStatus(
+        rootPhysical1, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(
+        rootPhysical2, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(
+        rootVirtual1, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(
+        rootVirtual2, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(childPhysical1, childAllocation.allocation(), CardStatus.INACTIVE);
+    validateCardStatus(childPhysical2, childAllocation.allocation(), CardStatus.INACTIVE);
+    validateCardStatus(childVirtual1, childAllocation.allocation(), CardStatus.ACTIVE);
+    validateCardStatus(childVirtual2, childAllocation.allocation(), CardStatus.ACTIVE);
+  }
+
+  private void validateCardStatus(
+      @NonNull final Card card,
+      @Nullable final Allocation cardAllocation,
+      @NonNull final CardStatus expectedStatus) {
+    final TypedId<AllocationId> cardAllocationId =
+        Optional.ofNullable(cardAllocation).map(Allocation::getId).orElse(null);
+    assertThat(cardRepository.findById(card.getId()))
+        .isPresent()
+        .get()
+        .hasFieldOrPropertyWithValue("status", expectedStatus)
+        .hasFieldOrPropertyWithValue("allocationId", cardAllocationId);
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    if (expectedStatus == CardStatus.CANCELLED) {
+      assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+    } else {
+      assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", null);
+    }
+  }
+
+  @Test
+  void stopAllCards_CancelVirtualUnlinkPhysical_ApplyToChildren() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card rootPhysical1 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootPhysical2 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootVirtual1 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card rootVirtual2 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card childPhysical1 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childPhysical2 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childVirtual1 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+    final Card childVirtual2 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+
+    final StopAllCardsRequest request =
+        new StopAllCardsRequest(true, true, StopPhysicalCardsType.UNLINK);
+    final StopAllCardsResponse response =
+        mockMvcHelper.queryObject(
+            "/allocations/%s/cards/stop"
+                .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            request,
+            StopAllCardsResponse.class);
+    assertThat(response.cancelledCards())
+        .containsExactlyInAnyOrder(
+            rootVirtual1.getId(),
+            rootVirtual2.getId(),
+            childVirtual1.getId(),
+            childVirtual2.getId());
+    assertThat(response.unlinkedCards())
+        .containsExactlyInAnyOrder(
+            rootPhysical1.getId(),
+            rootPhysical2.getId(),
+            childPhysical1.getId(),
+            childPhysical2.getId());
+
+    validateCardStatus(rootPhysical1, null, CardStatus.INACTIVE);
+    validateCardStatus(rootPhysical2, null, CardStatus.INACTIVE);
+    validateCardStatus(
+        rootVirtual1, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(
+        rootVirtual2, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(childPhysical1, null, CardStatus.INACTIVE);
+    validateCardStatus(childPhysical2, null, CardStatus.INACTIVE);
+    validateCardStatus(childVirtual1, childAllocation.allocation(), CardStatus.CANCELLED);
+    validateCardStatus(childVirtual2, childAllocation.allocation(), CardStatus.CANCELLED);
+  }
+
+  @Test
+  void stopAllCards_CancelVirtualUnlinkPhysical() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card rootPhysical1 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootPhysical2 =
+        issueCardForStopAll(
+            createBusinessRecord.allocationRecord().allocation(), CardType.PHYSICAL);
+    final Card rootVirtual1 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card rootVirtual2 =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final Card childPhysical1 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childPhysical2 =
+        issueCardForStopAll(childAllocation.allocation(), CardType.PHYSICAL);
+    final Card childVirtual1 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+    final Card childVirtual2 = issueCardForStopAll(childAllocation.allocation(), CardType.VIRTUAL);
+
+    final StopAllCardsRequest request =
+        new StopAllCardsRequest(false, true, StopPhysicalCardsType.UNLINK);
+    final StopAllCardsResponse response =
+        mockMvcHelper.queryObject(
+            "/allocations/%s/cards/stop"
+                .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            request,
+            StopAllCardsResponse.class);
+    assertThat(response.cancelledCards())
+        .containsExactlyInAnyOrder(rootVirtual1.getId(), rootVirtual2.getId());
+    assertThat(response.unlinkedCards())
+        .containsExactlyInAnyOrder(rootPhysical1.getId(), rootPhysical2.getId());
+
+    validateCardStatus(rootPhysical1, null, CardStatus.INACTIVE);
+    validateCardStatus(rootPhysical2, null, CardStatus.INACTIVE);
+    validateCardStatus(
+        rootVirtual1, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(
+        rootVirtual2, createBusinessRecord.allocationRecord().allocation(), CardStatus.CANCELLED);
+    validateCardStatus(childPhysical1, childAllocation.allocation(), CardStatus.INACTIVE);
+    validateCardStatus(childPhysical2, childAllocation.allocation(), CardStatus.INACTIVE);
+    validateCardStatus(childVirtual1, childAllocation.allocation(), CardStatus.ACTIVE);
+    validateCardStatus(childVirtual2, childAllocation.allocation(), CardStatus.ACTIVE);
+  }
+
+  @Test
+  void stopAllCards_UserPermissions() {
+    final StopAllCardsRequest request =
+        new StopAllCardsRequest(false, true, StopPhysicalCardsType.UNLINK);
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvcHelper.query(
+                "/allocations/%s/cards/stop"
+                    .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+                HttpMethod.PATCH,
+                cookie,
+                request);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateMockMvcCall(action);
   }
 
   @SneakyThrows
