@@ -6,16 +6,15 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CodatCategoryRepository
     extends JpaRepository<CodatCategory, TypedId<CodatCategoryId>> {
 
-  Optional<CodatCategory> findByCodatCategoryId(String codatId);
-
   List<CodatCategory> findByBusinessId(TypedId<BusinessId> businessId);
 
   List<CodatCategory> findByBusinessIdAndType(
       TypedId<BusinessId> businessId, CodatCategoryType type);
+
+  List<CodatCategory> findByBusinessIdAndCodatCategoryId(TypedId<BusinessId> businessId, String id);
 }

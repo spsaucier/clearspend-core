@@ -641,7 +641,9 @@ public class CodatService {
       GetTrackingCategoriesResponse categories =
           codatClient.getTrackingCategoriesForBusiness(business.get().getCodatCompanyRef());
       for (CodatTrackingCategory category : categories.getResults()) {
-        if (codatCategoryRepository.findByCodatCategoryId(category.getId()).isEmpty()) {
+        if (codatCategoryRepository
+            .findByBusinessIdAndCodatCategoryId(business.get().getBusinessId(), category.getId())
+            .isEmpty()) {
           if ("DEPARTMENTS".equals(category.getParentId())) {
             codatCategoryRepository.save(
                 new CodatCategory(
