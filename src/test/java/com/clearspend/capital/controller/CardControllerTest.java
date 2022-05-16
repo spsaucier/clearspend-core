@@ -42,9 +42,11 @@ import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
@@ -83,6 +85,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private final EntityManager entityManager;
   private final CardRepository cardRepository;
   private final UserRepository userRepository;
+  private final AllocationRepository allocationRepository;
   private final TransactionLimitRepository transactionLimitRepository;
   private final PermissionValidationHelper permissionValidationHelper;
 
@@ -151,6 +154,54 @@ public class CardControllerTest extends BaseCapitalTest {
             "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
 
     assertThat(issueCardResponse).hasSize(2);
+  }
+
+  @Test
+  @SneakyThrows
+  void issueCard_AllocationIsArchived() {
+    final AllocationRecord allocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getBusinessId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final CreateUpdateUserRecord employeeRecord =
+        testHelper.createUserWithRole(allocation.allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    allocation.allocation().setArchived(true);
+    allocationRepository.saveAndFlush(allocation.allocation());
+
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
+            allocation.allocation().getAllocationId(),
+            employeeRecord.user().getId(),
+            Currency.USD,
+            true,
+            CurrencyLimit.ofMap(
+                Map.of(
+                    Currency.USD,
+                    Map.of(
+                        LimitType.PURCHASE,
+                        Map.of(
+                            LimitPeriod.DAILY,
+                            BigDecimal.ONE,
+                            LimitPeriod.MONTHLY,
+                            BigDecimal.TEN)))),
+            Collections.emptySet(),
+            Set.of(PaymentType.MANUAL_ENTRY),
+            false);
+    issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
+
+    entityManager.flush();
+
+    final String response =
+        mockMvcHelper
+            .query("/cards", HttpMethod.POST, createBusinessRecord.authCookie(), issueCardRequest)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
   }
 
   @Test

@@ -256,6 +256,10 @@ public class RolesAndPermissionsService {
       prepareUserAllocationRoleChange(User grantee, Allocation allocation, String newRole) {
     entityManager.flush();
 
+    if (allocation.isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
+
     final UserRolesAndPermissions grantorPermissions =
         userAllocationRoleRepository
             .findAllByUserIdAndAllocationId(

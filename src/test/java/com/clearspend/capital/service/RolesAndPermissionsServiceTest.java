@@ -31,6 +31,7 @@ import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.security.AllocationRolePermissions;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.security.AllocationRolePermissionsRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
@@ -74,6 +75,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
   @Autowired BusinessBankAccountService businessBankAccountService;
   @Autowired EntityManager entityManager;
   @Autowired FusionAuthService fusionAuthService;
+  @Autowired private AllocationRepository allocationRepository;
 
   private CreateBusinessRecord createBusinessRecord;
   private Allocation rootAllocation;
@@ -434,6 +436,44 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     assertThat(endingManagerOnChildPermissions)
         .hasFieldOrPropertyWithValue("allocationRole", DefaultRoles.ALLOCATION_VIEW_ONLY)
         .hasFieldOrPropertyWithValue("allocationPermissions", viewOnlyPermissions);
+  }
+
+  @Test
+  void createOrUpdateUserAllocationRole_AllocationIsArchived() {
+    final User employee = testHelper.createUser(createBusinessRecord.business()).user();
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+
+    final InvalidRequestException ex =
+        assertThrows(
+            InvalidRequestException.class,
+            () ->
+                rolesAndPermissionsService.createOrUpdateUserAllocationRole(
+                    employee.getId(),
+                    createBusinessRecord.allocationRecord().account().getAllocationId(),
+                    DefaultRoles.ALLOCATION_ADMIN));
+    assertThat(ex).hasFieldOrPropertyWithValue("message", "Allocation is archived");
+  }
+
+  @Test
+  void deleteUserAllocationRole_AllocationIsArchived() {
+    final User manager1 =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+
+    final InvalidRequestException ex =
+        assertThrows(
+            InvalidRequestException.class,
+            () ->
+                rolesAndPermissionsService.deleteUserAllocationRole(
+                    createBusinessRecord.allocationRecord().account().getAllocationId(),
+                    manager1.getId()));
+    assertThat(ex).hasFieldOrPropertyWithValue("message", "Allocation is archived");
   }
 
   @Test

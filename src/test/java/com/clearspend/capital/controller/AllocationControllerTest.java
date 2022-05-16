@@ -11,6 +11,7 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.Amount;
@@ -40,6 +41,7 @@ import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -81,6 +83,7 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final AccountService accountService;
   private final AllocationService allocationService;
+  private final AllocationRepository allocationRepository;
   private final PermissionValidationHelper permissionValidationHelper;
   private final StripeMockClient stripeMockClient;
   private final CardRepository cardRepository;
@@ -108,6 +111,85 @@ class AllocationControllerTest extends BaseCapitalTest {
         FundingType.POOLED,
         cardType,
         false);
+  }
+
+  @Test
+  @SneakyThrows
+  void stopAllCards_AllocationIsArchived() {
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+
+    final StopAllCardsRequest request =
+        new StopAllCardsRequest(false, true, StopPhysicalCardsType.CANCEL);
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/cards/stop"
+                    .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie(),
+                request)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
+  }
+
+  @Test
+  @SneakyThrows
+  void updateAllocation_AllocationIsArchived() {
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+    final UpdateAllocationRequest request = new UpdateAllocationRequest();
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s"
+                    .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie(),
+                request)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
+  }
+
+  @Test
+  @SneakyThrows
+  void reallocateAllocationFunds_AllocationIsArchived() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final Card card =
+        issueCardForStopAll(createBusinessRecord.allocationRecord().allocation(), CardType.VIRTUAL);
+    final AllocationFundCardRequest request =
+        new AllocationFundCardRequest(
+            createBusinessRecord.allocationRecord().account().getId(),
+            card.getId(),
+            AllocationReallocationType.ALLOCATION_TO_CARD,
+            new Amount(Currency.USD, new BigDecimal("10")));
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/transactions"
+                    .formatted(
+                        createBusinessRecord.allocationRecord().allocation().getAllocationId()),
+                HttpMethod.POST,
+                createBusinessRecord.authCookie(),
+                request)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
   }
 
   @Test

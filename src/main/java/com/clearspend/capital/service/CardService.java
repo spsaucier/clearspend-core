@@ -108,6 +108,10 @@ public class CardService {
       Boolean disableForeign,
       Address shippingAddress) {
 
+    if (retrievalService.retrieveAllocation(allocationId).isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
+
     if (cardType == CardType.PHYSICAL) {
       if (shippingAddress == null) {
         throw new InvalidRequestException("Shipping address required for physical cards");

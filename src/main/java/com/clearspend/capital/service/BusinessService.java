@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
+import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -352,6 +353,11 @@ public class BusinessService {
         allocationService.getAllocation(businessRecord.business, allocationIdFrom);
     AllocationDetailsRecord allocationToRecord =
         allocationService.getAllocation(businessRecord.business, allocationIdTo);
+
+    if (allocationFromRecord.allocation().isArchived()
+        || allocationToRecord.allocation().isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(

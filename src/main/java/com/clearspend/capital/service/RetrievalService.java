@@ -2,13 +2,16 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -26,11 +29,18 @@ class RetrievalService {
   private final BusinessRepository businessRepository;
   private final BusinessBankAccountRepository businessBankAccountRepository;
   private final UserRepository userRepository;
+  private final AllocationRepository allocationRepository;
 
   Business retrieveBusiness(TypedId<BusinessId> businessId, boolean mustExist) {
     return businessRepository
         .findById(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, mustExist, businessId));
+  }
+
+  Allocation retrieveAllocation(final TypedId<AllocationId> allocationId) {
+    return allocationRepository
+        .findById(allocationId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, allocationId));
   }
 
   BusinessBankAccount retrieveBusinessBankAccount(

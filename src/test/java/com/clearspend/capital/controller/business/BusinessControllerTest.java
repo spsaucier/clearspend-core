@@ -12,6 +12,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.PlaidLogEntryId;
@@ -20,6 +21,7 @@ import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
+import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceRequest;
 import com.clearspend.capital.controller.type.business.BusinessLimit;
 import com.clearspend.capital.controller.type.business.BusinessLimit.BusinessLimitOperationRecord;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
@@ -41,6 +43,7 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AccountService;
@@ -91,6 +94,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
   private final BusinessService businessService;
   private final UserRepository userRepository;
+  private final AllocationRepository allocationRepository;
   private final PermissionValidationHelper permissionValidationHelper;
   private final PlaidLogEntryRepository plaidLogEntryRepository;
 
@@ -154,6 +158,86 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .allowGlobalRoles(DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
         .build()
         .validateMockMvcCall(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void reallocateBusinessFunds_FromAllocationArchived() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    createBusinessRecord.allocationRecord().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(createBusinessRecord.allocationRecord().allocation());
+    final BusinessReallocationRequest request =
+        new BusinessReallocationRequest(
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            childAllocation.allocation().getId(),
+            new com.clearspend.capital.controller.type.Amount(Currency.USD, new BigDecimal("10")));
+
+    final String response =
+        mvcHelper
+            .query(
+                "/businesses/transactions",
+                HttpMethod.POST,
+                createBusinessRecord.authCookie(),
+                request)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
+  }
+
+  @Test
+  @SneakyThrows
+  void reallocateBusinessFunds_ToAllocationArchived() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    childAllocation.allocation().setArchived(true);
+    allocationRepository.saveAndFlush(childAllocation.allocation());
+    final BusinessReallocationRequest request =
+        new BusinessReallocationRequest(
+            createBusinessRecord.allocationRecord().allocation().getId(),
+            childAllocation.allocation().getId(),
+            new com.clearspend.capital.controller.type.Amount(Currency.USD, new BigDecimal("10")));
+    final String response =
+        mvcHelper
+            .query(
+                "/businesses/transactions",
+                HttpMethod.POST,
+                createBusinessRecord.authCookie(),
+                request)
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is archived");
+  }
+
+  @Test
+  @SneakyThrows
+  void updateAllocationBalance_AllocationArchived() {
+    final UpdateAllocationBalanceRequest request =
+        new UpdateAllocationBalanceRequest(
+            new com.clearspend.capital.controller.type.Amount(Currency.USD, new BigDecimal("1")),
+            "Changing");
+    mvcHelper
+        .query(
+            "/businesses/%s/allocations/%s/transactions"
+                .formatted(
+                    createBusinessRecord.business().getBusinessId(),
+                    createBusinessRecord.allocationRecord().allocation().getAllocationId()),
+            HttpMethod.POST,
+            createBusinessRecord.authCookie(),
+            request)
+        .andExpect(status().is(403));
   }
 
   @Test

@@ -265,6 +265,9 @@ public class AllocationService {
       Boolean disableForeign) {
 
     Allocation allocation = retrieveAllocation(businessId, allocationId);
+    if (allocation.isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
 
     BeanUtils.setNotEmpty(name, allocation::setName);
     BeanUtils.setNotNull(parentAllocationId, allocation::setParentAllocationId);
@@ -334,6 +337,10 @@ public class AllocationService {
   @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS|CUSTOMER_SERVICE')")
   public StopAllCardsResponse stopAllCards(
       final TypedId<AllocationId> allocationId, final StopAllCardsRequest request) {
+    if (retrieveAllocation(CurrentUser.getBusinessId(), allocationId).isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
+
     final Set<TypedId<CardId>> cancelledVirtualCardIds;
     if (request.cancelVirtualCards()) {
       cancelledVirtualCardIds =
@@ -441,6 +448,9 @@ public class AllocationService {
       @NonNull AllocationReallocationType allocationReallocationType,
       @NonNull Amount amount) {
     AllocationDetailsRecord allocationDetailsRecord = getAllocation(business, allocationId);
+    if (allocationDetailsRecord.allocation().isArchived()) {
+      throw new InvalidRequestException("Allocation is archived");
+    }
     if (!allocationDetailsRecord.account().getId().equals(accountId)) {
       throw new IdMismatchException(
           IdType.ACCOUNT_ID, accountId, allocationDetailsRecord.account().getId());

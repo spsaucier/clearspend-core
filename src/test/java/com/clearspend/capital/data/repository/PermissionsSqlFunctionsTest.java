@@ -117,6 +117,7 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final DataSource dataSource;
   private final AllocationRolePermissionsRepository allocationRolePermissionsRepo;
+  private final AllocationRepository allocationRepo;
   private final UserAllocationRoleRepository userAllocationRoleRepo;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final EntityManager entityManager;
