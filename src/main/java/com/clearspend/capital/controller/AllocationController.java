@@ -9,6 +9,7 @@ import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardRequest;
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardResponse;
+import com.clearspend.capital.controller.type.allocation.ArchiveAllocationResponse;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationResponse;
 import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
@@ -59,6 +60,12 @@ public class AllocationController {
             request.getDisableForeign());
 
     return new CreateAllocationResponse(allocationRecord.allocation().getId());
+  }
+
+  @PatchMapping("/{allocationId}/archive")
+  ArchiveAllocationResponse archiveAllocation(
+      @PathVariable("allocationId") final TypedId<AllocationId> allocationId) {
+    return allocationService.archiveAllocation(allocationId);
   }
 
   @GetMapping("/{allocationId}")

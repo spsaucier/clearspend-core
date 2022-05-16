@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -47,6 +48,16 @@ public interface CardRepository extends JpaRepository<Card, TypedId<CardId>>, Ca
       @Param("lastFour") String lastFour);
 
   int countByBusinessIdAndType(TypedId<BusinessId> businessId, CardType cardType);
+
+  @Query(
+      """
+        SELECT COUNT(c)
+        FROM Card c
+        WHERE c.allocationId IN :allocationIds
+        AND c.status <> 'CANCELLED'
+""")
+  long countNonCancelledCardsForAllocations(
+      @Param("allocationIds") Collection<TypedId<AllocationId>> allocationIds);
 
   @Query(
       "SELECT c FROM Card c WHERE c.status <> 'CANCELLED' AND c.allocationId = :allocationId AND c.type = :type")

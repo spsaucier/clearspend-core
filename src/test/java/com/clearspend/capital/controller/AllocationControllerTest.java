@@ -14,9 +14,11 @@ import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommonAuthorization;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardRequest;
+import com.clearspend.capital.controller.type.allocation.ArchiveAllocationResponse;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
 import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest.StopPhysicalCardsType;
@@ -39,15 +41,15 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
-import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
-import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
+import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
@@ -81,13 +83,12 @@ class AllocationControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final MockMvcHelper mockMvcHelper;
   private final TestHelper testHelper;
-  private final AccountService accountService;
-  private final AllocationService allocationService;
   private final AllocationRepository allocationRepository;
   private final PermissionValidationHelper permissionValidationHelper;
+  private final CardService cardService;
+  private final ServiceHelper serviceHelper;
   private final StripeMockClient stripeMockClient;
   private final CardRepository cardRepository;
-  private final ServiceHelper serviceHelper;
 
   private final Faker faker = new Faker();
   private CreateBusinessRecord createBusinessRecord;
@@ -391,6 +392,404 @@ class AllocationControllerTest extends BaseCapitalTest {
                 HttpMethod.PATCH,
                 cookie,
                 request);
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  private record ArchiveAllocationData(
+      AllocationRecord targetAllocation,
+      AllocationRecord childOfTargetAllocation,
+      Card targetAllocationCard,
+      Card childOfTargetAllocationCard,
+      NetworkCommonAuthorization targetAllocationAuth,
+      NetworkCommonAuthorization childOfTargetAllocationAuth) {}
+
+  private ArchiveAllocationData setupArchiveAllocationData() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final AllocationRecord targetAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Target",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final AllocationRecord childOfTargetAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "ChildOfTarget",
+            targetAllocation.allocation().getId());
+    final Card targetAllocationCard =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            targetAllocation.allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    final Card childOfTargetAllocationCard =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            childOfTargetAllocation.allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    testHelper.transactBankAccount(
+        createBusinessRecord.businessBankAccounts().get(0),
+        BankAccountTransactType.DEPOSIT,
+        createBusinessRecord.user(),
+        new BigDecimal("100"),
+        false);
+    testHelper.moveAllocationFunds(
+        createBusinessRecord.allocationRecord().allocation(),
+        targetAllocation.allocation(),
+        new BigDecimal("20"));
+    testHelper.moveAllocationFunds(
+        createBusinessRecord.allocationRecord().allocation(),
+        childOfTargetAllocation.allocation(),
+        new BigDecimal("20"));
+
+    final NetworkCommonAuthorization targetAllocationAuth =
+        testHelper.createNetworkAuthorization(
+            createBusinessRecord.business(),
+            targetAllocation.account(),
+            createBusinessRecord.user(),
+            targetAllocationCard,
+            new com.clearspend.capital.common.data.model.Amount(Currency.USD, new BigDecimal("1")));
+    final NetworkCommonAuthorization childOfTargetAllocationAuth =
+        testHelper.createNetworkAuthorization(
+            createBusinessRecord.business(),
+            childOfTargetAllocation.account(),
+            createBusinessRecord.user(),
+            childOfTargetAllocationCard,
+            new com.clearspend.capital.common.data.model.Amount(Currency.USD, new BigDecimal("1")));
+
+    assertThat(
+            serviceHelper
+                .accountService()
+                .retrieveAccountById(
+                    createBusinessRecord.allocationRecord().account().getId(), true))
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("60.00USD", "60.00USD");
+    assertThat(
+            serviceHelper
+                .accountService()
+                .retrieveAccountById(targetAllocation.account().getId(), true))
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("20.00USD", "19.00USD");
+    assertThat(
+            serviceHelper
+                .accountService()
+                .retrieveAccountById(childOfTargetAllocation.account().getId(), true))
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("20.00USD", "19.00USD");
+
+    return new ArchiveAllocationData(
+        targetAllocation,
+        childOfTargetAllocation,
+        targetAllocationCard,
+        childOfTargetAllocationCard,
+        targetAllocationAuth,
+        childOfTargetAllocationAuth);
+  }
+
+  @Test
+  void archiveAllocation() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.targetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.childOfTargetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+
+    final ArchiveAllocationResponse response =
+        mockMvcHelper.queryObject(
+            "/allocations/%s/archive"
+                .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            ArchiveAllocationResponse.class);
+    assertThat(response.archivedAllocationIds())
+        .containsExactlyInAnyOrder(
+            archiveAllocationData.targetAllocation().allocation().getId(),
+            archiveAllocationData.childOfTargetAllocation().allocation().getId());
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_StillHasCards() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message",
+            "Cannot archive an allocation when it or its children have cards still assigned");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_ChildStillHasCards() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message",
+            "Cannot archive an allocation when it or its children have cards still assigned");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_StillHasHolds() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message",
+            "Cannot archive an allocation when it or its children have unresolved holds");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_ChildStillHasHolds() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message",
+            "Cannot archive an allocation when it or its children have unresolved holds");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_StillHasBalance() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.childOfTargetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message", "Cannot archive an allocation when it or its children still are funded");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_ChildStillHasBalance() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.targetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message", "Cannot archive an allocation when it or its children still are funded");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_IsRootAllocation() {
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(createBusinessRecord.allocationRecord().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Cannot archive the root allocation");
+  }
+
+  @Test
+  @SneakyThrows
+  void archiveAllocation_IsAlreadyArchived() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    archiveAllocationData.targetAllocation().allocation().setArchived(true);
+    allocationRepository.saveAndFlush(archiveAllocationData.targetAllocation().allocation());
+    final String response =
+        mockMvcHelper
+            .query(
+                "/allocations/%s/archive"
+                    .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error).hasFieldOrPropertyWithValue("message", "Allocation is already archived");
+  }
+
+  @Test
+  void archiveAllocation_UserPermissions() {
+    final ArchiveAllocationData archiveAllocationData = setupArchiveAllocationData();
+    cardService.cancelCard(
+        archiveAllocationData.targetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    cardService.cancelCard(
+        archiveAllocationData.childOfTargetAllocationCard(), CardStatusReason.CARDHOLDER_REQUESTED);
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.targetAllocationAuth());
+    testHelper.createNetworkTransactionForAuthorization(
+        createBusinessRecord.business(), archiveAllocationData.childOfTargetAllocationAuth());
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.targetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+    testHelper.moveAllocationFunds(
+        archiveAllocationData.childOfTargetAllocation().allocation(),
+        createBusinessRecord.allocationRecord().allocation(),
+        new BigDecimal("19"));
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> {
+          archiveAllocationData.targetAllocation().allocation().setArchived(false);
+          allocationRepository.saveAndFlush(archiveAllocationData.targetAllocation().allocation());
+          return mockMvcHelper.query(
+              "/allocations/%s/archive"
+                  .formatted(archiveAllocationData.targetAllocation().allocation().getId()),
+              HttpMethod.PATCH,
+              cookie);
+        };
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .allowRolesOnAllocation(

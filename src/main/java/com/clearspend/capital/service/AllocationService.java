@@ -17,6 +17,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.allocation.ArchiveAllocationResponse;
 import com.clearspend.capital.controller.type.allocation.StopAllCardsRequest;
 import com.clearspend.capital.controller.type.allocation.StopAllCardsResponse;
 import com.clearspend.capital.data.model.Account;
@@ -29,6 +30,7 @@ import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
@@ -36,9 +38,11 @@ import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
+import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
@@ -47,6 +51,7 @@ import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +64,7 @@ import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.prepost.PostFilter;
@@ -73,11 +79,13 @@ public class AllocationService {
 
   private final AllocationRepository allocationRepository;
   private final BusinessRepository businessRepository;
+  private final AccountRepository accountRepository;
   private final UserRepository userRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardRepository cardRepository;
+  private final HoldRepository holdRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
   private final RetrievalService retrievalService;
@@ -95,6 +103,53 @@ public class AllocationService {
     String reviewer();
 
     String explanation();
+  }
+
+  @Transactional
+  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS|CUSTOMER_SERVICE')")
+  public ArchiveAllocationResponse archiveAllocation(final TypedId<AllocationId> allocationId) {
+    final Allocation targetAllocation =
+        retrieveAllocation(CurrentUser.getBusinessId(), allocationId);
+    if (targetAllocation.isArchived()) {
+      throw new InvalidRequestException("Allocation is already archived");
+    }
+
+    if (targetAllocation.getParentAllocationId() == null) {
+      throw new InvalidRequestException("Cannot archive the root allocation");
+    }
+
+    final List<Allocation> children =
+        getAllocationChildren(CurrentUser.getBusinessId(), allocationId);
+    final List<Allocation> allAllocations = ListUtils.union(List.of(targetAllocation), children);
+    final Set<TypedId<AllocationId>> allAllocationIds =
+        allAllocations.stream().map(Allocation::getId).collect(Collectors.toSet());
+
+    validateArchiveAllocationAllowed(allAllocationIds);
+
+    allAllocations.forEach(allocation -> allocation.setArchived(true));
+    allocationRepository.saveAll(allAllocations);
+    return new ArchiveAllocationResponse(allAllocationIds);
+  }
+
+  private void validateArchiveAllocationAllowed(final Set<TypedId<AllocationId>> allocationIds) {
+    if (cardRepository.countNonCancelledCardsForAllocations(allocationIds) > 0) {
+      throw new InvalidRequestException(
+          "Cannot archive an allocation when it or its children have cards still assigned");
+    }
+
+    if (holdRepository.countHoldsWithStatusForAllocations(
+            HoldStatus.PLACED, allocationIds, OffsetDateTime.now())
+        > 0) {
+      throw new InvalidRequestException(
+          "Cannot archive an allocation when it or its children have unresolved holds");
+    }
+
+    if (accountRepository.countAccountsInAllocationsWithBalanceGreaterThan(
+            allocationIds, BigDecimal.ZERO)
+        > 0) {
+      throw new InvalidRequestException(
+          "Cannot archive an allocation when it or its children still are funded");
+    }
   }
 
   @RestrictedApi(

@@ -1,13 +1,17 @@
 package com.clearspend.capital.data.repository;
 
 import com.clearspend.capital.common.typedid.data.AccountId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface HoldRepository extends JpaRepository<Hold, TypedId<HoldId>> {
 
@@ -19,4 +23,18 @@ public interface HoldRepository extends JpaRepository<Hold, TypedId<HoldId>> {
 
   List<Hold> findByStatusAndExpirationDateGreaterThanAndExpirationDateLessThanEqual(
       HoldStatus holdStatus, OffsetDateTime startDate, OffsetDateTime endDate);
+
+  @Query(
+      """
+        SELECT COUNT(hold)
+        FROM Hold hold
+        JOIN Account account ON hold.accountId = account.id
+        WHERE hold.status = :status
+        AND hold.expirationDate > :minExpiration
+        AND account.allocationId IN :allocationIds
+""")
+  long countHoldsWithStatusForAllocations(
+      @Param("status") final HoldStatus status,
+      @Param("allocationIds") final Collection<TypedId<AllocationId>> allocationIds,
+      @Param("minExpiration") final OffsetDateTime minExpiration);
 }

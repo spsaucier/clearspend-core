@@ -264,8 +264,10 @@ public class TestHelper {
     } else {
       log.debug("Default businessID {} already exists, not creating.", businessId);
     }
-    if (businessBankAccountRepository.findByBusinessId(businessId).isEmpty()) {
-      createBusinessBankAccount(businessId);
+    List<BusinessBankAccount> businessBankAccounts =
+        businessBankAccountRepository.findByBusinessId(businessId);
+    if (businessBankAccounts.isEmpty()) {
+      businessBankAccounts = List.of(createBusinessBankAccount(businessId));
     } else {
       log.debug("Business bank account already exists for default business. Not creating");
     }
@@ -285,17 +287,30 @@ public class TestHelper {
                       .user());
       entityManager.flush();
       setCurrentUser(user);
-      createBusinessRecord =
-          new CreateBusinessRecord(
-              business,
-              businessOwner,
-              user,
-              user.getEmail().getEncrypted(),
-              serviceHelper.allocationService().getRootAllocation(businessId),
-              login(user));
+      return new CreateBusinessRecord(
+          business,
+          businessOwner,
+          user,
+          user.getEmail().getEncrypted(),
+          serviceHelper.allocationService().getRootAllocation(businessId),
+          businessBankAccounts,
+          login(user));
     }
 
-    return createBusinessRecord;
+    return createBusinessRecord.withBusinessBankAccounts(businessBankAccounts);
+  }
+
+  public void moveAllocationFunds(
+      final Allocation fromAllocation, final Allocation toAllocation, final BigDecimal amount) {
+    if (!fromAllocation.getBusinessId().equals(toAllocation.getBusinessId())) {
+      throw new IllegalArgumentException("Both allocations must be in the same business");
+    }
+    businessService.reallocateBusinessFunds(
+        fromAllocation.getBusinessId(),
+        CurrentUser.getUserId(),
+        fromAllocation.getId(),
+        toAllocation.getId(),
+        new com.clearspend.capital.common.data.model.Amount(Currency.USD, amount));
   }
 
   /** @return the first unused BusinessId from {@link #businessIds} */
@@ -894,7 +909,14 @@ public class TestHelper {
       User user,
       String email,
       AllocationRecord allocationRecord,
-      Cookie authCookie) {}
+      List<BusinessBankAccount> businessBankAccounts,
+      Cookie authCookie) {
+    public CreateBusinessRecord withBusinessBankAccounts(
+        final List<BusinessBankAccount> businessBankAccounts) {
+      return new CreateBusinessRecord(
+          business, businessOwner, user, email, allocationRecord, businessBankAccounts, authCookie);
+    }
+  }
 
   public CreateBusinessRecord createBusiness() {
     return createBusiness(getNextBusinessId(), 0L);
@@ -982,6 +1004,7 @@ public class TestHelper {
             businessOwner.user(),
             email,
             rootAllocation,
+            List.of(),
             login(email, password));
     entityManager.flush();
     return createBusinessRecord;
@@ -1185,6 +1208,36 @@ public class TestHelper {
           Amount.of(Currency.USD, new BigDecimal(random.nextInt(maxAmount)).add(BigDecimal.ONE));
       createNetworkTransaction(business, account, user.user(), card, amount);
     }
+  }
+
+  public NetworkCommonAuthorization createNetworkAuthorization(
+      final Business business,
+      final Account account,
+      final User user,
+      final Card card,
+      final Amount amount) {
+    final NetworkCommonAuthorization networkCommonAuthorization =
+        TestDataController.generateAuthorizationNetworkCommon(user, card, account, amount);
+    runWithWebhookUser(
+        user,
+        () -> {
+          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
+        });
+    assertPost(networkCommonAuthorization.networkCommon(), false, false, true);
+    return networkCommonAuthorization;
+  }
+
+  public NetworkCommon createNetworkTransactionForAuthorization(
+      final Business business, final NetworkCommonAuthorization authorization) {
+    final NetworkCommon common =
+        TestDataController.generateCaptureNetworkCommon(business, authorization.authorization());
+    runWithWebhookUser(
+        authorization.networkCommon().getUser(),
+        () -> {
+          networkMessageService.processNetworkMessage(common);
+        });
+    assertPost(common, true, false, false);
+    return common;
   }
 
   public void createNetworkTransaction(

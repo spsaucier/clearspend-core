@@ -8,10 +8,14 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.Currency;
+import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AccountRepository extends JpaRepository<Account, TypedId<AccountId>> {
 
@@ -37,4 +41,15 @@ public interface AccountRepository extends JpaRepository<Account, TypedId<Accoun
 
   // for deleting businesses in tests only
   void deleteByBusinessId(TypedId<BusinessId> businessId);
+
+  @Query(
+      """
+      SELECT COUNT(account)
+      FROM Account account
+      WHERE account.allocationId IN :allocationIds
+      AND account.ledgerBalance.amount > :amount
+""")
+  long countAccountsInAllocationsWithBalanceGreaterThan(
+      @Param("allocationIds") final Collection<TypedId<AllocationId>> allocationIds,
+      @Param("amount") final BigDecimal amount);
 }
