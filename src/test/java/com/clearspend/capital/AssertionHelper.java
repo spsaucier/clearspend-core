@@ -312,7 +312,8 @@ public class AssertionHelper {
     assertThat(accountActivity.getAllocationId()).isEqualTo(account.getAllocationId());
     assertThat(accountActivity.getAllocation().getName()).isEqualTo(allocation.getName());
     if (type == AccountActivityType.NETWORK_AUTHORIZATION
-        || type == AccountActivityType.NETWORK_CAPTURE) {
+        || type == AccountActivityType.NETWORK_CAPTURE
+        || type == AccountActivityType.NETWORK_REFUND) {
       assertThat(accountActivity.getUser().getId()).isEqualTo(user.getId());
     } else {
       assertThat(accountActivity.getUser()).isNull();

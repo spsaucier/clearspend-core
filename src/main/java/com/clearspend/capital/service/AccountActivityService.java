@@ -326,9 +326,7 @@ public class AccountActivityService {
         .map(Account::getId)
         .ifPresent(accountActivity::setAccountId);
 
-    if (accountActivityType != AccountActivityType.NETWORK_REFUND) {
-      accountActivity.setUser(UserDetails.of(cardOwner));
-    }
+    accountActivity.setUser(UserDetails.of(cardOwner));
 
     if (common.getDecline() != null) {
       // showing user only one decline reason to user
