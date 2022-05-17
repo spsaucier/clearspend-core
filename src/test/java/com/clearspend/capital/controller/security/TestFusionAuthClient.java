@@ -13,6 +13,7 @@ import io.fusionauth.domain.UserTwoFactorConfiguration;
 import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorDisableRequest;
+import io.fusionauth.domain.api.TwoFactorRecoveryCodeResponse;
 import io.fusionauth.domain.api.TwoFactorRequest;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.UserResponse;
@@ -21,9 +22,11 @@ import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -35,6 +38,7 @@ import javax.validation.constraints.Min;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +51,12 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient {
 
+  /**
+   * We have a beautiful explanation of why there is a single object mapper for the entire app - 1.
+   * it takes awhile to instantiate and 2. it should be consistent throughout the app. Well, this
+   * one should be a little different - configurable to match up with whatever quirks the FusionAuth
+   * library offers.
+   */
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
@@ -87,6 +97,11 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   public String getTwoFactorCodeForLogin(String twoFactorId) {
     return twoFactorPending.get(new TwoFactorId(twoFactorId)).code;
+  }
+
+  private static String generateNextRecoveryCode() {
+    return (RandomStringUtils.randomAlphanumeric(5) + "-" + RandomStringUtils.randomAlphanumeric(5))
+        .toUpperCase(Locale.ROOT);
   }
 
   private static String generateNextTwoFactorCode() {
@@ -142,14 +157,12 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
                 })
             .orElse("{}");
 
+    String code = generateNextTwoFactorCode();
     TwoFactorId twoFactorId = new TwoFactorId();
     twoFactorPending.put(
-        twoFactorId,
-        new TwoFactorPending(
-            userId, state, null, generateNextTwoFactorCode(), request.trustChallenge));
+        twoFactorId, new TwoFactorPending(userId, state, null, code, request.trustChallenge));
 
     List<TwoFactorMethod> methods = twoFactorConfiguration.get(userId).methods;
-    String code = RandomStringUtils.randomNumeric(6);
     TwoFactorStartResponse response =
         new TwoFactorStartResponse(code, methods, twoFactorId.getTwoFactorId());
 
@@ -274,19 +287,50 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       method.mobilePhone = enableRequest.mobilePhone;
       method.email = enableRequest.email;
 
-      if (!twoFactorConfiguration.containsKey(userId)) {
-        UserTwoFactorConfiguration config = new UserTwoFactorConfiguration();
-        config.recoveryCodes.addAll(
-            IntStream.range(0, 10)
-                .mapToObj(i -> generateNextTwoFactorCode())
-                .collect(Collectors.toList()));
-        twoFactorConfiguration.put(userId, config);
-      }
+      init2Factor(userId);
       twoFactorConfiguration.get(userId).methods.add(method);
       pendingEnable.remove(userId);
       return clientResponseFactory(
           200, new TwoFactorResponse(twoFactorConfiguration.get(userId).recoveryCodes));
     }
+  }
+
+  private void init2Factor(UUID userId) {
+    if (!twoFactorConfiguration.containsKey(userId)) {
+      UserTwoFactorConfiguration config = new UserTwoFactorConfiguration();
+      config.recoveryCodes.addAll(generateRecoveryCodes());
+      twoFactorConfiguration.put(userId, config);
+    }
+  }
+
+  @SneakyThrows
+  @Override
+  public ClientResponse<UserResponse, Errors> patchUser(UUID userId, Map<String, Object> request) {
+    Map<String, Object> userMod = (Map<String, Object>) request.get("user");
+    User patch = objectMapper.readValue(objectMapper.writeValueAsString(userMod), User.class);
+
+    List<TwoFactorMethod> methods =
+        Optional.ofNullable(patch.twoFactor)
+            .flatMap(t -> Optional.ofNullable(t.methods))
+            .orElse(Collections.emptyList());
+
+    if (!methods.isEmpty()) {
+      init2Factor(userId);
+      twoFactorConfiguration.get(userId).methods.addAll(methods);
+      patch.twoFactor = null;
+    }
+
+    return super.patchUser(
+        userId,
+        objectMapper.readValue(
+            objectMapper.writeValueAsString(patch), new TypeReference<Map<String, Object>>() {}));
+  }
+
+  @NotNull
+  private List<String> generateRecoveryCodes() {
+    return IntStream.range(0, 10)
+        .mapToObj(i -> generateNextRecoveryCode())
+        .collect(Collectors.toList());
   }
 
   /**
@@ -493,6 +537,22 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   @Override
   public ClientResponse<UserResponse, Errors> retrieveUserByUsername(String username) {
     return apply2FA(super.retrieveUserByUsername(username));
+  }
+
+  @Override
+  public ClientResponse<TwoFactorRecoveryCodeResponse, Errors> generateTwoFactorRecoveryCodes(
+      UUID userId) {
+    List<String> codes = twoFactorConfiguration.get(userId).recoveryCodes;
+    codes.clear();
+    codes.addAll(generateRecoveryCodes());
+    return retrieveTwoFactorRecoveryCodes(userId);
+  }
+
+  @Override
+  public ClientResponse<TwoFactorRecoveryCodeResponse, Errors> retrieveTwoFactorRecoveryCodes(
+      UUID userId) {
+    List<String> codes = twoFactorConfiguration.get(userId).recoveryCodes;
+    return clientResponseFactory(200, new TwoFactorRecoveryCodeResponse(codes));
   }
 
   @Override

@@ -213,10 +213,7 @@ public class UserService {
       oldEmail = user.getEmail().getEncrypted();
       user.setEmail(newEmail);
     }
-    if (user.getPhone() == null) {
-      // If the current number is null change it to the new thing
-      user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
-    } else if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
+    if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
       user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
     }
     final Address updatedAddress =

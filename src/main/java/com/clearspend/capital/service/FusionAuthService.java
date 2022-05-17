@@ -14,6 +14,7 @@ import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.inversoft.error.Errors;
@@ -38,10 +39,12 @@ import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
 import io.fusionauth.domain.api.user.RegistrationRequest;
 import io.fusionauth.domain.api.user.RegistrationResponse;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -54,6 +57,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
@@ -91,7 +95,6 @@ public class FusionAuthService {
   }
 
   private static final String BUSINESS_ID = "businessId";
-  private static final String CAPITAL_USER_ID = "capitalUserId";
   private static final String USER_TYPE = "userType";
   private static final String ROLES = "roles";
 
@@ -170,6 +173,36 @@ public class FusionAuthService {
                 businessId, userId.toUuid(), userType, fusionAuthId, Collections.emptySet()));
     validateResponse(client.register(fusionAuthId, request));
     return fusionAuthId;
+  }
+
+  private Map<String, Object> getRegistrationData(UUID userId) {
+    return validateResponse(client.retrieveRegistration(userId, getApplicationId()))
+        .registration
+        .data;
+  }
+
+  private void setRegistrationData(User user, Map<String, Object> data) {
+    UserRegistration registration = user.getRegistrationForApplication(getApplicationId());
+    registration.data.clear();
+    registration.data.putAll(data);
+    validateResponse(
+        client.updateRegistration(user.id, new RegistrationRequest(user, registration)));
+  }
+
+  private void persistStepUp(User user) {
+    Map<String, Object> data = getRegistrationData(user.id);
+    data.put(
+        "stepUpExpiry",
+        (long)
+            (System.currentTimeMillis() / 1000.0
+                + fusionAuthProperties.getStepUpValidPeriodSecs()));
+    setRegistrationData(user, data);
+  }
+
+  private boolean isSteppedUp(UUID userId) {
+    return Optional.ofNullable(getRegistrationData(userId).get("stepUpExpiry"))
+        .map(e -> (((Number) e).doubleValue() >= System.currentTimeMillis() / 1000.0))
+        .orElse(false);
   }
 
   private UserRegistration userRegistrationFactory(
@@ -263,6 +296,17 @@ public class FusionAuthService {
     if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
       throw new AccessDeniedException("");
     }
+    if (twoFactorEnabled()) {
+      throw new AccessDeniedException("2-factor enabled");
+    }
+    sendTwoFactorCodeToNewDestination(fusionAuthUserId, method, destination);
+  }
+
+  /** For adding a new method */
+  private void sendTwoFactorCodeToNewDestination(
+      @NonNull UUID fusionAuthUserId,
+      @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
+      @NotNull String destination) {
     TwoFactorSendRequest request = new TwoFactorSendRequest();
     request.method = method.name();
     switch (method) {
@@ -513,9 +557,8 @@ public class FusionAuthService {
             new io.fusionauth.domain.api.user.ChangePasswordRequest(request.getNewPassword()));
 
     switch (changePasswordResponse.status) {
-      case 200 -> {
-        twilioService.sendPasswordResetSuccessEmail(fusionAuthUser.successResponse.user.email, "");
-      }
+      case 200 -> twilioService.sendPasswordResetSuccessEmail(
+          fusionAuthUser.successResponse.user.email, "");
       case 404 -> throw new AccessDeniedException("");
       case 500 -> throw new RuntimeException(
           "FusionAuth internal error", changePasswordResponse.exception);
@@ -554,25 +597,115 @@ public class FusionAuthService {
     }
     String trustChallenge = RandomStringUtils.randomPrint(24);
     TwoFactorStartResponse initResponse = startTwoFactorLogin(user, state, trustChallenge);
+    final List<TwoFactorMethod> userMethods = initResponse.methods;
+    final String twoFactorId = initResponse.twoFactorId;
+
+    final String methodId = sendTwoFactorCodeUsingMethod(twoFactorId, userMethods);
+    return new TwoFactorStartLoggedInResponse(twoFactorId, methodId, trustChallenge);
+  }
+
+  private String sendTwoFactorCodeUsingMethod(
+      String twoFactorId, Collection<TwoFactorMethod> userMethods) {
     final String methodId =
-        initResponse.methods.stream()
+        userMethods.stream()
             .filter(m -> m.method.equals(TwoFactorMethod.SMS))
             .findFirst()
             .map(m -> m.id)
             .orElseThrow();
-    sendTwoFactorCodeUsingMethod(initResponse.twoFactorId, methodId);
-    return new TwoFactorStartLoggedInResponse(initResponse.twoFactorId, methodId, trustChallenge);
+    sendTwoFactorCodeUsingMethod(twoFactorId, methodId);
+    return methodId;
   }
+
+  private interface SteppedUpRequest {
+
+    String trustChallenge();
+
+    String twoFactorId();
+
+    String twoFactorCode();
+  }
+
+  public record ChangePhoneNumberRequest(
+      String changingNumber, String twoFactorCode, String twoFactorId, String trustChallenge)
+      implements SteppedUpRequest {}
 
   public record ChangePasswordRequest(
       String currentPassword,
       String newPassword,
       String trustChallenge,
       String twoFactorId,
-      String twoFactorCode) {}
+      String twoFactorCode)
+      implements SteppedUpRequest {}
+
+  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "modifying user")
+  @SneakyThrows
+  private <T extends SteppedUpRequest> TwoFactorStartLoggedInResponse stepUpRequest(
+      com.clearspend.capital.data.model.User user, T request, TriConsumer<T, T, String> operation) {
+
+    LoginResponse twoFactorLogin = null;
+    T oldRequest = null;
+    UUID fusionAuthUserId = UUID.fromString(user.getSubjectRef());
+
+    if (twoFactorEnabled()) {
+      // Check if the challenge has been answered
+      if (StringUtils.isAnyEmpty(
+          request.trustChallenge(), request.twoFactorId(), request.twoFactorCode())) {
+        final Map<String, Object> persistentState =
+            Map.of("stepUpRequest", objectMapper.writeValueAsString(request));
+
+        if (isSteppedUp(fusionAuthUserId)) {
+          // Bypass the step-up by taking the code returned from startTwoFactorLogin
+          String trustChallenge = RandomStringUtils.randomPrint(24);
+          TwoFactorStartResponse initResponse =
+              startTwoFactorLogin(user, persistentState, trustChallenge);
+
+          // Assemble a request with the old data plus the two factor info needed to complete the
+          // operation
+          Map<String, Object> mapRequest =
+              objectMapper.readValue(
+                  objectMapper.writeValueAsString(request),
+                  new TypeReference<Map<String, Object>>() {});
+          mapRequest.put("trustChallenge", trustChallenge);
+          mapRequest.put("twoFactorId", initResponse.twoFactorId);
+          mapRequest.put("twoFactorCode", initResponse.code);
+          request =
+              (T)
+                  objectMapper.readValue(
+                      objectMapper.writeValueAsString(mapRequest), request.getClass());
+        } else {
+          // issue the challenge
+          return sendCodeToBegin2FA(user, persistentState);
+        }
+      }
+
+      // Validate the step-up challenge
+      TwoFactorLoginRequest twoFactorLoginRequest =
+          new TwoFactorLoginRequest(
+              getApplicationId(), request.twoFactorCode(), request.twoFactorId());
+      twoFactorLoginRequest.userId = fusionAuthUserId;
+      ClientResponse<LoginResponse, Errors> twoFactorLoginResponse =
+          twoFactorLogin(twoFactorLoginRequest);
+      validateResponse(twoFactorLoginResponse);
+
+      persistStepUp(getUser(user));
+      // Assemble a new request based on the successful challenge and original request
+      twoFactorLogin = twoFactorLoginResponse.successResponse;
+      oldRequest =
+          (T)
+              objectMapper.readValue(
+                  (String) twoFactorLogin.state.get("stepUpRequest"), request.getClass());
+    }
+
+    // Perform the password change
+    operation.accept(
+        oldRequest,
+        request,
+        Optional.ofNullable(twoFactorLogin).map(l -> l.trustToken).orElse(null));
+    return null;
+  }
 
   /**
-   * A user wants to change their own password and they remember the old one.
+   * A user wants to change their own password, and they remember the old one.
    *
    * @param request For the initial request, just the user, old and new passwords need to be
    *     specified. Submit again to finalize, and then only the other parameters (trustChallenge,
@@ -592,43 +725,95 @@ public class FusionAuthService {
       explanation = "delegating some work within the class")
   @SneakyThrows
   public TwoFactorStartLoggedInResponse changePassword(
-      com.clearspend.capital.data.model.User user, ChangePasswordRequest request) {
-    LoginResponse twoFactorLogin = null;
-    if (twoFactorEnabled()) {
-      if (StringUtils.isAnyEmpty(
-          request.trustChallenge, request.twoFactorId, request.twoFactorCode)) {
-        return sendCodeToBegin2FA(
-            user, Map.of("changeRequest", objectMapper.writeValueAsString(request)));
-      }
-      TwoFactorLoginRequest twoFactorLoginRequest =
-          new TwoFactorLoginRequest(getApplicationId(), request.twoFactorCode, request.twoFactorId);
-      ClientResponse<LoginResponse, Errors> twoFactorLoginResponse =
-          twoFactorLogin(twoFactorLoginRequest);
-      if (!twoFactorLoginResponse.wasSuccessful()) {
-        throw new InvalidRequestException("Unauthorized");
-      }
-      twoFactorLogin = twoFactorLoginResponse.successResponse;
-      ChangePasswordRequest oldRequest =
-          objectMapper.readValue(
-              (String) twoFactorLogin.state.get("changeRequest"), ChangePasswordRequest.class);
-      request =
-          new ChangePasswordRequest(
-              oldRequest.currentPassword,
-              oldRequest.newPassword,
-              request.trustChallenge,
-              request.twoFactorId,
-              request.twoFactorCode);
-    }
+      com.clearspend.capital.data.model.User user, final ChangePasswordRequest request) {
+    return stepUpRequest(
+        user,
+        request,
+        (oldRequest, newRequest, trustToken) -> {
+          // Perform the password change
+          final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
+              new io.fusionauth.domain.api.user.ChangePasswordRequest(
+                  user.getEmail().getEncrypted(),
+                  oldRequest.currentPassword(),
+                  oldRequest.newPassword());
+          changePasswordRequest.trustToken = trustToken;
+          changePasswordRequest.trustChallenge = request.trustChallenge();
+          changePasswordRequest.applicationId = getApplicationId();
+          validateResponse(client.changePasswordByIdentity(changePasswordRequest));
+        });
+  }
 
-    final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
-        new io.fusionauth.domain.api.user.ChangePasswordRequest(
-            user.getEmail().getEncrypted(), request.currentPassword, request.newPassword);
-    changePasswordRequest.trustToken =
-        Optional.ofNullable(twoFactorLogin).map(l -> l.trustToken).orElse(null);
-    changePasswordRequest.trustChallenge = request.trustChallenge;
-    changePasswordRequest.applicationId = getApplicationId();
-    validateResponse(client.changePasswordByIdentity(changePasswordRequest));
-    return null;
+  @RestrictedApi(
+      explanation =
+          "This should only ever be used by AuthenticationController, and only "
+              + "after validating that the logged-in user is making the change.",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public TwoFactorStartLoggedInResponse addPhoneNumber(
+      final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
+    requireTwoFactorEnabled();
+    return stepUpRequest(
+        user,
+        request,
+        (oldRequest, newRequest, trustToken) ->
+            sendTwoFactorCodeToNewDestination(
+                UUID.fromString(user.getSubjectRef()),
+                TwoFactorAuthenticationMethod.sms,
+                Optional.ofNullable(oldRequest).orElse(newRequest).changingNumber));
+  }
+
+  private void requireTwoFactorEnabled() {
+    if (!twoFactorEnabled()) {
+      throw new InvalidRequestException("Enable two-factor first");
+    }
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This should only ever be used by AuthenticationController, and only "
+              + "after validating that the logged-in user is making the change.",
+      allowlistAnnotations = {FusionAuthUserModifier.class},
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  public TwoFactorStartLoggedInResponse removePhoneNumber(
+      final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
+    UUID userId = UUID.fromString(user.getSubjectRef());
+    requireTwoFactorEnabled();
+    return stepUpRequest(
+        user,
+        request,
+        (oldRequest, newRequest, trustToken) -> {
+          String recoveryCode =
+              validateResponse(client.retrieveTwoFactorRecoveryCodes(userId)).recoveryCodes.stream()
+                  .findAny()
+                  .or(
+                      () ->
+                          validateResponse(client.generateTwoFactorRecoveryCodes(userId))
+                              .recoveryCodes
+                              .stream()
+                              .findAny())
+                  .orElseThrow();
+          User faUser = getUser(userId);
+          String methodId =
+              faUser.twoFactor.methods.stream()
+                  .filter(m -> m.mobilePhone.equals(oldRequest.changingNumber))
+                  .map(m -> m.id)
+                  .findFirst()
+                  .orElseThrow(() -> new NoSuchElementException("mobileNumber not found"));
+          List<TwoFactorMethod> remainingMethods =
+              faUser.twoFactor.methods.stream().filter(m -> !m.id.equals(methodId)).toList();
+
+          // Using the recovery code wipes all methods
+          // Not doing so requires they get the code from the old number
+          client.disableTwoFactor(userId, methodId, recoveryCode);
+
+          // If we didn't remove the last method, put the others back
+          if (!remainingMethods.isEmpty()) {
+            client.patchUser(
+                userId, Map.of("user", Map.of("twoFactor", Map.of("methods", remainingMethods))));
+          }
+        });
   }
 
   /**
@@ -638,7 +823,7 @@ public class FusionAuthService {
    * @param loginId The user's email
    * @param currentPassword The current password
    * @param password The new password
-   * @return
+   * @return the FusionAuth ChangePasswordResponse
    */
   @RestrictedApi(
       explanation = "This should only ever be used by AuthenticationController",
@@ -689,6 +874,4 @@ public class FusionAuthService {
     }
     throw new InvalidRequestException(String.valueOf(response.status), response.exception);
   }
-
-  public void updateEmail(com.clearspend.capital.data.model.User user, String oldEmail) {}
 }

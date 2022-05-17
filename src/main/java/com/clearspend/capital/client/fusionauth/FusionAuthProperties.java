@@ -19,4 +19,6 @@ public class FusionAuthProperties {
   @NotBlank private String baseUrl;
 
   @NotBlank private String applicationId;
+
+  private int stepUpValidPeriodSecs;
 }

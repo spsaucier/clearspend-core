@@ -35,6 +35,7 @@ import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.text.ParseException;
 import java.time.Duration;
@@ -43,7 +44,9 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpCookie;
@@ -53,6 +56,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -260,6 +264,54 @@ public class AuthenticationController {
         firstTwoFactorSendRequest.destination);
   }
 
+  @Operation(
+      summary =
+          """
+     Add a two-factor method once two-factor authentication is already enabled.  This method
+     performs two steps of a three-step operation.  Submit the add request, receive a 421
+     and codes for step-up to a prior method, then receive a 204 with no body then submit the
+     code and new number at /authentication/two-factor/first/validate
+     """)
+  @PatchMapping("/two-factor/method")
+  @FusionAuthUserModifier(
+      explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
+      reviewer = "jscarbor")
+  ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddMethod(
+      @Validated @RequestBody ChangePhoneNumberRequest request) {
+    return twoFactorAddRemoveMethod(request, fusionAuthService::addPhoneNumber);
+  }
+
+  private ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddRemoveMethod(
+      ChangePhoneNumberRequest request,
+      BiFunction<
+              User,
+              FusionAuthService.ChangePhoneNumberRequest,
+              FusionAuthService.TwoFactorStartLoggedInResponse>
+          function) {
+
+    User user = userService.retrieveUser(CurrentUser.getUserId());
+
+    return Optional.ofNullable(function.apply(user, request.svc()))
+        .map(r -> ResponseEntity.status(421).body(TwoFactorStartLoggedInResponse.of(r)))
+        .orElse(ResponseEntity.status(204).build());
+  }
+
+  @Operation(
+      summary =
+          """
+      Remove a two-factor authentication method. This is a two-step operation.  Submit the delete
+      request, receive a 421, then submit the code and content from the 421 response.
+      204 on successful delete.
+      """)
+  @DeleteMapping("/two-factor/method")
+  @FusionAuthUserModifier(
+      explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
+      reviewer = "jscarbor")
+  ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorDeleteMethod(
+      @Validated @RequestBody ChangePhoneNumberRequest request) {
+    return twoFactorAddRemoveMethod(request, fusionAuthService::removePhoneNumber);
+  }
+
   record FirstTwoFactorValidateRequest(
       String code, TwoFactorAuthenticationMethod method, String destination) {}
 
@@ -276,6 +328,23 @@ public class AuthenticationController {
         firstTwoFactorValidateRequest.destination);
   }
 
+  public record ChangePhoneNumberRequest(
+      String changingNumber, String trustChallenge, String twoFactorId, String twoFactorCode) {
+
+    public FusionAuthService.ChangePhoneNumberRequest svc() {
+      return new FusionAuthService.ChangePhoneNumberRequest(
+          changingNumber, twoFactorCode, twoFactorId, trustChallenge);
+    }
+
+    static ChangePhoneNumberRequest of(FusionAuthService.ChangePhoneNumberRequest request) {
+      return new ChangePhoneNumberRequest(
+          request.changingNumber(),
+          request.trustChallenge(),
+          request.twoFactorId(),
+          request.twoFactorCode());
+    }
+  }
+
   /**
    * - * Some 2FA actions are done while the user is logged in. These have a twoFactorId and
    * possibly a - * methodId which could be needed for follow-up with the code. -
@@ -283,7 +352,8 @@ public class AuthenticationController {
   public record TwoFactorStartLoggedInResponse(
       String twoFactorId, String methodId, String trustChallenge) {
 
-    static TwoFactorStartLoggedInResponse of(FusionAuthService.TwoFactorStartLoggedInResponse r) {
+    static TwoFactorStartLoggedInResponse of(
+        @NonNull FusionAuthService.TwoFactorStartLoggedInResponse r) {
       return new TwoFactorStartLoggedInResponse(r.twoFactorId(), r.methodId(), r.trustChallenge());
     }
   }
