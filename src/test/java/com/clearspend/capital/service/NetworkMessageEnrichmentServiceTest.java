@@ -70,8 +70,7 @@ public class NetworkMessageEnrichmentServiceTest {
             mockMxClient,
             mockClearbitClient,
             mockCodatClient,
-            mockNetworkMerchantRepository,
-            true);
+            mockNetworkMerchantRepository);
   }
 
   @Test
@@ -162,7 +161,7 @@ public class NetworkMessageEnrichmentServiceTest {
             new EnhanceTransactionResponse(
                 List.of(
                     new TransactionRecordResponse(
-                        "testing", "enh-name", 123, "guid", "loc-guid", "desc"))));
+                        "testing", "enh-name", 123, null, "loc-guid", "desc"))));
 
     when(mockClearbitClient.getLogo(eq("enh-name"))).thenReturn("alt-logo-path");
     when(mockCodatClient.getSupplierForBusiness(anyString(), anyString()))
@@ -170,7 +169,6 @@ public class NetworkMessageEnrichmentServiceTest {
 
     NetworkCommon common = buildCommon("test", 123);
     common.setAccountActivity(new AccountActivity());
-    underTest.setUseMxLogos(false);
     underTest.scheduleActivityEnrichment(common);
 
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
@@ -232,7 +230,7 @@ public class NetworkMessageEnrichmentServiceTest {
   @Test
   @SneakyThrows
   public void
-      scheduleActivityEnrichment_whenNetworkMerchantAlreadyExists_mxIsNotQueriedAgainForLogo() {
+      scheduleActivityEnrichment_whenNetworkMerchantAlreadyExistsAndLogoAlreadyExists_mxIsNotQueriedAgainForLogo() {
     when(mockMxClient.getCleansedMerchantName(anyString(), anyInt()))
         .thenReturn(
             new EnhanceTransactionResponse(

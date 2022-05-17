@@ -9,11 +9,9 @@ import com.clearspend.capital.client.mx.types.TransactionRecordResponse;
 import com.clearspend.capital.data.model.network.NetworkMerchant;
 import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
 import com.clearspend.capital.service.type.NetworkCommon;
-import com.google.common.annotations.VisibleForTesting;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -27,22 +25,18 @@ public class NetworkMessageEnrichmentService {
   private final MxClient mxClient;
   private final NetworkMerchantRepository networkMerchantRepository;
 
-  private boolean useMxLogos;
-
   public NetworkMessageEnrichmentService(
       AccountActivityService accountActivityService,
       MxClient mxClient,
       ClearbitClient clearbitClient,
       CodatClient codatClient,
-      NetworkMerchantRepository networkMerchantRepository,
-      @Value("${client.mx.use-mx-logos:true}") boolean useMxLogos) {
+      NetworkMerchantRepository networkMerchantRepository) {
 
     this.accountActivityService = accountActivityService;
     this.mxClient = mxClient;
     this.clearbitClient = clearbitClient;
     this.codatClient = codatClient;
     this.networkMerchantRepository = networkMerchantRepository;
-    this.useMxLogos = useMxLogos;
   }
 
   @Async
@@ -57,16 +51,18 @@ public class NetworkMessageEnrichmentService {
         Optional<NetworkMerchant> entity =
             networkMerchantRepository.findByMerchantNameAndMerchantCategoryCode(
                 mxDetail.getEnhancedName(), mxDetail.getEnhancedCategoryCode());
-        if (entity.isPresent()) {
+        if (entity.isPresent() && !StringUtils.isBlank(entity.get().getMerchantLogoUrl())) {
           logoPath = entity.get().getMerchantLogoUrl();
-        } else if (useMxLogos && mxDetail.getExternalMerchantId() != null) {
+        } else if (mxDetail.getExternalMerchantId() != null && StringUtils.isBlank(logoPath)) {
           logoPath = mxClient.getMerchantLogo(mxDetail.getExternalMerchantId());
-        } else {
+        } else if (StringUtils.isBlank(logoPath)) {
           logoPath = clearbitClient.getLogo(mxDetail.getEnhancedName());
         }
         // If we haven't cached this Merchant, we should
         if (entity.isEmpty()) {
           createNetworkMerchant(mxDetail, logoPath);
+        } else if (!entity.get().getMerchantLogoUrl().equals(logoPath)) {
+          networkMerchantRepository.save(entity.get());
         }
 
         // Check if the merchant exists in the Accounting Integration and set those values too
@@ -121,10 +117,5 @@ public class NetworkMessageEnrichmentService {
         common.getMerchantName(),
         supplierDetails.getId(),
         supplierDetails.getSupplierName());
-  }
-
-  @VisibleForTesting
-  public void setUseMxLogos(boolean useMxLogos) {
-    this.useMxLogos = useMxLogos;
   }
 }
