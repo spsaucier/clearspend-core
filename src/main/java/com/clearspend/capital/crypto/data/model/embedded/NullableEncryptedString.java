@@ -27,10 +27,9 @@ public class NullableEncryptedString implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof NullableEncryptedString that)) {
       return false;
     }
-    NullableEncryptedString that = (NullableEncryptedString) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

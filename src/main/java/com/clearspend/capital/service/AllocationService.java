@@ -52,6 +52,7 @@ import com.clearspend.capital.service.type.CurrentUser;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +139,7 @@ public class AllocationService {
     }
 
     if (holdRepository.countHoldsWithStatusForAllocations(
-            HoldStatus.PLACED, allocationIds, OffsetDateTime.now())
+            HoldStatus.PLACED, allocationIds, OffsetDateTime.now(ZoneOffset.UTC))
         > 0) {
       throw new InvalidRequestException(
           "Cannot archive an allocation when it or its children have unresolved holds");

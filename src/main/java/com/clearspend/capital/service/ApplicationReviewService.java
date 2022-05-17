@@ -240,7 +240,8 @@ public class ApplicationReviewService {
                 accountRequiredField.startsWith(PERSON) && accountRequiredField.endsWith(DOCUMENT))
         .map(
             accountRequiredField -> {
-              String entityTokenId = accountRequiredField.split("\\.")[0];
+              String entityTokenId =
+                  Splitter.on('.').limit(2).splitToList(accountRequiredField).get(0);
               Optional<BusinessOwner> first =
                   businessOwners.stream()
                       .filter(

@@ -37,6 +37,7 @@ import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.common.base.Splitter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -137,7 +138,7 @@ public class CardService {
     }
     if (cardLine3.length() > 25) {
       StringBuilder name = new StringBuilder();
-      for (String s : cardLine3.toString().split(" ")) {
+      for (String s : Splitter.on(" ").split(cardLine3.toString())) {
         // TODO CAP-837 long names get run together
         if (name.length() + s.length() < 26) {
           name.append(s);

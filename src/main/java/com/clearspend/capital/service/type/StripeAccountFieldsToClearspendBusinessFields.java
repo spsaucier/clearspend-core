@@ -19,7 +19,7 @@ public enum StripeAccountFieldsToClearspendBusinessFields {
   description("product_description"),
   url("url");
 
-  String stripeField;
+  final String stripeField;
 
   StripeAccountFieldsToClearspendBusinessFields(String stripeField) {
     this.stripeField = stripeField;

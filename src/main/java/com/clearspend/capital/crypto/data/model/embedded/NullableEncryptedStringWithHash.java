@@ -45,10 +45,9 @@ public class NullableEncryptedStringWithHash implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof NullableEncryptedStringWithHash that)) {
       return false;
     }
-    NullableEncryptedStringWithHash that = (NullableEncryptedStringWithHash) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

@@ -48,10 +48,9 @@ public class EncryptedStringWithHash implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof EncryptedStringWithHash that)) {
       return false;
     }
-    EncryptedStringWithHash that = (EncryptedStringWithHash) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

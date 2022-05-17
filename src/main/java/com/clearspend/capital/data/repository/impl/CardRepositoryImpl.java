@@ -42,6 +42,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,7 +71,6 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   private final Crypto crypto;
 
   private final Template template;
-  private final String filterCardsQueryText;
 
   public record CardDetailsWithUserRecord(
       Card card,
@@ -87,8 +87,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     this.entityManager = entityManager;
     this.criteriaBuilderFactory = criteriaBuilderFactory;
     this.crypto = crypto;
-    this.filterCardsQueryText = SqlResourceLoader.load(filterCardsQueryFile);
-    this.template = Mustache.compiler().compile(this.filterCardsQueryText);
+    String filterCardsQueryText = SqlResourceLoader.load(filterCardsQueryFile);
+    this.template = Mustache.compiler().compile(filterCardsQueryText);
   }
 
   private SearchCardData cardFilterRowMapper(final ResultSet resultSet, final int rowNum)
@@ -139,7 +139,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             .addValue("businessId", TypeFunctions.nullableTypedIdToUUID(criteria.getBusinessId()))
             .addValue(
                 "invokingUser", TypeFunctions.nullableTypedIdToUUID(criteria.getInvokingUser()))
-            .addValue("javaNow", OffsetDateTime.now())
+            .addValue("javaNow", OffsetDateTime.now(ZoneOffset.UTC))
             .addValue("globalRoles", CurrentUser.get().roles().toArray(String[]::new), Types.ARRAY)
             .addValue("permission", criteria.getPermission())
             .addValue(

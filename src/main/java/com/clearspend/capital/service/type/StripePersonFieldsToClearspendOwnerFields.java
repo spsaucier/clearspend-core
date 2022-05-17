@@ -23,7 +23,7 @@ public enum StripePersonFieldsToClearspendOwnerFields {
   email("email"),
   phone("phone");
 
-  String stripeField;
+  final String stripeField;
 
   StripePersonFieldsToClearspendOwnerFields(String stripeField) {
     this.stripeField = stripeField;

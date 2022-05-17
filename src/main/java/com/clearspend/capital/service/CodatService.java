@@ -29,6 +29,7 @@ import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
+import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
@@ -54,8 +55,11 @@ import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.accounting.CodatSupplierData;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.common.base.Splitter;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -213,10 +217,14 @@ public class CodatService {
         chartOfAccounts.getResults().stream()
             .filter(
                 account ->
-                    (subCategories.stream()
+                    subCategories.stream()
                         .map(category -> category.getName())
-                        .collect(toList())
-                        .contains(account.getQualifiedName().split("\\.")[1])))
+                        .toList()
+                        .contains(
+                            Splitter.on(".")
+                                .limit(3)
+                                .splitToList(account.getQualifiedName())
+                                .get(1)))
             .collect(toList());
 
     return new CodatAccountNestedResponse(nestCodatAccounts(response));
@@ -226,11 +234,8 @@ public class CodatService {
   public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
-    CodatBankAccountsResponse bankAccounts =
-        codatClient.getBankAccountsForBusiness(
-            currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
-
-    return bankAccounts;
+    return codatClient.getBankAccountsForBusiness(
+        currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
@@ -249,7 +254,7 @@ public class CodatService {
         > 0) {
       // A Bank Account with this Account Name already exists.
       log.info(
-          "User attempted to create a QBO Bank Account with an Account Name matching an existing Account: %s",
+          "User attempted to create a QBO Bank Account with an Account Name matching an existing Account: {}",
           createBankAccountRequest.getAccountName());
       return new CodatCreateBankAccountResponse(
           new CodatValidation(
@@ -275,7 +280,7 @@ public class CodatService {
               business.getCodatCompanyRef(), business.getCodatConnectionId(), codatCreditCardId);
     } catch (Exception e) {
       log.info(
-          "User attempted to link to a QBO Bank Account that does not exist: %s",
+          "User attempted to link to a QBO Bank Account that does not exist: {}",
           codatCreditCardId);
       return business;
     }
@@ -311,14 +316,14 @@ public class CodatService {
   // TODO: Nesting off of fully qualified name swap to codat method when changes are implements on
   // their end.
   List<CodatAccountNested> nestCodatAccounts(List<CodatAccount> accounts) {
-    Tree<String, CodatAccount> tree = new Tree<String, CodatAccount>("root");
+    Tree<String, CodatAccount> tree = new Tree<>("root");
     Tree<String, CodatAccount> current = tree;
 
     for (CodatAccount account : accounts) {
       Tree<String, CodatAccount> walker = current;
-      String[] baseElements = account.getQualifiedName().split("\\.");
-      for (int i = 3; i < baseElements.length; i++) {
-        current = current.child(baseElements[i]);
+      List<String> baseElements = Splitter.on('.').splitToList(account.getQualifiedName());
+      for (int i = 3; i < baseElements.size(); i++) {
+        current = current.child(baseElements.get(i));
       }
       current.setPayload(account);
       current = walker;
@@ -387,7 +392,7 @@ public class CodatService {
 
       accountActivityForSyncOptional.ifPresent(
           accountActivity -> {
-            accountActivity.setLastSyncTime(OffsetDateTime.now());
+            accountActivity.setLastSyncTime(OffsetDateTime.now(ZoneOffset.UTC));
             accountActivityRepository.save(accountActivity);
 
             if (accountActivity.getReceipt() != null
@@ -399,9 +404,7 @@ public class CodatService {
           });
 
     } finally {
-      if (transactionSyncLog != null) {
-        transactionSyncLogRepository.save(transactionSyncLog);
-      }
+      transactionSyncLogRepository.save(transactionSyncLog);
     }
   }
 
@@ -509,8 +512,7 @@ public class CodatService {
     List<AccountActivity> transactionsReadyToSync =
         accountActivityService.findAllSyncableForBusiness(businessId);
     return syncMultipleTransactions(
-        transactionsReadyToSync.stream().map(transaction -> transaction.getId()).collect(toList()),
-        businessId);
+        transactionsReadyToSync.stream().map(TypedMutable::getId).collect(toList()), businessId);
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
@@ -527,7 +529,7 @@ public class CodatService {
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
     // 1. return empty list if nothing from QBO.
     if (suppliersFromQbo == null || CollectionUtils.isEmpty(suppliersFromQbo.getResults())) {
-      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, null);
+      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, Collections.emptyList());
       return emptyResponse;
     }
 
@@ -553,7 +555,7 @@ public class CodatService {
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
     // 1. return empty list if nothing from QBO.
     if (suppliersFromQbo == null || CollectionUtils.isEmpty(suppliersFromQbo.getResults())) {
-      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, null);
+      GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, Collections.emptyList());
       return emptyResponse;
     }
 
@@ -561,7 +563,7 @@ public class CodatService {
     List<CodatSupplierData> codatSupplierDataList =
         suppliersFromQbo.getResults().stream()
             .map(s -> new CodatSupplierData(s.getId(), s.getSupplierName(), 0))
-            .collect(Collectors.toList());
+            .toList();
     for (CodatSupplierData supplier : codatSupplierDataList) {
       supplier.calculateAndSetScore(targetName);
     }
@@ -572,7 +574,7 @@ public class CodatService {
                 (CodatSupplierData d1, CodatSupplierData d2) ->
                     Integer.compare(d2.getMatchScore(), d1.getMatchScore()))
             .limit(limit)
-            .collect(Collectors.toList());
+            .toList();
     // 4. prepare the final result
     List<CodatSupplier> finalSuppliers = new ArrayList<>();
     for (CodatSupplierData data : limitedList) {

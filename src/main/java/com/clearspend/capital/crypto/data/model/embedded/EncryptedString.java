@@ -31,10 +31,9 @@ public class EncryptedString implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof EncryptedString that)) {
       return false;
     }
-    EncryptedString that = (EncryptedString) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

@@ -139,8 +139,7 @@ public class BusinessBankAccountService {
         businessBankAccount.getId(),
         businessId);
 
-    BusinessBankAccount savedAccount = businessBankAccountRepository.save(businessBankAccount);
-    return savedAccount;
+    return businessBankAccountRepository.save(businessBankAccount);
   }
 
   @PostAuthorize("hasRootPermission(returnObject, 'LINK_BANK_ACCOUNTS')")
@@ -813,7 +812,7 @@ public class BusinessBankAccountService {
    * Creates stripe external account with setup intent for further money transfers. Current
    * requirement is to make sure that only one bank account may be configured in Stripe
    *
-   * @return
+   * @return the new account record
    */
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")

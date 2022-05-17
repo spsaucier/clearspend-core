@@ -43,10 +43,9 @@ public class RequiredEncryptedStringWithHash implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof RequiredEncryptedStringWithHash that)) {
       return false;
     }
-    RequiredEncryptedStringWithHash that = (RequiredEncryptedStringWithHash) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

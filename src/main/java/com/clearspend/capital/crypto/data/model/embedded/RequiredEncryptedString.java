@@ -33,10 +33,9 @@ public class RequiredEncryptedString implements WithEncryptedString {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof RequiredEncryptedString that)) {
       return false;
     }
-    RequiredEncryptedString that = (RequiredEncryptedString) o;
     return getEncrypted().equals(that.getEncrypted());
   }
 

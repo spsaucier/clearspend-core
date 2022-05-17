@@ -5,6 +5,7 @@ import static java.lang.Byte.parseByte;
 import com.clearspend.capital.crypto.data.model.Key;
 import com.clearspend.capital.crypto.data.repository.KeyRepository;
 import com.clearspend.capital.crypto.utils.VarInt;
+import com.google.common.base.Splitter;
 import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -36,7 +38,6 @@ public class Crypto {
   static String envPrefix = "clearspend.encryption.key.aes.";
   private static final int maxKeys = 1000;
   private static final String keyDelimiter = "\\|";
-  private final HashMap<String, String> replacementKeys = new HashMap<>();
   private final HashMap<Integer, byte[]> keyMap = new HashMap<>();
 
   byte[] currentKey;
@@ -86,12 +87,14 @@ public class Crypto {
       String envString = env.getProperty(envPrefix + i);
       Assert.isTrue(StringUtils.isNotBlank(envString), "invalid key: " + i);
 
-      String[] envParts = envString.split(keyDelimiter);
-      switch (envParts.length) {
+      List<String> envParts = Splitter.onPattern(keyDelimiter).splitToList(envString);
+      HashMap<String, String> replacementKeys = new HashMap<>();
+      switch (envParts.size()) {
         case 2:
           // if we have 2 keys add to the list of replacement keys, they fall through to the single
           // key case
-          replacementKeys.put(envParts[0], envParts[1]);
+          replacementKeys.put(envParts.get(0), envParts.get(1));
+          // fall through
         case 1:
           // add either one or two keys
           for (String keyString : envParts) {
@@ -110,7 +113,7 @@ public class Crypto {
           }
           break;
         default:
-          // we have an invalid number of keys for this envrionment variable
+          // we have an invalid number of keys for this environment variable
           throw new RuntimeException("Invalid key found for " + i);
       }
     }
