@@ -1340,4 +1340,27 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     assertThat(result.getMerchant().getCodatSupplierId().equals("10")).isTrue();
     assertThat(result.getMerchant().getCodatSupplierName().equals("Walmart")).isTrue();
   }
+
+  @Test
+  public void testUpdateCodatLocationAndClass() {
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employeeOwner = createEmployeeOwnerUser(createBusinessRecord);
+    final AccountActivity activity =
+        testDataHelper.createAccountActivity(
+            AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+                .owner(employeeOwner)
+                .syncStatus(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED)
+                .build());
+
+    accountActivityRepository.save(activity);
+
+    accountActivityService.updateAccountActivityClass(activity, "class-1");
+    accountActivityService.updateAccountActivityLocation(activity, "location-1");
+
+    AccountActivity updatedActivity = accountActivityRepository.getById(activity.getId());
+    assertThat(updatedActivity.getAccountingDetails().getCodatClassId()).isEqualTo("class-1");
+
+    assertThat(updatedActivity.getAccountingDetails().getCodatLocationId()).isEqualTo("location-1");
+  }
 }

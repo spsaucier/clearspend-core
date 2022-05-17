@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
+import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
 import com.clearspend.capital.data.model.embedded.BankAccountDetails;
 import com.clearspend.capital.data.model.embedded.CardDetails;
@@ -418,6 +419,7 @@ public class AccountActivityService {
     accountActivity.setNotes(note);
     accountActivity.getMerchant().setCodatSupplierId(supplierId);
     accountActivity.getMerchant().setCodatSupplierName(supplierName);
+
     if (expenseCategoryId != null) {
       accountActivity.setExpenseDetails(
           expenseCategoryService
@@ -429,11 +431,6 @@ public class AccountActivityService {
               .orElse(null));
     } else {
       accountActivity.setExpenseDetails(null);
-      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
-    }
-
-    if (supplierId == null || supplierName == null) {
-      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
     }
 
     log.debug(
@@ -441,20 +438,58 @@ public class AccountActivityService {
         accountActivity.getExpenseDetails(),
         accountActivity.getId());
 
-    if (accountActivity
-            .getIntegrationSyncStatus()
-            .equals(AccountActivityIntegrationSyncStatus.NOT_READY)
-        && expenseCategoryId != null
-        && supplierId != null
-        && supplierName != null
-        && chartOfAccountsMappingRepository.existsByBusinessIdAndExpenseCategoryId(
-            accountActivity.getBusinessId(), expenseCategoryId)) {
-      accountActivity.setIntegrationSyncStatus(
-          accountActivity
-              .getIntegrationSyncStatus()
-              .validTransition(AccountActivityIntegrationSyncStatus.READY));
-    }
+    updateSyncStatusForAccountActivityIfNeeded(accountActivity);
 
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  @PreAuthorize(
+      "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
+  AccountActivity updateSyncStatusForAccountActivityIfNeeded(AccountActivity accountActivity) {
+    if (accountActivity.getIntegrationSyncStatus()
+        == AccountActivityIntegrationSyncStatus.SYNCED_LOCKED) {
+      // SYNCED_LOCKED is a final state for the purposes of this method.
+      return accountActivity;
+    } else
+    // TODO: Add conditional logic that checks that a location/class is assigned,
+    // if being used for this business.
+    if (accountActivity.getExpenseDetails() != null
+        && accountActivity.getMerchant() != null
+        && accountActivity.getMerchant().getCodatSupplierId() != null
+        && accountActivity.getMerchant().getCodatSupplierName() != null
+        && accountActivity.getExpenseDetails().getExpenseCategoryId() != null
+        && chartOfAccountsMappingRepository.existsByBusinessIdAndExpenseCategoryId(
+            accountActivity.getBusinessId(),
+            accountActivity.getExpenseDetails().getExpenseCategoryId())) {
+      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.READY);
+    } else {
+      accountActivity.setIntegrationSyncStatus(AccountActivityIntegrationSyncStatus.NOT_READY);
+    }
+    return accountActivity;
+  }
+
+  @PreAuthorize(
+      "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
+  @Transactional
+  public AccountActivity updateAccountActivityClass(
+      AccountActivity accountActivity, String classId) {
+    if (accountActivity.getAccountingDetails() == null) {
+      accountActivity.setAccountingDetails(new AccountingDetails());
+    }
+    accountActivity.getAccountingDetails().setCodatClassId(classId);
+    return accountActivityRepository.save(accountActivity);
+  }
+
+  @PreAuthorize(
+      "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
+  @Transactional
+  public AccountActivity updateAccountActivityLocation(
+      AccountActivity accountActivity, String locationId) {
+
+    if (accountActivity.getAccountingDetails() == null) {
+      accountActivity.setAccountingDetails(new AccountingDetails());
+    }
+    accountActivity.getAccountingDetails().setCodatLocationId(locationId);
     return accountActivityRepository.save(accountActivity);
   }
 

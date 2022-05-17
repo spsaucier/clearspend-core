@@ -11,6 +11,8 @@ import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.activity.AccountActivityRequest;
 import com.clearspend.capital.controller.type.activity.AccountActivityResponse;
 import com.clearspend.capital.controller.type.activity.UpdateAccountActivityRequest;
+import com.clearspend.capital.controller.type.activity.UpdateCodatClassRequest;
+import com.clearspend.capital.controller.type.activity.UpdateCodatLocationRequest;
 import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardAccount;
@@ -445,6 +447,38 @@ public class UserController {
             request.getExpenseCategoryId(),
             request.getSupplierId(),
             request.getSupplierName()));
+  }
+
+  @PatchMapping("/account-activity/{accountActivityId}/class")
+  AccountActivityResponse updateAccountActivityCodatClass(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the account activity record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId,
+      @Validated @RequestBody UpdateCodatClassRequest request) {
+
+    return new AccountActivityResponse(
+        accountActivityService.updateAccountActivityClass(
+            accountActivityService.getAccountActivity(accountActivityId), request.getClassId()));
+  }
+
+  @PatchMapping("/account-activity/{accountActivityId}/location")
+  AccountActivityResponse updateAccountActivityCodatLocation(
+      @PathVariable(value = "accountActivityId")
+          @Parameter(
+              required = true,
+              name = "accountActivityId",
+              description = "ID of the account activity record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<AccountActivityId> accountActivityId,
+      @Validated @RequestBody UpdateCodatLocationRequest request) {
+
+    return new AccountActivityResponse(
+        accountActivityService.updateAccountActivityLocation(
+            accountActivityService.getAccountActivity(accountActivityId), request.getLocationId()));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/unlock")

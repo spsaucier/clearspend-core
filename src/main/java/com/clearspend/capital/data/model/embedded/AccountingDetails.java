@@ -18,4 +18,6 @@ import org.hibernate.annotations.TypeDefs;
 public class AccountingDetails {
 
   private Boolean sentToAccounting;
+  private String codatClassId;
+  private String codatLocationId;
 }
