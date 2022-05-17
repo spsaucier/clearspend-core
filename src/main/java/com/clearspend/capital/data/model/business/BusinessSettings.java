@@ -13,6 +13,8 @@ import java.math.BigDecimal;
 import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.Transient;
 import lombok.Data;
@@ -56,7 +58,9 @@ public class BusinessSettings extends TypedMutable<BusinessSettingsId> {
 
   @NonNull private BigDecimal foreignTransactionFee;
 
-  @NonNull private AchFundsAvailabilityMode achFundsAvailabilityMode;
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private AchFundsAvailabilityMode achFundsAvailabilityMode;
 
   @NonNull private BigDecimal immediateAchFundsLimit;
 
