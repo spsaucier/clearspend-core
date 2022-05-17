@@ -21,4 +21,5 @@ public class CodatProperties {
   private Integer responseTimeout;
   private Integer readTimeout;
   private Integer writeTimeout;
+  private Double supplierMatchingRatio;
 }

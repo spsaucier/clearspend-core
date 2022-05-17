@@ -18,4 +18,8 @@ public class GetSuppliersResponse implements Serializable {
   @JsonProperty("results")
   @NonNull
   private List<CodatSupplier> results;
+
+  public static GetSuppliersResponse fromSupplierList(List<CodatSupplier> suppliers) {
+    return new GetSuppliersResponse(suppliers.size(), suppliers);
+  }
 }

@@ -167,6 +167,9 @@ client:
     response-timeout: 15000
     read-timeout: 15000
     write-timeout: 10000
+    # This value is a ratio of the 'matching score' to the total number of characters to match.
+    # Minimum Value = 0, Maximum Value = 2
+    supplier-matching-ratio: 0.5
   mx:
     base-url: ${MX_BASE_URL:https://int-api.mx.com}
     auth-secret: ${MX_AUTH_SECRET:NmRjYTk0MjEtNDdkMy00Y2YzLThkZDAtZGVkNjQwMDlkNzZmOmY0M2IwZjUyZTg1M2YwZDY1OTg0MjdlNjlhMjUwMzU3MTZlZjliMjE=}

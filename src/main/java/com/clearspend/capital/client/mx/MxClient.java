@@ -48,7 +48,7 @@ public class MxClient {
       }
     } catch (Exception e) {
       log.error(
-          "Unable to marshal input: getCleansedMerchantName(%s, %d)", merchantName, categoryCode);
+          "Unable to marshal input: getCleansedMerchantName({}, {})", merchantName, categoryCode);
       throw new MxInterfaceException("/transactions/enhance", e);
     }
     return null;
@@ -109,8 +109,7 @@ public class MxClient {
       return result;
     } finally {
       if (log.isInfoEnabled()) {
-        log.info(
-            "Calling MX [%s] method. \nRequest: %s,\nResponse: %s".formatted(uri, body, result));
+        log.info("Calling MX [{}] method. \nRequest: {},\nResponse: {}", uri, body, result);
       }
     }
   }
@@ -133,7 +132,7 @@ public class MxClient {
       return result;
     } finally {
       if (log.isInfoEnabled()) {
-        log.info("Calling MX [%s] method. \nResponse: %s".formatted(uri, result));
+        log.info("Calling MX [{}] method. \nResponse: {}", uri, result);
       }
     }
   }

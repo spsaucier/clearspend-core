@@ -35,7 +35,7 @@ public class NetworkMessageEnrichmentService {
       ClearbitClient clearbitClient,
       CodatClient codatClient,
       NetworkMerchantRepository networkMerchantRepository,
-      @Value("${client.mx.use-mx-logo:true}") boolean useMxLogos) {
+      @Value("${client.mx.use-mx-logos:true}") boolean useMxLogos) {
 
     this.accountActivityService = accountActivityService;
     this.mxClient = mxClient;

@@ -12,6 +12,7 @@ import com.clearspend.capital.client.codat.types.CodatBankAccountStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatBankAccountsResponse;
 import com.clearspend.capital.client.codat.types.CodatCreateBankAccountResponse;
 import com.clearspend.capital.client.codat.types.CodatError;
+import com.clearspend.capital.client.codat.types.CodatProperties;
 import com.clearspend.capital.client.codat.types.CodatPushDataResponse;
 import com.clearspend.capital.client.codat.types.CodatPushStatusResponse;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
@@ -53,8 +54,8 @@ import com.clearspend.capital.data.repository.CodatCategoryRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
-import com.clearspend.capital.service.accounting.CodatSupplierData;
 import com.clearspend.capital.service.type.CurrentUser;
+import com.google.cloud.Tuple;
 import com.google.common.base.Splitter;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -62,12 +63,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.text.similarity.FuzzyScore;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -93,6 +96,8 @@ public class CodatService {
   private final ChartOfAccountsMappingService chartOfAccountsMappingService;
 
   private final CodatCategoryRepository codatCategoryRepository;
+
+  private final CodatProperties codatProperties;
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
@@ -553,40 +558,22 @@ public class CodatService {
     Business business = businessService.retrieveBusinessForService(businessId, true);
     GetSuppliersResponse suppliersFromQbo =
         codatClient.getSuppliersForBusiness(business.getCodatCompanyRef());
-    // 1. return empty list if nothing from QBO.
+
     if (suppliersFromQbo == null || CollectionUtils.isEmpty(suppliersFromQbo.getResults())) {
       GetSuppliersResponse emptyResponse = new GetSuppliersResponse(0, Collections.emptyList());
       return emptyResponse;
     }
 
-    // 2. calculate the fuzzy score for each supplier
-    List<CodatSupplierData> codatSupplierDataList =
+    Double threshold = codatProperties.getSupplierMatchingRatio();
+    FuzzyScore scoreAlgorithm = new FuzzyScore(Locale.ENGLISH);
+    return GetSuppliersResponse.fromSupplierList(
         suppliersFromQbo.getResults().stream()
-            .map(s -> new CodatSupplierData(s.getId(), s.getSupplierName(), 0))
-            .toList();
-    for (CodatSupplierData supplier : codatSupplierDataList) {
-      supplier.calculateAndSetScore(targetName);
-    }
-    // 3. limit the result set
-    List<CodatSupplierData> limitedList =
-        codatSupplierDataList.stream()
-            .sorted(
-                (CodatSupplierData d1, CodatSupplierData d2) ->
-                    Integer.compare(d2.getMatchScore(), d1.getMatchScore()))
+            .map(it -> Tuple.of(it, scoreAlgorithm.fuzzyScore(it.getSupplierName(), targetName)))
+            .filter(it -> (it.y().doubleValue() / targetName.length()) > threshold)
+            .sorted((lhs, rhs) -> rhs.y().compareTo(lhs.y()))
             .limit(limit)
-            .toList();
-    // 4. prepare the final result
-    List<CodatSupplier> finalSuppliers = new ArrayList<>();
-    for (CodatSupplierData data : limitedList) {
-      finalSuppliers.add(
-          suppliersFromQbo.getResults().stream()
-              .filter(
-                  q -> q.getId().equals(data.getId()) && q.getSupplierName().equals(data.getName()))
-              .findFirst()
-              .get());
-    }
-
-    return new GetSuppliersResponse(finalSuppliers.size(), finalSuppliers);
+            .map(it -> it.x())
+            .collect(toList()));
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")

@@ -49,14 +49,18 @@ public class CodatMockClient extends CodatClient {
 
   public CodatMockClient(WebClient codatWebClient, ObjectMapper objectMapper) {
     super(codatWebClient, objectMapper, "quickbooksonlinesandbox");
-    supplierList = new ArrayList<>();
-    supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
     trackingCategoriesList = new ArrayList<>();
     trackingCategoriesList.add(new CodatTrackingCategory("1", "CLASSES", "Class One", "Active"));
     trackingCategoriesList.add(
         new CodatTrackingCategory("2", "DEPARTMENTS", "Class Two", "Active"));
     trackingCategoriesList.add(new CodatTrackingCategory("3", null, "DEPARTMENTS", "Active"));
     createDefaultAccountList();
+    createDefaultSuppliers();
+  }
+
+  public void createDefaultSuppliers() {
+    supplierList = new ArrayList<>();
+    supplierList.add(new CodatSupplier("1", "Test Business", "ACTIVE", "USD"));
   }
 
   public void overrideDefaultAccountList(List<CodatAccount> accountList) {

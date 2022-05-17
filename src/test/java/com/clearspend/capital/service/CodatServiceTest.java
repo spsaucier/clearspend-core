@@ -1061,6 +1061,7 @@ public class CodatServiceTest extends BaseCapitalTest {
     Business business = createBusinessRecord.business();
     business.setCodatCompanyRef("test-codat-ref");
     testHelper.setCurrentUser(createBusinessRecord.user());
+    mockClient.createDefaultSuppliers();
     mockClient.addSupplierToList(
         new CodatSupplier("supplierlist-101", "Bob's Burger Joint", "Active", "USD"));
     mockClient.addSupplierToList(
@@ -1099,9 +1100,61 @@ public class CodatServiceTest extends BaseCapitalTest {
     for (CodatSupplier s : suppliers.getResults()) {
       matchedStrings.add(s.getSupplierName());
     }
-    assertThat("National Eye Care".equals(matchedStrings.get(0))).isTrue();
-    assertThat(matchedStrings.contains("National Eye Care")).isTrue();
-    assertThat(matchedStrings.contains("Norton Lumber and Building Materials")).isTrue();
+    assertThat(matchedStrings)
+        .isNotNull()
+        .isNotEmpty()
+        .containsExactly("National Eye Care", "Cigna Health Care", "United States Treasury");
+  }
+
+  @Test
+  public void getSuppliersFromQboByBusiness_limitIsAppliedAfterFuzzyScoring() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    Business business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    mockClient.createDefaultSuppliers();
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-101", "Bob's Burger Joint", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-102", "Books by Bessie", "Active", "USD"));
+    mockClient.addSupplierToList(new CodatSupplier("supplierlist-103", "abcd", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-104", "Brosnahan Insurance Agency", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-105", "Cal Telephone", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-106", "Cigna Health Care", "Active", "USD"));
+
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-107", "National Eye Care", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier(
+            "supplierlist-108", "Norton Lumber and Building Materials", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-109", "Robertson & Associates", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-110", "Tony Rondonuwu", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-111", "United States Treasury", "Active", "USD"));
+    mockClient.addSupplierToList(
+        new CodatSupplier("supplierlist-112", "Squeaky Kleen Car Wash", "Active", "USD"));
+
+    GetSuppliersResponse suppliers =
+        mockMvcHelper.queryObject(
+            "/codat/accounting-suppliers?limit=2&target=National",
+            HttpMethod.GET,
+            userCookie,
+            null,
+            GetSuppliersResponse.class);
+
+    List<String> matchedStrings = new ArrayList<>();
+    for (CodatSupplier s : suppliers.getResults()) {
+      matchedStrings.add(s.getSupplierName());
+    }
+    assertThat(matchedStrings)
+        .isNotNull()
+        .isNotEmpty()
+        .containsExactly("National Eye Care", "Cigna Health Care");
   }
 
   @SneakyThrows
