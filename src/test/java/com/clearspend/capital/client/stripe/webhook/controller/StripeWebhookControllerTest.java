@@ -29,6 +29,7 @@ import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -137,6 +138,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
+  private BusinessSettings businessSettings;
   private Allocation rootAllocation;
   private BusinessBankAccount businessBankAccount;
   private User user;
@@ -147,6 +149,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     createBusinessRecord = testHelper.createBusiness();
     user = createBusinessRecord.user();
     business = createBusinessRecord.business();
+    businessSettings = createBusinessRecord.businessSettings();
     rootAllocation = createBusinessRecord.allocationRecord().allocation();
     testHelper.setCurrentUser(createBusinessRecord.user());
     businessBankAccount = testHelper.createBusinessBankAccount(business.getId());
@@ -230,7 +233,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 new StripeWebhookLog(), authorization, authorization, stripeEventType),
             true);
     if (networkCommon.getForeign()) {
-      amount += (amount / 100) * business.getForeignTransactionFee().longValue();
+      amount += (amount / 100) * businessSettings.getForeignTransactionFee().longValue();
     }
     if (approved) {
       testHelper.assertPost(networkCommon, false, false, true);
@@ -489,7 +492,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new PaymentDetails(
                 AuthorizationMethod.CONTACTLESS,
                 PaymentType.from(AuthorizationMethod.CONTACTLESS),
-                business.getForeignTransactionFee(),
+                businessSettings.getForeignTransactionFee(),
                 null,
                 true));
   }
@@ -705,7 +708,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     long captureAmount = -authAmount;
     BigDecimal closingBalance =
         BigDecimal.valueOf(
-            100 - 10 - 10 / 100d * business.getForeignTransactionFee().doubleValue());
+            100 - 10 - 10 / 100d * businessSettings.getForeignTransactionFee().doubleValue());
     capture(authorize, allocation, user, card, captureAmount, closingBalance);
 
     AccountActivity latestActivity = getLatestActivity();
@@ -714,7 +717,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new PaymentDetails(
                 AuthorizationMethod.CONTACTLESS,
                 PaymentType.from(AuthorizationMethod.CONTACTLESS),
-                business.getForeignTransactionFee(),
+                businessSettings.getForeignTransactionFee(),
                 null,
                 true));
   }

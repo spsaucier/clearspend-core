@@ -28,7 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SuppressWarnings("JavaTimeDefaultTimeZone")
 class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
 
-  @Autowired private BusinessLimitService businessLimitService;
+  @Autowired private BusinessSettingsService businessSettingsService;
 
   private final TypedId<AccountId> accountId = new TypedId<>(UUID.randomUUID());
   private final TypedId<BusinessId> businessId = new TypedId<>(UUID.randomUUID());
@@ -43,7 +43,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
     allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.TEN);
 
     // under limit
-    businessLimitService.withinLimit(
+    businessSettingsService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.valueOf(9.99)),
@@ -51,7 +51,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
         allocationDurationMap);
 
     // exact limit
-    businessLimitService.withinLimit(
+    businessSettingsService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.TEN),
@@ -62,7 +62,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
     assertThrows(
         LimitViolationException.class,
         () ->
-            businessLimitService.withinLimit(
+            businessSettingsService.withinLimit(
                 businessId,
                 AdjustmentType.DEPOSIT,
                 Amount.of(Currency.USD, BigDecimal.valueOf(10.01)),
@@ -76,7 +76,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
     allocationDurationMap.put(LimitPeriod.MONTHLY, BigDecimal.TEN);
 
     // under limit
-    businessLimitService.withinLimit(
+    businessSettingsService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.valueOf(7.99)),
@@ -86,7 +86,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
         allocationDurationMap);
 
     // exact limit
-    businessLimitService.withinLimit(
+    businessSettingsService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.valueOf(8.0)),
@@ -99,7 +99,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
     assertThrows(
         LimitViolationException.class,
         () ->
-            businessLimitService.withinLimit(
+            businessSettingsService.withinLimit(
                 businessId,
                 AdjustmentType.DEPOSIT,
                 Amount.of(Currency.USD, BigDecimal.valueOf(8.01)),
@@ -113,7 +113,7 @@ class BusinessTransactionTransactionLimitServiceTest extends BaseCapitalTest {
     allocationDurationMap.clear();
     allocationDurationMap.put(LimitPeriod.DAILY, BigDecimal.TEN);
     // under daily limit
-    businessLimitService.withinLimit(
+    businessSettingsService.withinLimit(
         businessId,
         AdjustmentType.DEPOSIT,
         Amount.of(Currency.USD, BigDecimal.valueOf(8.01)),

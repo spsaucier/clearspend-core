@@ -46,6 +46,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
@@ -70,10 +71,10 @@ import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountBalanceRepository;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
-import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.data.repository.business.BusinessSettingsRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
@@ -189,7 +190,7 @@ public class TestHelper {
   private final AccountRepository accountRepository;
   private final AllocationRepository allocationRepository;
   private final BusinessBankAccountRepository businessBankAccountRepository;
-  private final BusinessLimitRepository businessLimitRepository;
+  private final BusinessSettingsRepository businessSettingsRepository;
   private final BusinessOwnerRepository businessOwnerRepository;
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessRepository businessRepository;
@@ -231,10 +232,9 @@ public class TestHelper {
   private volatile Cookie defaultAuthCookie;
 
   public void setIssuedPhysicalCardsLimit(TypedId<BusinessId> businessId, int newLimit) {
-    com.clearspend.capital.data.model.business.BusinessLimit limit =
-        businessLimitRepository.findByBusinessId(businessId).orElseThrow();
+    BusinessSettings limit = businessSettingsRepository.findByBusinessId(businessId).orElseThrow();
     limit.setIssuedPhysicalCardsLimit(newLimit);
-    businessLimitRepository.save(limit);
+    businessSettingsRepository.save(limit);
   }
 
   public void flush() {
@@ -294,7 +294,8 @@ public class TestHelper {
           user.getEmail().getEncrypted(),
           serviceHelper.allocationService().getRootAllocation(businessId),
           businessBankAccounts,
-          login(user));
+          login(user),
+          businessSettingsRepository.findByBusinessId(business.getId()).orElseThrow());
     }
 
     return createBusinessRecord.withBusinessBankAccounts(businessBankAccounts);
@@ -731,7 +732,7 @@ public class TestHelper {
   }
 
   public void deleteBusinessLimit(TypedId<BusinessId> businessId) {
-    businessLimitRepository.deleteByBusinessId(businessId);
+    businessSettingsRepository.deleteByBusinessId(businessId);
   }
 
   public void deleteSpendLimit(TypedId<BusinessId> businessId) {
@@ -910,11 +911,19 @@ public class TestHelper {
       String email,
       AllocationRecord allocationRecord,
       List<BusinessBankAccount> businessBankAccounts,
-      Cookie authCookie) {
+      Cookie authCookie,
+      BusinessSettings businessSettings) {
     public CreateBusinessRecord withBusinessBankAccounts(
         final List<BusinessBankAccount> businessBankAccounts) {
       return new CreateBusinessRecord(
-          business, businessOwner, user, email, allocationRecord, businessBankAccounts, authCookie);
+          business,
+          businessOwner,
+          user,
+          email,
+          allocationRecord,
+          businessBankAccounts,
+          authCookie,
+          businessSettings);
     }
   }
 
@@ -1005,7 +1014,8 @@ public class TestHelper {
             email,
             rootAllocation,
             List.of(),
-            login(email, password));
+            login(email, password),
+            businessSettingsRepository.findByBusinessId(business.getId()).orElseThrow());
     entityManager.flush();
     return createBusinessRecord;
   }

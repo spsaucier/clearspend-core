@@ -7,14 +7,15 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.controller.type.business.BusinessLimit.BusinessLimitOperationRecord;
-import com.clearspend.capital.controller.type.business.BusinessLimit.BusinessLimitRecord;
-import com.clearspend.capital.controller.type.business.BusinessLimit.LimitOperationRecord;
-import com.clearspend.capital.controller.type.business.BusinessLimit.LimitPeriodOperationRecord;
-import com.clearspend.capital.controller.type.business.BusinessLimit.LimitPeriodRecord;
-import com.clearspend.capital.controller.type.business.BusinessLimit.LimitRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.BusinessLimitOperationRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.BusinessLimitRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.LimitOperationRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.LimitPeriodOperationRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.LimitPeriodRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings.LimitRecord;
 import com.clearspend.capital.data.model.Adjustment;
-import com.clearspend.capital.data.model.business.BusinessLimit;
+import com.clearspend.capital.data.model.business.BusinessSettings;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
@@ -22,7 +23,7 @@ import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.CardRepository;
-import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
+import com.clearspend.capital.data.repository.business.BusinessSettingsRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -42,7 +43,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
-public class BusinessLimitService {
+public class BusinessSettingsService {
+
+  private static final BigDecimal DEFAULT_FOREIGN_TRANSACTION_FEE = new BigDecimal(3);
+  private static final AchFundsAvailabilityMode DEFAULT_ACH_FUNDS_AVAILABILITY_MODE =
+      AchFundsAvailabilityMode.STANDARD;
+  private static final BigDecimal DEFAULT_IMMEDIATE_ACH_FUNDS_LIMIT = BigDecimal.ZERO;
 
   private static final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> DEFAULT_LIMITS =
       Map.of(
@@ -69,81 +75,96 @@ public class BusinessLimitService {
                   LimitType.ACH_DEPOSIT, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6),
                   LimitType.ACH_WITHDRAW, Map.of(LimitPeriod.DAILY, 2, LimitPeriod.MONTHLY, 6)));
 
-  private final BusinessLimitRepository businessLimitRepository;
+  private final BusinessSettingsRepository businessSettingsRepository;
   private final AdjustmentService adjustmentService;
 
   private final CardRepository cardRepository;
 
   private final Integer issuedPhysicalCardDefaultLimit;
 
-  public BusinessLimitService(
-      BusinessLimitRepository businessLimitRepository,
+  public BusinessSettingsService(
+      BusinessSettingsRepository businessSettingsRepository,
       AdjustmentService adjustmentService,
       CardRepository cardRepository,
       @Value("${clearspend.business.limit.issuance.card.physical}")
           Integer issuedPhysicalCardDefaultLimit) {
-    this.businessLimitRepository = businessLimitRepository;
+    this.businessSettingsRepository = businessSettingsRepository;
     this.adjustmentService = adjustmentService;
     this.cardRepository = cardRepository;
     this.issuedPhysicalCardDefaultLimit = issuedPhysicalCardDefaultLimit;
   }
 
-  BusinessLimit initializeBusinessLimit(TypedId<BusinessId> businessId) {
-    return businessLimitRepository.save(
-        new BusinessLimit(
-            businessId, DEFAULT_LIMITS, DEFAULT_OPERATION_LIMITS, issuedPhysicalCardDefaultLimit));
+  BusinessSettings initializeBusinessSettings(TypedId<BusinessId> businessId) {
+    return businessSettingsRepository.save(
+        new BusinessSettings(
+            businessId,
+            DEFAULT_LIMITS,
+            DEFAULT_OPERATION_LIMITS,
+            issuedPhysicalCardDefaultLimit,
+            DEFAULT_FOREIGN_TRANSACTION_FEE,
+            DEFAULT_ACH_FUNDS_AVAILABILITY_MODE,
+            DEFAULT_IMMEDIATE_ACH_FUNDS_LIMIT));
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'READ')")
-  public BusinessLimit retrieveBusinessLimit(TypedId<BusinessId> businessId) {
-    return retrieveBusinessLimitForService(businessId);
+  public BusinessSettings retrieveBusinessSettings(TypedId<BusinessId> businessId) {
+    return retrieveBusinessSettingsForService(businessId);
   }
 
-  BusinessLimit retrieveBusinessLimitForService(final TypedId<BusinessId> businessId) {
-    BusinessLimit businessLimit = findBusinessLimit(businessId);
-    businessLimit.setIssuedPhysicalCardsTotal(
+  BusinessSettings retrieveBusinessSettingsForService(final TypedId<BusinessId> businessId) {
+    BusinessSettings businessSettings = findBusinessSettings(businessId);
+    businessSettings.setIssuedPhysicalCardsTotal(
         cardRepository.countByBusinessIdAndType(businessId, CardType.PHYSICAL));
 
-    return businessLimit;
+    return businessSettings;
   }
 
-  private BusinessLimit findBusinessLimit(TypedId<BusinessId> businessId) {
-    return businessLimitRepository
+  private BusinessSettings findBusinessSettings(TypedId<BusinessId> businessId) {
+    return businessSettingsRepository
         .findByBusinessId(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS_LIMIT, businessId));
   }
 
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_FUNDS')")
-  public BusinessLimit updateBusinessLimits(
+  public BusinessSettings updateBusinessSettings(
       TypedId<BusinessId> businessId,
-      com.clearspend.capital.controller.type.business.BusinessLimit updateBusinessLimit) {
-    BusinessLimit businessLimit = findBusinessLimit(businessId);
+      com.clearspend.capital.controller.type.business.BusinessSettings updateBusinessSettings) {
+    BusinessSettings businessSettings = findBusinessSettings(businessId);
 
-    if (CollectionUtils.isNotEmpty(updateBusinessLimit.getLimits())) {
+    if (CollectionUtils.isNotEmpty(updateBusinessSettings.getLimits())) {
       Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
-          businessLimit.getLimits().entrySet().stream().collect(toMapCurrencyLimits());
-      updateBusinessLimit.getLimits().forEach(updateBusinessLimitsForCurrency(limits));
-      businessLimit.setLimits(limits);
+          businessSettings.getLimits().entrySet().stream().collect(toMapCurrencyLimits());
+      updateBusinessSettings.getLimits().forEach(updateBusinessLimitsForCurrency(limits));
+      businessSettings.setLimits(limits);
     }
 
-    if (CollectionUtils.isNotEmpty(updateBusinessLimit.getOperationLimits())) {
+    if (CollectionUtils.isNotEmpty(updateBusinessSettings.getOperationLimits())) {
       Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>> operationLimits =
-          businessLimit.getOperationLimits().entrySet().stream()
+          businessSettings.getOperationLimits().entrySet().stream()
               .collect(toMapCurrencyOperationLimits());
-      updateBusinessLimit
+      updateBusinessSettings
           .getOperationLimits()
           .forEach(updateBusinessLimitOperationsForCurrency(operationLimits));
-      businessLimit.setOperationLimits(operationLimits);
+      businessSettings.setOperationLimits(operationLimits);
     }
 
     BeanUtils.setNotNull(
-        updateBusinessLimit.getIssuedPhysicalCardsLimit(),
-        businessLimit::setIssuedPhysicalCardsLimit);
+        updateBusinessSettings.getIssuedPhysicalCardsLimit(),
+        businessSettings::setIssuedPhysicalCardsLimit);
+    BeanUtils.setNotNull(
+        updateBusinessSettings.getForeignTransactionFee(),
+        businessSettings::setForeignTransactionFee);
+    BeanUtils.setNotNull(
+        updateBusinessSettings.getAchFundsAvailabilityMode(),
+        businessSettings::setAchFundsAvailabilityMode);
+    BeanUtils.setNotNull(
+        updateBusinessSettings.getImmediateAchFundsLimit(),
+        businessSettings::setImmediateAchFundsLimit);
 
-    businessLimitRepository.save(businessLimit);
+    businessSettingsRepository.save(businessSettings);
 
-    return businessLimit;
+    return businessSettings;
   }
 
   private Collector<
@@ -275,7 +296,7 @@ public class BusinessLimitService {
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
             businessId, List.of(AdjustmentType.DEPOSIT), 30);
-    BusinessLimit limit = findBusinessLimit(businessId);
+    BusinessSettings limit = findBusinessSettings(businessId);
 
     // evaluate limits
     withinOperationLimits(
@@ -299,7 +320,7 @@ public class BusinessLimitService {
     List<Adjustment> adjustments =
         adjustmentService.retrieveBusinessAdjustments(
             businessId, List.of(AdjustmentType.WITHDRAW), 30);
-    BusinessLimit limit = findBusinessLimit(businessId);
+    BusinessSettings limit = findBusinessSettings(businessId);
 
     // evaluate limits
     withinOperationLimits(

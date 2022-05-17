@@ -22,8 +22,8 @@ import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceRequest;
-import com.clearspend.capital.controller.type.business.BusinessLimit;
-import com.clearspend.capital.controller.type.business.BusinessLimit.BusinessLimitOperationRecord;
+import com.clearspend.capital.controller.type.business.BusinessSettings;
+import com.clearspend.capital.controller.type.business.BusinessSettings.BusinessLimitOperationRecord;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails;
@@ -35,6 +35,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.PlaidLogEntry;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -740,12 +741,12 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   void defaultBusinessLimit() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
-    BusinessLimit businessLimit =
+    BusinessSettings businessSettings =
         mvcHelper.queryObject(
-            "/businesses/business-limit", HttpMethod.GET, authCookie, BusinessLimit.class);
+            "/businesses/business-settings", HttpMethod.GET, authCookie, BusinessSettings.class);
 
-    assertThat(businessLimit.getIssuedPhysicalCardsLimit()).isEqualTo(10);
-    assertThat(businessLimit.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettings.getIssuedPhysicalCardsLimit()).isEqualTo(10);
+    assertThat(businessSettings.getIssuedPhysicalCardsTotal()).isEqualTo(0);
   }
 
   @Test
@@ -758,7 +759,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
                 createBusinessRecord.allocationRecord().allocation().getId())
             .allocation();
     final ThrowingFunction<Cookie, ResultActions> action =
-        cookie -> mvc.perform(get("/businesses/business-limit").cookie(cookie));
+        cookie -> mvc.perform(get("/businesses/business-settings").cookie(cookie));
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .setAllocation(allocation)
@@ -774,31 +775,34 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   void updateBusinessLimits() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
-    BusinessLimit businessLimit =
-        new BusinessLimit(
+    BusinessSettings businessSettings =
+        new BusinessSettings(
             null,
             Set.of(
-                new BusinessLimit.LimitOperationRecord(
+                new BusinessSettings.LimitOperationRecord(
                     Currency.USD,
                     Set.of(
-                        new BusinessLimit.BusinessLimitOperationRecord(
+                        new BusinessSettings.BusinessLimitOperationRecord(
                             LimitType.ACH_DEPOSIT,
                             Set.of(
-                                new BusinessLimit.LimitPeriodOperationRecord(
+                                new BusinessSettings.LimitPeriodOperationRecord(
                                     LimitPeriod.DAILY, 1)))))),
             110,
-            1);
+            1,
+            BigDecimal.valueOf(5.0),
+            AchFundsAvailabilityMode.FAST,
+            BigDecimal.TEN);
 
-    BusinessLimit businessLimitResponse =
+    BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
-            "/businesses/business-limit",
+            "/businesses/business-settings",
             HttpMethod.PATCH,
             authCookie,
-            businessLimit,
-            BusinessLimit.class);
+            businessSettings,
+            BusinessSettings.class);
 
     Integer dailyAchDepositOperations =
-        businessLimitResponse.getOperationLimits().stream()
+        businessSettingsResponse.getOperationLimits().stream()
             .filter(limitOperationRecord -> limitOperationRecord.currency() == Currency.USD)
             .findAny()
             .get()
@@ -819,7 +823,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .value();
 
     Integer monthlyAchDepositOperations =
-        businessLimitResponse.getOperationLimits().stream()
+        businessSettingsResponse.getOperationLimits().stream()
             .filter(limitOperationRecord -> limitOperationRecord.currency() == Currency.USD)
             .findAny()
             .get()
@@ -841,35 +845,43 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     assertThat(dailyAchDepositOperations).isEqualTo(1);
     assertThat(monthlyAchDepositOperations).isEqualTo(6);
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getForeignTransactionFee())
+        .isEqualTo(BigDecimal.valueOf(5.0));
+    assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
+        .isEqualTo(AchFundsAvailabilityMode.FAST);
+    assertThat(businessSettingsResponse.getImmediateAchFundsLimit()).isEqualTo(BigDecimal.TEN);
   }
 
   @Test
   void deleteBusinessLimits() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
-    BusinessLimit businessLimit =
-        new BusinessLimit(
+    BusinessSettings businessSettings =
+        new BusinessSettings(
             null,
             Set.of(
-                new BusinessLimit.LimitOperationRecord(
+                new BusinessSettings.LimitOperationRecord(
                     Currency.USD,
                     Set.of(
-                        new BusinessLimit.BusinessLimitOperationRecord(
+                        new BusinessSettings.BusinessLimitOperationRecord(
                             LimitType.ACH_DEPOSIT, null)))),
             110,
-            1);
+            1,
+            BigDecimal.TEN,
+            AchFundsAvailabilityMode.STANDARD,
+            BigDecimal.TEN);
 
-    BusinessLimit businessLimitResponse =
+    BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
-            "/businesses/business-limit",
+            "/businesses/business-settings",
             HttpMethod.PATCH,
             authCookie,
-            businessLimit,
-            BusinessLimit.class);
+            businessSettings,
+            BusinessSettings.class);
 
     Optional<BusinessLimitOperationRecord> dailyAchDepositOperations =
-        businessLimitResponse.getOperationLimits().stream()
+        businessSettingsResponse.getOperationLimits().stream()
             .filter(limitOperationRecord -> limitOperationRecord.currency() == Currency.USD)
             .findAny()
             .get()
@@ -881,38 +893,45 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .findAny();
 
     assertThat(dailyAchDepositOperations).isEmpty();
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getForeignTransactionFee()).isEqualTo(BigDecimal.TEN);
+    assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
+        .isEqualTo(AchFundsAvailabilityMode.STANDARD);
+    assertThat(businessSettingsResponse.getImmediateAchFundsLimit()).isEqualTo(BigDecimal.TEN);
   }
 
   @Test
   void addBusinessLimits() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
-    BusinessLimit businessLimit =
-        new BusinessLimit(
+    BusinessSettings businessSettings =
+        new BusinessSettings(
             null,
             Set.of(
-                new BusinessLimit.LimitOperationRecord(
+                new BusinessSettings.LimitOperationRecord(
                     Currency.AMD,
                     Set.of(
-                        new BusinessLimit.BusinessLimitOperationRecord(
+                        new BusinessSettings.BusinessLimitOperationRecord(
                             LimitType.ACH_DEPOSIT,
                             Set.of(
-                                new BusinessLimit.LimitPeriodOperationRecord(
+                                new BusinessSettings.LimitPeriodOperationRecord(
                                     LimitPeriod.DAILY, 111)))))),
             110,
-            1);
+            1,
+            BigDecimal.TEN,
+            AchFundsAvailabilityMode.IMMEDIATE,
+            BigDecimal.ONE);
 
-    BusinessLimit businessLimitResponse =
+    BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
-            "/businesses/business-limit",
+            "/businesses/business-settings",
             HttpMethod.PATCH,
             authCookie,
-            businessLimit,
-            BusinessLimit.class);
+            businessSettings,
+            BusinessSettings.class);
 
     Integer dailyAchDepositOperations =
-        businessLimitResponse.getOperationLimits().stream()
+        businessSettingsResponse.getOperationLimits().stream()
             .filter(limitOperationRecord -> limitOperationRecord.currency() == Currency.AMD)
             .findAny()
             .get()
@@ -933,7 +952,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .value();
 
     Integer monthlyAchDepositOperations =
-        businessLimitResponse.getOperationLimits().stream()
+        businessSettingsResponse.getOperationLimits().stream()
             .filter(limitOperationRecord -> limitOperationRecord.currency() == Currency.USD)
             .findAny()
             .get()
@@ -955,40 +974,47 @@ public class BusinessControllerTest extends BaseCapitalTest {
 
     assertThat(dailyAchDepositOperations).isEqualTo(111);
     assertThat(monthlyAchDepositOperations).isEqualTo(6);
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
-    assertThat(businessLimitResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
+    assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
+    assertThat(businessSettingsResponse.getForeignTransactionFee()).isEqualTo(BigDecimal.TEN);
+    assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
+        .isEqualTo(AchFundsAvailabilityMode.IMMEDIATE);
+    assertThat(businessSettingsResponse.getImmediateAchFundsLimit()).isEqualTo(BigDecimal.ONE);
   }
 
   @SneakyThrows
   @Test
   void addDuplicatesIntoBusinessLimits() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
-    BusinessLimit businessLimit =
-        new BusinessLimit(
+    BusinessSettings businessSettings =
+        new BusinessSettings(
             null,
             Set.of(
-                new BusinessLimit.LimitOperationRecord(
+                new BusinessSettings.LimitOperationRecord(
                     Currency.AMD,
                     Set.of(
-                        new BusinessLimit.BusinessLimitOperationRecord(
+                        new BusinessSettings.BusinessLimitOperationRecord(
                             LimitType.ACH_DEPOSIT,
                             Set.of(
-                                new BusinessLimit.LimitPeriodOperationRecord(
+                                new BusinessSettings.LimitPeriodOperationRecord(
                                     LimitPeriod.DAILY, 111))))),
-                new BusinessLimit.LimitOperationRecord(
+                new BusinessSettings.LimitOperationRecord(
                     Currency.AMD,
                     Set.of(
-                        new BusinessLimit.BusinessLimitOperationRecord(
+                        new BusinessSettings.BusinessLimitOperationRecord(
                             LimitType.ACH_DEPOSIT,
                             Set.of(
-                                new BusinessLimit.LimitPeriodOperationRecord(
+                                new BusinessSettings.LimitPeriodOperationRecord(
                                     LimitPeriod.DAILY, 222)))))),
             110,
-            1);
+            1,
+            BigDecimal.TEN,
+            AchFundsAvailabilityMode.STANDARD,
+            BigDecimal.ONE);
 
     mvc.perform(
-            patch("/businesses/business-limit")
-                .content(objectMapper.writeValueAsString(businessLimit))
+            patch("/businesses/business-settings")
+                .content(objectMapper.writeValueAsString(businessSettings))
                 .contentType(APPLICATION_JSON_VALUE)
                 .cookie(authCookie))
         .andExpect(status().is4xxClientError());

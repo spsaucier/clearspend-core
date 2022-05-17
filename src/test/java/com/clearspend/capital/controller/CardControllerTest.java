@@ -14,7 +14,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.PagedData;
-import com.clearspend.capital.controller.type.business.BusinessLimit;
+import com.clearspend.capital.controller.type.business.BusinessSettings;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
@@ -501,9 +501,9 @@ public class CardControllerTest extends BaseCapitalTest {
   void physicalCardsIssuanceLimit() {
     testHelper.setIssuedPhysicalCardsLimit(createBusinessRecord.business().getId(), 10);
 
-    BusinessLimit businessLimit =
+    BusinessSettings businessSettings =
         mockMvcHelper.queryObject(
-            "/businesses/business-limit", HttpMethod.GET, userCookie, BusinessLimit.class);
+            "/businesses/business-settings", HttpMethod.GET, userCookie, BusinessSettings.class);
 
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
@@ -518,8 +518,8 @@ public class CardControllerTest extends BaseCapitalTest {
             false);
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
-    for (int i = businessLimit.getIssuedPhysicalCardsTotal();
-        i < businessLimit.getIssuedPhysicalCardsLimit();
+    for (int i = businessSettings.getIssuedPhysicalCardsTotal();
+        i < businessSettings.getIssuedPhysicalCardsLimit();
         i++) {
       mockMvcHelper.queryList(
           "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});

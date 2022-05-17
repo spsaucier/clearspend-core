@@ -137,6 +137,7 @@ public class StripeConnectHandler {
       businessBankAccountService.processBankAccountDeposit(
           businessId,
           StripeMetadataEntry.extractId(StripeMetadataEntry.ADJUSTMENT_ID, metadata),
+          StripeMetadataEntry.extractId(StripeMetadataEntry.HOLD_ID, metadata),
           amount);
     }
   }

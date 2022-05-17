@@ -3,6 +3,7 @@ package com.clearspend.capital.client.stripe;
 import com.clearspend.capital.client.stripe.types.FinancialAccount;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAbaAddress;
 import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
+import com.clearspend.capital.client.stripe.types.FinancialAccountBalance;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
@@ -17,6 +18,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
@@ -50,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,6 +109,8 @@ public class StripeMockClient extends StripeClient {
   private final Resource LLC_ownersRequired;
   private final List<MockAuthorization> mockAuthorizations =
       Collections.synchronizedList(new ArrayList<>());
+
+  @Setter private Amount clearspendFinancialAccountBalance = Amount.of(Currency.USD);
 
   public StripeMockClient(
       StripeProperties stripeProperties,
@@ -771,6 +777,7 @@ public class StripeMockClient extends StripeClient {
   public void reset() {
     createdObjects.clear();
     mockAuthorizations.clear();
+    clearspendFinancialAccountBalance = Amount.of(Currency.USD);
   }
 
   public long countCreatedObjectsByType(Class<?> clazz) {
@@ -819,4 +826,20 @@ public class StripeMockClient extends StripeClient {
 
   public record MockAuthorization(
       MockAuthorizationStatus status, Authorization authorization, NetworkCommon networkCommon) {}
+
+  @Override
+  public FinancialAccount getClearspendFinancialAccount() {
+    FinancialAccount financialAccount =
+        getFinancialAccount(new TypedId<>(), "stripeAccountId", "stripeFinancialAccount");
+
+    FinancialAccountBalance balance = new FinancialAccountBalance();
+    balance.setCash(
+        Map.of(
+            clearspendFinancialAccountBalance.getCurrency().toStripeCurrency(),
+            clearspendFinancialAccountBalance.toStripeAmount()));
+
+    financialAccount.setBalance(balance);
+
+    return financialAccount;
+  }
 }

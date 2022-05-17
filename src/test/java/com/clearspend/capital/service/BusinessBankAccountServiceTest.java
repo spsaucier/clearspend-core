@@ -1,9 +1,6 @@
 package com.clearspend.capital.service;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasProperty;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,14 +14,22 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidClient;
+import com.clearspend.capital.client.stripe.StripeMetadataEntry;
+import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.client.stripe.types.InboundTransfer;
+import com.clearspend.capital.client.stripe.webhook.controller.StripeConnectHandlerAccessor;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.OperationLimitViolationException;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
+import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.business.BusinessSettings;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
@@ -33,8 +38,10 @@ import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.decline.LimitExceeded;
 import com.clearspend.capital.data.model.decline.OperationLimitExceeded;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
@@ -43,14 +50,16 @@ import com.clearspend.capital.data.repository.business.BusinessBankAccountReposi
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
@@ -62,11 +71,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 class BusinessBankAccountServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
   @Autowired private BusinessBankAccountService bankAccountService;
+  @Autowired private AccountService accountService;
+  @Autowired private BusinessSettingsService businessSettingsService;
+  @Autowired private StripeConnectHandlerAccessor stripeConnectHandlerAccessor;
   @Autowired private PlaidClient plaidClient;
   @Autowired private BusinessBankAccountBalanceRepository businessBankAccountBalanceRepository;
   @Autowired private PermissionValidationHelper permissionValidationHelper;
   @Autowired private AccountActivityRepository accountActivityRepository;
   @Autowired private BusinessBankAccountRepository businessBankAccountRepository;
+  @Autowired private StripeMockClient stripeMockClient;
 
   private CreateBusinessRecord createBusinessRecord;
   private Allocation childAllocation;
@@ -152,7 +165,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
             .findFirst()
             .orElseThrow();
-    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+    assertThat(declinedActivity.getDeclineDetails())
         .containsOnly(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
   }
 
@@ -197,7 +210,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
             .findFirst()
             .orElseThrow();
-    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+    assertThat(declinedActivity.getDeclineDetails())
         .containsOnly(OperationLimitExceeded.from(operationLimitViolationException));
   }
 
@@ -232,8 +245,221 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
             .findFirst()
             .orElseThrow();
-    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+    assertThat(declinedActivity.getDeclineDetails())
         .containsOnly(LimitExceeded.from(limitViolationException));
+  }
+
+  @Test
+  void depositFunds_AchFundsAvailability_Standard() {
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    businessSettingsService.updateBusinessSettings(
+        businessId,
+        BusinessSettings.builder()
+            .achFundsAvailabilityMode(AchFundsAvailabilityMode.STANDARD)
+            .build());
+
+    Amount amount = Amount.of(Currency.USD, new BigDecimal("1000"));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        bankAccountService.transactBankAccount(
+            createBusinessRecord.business().getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    Account account =
+        accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isAfter(OffsetDateTime.now(Clock.systemUTC()).plusDays(4));
+    assertThat(account.getAvailableBalance()).isEqualTo(Amount.of(Currency.USD, BigDecimal.ZERO));
+
+    sendAchTransferCompletion(
+        businessBankAccount.getId(),
+        adjustmentAndHoldRecord.hold().getId(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount);
+
+    // hold should still be in place and ledger balance = 0
+    account = accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isAfter(OffsetDateTime.now(Clock.systemUTC()).plusDays(4));
+    assertThat(account.getAvailableBalance()).isEqualTo(Amount.of(Currency.USD, BigDecimal.ZERO));
+  }
+
+  @Test
+  void depositFunds_AchFundsAvailability_Fast() {
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    businessSettingsService.updateBusinessSettings(
+        businessId,
+        BusinessSettings.builder().achFundsAvailabilityMode(AchFundsAvailabilityMode.FAST).build());
+
+    Amount amount = Amount.of(Currency.USD, new BigDecimal("1000"));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        bankAccountService.transactBankAccount(
+            createBusinessRecord.business().getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    Account account =
+        accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isAfter(OffsetDateTime.now(Clock.systemUTC()).plusDays(4));
+    assertThat(account.getAvailableBalance()).isEqualTo(Amount.of(Currency.USD, BigDecimal.ZERO));
+
+    sendAchTransferCompletion(
+        businessBankAccount.getId(),
+        adjustmentAndHoldRecord.hold().getId(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount);
+
+    // hold should be released and funds available
+    account = accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.RELEASED);
+    assertThat(account.getAvailableBalance())
+        .isEqualTo(Amount.of(Currency.USD, BigDecimal.valueOf(1000)));
+  }
+
+  @Test
+  void depositFunds_AchFundsAvailability_Immediate() {
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    businessSettingsService.updateBusinessSettings(
+        businessId,
+        BusinessSettings.builder()
+            .achFundsAvailabilityMode(AchFundsAvailabilityMode.IMMEDIATE)
+            .immediateAchFundsLimit(BigDecimal.valueOf(1000))
+            .build());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(1000));
+    stripeMockClient.setClearspendFinancialAccountBalance(Amount.of(Currency.USD, 2000L));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        bankAccountService.transactBankAccount(
+            createBusinessRecord.business().getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    Account account =
+        accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isBefore(OffsetDateTime.now(Clock.systemUTC()));
+    assertThat(account.getAvailableBalance())
+        .isEqualTo(Amount.of(Currency.USD, BigDecimal.valueOf(1000)));
+
+    sendAchTransferCompletion(
+        businessBankAccount.getId(),
+        adjustmentAndHoldRecord.hold().getId(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount);
+
+    // hold should be released and funds available
+    account = accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.RELEASED);
+    assertThat(account.getAvailableBalance())
+        .isEqualTo(Amount.of(Currency.USD, BigDecimal.valueOf(1000)));
+  }
+
+  @Test
+  void depositFunds_AchFundsAvailability_Immediate_LimitExceeded() {
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    businessSettingsService.updateBusinessSettings(
+        businessId,
+        BusinessSettings.builder()
+            .achFundsAvailabilityMode(AchFundsAvailabilityMode.IMMEDIATE)
+            .immediateAchFundsLimit(BigDecimal.valueOf(500))
+            .build());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(1000));
+    stripeMockClient.setClearspendFinancialAccountBalance(Amount.of(Currency.USD, 2000L));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        bankAccountService.transactBankAccount(
+            createBusinessRecord.business().getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    // standard lock, no available funds
+    Account account =
+        accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isAfter(OffsetDateTime.now(Clock.systemUTC()).plusDays(4));
+    assertThat(account.getAvailableBalance()).isEqualTo(Amount.of(Currency.USD, BigDecimal.ZERO));
+
+    sendAchTransferCompletion(
+        businessBankAccount.getId(),
+        adjustmentAndHoldRecord.hold().getId(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount);
+
+    // hold should be released and funds available
+    account = accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.RELEASED);
+    assertThat(account.getAvailableBalance())
+        .isEqualTo(Amount.of(Currency.USD, BigDecimal.valueOf(1000)));
+  }
+
+  @Test
+  void depositFunds_AchFundsAvailability_Immediate_NotEnoughFundsOnClearspendAccount() {
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    businessSettingsService.updateBusinessSettings(
+        businessId,
+        BusinessSettings.builder()
+            .achFundsAvailabilityMode(AchFundsAvailabilityMode.IMMEDIATE)
+            .immediateAchFundsLimit(BigDecimal.valueOf(1000))
+            .build());
+
+    Amount amount = Amount.of(Currency.USD, BigDecimal.valueOf(1000));
+    stripeMockClient.setClearspendFinancialAccountBalance(Amount.of(Currency.USD, 200L));
+
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        bankAccountService.transactBankAccount(
+            createBusinessRecord.business().getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    // standard lock, no available funds
+    Account account =
+        accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.PLACED);
+    assertThat(adjustmentAndHoldRecord.hold().getExpirationDate())
+        .isAfter(OffsetDateTime.now(Clock.systemUTC()).plusDays(4));
+    assertThat(account.getAvailableBalance()).isEqualTo(Amount.of(Currency.USD, BigDecimal.ZERO));
+
+    sendAchTransferCompletion(
+        businessBankAccount.getId(),
+        adjustmentAndHoldRecord.hold().getId(),
+        adjustmentAndHoldRecord.adjustment().getId(),
+        amount);
+
+    // hold should be released and funds available
+    account = accountService.retrieveAccountById(adjustmentAndHoldRecord.account().getId(), true);
+    assertThat(adjustmentAndHoldRecord.hold().getStatus()).isEqualTo(HoldStatus.RELEASED);
+    assertThat(account.getAvailableBalance())
+        .isEqualTo(Amount.of(Currency.USD, BigDecimal.valueOf(1000)));
   }
 
   @Test
@@ -260,7 +486,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
             .findFirst()
             .orElseThrow();
-    org.assertj.core.api.Assertions.assertThat(declinedActivity.getDeclineDetails())
+    assertThat(declinedActivity.getDeclineDetails())
         .containsOnly(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
   }
 
@@ -334,18 +560,18 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             accountRef,
             bankName,
             createBusinessRecord.business().getId());
-    assertThat(
-        businessBankAccount,
-        allOf(
-            hasProperty("businessId", equalTo(createBusinessRecord.business().getId())),
-            hasProperty(
-                "routingNumber", equalTo(new RequiredEncryptedStringWithHash(routingNumber))),
-            hasProperty(
-                "accountNumber", equalTo(new RequiredEncryptedStringWithHash(accountNumber))),
-            hasProperty("accessToken", equalTo(new RequiredEncryptedStringWithHash(accessToken))),
-            hasProperty(
-                "plaidAccountRef", equalTo(new RequiredEncryptedStringWithHash(accountRef))),
-            hasProperty("name", equalTo(accountName))));
+
+    assertThat(businessBankAccount.getBusinessId())
+        .isEqualTo(createBusinessRecord.business().getId());
+    assertThat(businessBankAccount.getRoutingNumber())
+        .isEqualTo(new RequiredEncryptedStringWithHash(routingNumber));
+    assertThat(businessBankAccount.getAccountNumber())
+        .isEqualTo(new RequiredEncryptedStringWithHash(accountNumber));
+    assertThat(businessBankAccount.getAccessToken())
+        .isEqualTo(new RequiredEncryptedStringWithHash(accessToken));
+    assertThat(businessBankAccount.getPlaidAccountRef())
+        .isEqualTo(new RequiredEncryptedStringWithHash(accountRef));
+    assertThat(businessBankAccount.getName()).isEqualTo(accountName);
   }
 
   @Test
@@ -436,8 +662,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
     assertTrue(businessBankAccountBalanceRepository.findAll().size() > balancesBeforeTest);
     BusinessBankAccountBalance balance = optionalBalance.orElseThrow(NoSuchElementException::new);
 
-    Assertions.assertTrue(balance.getAvailable().isPositive());
-    Assertions.assertTrue(balance.getCurrent().isPositive());
+    assertTrue(balance.getAvailable().isPositive());
+    assertTrue(balance.getCurrent().isPositive());
     assertNull(balance.getLimit());
   }
 
@@ -532,5 +758,29 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateServiceMethod(action);
+  }
+
+  private void sendAchTransferCompletion(
+      TypedId<BusinessBankAccountId> businessBankAccountId,
+      TypedId<HoldId> holdId,
+      TypedId<AdjustmentId> adjustmentId,
+      Amount amount) {
+    InboundTransfer inboundTransfer = new InboundTransfer();
+    inboundTransfer.setMetadata(
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            createBusinessRecord.business().getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccountId.toString(),
+            StripeMetadataEntry.HOLD_ID.getKey(),
+            holdId.toString(),
+            StripeMetadataEntry.ADJUSTMENT_ID.getKey(),
+            adjustmentId.toString()));
+    inboundTransfer.setCurrency("usd");
+    inboundTransfer.setAmount(amount.toStripeAmount());
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
+    stripeConnectHandlerAccessor.processInboundTransferResult(inboundTransfer);
   }
 }

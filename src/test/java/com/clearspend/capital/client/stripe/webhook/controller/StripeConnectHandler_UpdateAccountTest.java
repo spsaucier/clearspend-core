@@ -16,9 +16,9 @@ import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
-import com.clearspend.capital.data.repository.business.BusinessLimitRepository;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.data.repository.business.BusinessSettingsRepository;
 import com.clearspend.capital.data.repository.business.StripeRequirementsRepository;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.ServiceHelper;
@@ -61,7 +61,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
   @Autowired private ServiceHelper serviceHelper;
   @Autowired private ExpenseCategoryRepository expenseCategoryRepository;
   @Autowired private BusinessRepository businessRepository;
-  @Autowired private BusinessLimitRepository businessLimitRepository;
+  @Autowired private BusinessSettingsRepository businessSettingsRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private AllocationRepository allocationRepository;
   @Autowired private AccountRepository accountRepository;
@@ -661,7 +661,7 @@ class StripeConnectHandler_UpdateAccountTest extends BaseCapitalTest {
     // clean database
     allocationRepository.deleteAll();
     businessOwnerRepository.deleteAll();
-    businessLimitRepository.deleteAll();
+    businessSettingsRepository.deleteAll();
     expenseCategoryRepository.deleteAll();
     userRepository.deleteAll();
     accountRepository.deleteAll();

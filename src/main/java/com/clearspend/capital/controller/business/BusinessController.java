@@ -12,7 +12,7 @@ import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocatio
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceRequest;
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceResponse;
 import com.clearspend.capital.controller.type.business.Business;
-import com.clearspend.capital.controller.type.business.BusinessLimit;
+import com.clearspend.capital.controller.type.business.BusinessSettings;
 import com.clearspend.capital.controller.type.business.BusinessStatusResponse;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.controller.type.business.accounting.UpdateAutoCreateExpenseCategoriesRequest;
@@ -27,9 +27,9 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AllocationService;
-import com.clearspend.capital.service.BusinessLimitService;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.BusinessService.OnboardingBusinessOp;
+import com.clearspend.capital.service.BusinessSettingsService;
 import com.clearspend.capital.service.PlaidLogService;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,7 +62,7 @@ public class BusinessController {
       EnumSet.of(BusinessOnboardingStep.LINK_ACCOUNT, BusinessOnboardingStep.TRANSFER_MONEY);
   private final AllocationService allocationService;
   private final BusinessService businessService;
-  private final BusinessLimitService businessLimitService;
+  private final BusinessSettingsService businessSettingsService;
   private final PlaidLogService plaidLogService;
 
   @GetMapping("/{businessId}/plaid/logs/{plaidLogEntryId}")
@@ -215,19 +215,20 @@ public class BusinessController {
         new Business(businessService.getBusiness(CurrentUser.getBusinessId(), false)));
   }
 
-  @GetMapping("/business-limit")
-  BusinessLimit getBusinessLimit() {
-    return BusinessLimit.of(
-        businessLimitService.retrieveBusinessLimit(CurrentUser.getBusinessId()));
+  @GetMapping("/business-settings")
+  BusinessSettings getBusinessSettings() {
+    return BusinessSettings.of(
+        businessSettingsService.retrieveBusinessSettings(CurrentUser.getBusinessId()));
   }
 
-  @PatchMapping("/business-limit")
-  BusinessLimit updateBusinessLimit(@RequestBody @Validated BusinessLimit businessLimitRequest) {
+  @PatchMapping("/business-settings")
+  BusinessSettings updateBusinessSettings(
+      @RequestBody @Validated BusinessSettings businessSettingsRequest) {
     // validate for duplicate keys
-    businessLimitRequest.checkDuplicateLimits();
-    return BusinessLimit.of(
-        businessLimitService.updateBusinessLimits(
-            CurrentUser.getBusinessId(), businessLimitRequest));
+    businessSettingsRequest.checkDuplicateLimits();
+    return BusinessSettings.of(
+        businessSettingsService.updateBusinessSettings(
+            CurrentUser.getBusinessId(), businessSettingsRequest));
   }
 
   @PostMapping("/complete-onboarding")

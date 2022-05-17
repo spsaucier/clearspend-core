@@ -32,6 +32,7 @@ import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
@@ -54,6 +55,7 @@ public class NetworkMessageService {
 
   private final AccountService accountService;
   private final BusinessService businessService;
+  private final BusinessSettingsService businessSettingsService;
   private final AccountActivityService accountActivityService;
   private final AllocationService allocationService;
   private final CardService cardService;
@@ -73,6 +75,9 @@ public class NetworkMessageService {
 
     common.setBusiness(
         businessService.retrieveBusinessForService(cardRecord.card().getBusinessId(), true));
+    common.setBusinessSettings(
+        businessSettingsService.retrieveBusinessSettingsForService(
+            cardRecord.card().getBusinessId()));
     common.setCard(cardRecord.card());
     common.setUser(userService.retrieveUserForService(cardRecord.card().getUserId()));
 
@@ -279,7 +284,9 @@ public class NetworkMessageService {
 
     if (common.getForeign()) {
       Amount foreignFee =
-          common.getRequestedAmount().percents(common.getBusiness().getForeignTransactionFee());
+          common
+              .getRequestedAmount()
+              .percents(common.getBusinessSettings().getForeignTransactionFee());
       common.setPaddedAmount(common.getPaddedAmount().add(foreignFee));
     }
 
@@ -316,7 +323,9 @@ public class NetworkMessageService {
 
     if (common.getForeign()) {
       Amount foreignFee =
-          common.getApprovedAmount().percents(common.getBusiness().getForeignTransactionFee());
+          common
+              .getApprovedAmount()
+              .percents(common.getBusinessSettings().getForeignTransactionFee());
       common.setApprovedAmount(common.getApprovedAmount().add(foreignFee));
     }
 
@@ -451,5 +460,9 @@ public class NetworkMessageService {
         .stream()
         .findFirst()
         .orElse(null);
+  }
+
+  public static void main(String[] args) {
+    System.out.println(OffsetDateTime.now(Clock.systemUTC()).toZonedDateTime());
   }
 }

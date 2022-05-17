@@ -29,7 +29,6 @@ import com.google.errorprone.annotations.RestrictedApi;
 import com.stripe.model.Account.BusinessProfile;
 import com.stripe.model.Account.Company;
 import com.stripe.model.Address;
-import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -46,8 +45,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessService {
-
-  private static final BigDecimal DEFAULT_FOREIGN_TRANSACTION_FEE = new BigDecimal(3);
 
   public @interface OnboardingBusinessOp {
     String reviewer();
@@ -66,7 +63,7 @@ public class BusinessService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final AllocationService allocationService;
-  private final BusinessLimitService businessLimitService;
+  private final BusinessSettingsService businessSettingsService;
   private final RetrievalService retrievalService;
   private final ExpenseCategoryService expenseCategoryService;
 
@@ -98,8 +95,7 @@ public class BusinessService {
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
             false,
-            AccountingSetupStep.AWAITING_SYNC,
-            DEFAULT_FOREIGN_TRANSACTION_FEE);
+            AccountingSetupStep.AWAITING_SYNC);
     if (businessId != null) {
       business.setId(businessId);
     }
@@ -126,7 +122,7 @@ public class BusinessService {
         .setFinancialAccountRef(
             stripeClient.createFinancialAccount(business.getId(), account.getId()).getId());
 
-    businessLimitService.initializeBusinessLimit(business.getId());
+    businessSettingsService.initializeBusinessSettings(business.getId());
 
     expenseCategoryService.createDefaultCategoriesForBusiness(business.getId());
 

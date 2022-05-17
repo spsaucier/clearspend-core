@@ -12,6 +12,7 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
@@ -146,6 +147,7 @@ public class NetworkCommon {
   private String stripeAuthorizationExternalRef;
 
   private Business business;
+  private BusinessSettings businessSettings;
 
   private Allocation allocation;
 

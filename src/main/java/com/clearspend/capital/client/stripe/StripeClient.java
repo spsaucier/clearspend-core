@@ -877,6 +877,13 @@ public class StripeClient {
         FinancialAccount.class);
   }
 
+  public FinancialAccount getClearspendFinancialAccount() {
+    return getFinancialAccount(
+        null,
+        stripeProperties.getClearspendConnectedAccountId(),
+        stripeProperties.getClearspendFinancialAccountId());
+  }
+
   public FinancialAccount getFinancialAccount(
       TypedId<BusinessId> businessId, String stripeAccountRef, String stripeFinancialAccountRef) {
     MultiValueMapBuilder multiValueMapBuilder =

@@ -16,7 +16,7 @@ import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
-import com.clearspend.capital.data.model.business.BusinessLimit;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
@@ -79,7 +79,7 @@ public class CardService {
   private final UserWelcomeService userWelcomeService;
 
   private final AccountService accountService;
-  private final BusinessLimitService businessLimitService;
+  private final BusinessSettingsService businessSettingsService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
   private final TwilioService twilioService;
@@ -117,10 +117,10 @@ public class CardService {
         throw new InvalidRequestException("Shipping address required for physical cards");
       }
 
-      BusinessLimit businessLimit =
-          businessLimitService.retrieveBusinessLimitForService(businessId);
-      if (businessLimit.getIssuedPhysicalCardsTotal()
-          >= businessLimit.getIssuedPhysicalCardsLimit()) {
+      BusinessSettings businessSettings =
+          businessSettingsService.retrieveBusinessSettingsForService(businessId);
+      if (businessSettings.getIssuedPhysicalCardsTotal()
+          >= businessSettings.getIssuedPhysicalCardsLimit()) {
         throw new InvalidRequestException("Physical card issuance limit exceeded");
       }
     }

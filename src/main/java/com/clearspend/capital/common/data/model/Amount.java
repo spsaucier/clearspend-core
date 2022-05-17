@@ -116,6 +116,10 @@ public class Amount {
     return amount.compareTo(that.amount) < 0;
   }
 
+  public boolean isLessThanOrEqualTo(@NonNull Amount that) {
+    return amount.compareTo(that.amount) <= 0;
+  }
+
   public boolean isEqual(@NonNull Amount that) {
     return amount.compareTo(that.amount) == 0;
   }
@@ -126,6 +130,10 @@ public class Amount {
 
   public boolean isGreaterThan(@NonNull Amount that) {
     return amount.compareTo(that.amount) > 0;
+  }
+
+  public boolean isGreaterThanOrEqualTo(@NonNull Amount that) {
+    return amount.compareTo(that.amount) >= 0;
   }
 
   @JsonIgnore

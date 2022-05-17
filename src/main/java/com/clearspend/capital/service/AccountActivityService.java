@@ -398,7 +398,7 @@ public class AccountActivityService {
             new PaymentDetails(
                 authorizationMethod,
                 PaymentType.from(authorizationMethod),
-                common.getBusiness().getForeignTransactionFee(),
+                common.getBusinessSettings().getForeignTransactionFee(),
                 common.getInterchange(),
                 common.getForeign()));
       }

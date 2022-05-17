@@ -3,6 +3,7 @@ package com.clearspend.capital.controller.type.business;
 import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
 
 import com.clearspend.capital.common.error.BusinessLimitValidationException;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
@@ -15,16 +16,14 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.Value;
 
 @Value
-@RequiredArgsConstructor
-@Builder(access = AccessLevel.PRIVATE)
-public class BusinessLimit {
+@AllArgsConstructor
+@Builder
+public class BusinessSettings {
 
   public record LimitPeriodRecord(LimitPeriod period, BigDecimal value) {}
 
@@ -47,30 +46,41 @@ public class BusinessLimit {
   @JsonProperty("operationLimits")
   Set<LimitOperationRecord> operationLimits;
 
-  @NonNull
   @JsonProperty("issuedPhysicalCardsLimit")
   Integer issuedPhysicalCardsLimit;
 
   @JsonProperty("issuedPhysicalCardsTotal")
   int issuedPhysicalCardsTotal;
 
-  public static BusinessLimit of(
-      com.clearspend.capital.data.model.business.BusinessLimit businessLimit) {
+  @JsonProperty("foreignTransactionFee")
+  BigDecimal foreignTransactionFee;
+
+  @JsonProperty("achFundsAvailabilityMode")
+  AchFundsAvailabilityMode achFundsAvailabilityMode;
+
+  @JsonProperty("immediateAchFundsLimit")
+  BigDecimal immediateAchFundsLimit;
+
+  public static BusinessSettings of(
+      com.clearspend.capital.data.model.business.BusinessSettings businessSettings) {
     Set<LimitRecord> limitRecords =
-        businessLimit.getLimits().entrySet().stream()
+        businessSettings.getLimits().entrySet().stream()
             .map(mapCurrencyLimitFunction())
             .collect(Collectors.toSet());
 
     Set<LimitOperationRecord> limitOperationRecords =
-        businessLimit.getOperationLimits().entrySet().stream()
+        businessSettings.getOperationLimits().entrySet().stream()
             .map(mapCurrencyLimitOperationRecord())
             .collect(Collectors.toSet());
 
-    return new BusinessLimit(
+    return new BusinessSettings(
         limitRecords,
         limitOperationRecords,
-        businessLimit.getIssuedPhysicalCardsLimit(),
-        businessLimit.getIssuedPhysicalCardsTotal());
+        businessSettings.getIssuedPhysicalCardsLimit(),
+        businessSettings.getIssuedPhysicalCardsTotal(),
+        businessSettings.getForeignTransactionFee(),
+        businessSettings.getAchFundsAvailabilityMode(),
+        businessSettings.getImmediateAchFundsLimit());
   }
 
   private static Function<

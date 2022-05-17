@@ -3,7 +3,8 @@ package com.clearspend.capital.data.model.business;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.common.typedid.data.business.BusinessLimitId;
+import com.clearspend.capital.common.typedid.data.business.BusinessSettingsId;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
@@ -33,7 +34,7 @@ import org.hibernate.annotations.TypeDefs;
 @DynamicUpdate
 @Slf4j
 @TypeDefs({@TypeDef(name = "json", typeClass = JsonType.class)})
-public class BusinessLimit extends TypedMutable<BusinessLimitId> {
+public class BusinessSettings extends TypedMutable<BusinessSettingsId> {
 
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
@@ -52,6 +53,12 @@ public class BusinessLimit extends TypedMutable<BusinessLimitId> {
   private Map<Currency, Map<LimitType, Map<LimitPeriod, Integer>>> operationLimits;
 
   @NonNull private Integer issuedPhysicalCardsLimit;
+
+  @NonNull private BigDecimal foreignTransactionFee;
+
+  @NonNull private AchFundsAvailabilityMode achFundsAvailabilityMode;
+
+  @NonNull private BigDecimal immediateAchFundsLimit;
 
   /**
    * Will be a calculated value for now. Might be reworked to a persistent field in case of any

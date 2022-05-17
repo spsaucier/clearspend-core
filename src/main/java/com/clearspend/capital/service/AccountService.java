@@ -51,7 +51,7 @@ public class AccountService {
   private final HoldRepository holdRepository;
 
   private final AdjustmentService adjustmentService;
-  private final BusinessLimitService businessLimitService;
+  private final BusinessSettingsService businessSettingsService;
   private final LedgerService ledgerService;
 
   public record AdjustmentRecord(
@@ -102,7 +102,7 @@ public class AccountService {
       boolean standardHold) {
     amount.ensureNonNegative();
 
-    businessLimitService.ensureWithinDepositLimit(businessId, amount);
+    businessSettingsService.ensureWithinDepositLimit(businessId, amount);
 
     Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
@@ -159,7 +159,7 @@ public class AccountService {
       throw new InsufficientFundsException(rootAllocationAccount, AdjustmentType.WITHDRAW, amount);
     }
 
-    businessLimitService.ensureWithinWithdrawLimit(businessId, amount);
+    businessSettingsService.ensureWithinWithdrawLimit(businessId, amount);
 
     Adjustment adjustment = adjustmentService.recordWithdrawFunds(rootAllocationAccount, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().sub(amount));

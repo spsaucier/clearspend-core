@@ -33,11 +33,13 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.decline.LimitExceeded;
 import com.clearspend.capital.data.model.decline.OperationLimitExceeded;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
@@ -94,6 +96,7 @@ public class BusinessBankAccountService {
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final BusinessService businessService;
+  private final BusinessSettingsService businessSettingsService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
   private final ContactValidator contactValidator;
@@ -104,6 +107,7 @@ public class BusinessBankAccountService {
   private final PendingStripeTransferService pendingStripeTransferService;
   private final TwilioService twilioService;
   private final UserService userService;
+  private final ClearspendService clearspendService;
 
   @Value("${clearspend.ach.return-fee:0}")
   private long achReturnFee;
@@ -430,8 +434,14 @@ public class BusinessBankAccountService {
           IdType.BUSINESS_ID, businessId, businessBankAccount.getBusinessId());
     }
 
+    BusinessSettings businessSettings =
+        businessSettingsService.retrieveBusinessSettingsForService(businessId);
     User user = retrievalService.retrieveUser(businessId, userId);
     AllocationRecord allocationRecord = allocationService.getRootAllocation(businessId);
+
+    if (canAccessFundsImmediately(business, businessSettings, amount)) {
+      standardHold = false;
+    }
 
     try {
       return transactBankAccount(
@@ -463,6 +473,50 @@ public class BusinessBankAccountService {
 
       throw e;
     }
+  }
+
+  /**
+   * Checks if business settings allow to make ach funds immediately
+   *
+   * @param business business object
+   * @param businessSettings business settings
+   * @param amount amount to be pulled
+   * @return true for yes, false for no
+   */
+  private boolean canAccessFundsImmediately(
+      Business business, BusinessSettings businessSettings, Amount amount) {
+    boolean result = false;
+
+    if (businessSettings.getAchFundsAvailabilityMode() == AchFundsAvailabilityMode.IMMEDIATE) {
+      Amount limit =
+          Amount.of(business.getCurrency(), businessSettings.getImmediateAchFundsLimit());
+      if (amount.isLessThanOrEqualTo(limit)) {
+        Amount mainFinancialAccountAvailableBalance =
+            clearspendService.getFinancialAccountBalance().availableBalance();
+        if (mainFinancialAccountAvailableBalance.isGreaterThanOrEqualTo(amount)) {
+          log.info(
+              "ACH funds {} can be provided immediately to business {} due to IMMEDIATE mode and being equal or less than {} limit",
+              amount,
+              business.getBusinessId(),
+              limit);
+          result = true;
+        } else {
+          log.warn(
+              "ACH funds {} can't be provided immediately to business {} due to insufficient available funds {} on our main financial account",
+              amount,
+              business.getBusinessId(),
+              mainFinancialAccountAvailableBalance);
+        }
+      } else {
+        log.warn(
+            "ACH funds {} can't be provided immediately to business {} since threshold {} has been exceeded",
+            amount,
+            business.getBusinessId(),
+            limit);
+      }
+    }
+
+    return result;
   }
 
   private AdjustmentAndHoldRecord transactBankAccount(
@@ -626,8 +680,31 @@ public class BusinessBankAccountService {
   @Transactional
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processBankAccountDeposit(
-      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId, Amount amount) {
+      TypedId<BusinessId> businessId,
+      TypedId<AdjustmentId> adjustmentId,
+      TypedId<HoldId> holdId,
+      Amount amount) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
+    BusinessSettings businessSettings =
+        businessSettingsService.retrieveBusinessSettingsForService(businessId);
+
+    if (holdId != null
+        && businessSettings.getAchFundsAvailabilityMode() != AchFundsAvailabilityMode.STANDARD) {
+      log.info(
+          "Releasing ach transfer hold {} for business {} for {} amount due to {} ach funds availability mode",
+          holdId,
+          businessId,
+          amount,
+          businessSettings.getAchFundsAvailabilityMode());
+      Hold hold = accountService.retrieveHold(holdId);
+      hold.setStatus(HoldStatus.RELEASED);
+
+      accountActivityService.recordHoldReleaseAccountActivity(hold);
+
+      AccountActivity accountActivity =
+          accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
+      accountActivity.setVisibleAfter(OffsetDateTime.now(Clock.systemUTC()));
+    }
 
     stripeClient.pushFundsToClearspendFinancialAccount(
         businessId,
