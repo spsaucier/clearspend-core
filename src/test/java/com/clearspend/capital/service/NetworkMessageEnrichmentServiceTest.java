@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.clearspend.capital.client.clearbit.ClearbitClient;
 import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.mx.MxClient;
@@ -48,7 +47,6 @@ public class NetworkMessageEnrichmentServiceTest {
 
   private AccountActivityService mockAccountActivityService;
   private MxClient mockMxClient;
-  private ClearbitClient mockClearbitClient;
   private CodatClient mockCodatClient;
   private NetworkMerchantRepository mockNetworkMerchantRepository;
 
@@ -58,7 +56,6 @@ public class NetworkMessageEnrichmentServiceTest {
   public void setup() {
     mockAccountActivityService = Mockito.mock(AccountActivityService.class);
     mockMxClient = Mockito.mock(MxClient.class);
-    mockClearbitClient = Mockito.mock(ClearbitClient.class);
     mockCodatClient = Mockito.mock(CodatClient.class);
     mockNetworkMerchantRepository = Mockito.mock(NetworkMerchantRepository.class);
 
@@ -68,7 +65,6 @@ public class NetworkMessageEnrichmentServiceTest {
         new NetworkMessageEnrichmentService(
             mockAccountActivityService,
             mockMxClient,
-            mockClearbitClient,
             mockCodatClient,
             mockNetworkMerchantRepository);
   }
@@ -80,7 +76,6 @@ public class NetworkMessageEnrichmentServiceTest {
     verifyNoInteractions(mockMxClient);
     verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockNetworkMerchantRepository);
-    verifyNoInteractions(mockClearbitClient);
     verifyNoInteractions(mockCodatClient);
   }
 
@@ -96,7 +91,6 @@ public class NetworkMessageEnrichmentServiceTest {
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
     verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockNetworkMerchantRepository);
-    verifyNoInteractions(mockClearbitClient);
     verifyNoInteractions(mockCodatClient);
   }
 
@@ -113,7 +107,6 @@ public class NetworkMessageEnrichmentServiceTest {
     verify(mockMxClient, times(1)).getCleansedMerchantName(eq("test"), eq(123));
     verifyNoInteractions(mockAccountActivityService);
     verifyNoInteractions(mockNetworkMerchantRepository);
-    verifyNoInteractions(mockClearbitClient);
     verifyNoInteractions(mockCodatClient);
   }
 
@@ -148,22 +141,22 @@ public class NetworkMessageEnrichmentServiceTest {
             eq("test"),
             isNull(),
             isNull());
-    verifyNoInteractions(mockClearbitClient);
     verify(mockNetworkMerchantRepository, times(1)).save(any());
   }
 
   @Test
   @SneakyThrows
-  public void
-      scheduleActivityEnrichment_whenValidMxResultUsingClearbitLogos_clearbitIsQueriedForLogos() {
+  public void scheduleActivityEnrichment_whenNoMxLogoIsAvailable_noNetworkMerchantIsPersisted() {
     when(mockMxClient.getCleansedMerchantName(anyString(), anyInt()))
         .thenReturn(
             new EnhanceTransactionResponse(
                 List.of(
                     new TransactionRecordResponse(
                         "testing", "enh-name", 123, null, "loc-guid", "desc"))));
+    when(mockNetworkMerchantRepository.findByMerchantNameAndMerchantCategoryCode(
+            anyString(), anyInt()))
+        .thenReturn(Optional.empty());
 
-    when(mockClearbitClient.getLogo(eq("enh-name"))).thenReturn("alt-logo-path");
     when(mockCodatClient.getSupplierForBusiness(anyString(), anyString()))
         .thenReturn(new GetSuppliersResponse(Collections.emptyList()));
 
@@ -178,7 +171,7 @@ public class NetworkMessageEnrichmentServiceTest {
             eq(common.getBusiness().getId()),
             eq(common.getAccountActivity().getId()),
             eq("enh-name"),
-            eq("alt-logo-path"),
+            eq(""),
             eq("test"),
             isNull(),
             isNull());
@@ -224,7 +217,6 @@ public class NetworkMessageEnrichmentServiceTest {
             eq("test"),
             isNull(),
             isNull());
-    verifyNoInteractions(mockClearbitClient);
   }
 
   @Test
@@ -261,7 +253,6 @@ public class NetworkMessageEnrichmentServiceTest {
             eq("test"),
             isNull(),
             isNull());
-    verifyNoInteractions(mockClearbitClient);
     verify(mockNetworkMerchantRepository, never()).save(any());
   }
 
@@ -298,7 +289,6 @@ public class NetworkMessageEnrichmentServiceTest {
             eq("test"),
             isNull(),
             isNull());
-    verifyNoInteractions(mockClearbitClient);
     verify(mockNetworkMerchantRepository, times(1)).save(merchantCaptor.capture());
     assertThat(merchantCaptor.getValue())
         .matches(it -> "enh-name".equals(it.getMerchantName()))

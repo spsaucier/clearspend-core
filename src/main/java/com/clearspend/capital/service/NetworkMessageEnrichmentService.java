@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.clearbit.ClearbitClient;
 import com.clearspend.capital.client.codat.CodatClient;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.mx.MxClient;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 public class NetworkMessageEnrichmentService {
 
   private final AccountActivityService accountActivityService;
-  private final ClearbitClient clearbitClient;
   private final CodatClient codatClient;
   private final MxClient mxClient;
   private final NetworkMerchantRepository networkMerchantRepository;
@@ -28,13 +26,11 @@ public class NetworkMessageEnrichmentService {
   public NetworkMessageEnrichmentService(
       AccountActivityService accountActivityService,
       MxClient mxClient,
-      ClearbitClient clearbitClient,
       CodatClient codatClient,
       NetworkMerchantRepository networkMerchantRepository) {
 
     this.accountActivityService = accountActivityService;
     this.mxClient = mxClient;
-    this.clearbitClient = clearbitClient;
     this.codatClient = codatClient;
     this.networkMerchantRepository = networkMerchantRepository;
   }
@@ -55,13 +51,13 @@ public class NetworkMessageEnrichmentService {
           logoPath = entity.get().getMerchantLogoUrl();
         } else if (mxDetail.getExternalMerchantId() != null && StringUtils.isBlank(logoPath)) {
           logoPath = mxClient.getMerchantLogo(mxDetail.getExternalMerchantId());
-        } else if (StringUtils.isBlank(logoPath)) {
-          logoPath = clearbitClient.getLogo(mxDetail.getEnhancedName());
         }
         // If we haven't cached this Merchant, we should
-        if (entity.isEmpty()) {
+        if (entity.isEmpty() && !StringUtils.isBlank(logoPath)) {
           createNetworkMerchant(mxDetail, logoPath);
-        } else if (!entity.get().getMerchantLogoUrl().equals(logoPath)) {
+        }
+
+        if (entity.isPresent() && !entity.get().getMerchantLogoUrl().equals(logoPath)) {
           networkMerchantRepository.save(entity.get());
         }
 
