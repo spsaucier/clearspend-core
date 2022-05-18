@@ -652,7 +652,7 @@ class UserControllerTest extends BaseCapitalTest {
         mockMvcHelper.queryObject(
             "/users/cards/%s/cancel".formatted(card.getId()),
             HttpMethod.PATCH,
-            userCookie,
+            createBusinessRecord.authCookie(),
             new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
             com.clearspend.capital.controller.type.card.Card.class);
 
@@ -711,7 +711,7 @@ class UserControllerTest extends BaseCapitalTest {
         .allowGlobalRoles(
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
-        .allowUser(employee)
+        .denyUser(employee)
         .build()
         .validateMockMvcCall(action);
   }

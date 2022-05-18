@@ -365,7 +365,7 @@ public class CardService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#card, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
+  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
   public Card cancelCard(Card card, CardStatusReason reason) {
     return updateCardStatus(card, CardStatus.CANCELLED, reason, false);
   }
