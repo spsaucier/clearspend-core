@@ -11,6 +11,7 @@ import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.CardId;
+import com.clearspend.capital.common.typedid.data.CodatCategoryId;
 import com.clearspend.capital.common.typedid.data.ExpenseCategoryId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -472,11 +473,11 @@ public class AccountActivityService {
       "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
   @Transactional
   public AccountActivity updateAccountActivityClass(
-      AccountActivity accountActivity, String classId) {
+      AccountActivity accountActivity, TypedId<CodatCategoryId> codatCategoryId) {
     if (accountActivity.getAccountingDetails() == null) {
       accountActivity.setAccountingDetails(new AccountingDetails());
     }
-    accountActivity.getAccountingDetails().setCodatClassId(classId);
+    accountActivity.getAccountingDetails().setCodatClassId(codatCategoryId);
     return accountActivityRepository.save(accountActivity);
   }
 
@@ -484,12 +485,12 @@ public class AccountActivityService {
       "isSelfOwned(#accountActivity) or hasAllocationPermission(#accountActivity.allocationId, 'MANAGE_FUNDS')")
   @Transactional
   public AccountActivity updateAccountActivityLocation(
-      AccountActivity accountActivity, String locationId) {
+      AccountActivity accountActivity, TypedId<CodatCategoryId> codatCategoryId) {
 
     if (accountActivity.getAccountingDetails() == null) {
       accountActivity.setAccountingDetails(new AccountingDetails());
     }
-    accountActivity.getAccountingDetails().setCodatLocationId(locationId);
+    accountActivity.getAccountingDetails().setCodatLocationId(codatCategoryId);
     return accountActivityRepository.save(accountActivity);
   }
 

@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -43,6 +44,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.CodatCategoryRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.service.AccountActivityService.CardAccountActivity;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -87,6 +89,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
   @Autowired TestDataHelper testDataHelper;
 
   @Autowired ExpenseCategoryRepository expenseCategoryRepository;
+  @Autowired CodatCategoryRepository codatCategoryRepository;
 
   @Test
   void recordAccountActivityOnBusinessBankAccountTransaction() {
@@ -1355,12 +1358,19 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
 
     accountActivityRepository.save(activity);
 
-    accountActivityService.updateAccountActivityClass(activity, "class-1");
-    accountActivityService.updateAccountActivityLocation(activity, "location-1");
+    CodatCategory classCategory = new CodatCategory();
+    CodatCategory locationCategory = new CodatCategory();
+    codatCategoryRepository.save(classCategory);
+    codatCategoryRepository.save(locationCategory);
+
+    accountActivityService.updateAccountActivityClass(activity, classCategory.getId());
+    accountActivityService.updateAccountActivityLocation(activity, locationCategory.getId());
 
     AccountActivity updatedActivity = accountActivityRepository.getById(activity.getId());
-    assertThat(updatedActivity.getAccountingDetails().getCodatClassId()).isEqualTo("class-1");
+    assertThat(updatedActivity.getAccountingDetails().getCodatClassId())
+        .isEqualTo(classCategory.getId());
 
-    assertThat(updatedActivity.getAccountingDetails().getCodatLocationId()).isEqualTo("location-1");
+    assertThat(updatedActivity.getAccountingDetails().getCodatLocationId())
+        .isEqualTo(locationCategory.getId());
   }
 }
