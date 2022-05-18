@@ -3,7 +3,6 @@ package com.clearspend.capital.data.model.embedded;
 import com.clearspend.capital.common.data.type.TypedIdSetType;
 import com.clearspend.capital.common.typedid.data.CodatCategoryId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.JoinColumn;
 import javax.persistence.MappedSuperclass;
@@ -25,12 +24,10 @@ public class AccountingDetails {
   private Boolean sentToAccounting;
 
   @JoinColumn(referencedColumnName = "id", table = "codat_category")
-  @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<CodatCategoryId> codatClassId;
 
   @JoinColumn(referencedColumnName = "id", table = "codat_category")
-  @Column(updatable = false)
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<CodatCategoryId> codatLocationId;
 }
