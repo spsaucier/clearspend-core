@@ -25,11 +25,14 @@ import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.embedded.ExpenseDetails;
+import com.clearspend.capital.data.model.embedded.MerchantDetails;
 import com.clearspend.capital.data.model.embedded.ReceiptDetails;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.MccGroup;
+import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
@@ -630,5 +633,57 @@ public class AccountActivityControllerTest extends BaseCapitalTest {
     assertEquals(2, pagedData.getContent().size());
     assertEquals(pagedData.getTotalElements(), 2);
     log.info(response.getContentAsString());
+  }
+
+  @SneakyThrows
+  @Test
+  void accountActivitySearchResultsContainMerchantStatementDescriptorIfPresent() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    BusinessBankAccount businessBankAccount =
+        testHelper.createBusinessBankAccount(createBusinessRecord.business().getId());
+    Business business = createBusinessRecord.business();
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    MerchantDetails details = new MerchantDetails();
+    details.setName("Merch Name");
+    details.setType(MerchantType.UNKNOWN);
+    details.setMerchantNumber("123");
+    details.setMerchantCategoryCode(123);
+    details.setMerchantCategoryGroup(MccGroup.GAMBLING);
+    details.setStatementDescriptor("test descriptor");
+    testDataHelper.createAccountActivity(
+        AccountActivityConfig.fromCreateBusinessRecord(createBusinessRecord)
+            .merchant(details)
+            .build());
+
+    AccountActivityRequest accountActivityRequest = new AccountActivityRequest();
+    accountActivityRequest.setPageRequest(new PageRequest(0, 10));
+
+    String body = objectMapper.writeValueAsString(accountActivityRequest);
+
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/account-activity")
+                    .contentType("application/json")
+                    .content(body)
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    // we should have just one bank deposit
+    PagedData<AccountActivityResponse> pagedData =
+        objectMapper.readValue(
+            response.getContentAsString(),
+            objectMapper
+                .getTypeFactory()
+                .constructParametricType(PagedData.class, AccountActivityResponse.class));
+    assertEquals(1, pagedData.getContent().size());
+    assertEquals(pagedData.getTotalElements(), 1);
+    log.info(response.getContentAsString());
+    assertThat(pagedData.getContent().get(0).getMerchant().getStatementDescriptor())
+        .isEqualTo("test descriptor");
   }
 }

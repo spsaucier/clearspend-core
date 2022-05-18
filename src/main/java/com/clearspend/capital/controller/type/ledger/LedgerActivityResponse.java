@@ -85,6 +85,9 @@ public class LedgerActivityResponse {
   @JsonProperty("paymentDetails")
   private PaymentDetails paymentDetails;
 
+  @JsonProperty("statementDescriptor")
+  private String statementDescriptor;
+
   @JsonIgnore private AccountActivity accountActivity;
 
   public static LedgerActivityResponse of(AccountActivity accountActivity) {
@@ -176,6 +179,10 @@ public class LedgerActivityResponse {
     response.setExpenseDetails(
         ExpenseDetails.toExpenseDetails(accountActivity.getExpenseDetails()));
     response.setLastSynctime(accountActivity.getLastSyncTime());
+
+    if (accountActivity.getMerchant() != null) {
+      response.setStatementDescriptor(accountActivity.getMerchant().getStatementDescriptor());
+    }
 
     if (CollectionUtils.isNotEmpty(accountActivity.getDeclineDetails())) {
       response.setDeclineDetails(accountActivity.getDeclineDetails().get(0));

@@ -58,6 +58,9 @@ public class Merchant {
   @JsonProperty("codatSupplierId")
   private String codatSupplierId;
 
+  @JsonProperty("statementDescriptor")
+  private String statementDescriptor;
+
   public static Merchant toMerchant(MerchantDetails in) {
     if (in == null) {
       return null;
@@ -75,6 +78,7 @@ public class Merchant {
         in.getLongitude(),
         in.getCountry(),
         in.getCodatSupplierName(),
-        in.getCodatSupplierId());
+        in.getCodatSupplierId(),
+        in.getStatementDescriptor());
   }
 }
