@@ -1,0 +1,57 @@
+{
+  "id": "evt_1KUaNk4g2Xo63Nb8Uw7dvKMv",
+  "data": {
+    "object": {
+      "id": "ipi_1KwSEK4fOsQi6HOO3yIzvYxt",
+      "object": "issuing.transaction",
+      "amount": 100,
+      "amount_details": {
+        "atm_fee": null
+      },
+      {{#authorizationRef}}"authorization": "{{authorizationRef}}",{{/authorizationRef}}
+      {{^authorizationRef}}"authorization": null,{{/authorizationRef}}
+      "balance_transaction": null,
+      "card": "{{cardExternalRef}}",
+      "cardholder": "ich_1KbT9M4fOsQi6HOOnIyiN5bq",
+      "created": 1651847644,
+      "currency": "usd",
+      "dispute": null,
+      "livemode": true,
+      "merchant_amount": 100,
+      "merchant_currency": "usd",
+      "merchant_data": {
+        "category": "hotels_motels_and_resorts",
+        "category_code": "7011",
+        "city": "SAN DIEGO",
+        "country": "US",
+        "name": "PARADISE POINT RESORT",
+        "network_id": "000498757310889",
+        "postal_code": "92109",
+        "state": "CA"
+      },
+      "metadata": {
+      },
+      "type": "refund",
+      "wallet": null,
+      "flow_transaction": "trxn_1KwSEM4fOsQi6HOOBjMSl551",
+      "interchange": {
+        "amount_decimal": "-1.00"
+      },
+      "treasury": {
+        "received_credit": "rc_1KwSEK4fOsQi6HOOYD8AmpFW",
+        "received_debit": null
+      }
+    }
+  },
+  "type": "issuing_transaction.created",
+  "object": "event",
+  "account": "{{stripeAccountId}}",
+  "created": 1645205796,
+  "request": {
+    "id": "req_fXCaykmwqh6YpW",
+    "idempotency_key": "bbdd11d9-1026-4f9f-a49f-de73a828eff9"
+  },
+  "livemode": false,
+  "api_version": "2020-08-27; financial_accounts_beta=v3; issuing_flows_beta=v1; money_flows_beta=v2",
+  "pending_webhooks": 1
+}

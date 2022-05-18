@@ -60,6 +60,7 @@ import com.clearspend.capital.data.model.network.NetworkMessage;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
+import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
@@ -75,6 +76,7 @@ import com.clearspend.capital.service.TransactionLimitService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.clearspend.capital.testutils.data.TestDataHelper;
 import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
+import com.clearspend.capital.util.function.MapFunctions;
 import com.github.javafaker.Faker;
 import com.google.gson.Gson;
 import com.samskivert.mustache.Template;
@@ -117,6 +119,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   @Autowired private ReceiptRepository receiptRepository;
 
   @Autowired private AccountActivityRepository accountActivityRepository;
+  @Autowired private AllocationRepository allocationRepository;
   @Autowired private AccountRepository accountRepository;
   @Autowired private HoldRepository holdRepository;
   @Autowired private StripeWebhookLogRepository stripeWebhookLogRepository;
@@ -1662,6 +1665,154 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
   }
 
   @Test
+  void processCompletion_Refund() {
+    final AllocationRecord childAllocationRecord =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            childAllocationRecord.allocation(),
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    serviceHelper
+        .accountService()
+        .reallocateFunds(
+            createBusinessRecord.allocationRecord().account().getId(),
+            childAllocationRecord.account().getId(),
+            Amount.of(Currency.USD, 100));
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Template captureTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_captureTransaction.json");
+    final Template refundTemplate =
+        MustacheResourceLoader.load("stripeEvents/issuingTransaction_refund.json");
+
+    final Map<String, String> authCaptureParams =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String authorizationJson = authorizationTemplate.execute(authCaptureParams);
+    sendStripeJson(authorizationJson);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(1);
+    final String authExternalRef = networkMessages.get(0).getExternalRef();
+
+    final String captureJson = captureTemplate.execute(authCaptureParams);
+    sendStripeJson(captureJson);
+
+    final Account rootAccountAfterCapture =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(createBusinessRecord.allocationRecord().account().getId(), true);
+    assertThat(rootAccountAfterCapture)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("1000000.00USD", "1000000.00USD");
+
+    final Account childAccountAfterCapture =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(childAllocationRecord.account().getId(), true);
+    assertThat(childAccountAfterCapture)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("99.00USD", "99.00USD");
+    assertThat(childAccountAfterCapture.getHolds()).isEmpty();
+
+    final Map<String, String> refundParams =
+        MapFunctions.append(authCaptureParams, "authorizationRef", authExternalRef);
+    final String refundJson = refundTemplate.execute(refundParams);
+    sendStripeJson(refundJson);
+
+    final List<AccountActivity> allActivitiesPostRefund =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+
+    // First 2 activities are from setup
+    assertEquals(5, allActivitiesPostRefund.size());
+    assertThat(allActivitiesPostRefund.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING)
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation", AllocationDetails.of(childAllocationRecord.allocation()));
+    assertThat(allActivitiesPostRefund.get(3))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED)
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation", AllocationDetails.of(childAllocationRecord.allocation()));
+    assertThat(allActivitiesPostRefund.get(4))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_REFUND)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PROCESSED)
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation", AllocationDetails.of(childAllocationRecord.allocation()));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).isEmpty();
+
+    final List<NetworkMessage> networkMessagesPostRefund = networkMessageRepository.findAll();
+    assertThat(networkMessagesPostRefund).hasSize(3);
+    networkMessagesPostRefund.sort(Comparator.comparing(NetworkMessage::getCreated));
+
+    assertThat(networkMessagesPostRefund.get(0))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessagesPostRefund.get(1))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessagesPostRefund.get(2))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
+
+    final Account rootAccountAfterRefund =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(createBusinessRecord.allocationRecord().account().getId(), true);
+    assertThat(rootAccountAfterRefund)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("1000000.00USD", "1000000.00USD");
+
+    final Account childAccountAfterRefund =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(childAllocationRecord.account().getId(), true);
+    assertThat(childAccountAfterRefund)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("100.00USD", "100.00USD");
+  }
+
+  @Test
   void processCompletion_IndividualFunding_CardUnlinkedAfterAuthorization() {
     final Card card =
         testHelper.issueCard(
@@ -1754,5 +1905,160 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("cardId", card.getId())
         .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
         .hasFieldOrPropertyWithValue("declineId", null);
+  }
+
+  @Test
+  void processCompletion_Refund_AllocationIsArchived() {
+    final AllocationRecord childAllocationRecord =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card card =
+        testHelper.issueCard(
+            business,
+            childAllocationRecord.allocation(),
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    serviceHelper
+        .accountService()
+        .reallocateFunds(
+            createBusinessRecord.allocationRecord().account().getId(),
+            childAllocationRecord.account().getId(),
+            Amount.of(Currency.USD, 100));
+    final Template authorizationTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_authorization.json");
+    final Template captureTemplate =
+        MustacheResourceLoader.load("stripeEvents/cardCancelled_captureTransaction.json");
+    final Template refundTemplate =
+        MustacheResourceLoader.load("stripeEvents/issuingTransaction_refund.json");
+
+    final Map<String, String> authCaptureParams =
+        Map.of(
+            "cardExternalRef", card.getExternalRef(),
+            "stripeAccountId", business.getStripeData().getAccountRef(),
+            "userId", createBusinessRecord.user().getId().toUuid().toString(),
+            "businessId", business.getId().toUuid().toString(),
+            "cardId", card.getId().toUuid().toString());
+    final String authorizationJson = authorizationTemplate.execute(authCaptureParams);
+    sendStripeJson(authorizationJson);
+
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    final List<NetworkMessage> networkMessages = networkMessageRepository.findAll();
+    assertThat(networkMessages).hasSize(1);
+    final String authExternalRef = networkMessages.get(0).getExternalRef();
+
+    final String captureJson = captureTemplate.execute(authCaptureParams);
+    sendStripeJson(captureJson);
+
+    final Account rootAccountAfterCapture =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(createBusinessRecord.allocationRecord().account().getId(), true);
+    assertThat(rootAccountAfterCapture)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("1000000.00USD", "1000000.00USD");
+
+    final Account childAccountAfterCapture =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(childAllocationRecord.account().getId(), true);
+    assertThat(childAccountAfterCapture)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("99.00USD", "99.00USD");
+    assertThat(childAccountAfterCapture.getHolds()).isEmpty();
+
+    childAllocationRecord.allocation().setArchived(true);
+    allocationRepository.save(childAllocationRecord.allocation());
+
+    final Map<String, String> refundParams =
+        MapFunctions.append(authCaptureParams, "authorizationRef", authExternalRef);
+    final String refundJson = refundTemplate.execute(refundParams);
+    sendStripeJson(refundJson);
+
+    final List<AccountActivity> allActivitiesPostRefund =
+        accountActivityRepository.findAll().stream()
+            .sorted(Comparator.comparing(AccountActivity::getActivityTime))
+            .toList();
+
+    // First 2 activities are from setup
+    assertEquals(5, allActivitiesPostRefund.size());
+    assertThat(allActivitiesPostRefund.get(2))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_AUTHORIZATION)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PENDING)
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation", AllocationDetails.of(childAllocationRecord.allocation()));
+    assertThat(allActivitiesPostRefund.get(3))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_CAPTURE)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.APPROVED)
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation", AllocationDetails.of(childAllocationRecord.allocation()));
+    assertThat(allActivitiesPostRefund.get(4))
+        .hasFieldOrPropertyWithValue("type", AccountActivityType.NETWORK_REFUND)
+        .hasFieldOrPropertyWithValue("status", AccountActivityStatus.PROCESSED)
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue(
+            "allocation",
+            AllocationDetails.of(createBusinessRecord.allocationRecord().allocation()));
+
+    assertThat(stripeMockClient.getMockAuthorizations())
+        .hasSize(1)
+        .first()
+        .hasFieldOrPropertyWithValue("status", MockAuthorizationStatus.APPROVED);
+
+    final List<Decline> declines = declineRepository.findAll();
+    assertThat(declines).isEmpty();
+
+    final List<NetworkMessage> networkMessagesPostRefund = networkMessageRepository.findAll();
+    assertThat(networkMessagesPostRefund).hasSize(3);
+    networkMessagesPostRefund.sort(Comparator.comparing(NetworkMessage::getCreated));
+
+    assertThat(networkMessagesPostRefund.get(0))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.AUTH_REQUEST)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessagesPostRefund.get(1))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocationRecord.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocationRecord.account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
+    assertThat(networkMessagesPostRefund.get(2))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue(
+            "accountId", createBusinessRecord.allocationRecord().account().getId())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("type", NetworkMessageType.TRANSACTION_CREATED)
+        .hasFieldOrPropertyWithValue("declineId", null);
+
+    final Account rootAccountAfterRefund =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(createBusinessRecord.allocationRecord().account().getId(), true);
+    assertThat(rootAccountAfterRefund)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("1000001.00USD", "1000001.00USD");
+
+    final Account childAccountAfterRefund =
+        serviceHelper
+            .accountService()
+            .retrieveAccountById(childAllocationRecord.account().getId(), true);
+    assertThat(childAccountAfterRefund)
+        .extracting("ledgerBalance", "availableBalance")
+        .map(Object::toString)
+        .containsExactly("99.00USD", "99.00USD");
   }
 }

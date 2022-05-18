@@ -1,5 +1,6 @@
 package com.clearspend.capital.service;
 
+import com.clearspend.capital.client.stripe.types.TransactionType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.LimitViolationException;
@@ -28,6 +29,7 @@ import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
 import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.AccountService.HoldRecord;
+import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
@@ -124,6 +126,15 @@ public class NetworkMessageService {
                     allocationService.retrieveAllocation(
                         common.getBusiness().getId(), allocationId));
               });
+    }
+
+    if (Optional.ofNullable(common.getAllocation()).filter(Allocation::isArchived).isPresent()
+        && common.getNetworkMessageType() == NetworkMessageType.TRANSACTION_CREATED
+        && TransactionType.from(common.getNetworkMessageSubType()) == TransactionType.REFUND) {
+      final AllocationRecord rootAllocation =
+          allocationService.getRootAllocation(common.getAllocation().getBusinessId());
+      common.setAllocation(rootAllocation.allocation());
+      common.setAccount(rootAllocation.account());
     }
   }
 
