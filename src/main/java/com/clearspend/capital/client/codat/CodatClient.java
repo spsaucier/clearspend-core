@@ -23,6 +23,7 @@ import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatTaxRateRef;
 import com.clearspend.capital.client.codat.types.CodatTrackingCategory;
+import com.clearspend.capital.client.codat.types.CodatTrackingCategoryRef;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
 import com.clearspend.capital.client.codat.types.CreateIntegrationResponse;
 import com.clearspend.capital.client.codat.types.DirectCostRequest;
@@ -228,7 +229,8 @@ public class CodatClient {
       AccountActivity transaction,
       String currency,
       CodatAccount expenseAccount,
-      String expenseCategoryRef)
+      String expenseCategoryRef,
+      List<CodatTrackingCategoryRef> trackingCategoryRefs)
       throws RuntimeException {
 
     List<CodatPaymentAllocation> paymentAllocations = new ArrayList<>();
@@ -247,7 +249,8 @@ public class CodatClient {
             1,
             new CodatAccountRef(expenseCategoryRef),
             new CodatTaxRateRef("NON"),
-            transaction.getNotes()));
+            transaction.getNotes(),
+            trackingCategoryRefs));
 
     CodatContactRef contactRef =
         new CodatContactRef(transaction.getMerchant().getCodatSupplierId(), "suppliers");

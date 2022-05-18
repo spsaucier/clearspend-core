@@ -22,6 +22,7 @@ import com.clearspend.capital.client.codat.types.CodatSyncReceiptRequest;
 import com.clearspend.capital.client.codat.types.CodatSyncReceiptResponse;
 import com.clearspend.capital.client.codat.types.CodatSyncResponse;
 import com.clearspend.capital.client.codat.types.CodatTrackingCategory;
+import com.clearspend.capital.client.codat.types.CodatTrackingCategoryRef;
 import com.clearspend.capital.client.codat.types.CodatValidation;
 import com.clearspend.capital.client.codat.types.CreateAssignSupplierResponse;
 import com.clearspend.capital.client.codat.types.CreateCompanyResponse;
@@ -173,6 +174,24 @@ public class CodatService {
       return new SyncTransactionResponse("FAILED (Expense category for transaction is unmapped");
     }
 
+    List<CodatTrackingCategoryRef> trackingCategoryRefs = new ArrayList<>();
+
+    if (accountActivity.getAccountingDetails() != null) {
+      if (accountActivity.getAccountingDetails().getCodatClassId() != null) {
+        CodatCategory classCategory =
+            codatCategoryRepository.getById(
+                accountActivity.getAccountingDetails().getCodatClassId());
+        trackingCategoryRefs.add(new CodatTrackingCategoryRef(classCategory.getCodatCategoryId()));
+      }
+      if (accountActivity.getAccountingDetails().getCodatLocationId() != null) {
+        CodatCategory locationCategory =
+            codatCategoryRepository.getById(
+                accountActivity.getAccountingDetails().getCodatLocationId());
+        trackingCategoryRefs.add(
+            new CodatTrackingCategoryRef(locationCategory.getCodatCategoryId()));
+      }
+    }
+
     CodatSyncDirectCostResponse directCostSyncResponse =
         codatClient.syncTransactionAsDirectCost(
             business.getCodatCompanyRef(),
@@ -180,7 +199,8 @@ public class CodatService {
             accountActivity,
             business.getCurrency().name(),
             expenseAccount.get(),
-            expenseCategoryMapping.get().getAccountRefId());
+            expenseCategoryMapping.get().getAccountRefId(),
+            trackingCategoryRefs);
 
     User currentUserDetails = userService.retrieveUserForService(CurrentUser.getUserId());
     transactionSyncLogRepository.save(
