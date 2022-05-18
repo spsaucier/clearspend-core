@@ -170,6 +170,7 @@ dependencies {
     implementation("com.blazebit:blaze-persistence-integration-hibernate-5.6:$blazePersistenceVersion")
     implementation("com.samskivert:jmustache:$jmustacheVersion")
     implementation("com.jayway.jsonpath:json-path:2.7.0")
+    implementation("com.google.cloud:google-cloud-bigtable:2.6.2")
 
 //client libs
     implementation("com.stripe:stripe-java:20.111.0") // from: https://github.com/stripe/stripe-java

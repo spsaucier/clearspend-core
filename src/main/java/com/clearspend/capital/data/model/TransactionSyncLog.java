@@ -1,5 +1,6 @@
 package com.clearspend.capital.data.model;
 
+import com.clearspend.capital.common.audit.TransactionLogEntityEventListener;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -11,6 +12,7 @@ import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -33,6 +35,7 @@ import org.hibernate.annotations.Type;
 @AllArgsConstructor
 @DynamicUpdate
 @Slf4j
+@EntityListeners(TransactionLogEntityEventListener.class)
 @Table(name = "transaction_sync_log")
 public class TransactionSyncLog extends TypedMutable<TransactionSyncLogId> {
   @NonNull
