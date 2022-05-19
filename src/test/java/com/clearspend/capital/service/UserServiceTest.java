@@ -87,7 +87,7 @@ class UserServiceTest extends BaseCapitalTest {
             faker.name().firstName(),
             faker.name().lastName(),
             null,
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
@@ -104,7 +104,7 @@ class UserServiceTest extends BaseCapitalTest {
             faker.name().firstName(),
             faker.name().lastName(),
             null,
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             null);
     User foundUser = userRepository.findById(userRecord.user().getId()).orElseThrow();
     assertThat(foundUser).isNotNull();
@@ -149,7 +149,7 @@ class UserServiceTest extends BaseCapitalTest {
   void createUser_exceptionThrownWhenCreatingUserWithDuplicateEmailAddress() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     CreateBusinessRecord newBusiness = testHelper.createBusiness();
-    String emailAddress = faker.internet().emailAddress();
+    String emailAddress = testHelper.createRandomEmail();
 
     testHelper.setCurrentUser(createBusinessRecord.user());
 
@@ -320,7 +320,7 @@ class UserServiceTest extends BaseCapitalTest {
                 "Bob",
                 "Saget",
                 null,
-                "bs@clearspend.com",
+                testHelper.createRandomEmail(),
                 "123456789");
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
@@ -348,7 +348,7 @@ class UserServiceTest extends BaseCapitalTest {
                     "Bob",
                     "Saget",
                     null,
-                    "bs@clearspend.com",
+                    testHelper.createRandomEmail(),
                     "123456789",
                     false));
     permissionValidationHelper
@@ -390,7 +390,7 @@ class UserServiceTest extends BaseCapitalTest {
                     "Bob",
                     "Saget",
                     null,
-                    "bs+1234@clearspend.com",
+                    testHelper.createRandomEmail(),
                     "123456789",
                     false))
             .user();

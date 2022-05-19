@@ -82,6 +82,7 @@ public class TestDataHelper {
   private final TransactionLimitRepository transactionLimitRepo;
   private final ReceiptRepository receiptRepo;
   private final Faker faker = new Faker();
+  private final TestHelper testHelper;
 
   private Amount createAmount() {
     final Amount amount = new Amount();
@@ -135,7 +136,7 @@ public class TestDataHelper {
     data.setRelationshipRepresentative(true);
     data.setRelationshipExecutive(true);
     data.setRelationshipDirector(true);
-    data.setEmail(faker.internet().emailAddress());
+    data.setEmail(testHelper.createRandomEmail());
     data.setPhone(faker.phoneNumber().phoneNumber());
     data.setSubjectRef(UUID.randomUUID().toString());
     return data;

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.TestEnv;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.client.plaid.PlaidClient.OwnersResponse;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -33,9 +34,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
+@DisabledIfEnvironmentVariable(
+    named = TestEnv.FAST_TEST_EXECUTION,
+    matches = "true",
+    disabledReason = "To speed up test execution")
 public class PlaidClientTest extends BaseCapitalTest {
 
   @Autowired private PlaidClient underTest;

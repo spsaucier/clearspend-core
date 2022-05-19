@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${TC_DB_URL}
-    username: ${TC_DB_USERNAME}
-    password: ${TC_DB_PASSWORD}
+    url: ${TC_DB_URL:jdbc:postgresql://localhost:5432/capitaltest}
+    username: ${TC_DB_USERNAME:postgres}
+    password: ${TC_DB_PASSWORD:docker}
   security:
     oauth2:
       client:
@@ -10,9 +10,9 @@ spring:
           clientId: 58b18750-7b73-4f6c-bd3c-a47b0a5bd9e6
           secret: d0rW31MMAlWW-04RIeFhkrzU7PuKzfoNBmrGo02vqp0
   redis:
-    database: 0
+    database: 1
     host: localhost
-    port: 16379
+    port: ${TC_REDIS_PORT:6379}
     password:
     timeout: 60000
   main:

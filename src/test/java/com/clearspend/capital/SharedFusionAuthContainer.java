@@ -16,8 +16,9 @@ import org.testcontainers.utility.DockerImageName;
 /** Override stop method in order to make database durable between test classes */
 @Slf4j
 public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuthContainer> {
-
   private static final SharedFusionAuthContainer container = new SharedFusionAuthContainer();
+  private static final DoNothingContainer<SharedFusionAuthContainer> doNothingContainer =
+      new DoNothingContainer<>();
 
   @SneakyThrows
   private static String getImageName() {
@@ -52,18 +53,21 @@ public class SharedFusionAuthContainer extends GenericContainer<SharedFusionAuth
         .withEnv("FUSIONAUTH_PORT", String.valueOf(fusionAuthPort));
   }
 
-  public static SharedFusionAuthContainer getInstance() {
+  public static GenericContainer<SharedFusionAuthContainer> getInstance() {
+    if (TestEnv.isFastTestExecution()) {
+      return doNothingContainer;
+    }
     return container;
   }
 
   @Override
   public void start() {
     super.start();
-    log.info("fusionauth port: {}", container.getMappedPort(9011));
+    log.info("fusionauth port: {}", getMappedPort(9011));
     System.setProperty(
-        "FUSIONAUTH_BASE_URL", String.format("http://localhost:%d", container.getMappedPort(9011)));
+        "FUSIONAUTH_BASE_URL", String.format("http://localhost:%d", getMappedPort(9011)));
     Slf4jLogConsumer logConsumer = new Slf4jLogConsumer(log);
-    container.followOutput(logConsumer);
+    followOutput(logConsumer);
   }
 
   @Override

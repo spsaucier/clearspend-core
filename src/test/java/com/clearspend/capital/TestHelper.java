@@ -1048,10 +1048,14 @@ public class TestHelper {
             faker.name().firstName(),
             faker.name().lastName(),
             generateEntityAddress(),
-            faker.internet().emailAddress(),
+            createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     passwords.put(record.user().getId(), record.password());
     return record;
+  }
+
+  public String createRandomEmail() {
+    return "%s@example.com".formatted(UUID.randomUUID().toString());
   }
 
   public CreateUpdateUserRecord createUserWithRole(Allocation allocation, String role) {

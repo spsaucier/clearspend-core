@@ -217,7 +217,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             faker.name().lastName(),
             new Address(testHelper.generateEntityAddress()),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber(),
             true);
 
@@ -257,7 +257,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             createdUser.user().getLastName().toString(),
             new Address(createdUser.user().getAddress()),
-            faker.internet().emailAddress(), // Ensure non-duplicate email address
+            testHelper.createRandomEmail(), // Ensure non-duplicate email address
             createdUser.user().getPhone().toString(),
             true);
 
@@ -300,7 +300,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             createdUser.user().getLastName().toString(),
             new Address(createdUser.user().getAddress()),
-            faker.internet().emailAddress(), // Ensure non-duplicate email address
+            testHelper.createRandomEmail(), // Ensure non-duplicate email address
             createdUser.user().getPhone().toString(),
             true);
 
@@ -384,7 +384,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             faker.name().lastName(),
             new Address(testHelper.generateEntityAddress()),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber(),
             true);
     CreateUserRequest userRecord2 =
@@ -392,7 +392,7 @@ class UserControllerTest extends BaseCapitalTest {
             faker.name().firstName(),
             faker.name().lastName(),
             new Address(testHelper.generateEntityAddress()),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             null,
             true);
 
@@ -429,7 +429,7 @@ class UserControllerTest extends BaseCapitalTest {
         "First",
         "Last",
         testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
+        testHelper.createRandomEmail(),
         faker.phoneNumber().phoneNumber());
     userService.createUser(
         business.getId(),
@@ -437,7 +437,7 @@ class UserControllerTest extends BaseCapitalTest {
         "Name",
         "Last",
         testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
+        testHelper.createRandomEmail(),
         null); // CAP-519 null phone (which can happen from bulk onboarding) caused NPE
 
     MockHttpServletResponse response =
@@ -1698,7 +1698,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     userService.createUser(
         business.getId(),
@@ -1706,7 +1706,7 @@ class UserControllerTest extends BaseCapitalTest {
         "Name",
         "Last",
         testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
+        testHelper.createRandomEmail(),
         faker.phoneNumber().phoneNumber());
 
     MockHttpServletResponse responseFilteredByUserName =
@@ -1743,7 +1743,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -1752,7 +1752,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     testHelper.issueCard(
@@ -1839,7 +1839,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -1848,7 +1848,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     testHelper.issueCard(
@@ -1935,7 +1935,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -1944,7 +1944,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     testHelper.setCurrentUser(createBusinessRecord.user());
@@ -2022,7 +2022,7 @@ class UserControllerTest extends BaseCapitalTest {
         "First",
         "Last",
         testHelper.generateEntityAddress(),
-        faker.internet().emailAddress(),
+        testHelper.createRandomEmail(),
         faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -2031,7 +2031,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     SearchUserRequest searchUserRequest = new SearchUserRequest();
@@ -2180,7 +2180,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -2189,7 +2189,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     userService.archiveUser(business.getId(), user.user().getId());
@@ -2262,7 +2262,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -2271,7 +2271,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     userService.archiveUser(business.getId(), user.user().getId());
@@ -2330,7 +2330,7 @@ class UserControllerTest extends BaseCapitalTest {
             "First",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
     CreateUpdateUserRecord user1 =
         userService.createUser(
@@ -2339,7 +2339,7 @@ class UserControllerTest extends BaseCapitalTest {
             "Name",
             "Last",
             testHelper.generateEntityAddress(),
-            faker.internet().emailAddress(),
+            testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
 
     testHelper.setCurrentUser(createBusinessRecord.user());

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import javax.transaction.Transactional;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -25,19 +25,20 @@ public abstract class BaseCapitalTest {
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
   @Container
-  private static final PostgreSQLContainer<?> postgreSQLContainer =
+  private static final GenericContainer<SharedPostgreSQLContainer> postgreSQLContainer =
       SharedPostgreSQLContainer.getInstance();
 
   static Network fusionAuthNetwork = Network.newNetwork();
 
   @Container
-  private static final FusionAuthPostgreSQLContainer fusionAuthPostgreSQLContainer =
-      FusionAuthPostgreSQLContainer.getInstance();
+  private static final GenericContainer<FusionAuthPostgreSQLContainer>
+      fusionAuthPostgreSQLContainer = FusionAuthPostgreSQLContainer.getInstance();
 
   @Container
-  private static final SharedFusionAuthContainer fusionauthContainer =
+  private static final GenericContainer<SharedFusionAuthContainer> fusionauthContainer =
       SharedFusionAuthContainer.getInstance();
 
   @Container
-  private static final SharedRedisContainer redisContainer = SharedRedisContainer.getInstance();
+  private static final GenericContainer<SharedRedisContainer> redisContainer =
+      SharedRedisContainer.getInstance();
 }

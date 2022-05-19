@@ -1,8 +1,11 @@
 package com.clearspend.capital.configuration;
 
+import com.clearspend.capital.cache.CapitalCacheErrorHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
+import org.springframework.cache.annotation.CachingConfigurerSupport;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -21,6 +24,16 @@ public class CacheConfiguration {
         .disableCachingNullValues()
         .serializeValuesWith(
             SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer(objectMapper)));
+  }
+
+  @Bean
+  public CachingConfigurerSupport cachingConfigurerSupport() {
+    return new CachingConfigurerSupport() {
+      @Override
+      public CacheErrorHandler errorHandler() {
+        return new CapitalCacheErrorHandler();
+      }
+    };
   }
 
   @Bean

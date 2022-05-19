@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
+import com.clearspend.capital.TestEnv;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.plaid.PlaidClient;
@@ -52,6 +53,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -375,6 +377,10 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
   @SneakyThrows
   @Test
+  @DisabledIfEnvironmentVariable(
+      named = TestEnv.FAST_TEST_EXECUTION,
+      matches = "true",
+      disabledReason = "To speed up test execution")
   void plaidPasswordReset() {
     assumeTrue(plaidClient.isConfigured());
     // not using the regular one for this test

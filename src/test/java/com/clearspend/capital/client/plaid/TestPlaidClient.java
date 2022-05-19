@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.plaid;
 
+import com.clearspend.capital.TestEnv;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -123,6 +124,11 @@ public class TestPlaidClient extends SandboxPlaidClient {
       return "link-token-mock-" + businessId;
     }
 
+    if (TestEnv.isFastTestExecution()) {
+      throw new RuntimeException(
+          "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
+    }
+
     SandboxPublicTokenCreateRequest request =
         new SandboxPublicTokenCreateRequest()
             .institutionId(INSTITUTION_SANDBOX_ID_BY_BUSINESS_ID.get(businessId));
@@ -153,6 +159,10 @@ public class TestPlaidClient extends SandboxPlaidClient {
       @NonNull String linkToken, @NonNull TypedId<BusinessId> businessId) throws IOException {
     if (isMockLinkToken(linkToken)) {
       return linkToken.replaceFirst("^link-token-mock-", "access-mock-");
+    }
+    if (TestEnv.isFastTestExecution()) {
+      throw new RuntimeException(
+          "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
     }
     return super.exchangePublicTokenForAccessToken(linkToken, businessId);
   }
@@ -186,6 +196,10 @@ public class TestPlaidClient extends SandboxPlaidClient {
           accessToken, response.accounts(), response.numbers().ach(), institutionName);
     }
 
+    if (TestEnv.isFastTestExecution()) {
+      throw new RuntimeException(
+          "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
+    }
     return super.getAccounts(accessToken, businessId);
   }
 
@@ -198,6 +212,10 @@ public class TestPlaidClient extends SandboxPlaidClient {
           .getAccounts();
     }
 
+    if (TestEnv.isFastTestExecution()) {
+      throw new RuntimeException(
+          "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
+    }
     return super.getBalances(businessId, accessToken);
   }
 
@@ -208,6 +226,10 @@ public class TestPlaidClient extends SandboxPlaidClient {
       return objectMapper.readValue(mockOwnersResponse.getFile(), OwnersResponse.class);
     }
 
+    if (TestEnv.isFastTestExecution()) {
+      throw new RuntimeException(
+          "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
+    }
     return super.getOwners(accessToken, businessId);
   }
 

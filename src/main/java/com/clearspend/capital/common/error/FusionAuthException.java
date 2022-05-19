@@ -10,7 +10,7 @@ public class FusionAuthException extends RuntimeException {
   private final int httpStatus;
 
   public FusionAuthException(int httpStatus, Errors errors, Throwable throwable) {
-    super("HTTP status " + httpStatus, throwable);
+    super("HTTP status %d, Errors: %s".formatted(httpStatus, String.valueOf(errors)), throwable);
     this.httpStatus = httpStatus;
     this.errors = errors;
   }

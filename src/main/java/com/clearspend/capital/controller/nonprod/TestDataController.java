@@ -751,7 +751,7 @@ public class TestDataController {
         faker.name().firstName(),
         faker.name().lastName(),
         generateEntityAddress(),
-        faker.internet().emailAddress(),
+        "%s@example.com".formatted(UUID.randomUUID().toString()),
         getValidPhoneNumber());
   }
 
