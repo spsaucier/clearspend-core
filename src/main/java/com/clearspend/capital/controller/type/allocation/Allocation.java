@@ -37,12 +37,16 @@ public class Allocation {
   @NotNull(message = "account required")
   private Account account;
 
+  @JsonProperty("archived")
+  private boolean archived;
+
   public static Allocation of(AllocationRecord record) {
     Allocation result =
         new Allocation(
             record.allocation().getId(),
             record.allocation().getName(),
             Account.of(record.account()));
+    result.setArchived(record.allocation().isArchived());
 
     result.setParentAllocationId(record.allocation().getParentAllocationId());
 

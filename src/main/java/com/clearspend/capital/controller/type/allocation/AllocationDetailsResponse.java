@@ -43,6 +43,7 @@ public class AllocationDetailsResponse {
             record.allocation().getName(),
             Account.of(record.account()));
     allocation.setParentAllocationId(record.allocation().getParentAllocationId());
+    allocation.setArchived(record.allocation().isArchived());
 
     return new AllocationDetailsResponse(
         allocation,

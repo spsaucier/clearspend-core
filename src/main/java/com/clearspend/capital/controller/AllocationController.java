@@ -4,7 +4,6 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
-import com.clearspend.capital.controller.type.account.Account;
 import com.clearspend.capital.controller.type.allocation.Allocation;
 import com.clearspend.capital.controller.type.allocation.AllocationDetailsResponse;
 import com.clearspend.capital.controller.type.allocation.AllocationFundCardRequest;
@@ -139,10 +138,7 @@ public class AllocationController {
         .getAllocationChildrenRecords(
             businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId)
         .stream()
-        .map(
-            e ->
-                new Allocation(
-                    e.allocation().getId(), e.allocation().getName(), Account.of(e.account())))
+        .map(Allocation::of)
         .collect(Collectors.toList());
   }
 
