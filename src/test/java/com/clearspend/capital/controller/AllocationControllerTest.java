@@ -54,6 +54,7 @@ import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.github.javafaker.Faker;
+import com.stripe.param.issuing.CardUpdateParams;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -264,7 +265,9 @@ class AllocationControllerTest extends BaseCapitalTest {
     final com.stripe.model.issuing.Card stripeCard =
         (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
     if (expectedStatus == CardStatus.CANCELLED) {
-      assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+      assertThat(stripeCard)
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name());
     } else {
       assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", null);
     }

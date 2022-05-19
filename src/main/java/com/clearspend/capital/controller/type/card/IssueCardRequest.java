@@ -5,15 +5,22 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
+import com.clearspend.capital.data.model.ReplacementReason;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.LimitPeriod;
+import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
@@ -87,4 +94,33 @@ public class IssueCardRequest {
   @JsonProperty("shippingAddress")
   @Schema(description = "the shipping address (only required for physical cards)")
   private Address shippingAddress;
+
+  @Schema(
+      description = "The Stripe reference for a previously cancelled card that this is replacing")
+  private String replacementFor;
+
+  @Schema(
+      description =
+          "The reason this card is a replacement. Required if replacementFor is provided. If LOST or STOLEN, the card must have had a similar reason set in Stripe for its cancellation")
+  private ReplacementReason replacementReason;
+
+  @JsonIgnore
+  public FundingType getFundingType() {
+    return Optional.ofNullable(fundingType).orElse(FundingType.POOLED);
+  }
+
+  @JsonIgnore
+  public Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> getCurrencyLimitMap() {
+    return CurrencyLimit.toMap(limits);
+  }
+
+  @JsonIgnore
+  public BinType getBinType() {
+    return Optional.ofNullable(binType).orElse(BinType.DEBIT);
+  }
+
+  @JsonIgnore
+  public com.clearspend.capital.common.data.model.Address getModelShippingAddress() {
+    return Optional.ofNullable(shippingAddress).map(Address::toAddress).orElse(null);
+  }
 }

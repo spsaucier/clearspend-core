@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -35,6 +36,7 @@ import com.clearspend.capital.controller.type.card.ActivateCardRequest;
 import com.clearspend.capital.controller.type.card.CardAccount;
 import com.clearspend.capital.controller.type.card.CardAndAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
+import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
@@ -57,7 +59,6 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.ExpenseCategoryStatus;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -85,12 +86,13 @@ import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.javafaker.Faker;
+import com.stripe.param.issuing.CardUpdateParams;
+import com.stripe.param.issuing.CardUpdateParams.CancellationReason;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -636,8 +638,7 @@ class UserControllerTest extends BaseCapitalTest {
 
   @Test
   void cancelCard() {
-    // given
-    Card card =
+    final Card card =
         testHelper.issueCard(
             business,
             createBusinessRecord.allocationRecord().allocation(),
@@ -647,8 +648,7 @@ class UserControllerTest extends BaseCapitalTest {
             CardType.VIRTUAL,
             false);
 
-    // when
-    com.clearspend.capital.controller.type.card.Card blockedCard =
+    com.clearspend.capital.controller.type.card.Card cancelledCard =
         mockMvcHelper.queryObject(
             "/users/cards/%s/cancel".formatted(card.getId()),
             HttpMethod.PATCH,
@@ -656,10 +656,10 @@ class UserControllerTest extends BaseCapitalTest {
             new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
             com.clearspend.capital.controller.type.card.Card.class);
 
-    // then
-    assertThat(blockedCard.getCardId()).isEqualTo(card.getId());
-    assertThat(blockedCard.getStatus()).isEqualTo(CardStatus.CANCELLED);
-    assertThat(blockedCard.getStatusReason()).isEqualTo(CardStatusReason.CARDHOLDER_REQUESTED);
+    assertThat(cancelledCard)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.CARDHOLDER_REQUESTED);
 
     final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(dbCard)
@@ -668,7 +668,86 @@ class UserControllerTest extends BaseCapitalTest {
 
     final com.stripe.model.issuing.Card stripeCard =
         (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
-    assertThat(stripeCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+    assertThat(stripeCard)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name())
+        .hasFieldOrPropertyWithValue("cancellationReason", null);
+  }
+
+  @Test
+  void cancelCard_Lost() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    com.clearspend.capital.controller.type.card.Card cancelledCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/cancel".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.LOST),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    assertThat(cancelledCard)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.LOST);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.LOST);
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    assertThat(stripeCard)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name())
+        .hasFieldOrPropertyWithValue("cancellationReason", CancellationReason.LOST.getValue());
+  }
+
+  @Test
+  void cancelCard_Stolen() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    com.clearspend.capital.controller.type.card.Card cancelledCard =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/cancel".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.STOLEN),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    assertThat(cancelledCard)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.STOLEN);
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("status", CardStatus.CANCELLED)
+        .hasFieldOrPropertyWithValue("statusReason", CardStatusReason.STOLEN);
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    assertThat(stripeCard)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name())
+        .hasFieldOrPropertyWithValue("cancellationReason", CancellationReason.STOLEN.getValue());
   }
 
   @Test
@@ -912,22 +991,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -1107,22 +1187,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -1169,22 +1250,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -1229,22 +1311,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -1309,22 +1392,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -1412,22 +1496,23 @@ class UserControllerTest extends BaseCapitalTest {
     Cookie authCookie = testHelper.login(userRecord.user());
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    CardRecord cardRecord =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            userRecord.user().getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             userRecord.user().getId(),
             Currency.USD,
             true,
-            createBusinessRecord.business().getLegalName(),
-            Map.of(Currency.USD, new HashMap<>()),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            createBusinessRecord.business().getClearAddress().toAddress());
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(
+            createBusinessRecord.business().getClearAddress()));
+
+    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     Amount amount = Amount.of(Currency.USD, BigDecimal.ONE);
     NetworkCommonAuthorization networkCommonAuthorization =
@@ -2036,12 +2121,16 @@ class UserControllerTest extends BaseCapitalTest {
     final com.stripe.model.issuing.Card stripeVirtualCard =
         (com.stripe.model.issuing.Card)
             stripeMockClient.getCreatedObject(dbVirtualCard.getExternalRef());
-    assertThat(stripeVirtualCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+    assertThat(stripeVirtualCard)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name());
 
     final com.stripe.model.issuing.Card stripePhysicalCard =
         (com.stripe.model.issuing.Card)
             stripeMockClient.getCreatedObject(dbPhysicalCard.getExternalRef());
-    assertThat(stripePhysicalCard).isNotNull().hasFieldOrPropertyWithValue("status", "CANCELLED");
+    assertThat(stripePhysicalCard)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name());
 
     assertThrows(FusionAuthException.class, () -> fusionAuthService.getUser(employee));
   }

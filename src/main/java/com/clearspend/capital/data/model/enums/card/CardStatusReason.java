@@ -3,7 +3,9 @@ package com.clearspend.capital.data.model.enums.card;
 public enum CardStatusReason {
   NONE,
   CARDHOLDER_REQUESTED,
-  USER_ARCHIVED
+  USER_ARCHIVED,
+  LOST,
+  STOLEN
   // possible future values
   //  RISK_REVIEW,
   //  SYSTEM_GENERATED,

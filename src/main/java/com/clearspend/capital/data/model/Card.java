@@ -111,6 +111,7 @@ public class Card extends TypedMutable<CardId> implements Permissionable {
   private String lastFour;
 
   @NonNull @Embedded private Address shippingAddress;
+  @NonNull @Embedded private CardReplacementDetails replacement;
 
   // this is the identifier of this card at Stripe
   @Column(length = 32)

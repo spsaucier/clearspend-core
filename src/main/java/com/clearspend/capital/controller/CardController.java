@@ -18,7 +18,6 @@ import com.clearspend.capital.controller.type.card.UpdateCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.enums.FundingType;
-import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
@@ -88,29 +87,7 @@ public class CardController {
             cardType ->
                 issueCardResponseList.add(
                     new IssueCardResponse(
-                        cardService
-                            .issueCard(
-                                request.getBinType() != null ? request.getBinType() : BinType.DEBIT,
-                                request.getFundingType() != null
-                                    ? request.getFundingType()
-                                    : FundingType.POOLED,
-                                cardType,
-                                businessId,
-                                request.getAllocationId(),
-                                request.getUserId(),
-                                request.getCurrency(),
-                                request.getIsPersonal(),
-                                businessLegalName,
-                                CurrencyLimit.toMap(request.getLimits()),
-                                request.getDisabledMccGroups(),
-                                request.getDisabledPaymentTypes(),
-                                request.getDisableForeign(),
-                                request.getShippingAddress() != null
-                                    ? request.getShippingAddress().toAddress()
-                                    : null)
-                            .card()
-                            .getId(),
-                        null)));
+                        cardService.issueCard(cardType, request).card().getId(), null)));
 
     return issueCardResponseList;
   }

@@ -9,6 +9,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -28,6 +29,7 @@ import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.ReplacementReason;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -66,6 +68,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +91,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private final AllocationRepository allocationRepository;
   private final TransactionLimitRepository transactionLimitRepository;
   private final PermissionValidationHelper permissionValidationHelper;
+  private final StripeMockClient stripeMockClient;
 
   private final Faker faker = new Faker();
 
@@ -114,6 +118,11 @@ public class CardControllerTest extends BaseCapitalTest {
             FundingType.POOLED,
             CardType.PHYSICAL,
             false);
+  }
+
+  @AfterEach
+  public void cleanup() {
+    stripeMockClient.reset();
   }
 
   @SneakyThrows
@@ -154,6 +163,76 @@ public class CardControllerTest extends BaseCapitalTest {
             "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
 
     assertThat(issueCardResponse).hasSize(2);
+  }
+
+  @Test
+  @SneakyThrows
+  void issueCard_ReplacementFor() {
+    final Card firstCard =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
+    com.clearspend.capital.controller.type.card.Card firstCardCancelled =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/cancel".formatted(card.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            new UpdateCardStatusRequest(CardStatusReason.LOST),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    final String replacementFor = firstCard.getExternalRef();
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(CardType.VIRTUAL),
+            createBusinessRecord.allocationRecord().allocation().getAllocationId(),
+            createBusinessRecord.user().getId(),
+            Currency.USD,
+            true,
+            CurrencyLimit.ofMap(
+                Map.of(
+                    Currency.USD,
+                    Map.of(
+                        LimitType.PURCHASE,
+                        Map.of(
+                            LimitPeriod.DAILY,
+                            BigDecimal.ONE,
+                            LimitPeriod.MONTHLY,
+                            BigDecimal.TEN)))),
+            Collections.emptySet(),
+            Set.of(PaymentType.MANUAL_ENTRY),
+            false);
+    issueCardRequest.setReplacementFor(replacementFor);
+    issueCardRequest.setReplacementReason(ReplacementReason.LOST);
+
+    entityManager.flush();
+
+    final JavaType responseType =
+        objectMapper.getTypeFactory().constructParametricType(List.class, IssueCardResponse.class);
+    final List<IssueCardResponse> response =
+        mockMvcHelper.queryObject(
+            "/cards",
+            HttpMethod.POST,
+            createBusinessRecord.authCookie(),
+            issueCardRequest,
+            responseType);
+    assertThat(response).hasSize(1);
+
+    final Card card = cardRepository.findById(response.get(0).getCardId()).orElseThrow();
+    assertThat(card.getReplacement())
+        .hasFieldOrPropertyWithValue("cardId", firstCard.getId())
+        .hasFieldOrPropertyWithValue("reason", ReplacementReason.LOST);
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    assertThat(stripeCard)
+        .hasFieldOrPropertyWithValue("replacementFor", replacementFor)
+        .hasFieldOrPropertyWithValue("replacementReason", ReplacementReason.LOST.getValue());
   }
 
   @Test

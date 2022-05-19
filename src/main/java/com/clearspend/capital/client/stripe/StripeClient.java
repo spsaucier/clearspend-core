@@ -19,6 +19,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -64,6 +65,7 @@ import com.stripe.param.SetupIntentCreateParams.MandateData.CustomerAcceptance;
 import com.stripe.param.issuing.AuthorizationApproveParams;
 import com.stripe.param.issuing.AuthorizationDeclineParams;
 import com.stripe.param.issuing.CardCreateParams;
+import com.stripe.param.issuing.CardCreateParams.ReplacementReason;
 import com.stripe.param.issuing.CardCreateParams.Shipping;
 import com.stripe.param.issuing.CardCreateParams.Shipping.Service;
 import com.stripe.param.issuing.CardCreateParams.SpendingControls;
@@ -71,6 +73,7 @@ import com.stripe.param.issuing.CardCreateParams.SpendingControls.SpendingLimit;
 import com.stripe.param.issuing.CardCreateParams.SpendingControls.SpendingLimit.Interval;
 import com.stripe.param.issuing.CardCreateParams.Status;
 import com.stripe.param.issuing.CardUpdateParams;
+import com.stripe.param.issuing.CardUpdateParams.CancellationReason;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
 import com.stripe.param.issuing.CardholderUpdateParams;
@@ -80,7 +83,12 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import javax.annotation.Nullable;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.SneakyThrows;
+import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -741,18 +749,17 @@ public class StripeClient {
     return person.delete();
   }
 
-  public Card updateCard(String stripeCardId, CardStatus cardStatus) {
+  public Card updateCard(
+      @NonNull final String stripeCardId,
+      @NonNull final CardStatus cardStatus,
+      @NonNull final CardStatusReason reason) {
     Card card = new Card();
     card.setId(stripeCardId);
 
     CardUpdateParams params =
         CardUpdateParams.builder()
-            .setStatus(
-                switch (cardStatus) {
-                  case ACTIVE -> CardUpdateParams.Status.ACTIVE;
-                  case INACTIVE -> CardUpdateParams.Status.INACTIVE;
-                  case CANCELLED -> CardUpdateParams.Status.CANCELED;
-                })
+            .setStatus(getCardStatus(cardStatus))
+            .setCancellationReason(getCancellationReason(cardStatus, reason))
             .build();
 
     return callStripe(
@@ -765,26 +772,31 @@ public class StripeClient {
                     new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId())));
   }
 
-  public Card createVirtualCard(
-      com.clearspend.capital.data.model.Card card, String stripeAccountRef, String stripeUserRef) {
-    CardCreateParams cardParameters =
-        CardCreateParams.builder()
-            .setCardholder(stripeUserRef)
-            .setCurrency(Currency.USD.name())
+  protected CancellationReason getCancellationReason(
+      @NonNull final CardStatus cardStatus, @NonNull final CardStatusReason reason) {
+    if (CardStatus.CANCELLED == cardStatus) {
+      return switch (reason) {
+        case LOST -> CancellationReason.LOST;
+        case STOLEN -> CancellationReason.STOLEN;
+        default -> null;
+      };
+    }
+    return null;
+  }
+
+  protected CardUpdateParams.Status getCardStatus(@NonNull final CardStatus cardStatus) {
+    return switch (cardStatus) {
+      case ACTIVE -> CardUpdateParams.Status.ACTIVE;
+      case INACTIVE -> CardUpdateParams.Status.INACTIVE;
+      case CANCELLED -> CardUpdateParams.Status.CANCELED;
+    };
+  }
+
+  public Card createVirtualCard(final CreateCardConfig config) {
+    final CardCreateParams cardParameters =
+        buildCardCreateParams(config)
             .setType(CardCreateParams.Type.VIRTUAL)
             .setStatus(Status.ACTIVE)
-            .setSpendingControls(
-                SpendingControls.builder()
-                    .addSpendingLimit(
-                        SpendingLimit.builder()
-                            .setAmount(10_000_00L)
-                            .setInterval(Interval.DAILY)
-                            .build())
-                    .build())
-            .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
-            .putMetadata(StripeMetadataEntry.BUSINESS_ID.getKey(), card.getBusinessId().toString())
-            .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), card.getId().toString())
-            .putMetadata(StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(), stripeAccountRef)
             .build();
     log.debug("Virtual card: cardParameters: {}", cardParameters);
 
@@ -795,50 +807,31 @@ public class StripeClient {
             com.stripe.model.issuing.Card.create(
                 cardParameters,
                 getRequestOptionsBetaApi(
-                    card.getId(), stripeProperties.getClearspendConnectedAccountId())));
+                    config.getCard().getId(), stripeProperties.getClearspendConnectedAccountId())));
   }
 
-  public Card createPhysicalCard(
-      com.clearspend.capital.data.model.Card card,
-      com.clearspend.capital.common.data.model.Address shippingAddress,
-      String shippingLabel,
-      String stripeAccountRef,
-      String stripeUserRef) {
-    Shipping.Address.Builder addressBuilder =
+  public Card createPhysicalCard(final CreatePhysicalCardConfig config) {
+    final Shipping.Address.Builder addressBuilder =
         Shipping.Address.builder()
-            .setLine1(shippingAddress.getStreetLine1().getEncrypted())
-            .setCity(shippingAddress.getLocality())
-            .setState(shippingAddress.getRegion())
-            .setPostalCode(shippingAddress.getPostalCode().getEncrypted())
-            .setCountry(shippingAddress.getCountry().getTwoCharacterCode());
-    if (StringUtils.isNotEmpty(shippingAddress.getStreetLine2().getEncrypted())) {
-      addressBuilder.setLine2(shippingAddress.getStreetLine2().getEncrypted());
+            .setLine1(config.getShippingAddress().getStreetLine1().getEncrypted())
+            .setCity(config.getShippingAddress().getLocality())
+            .setState(config.getShippingAddress().getRegion())
+            .setPostalCode(config.getShippingAddress().getPostalCode().getEncrypted())
+            .setCountry(config.getShippingAddress().getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(config.getShippingAddress().getStreetLine2().getEncrypted())) {
+      addressBuilder.setLine2(config.getShippingAddress().getStreetLine2().getEncrypted());
     }
 
-    CardCreateParams cardParameters =
-        CardCreateParams.builder()
-            .setCardholder(stripeUserRef)
-            .setCurrency(Currency.USD.name())
+    final CardCreateParams cardParameters =
+        buildCardCreateParams(config)
             .setType(CardCreateParams.Type.PHYSICAL)
             .setStatus(Status.INACTIVE)
             .setShipping(
                 Shipping.builder()
-                    .setName(shippingLabel)
+                    .setName(config.getShippingLabel())
                     .setService(Service.STANDARD)
                     .setAddress(addressBuilder.build())
                     .build())
-            .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
-            .setSpendingControls(
-                SpendingControls.builder()
-                    .addSpendingLimit(
-                        SpendingLimit.builder()
-                            .setAmount(10_000_00L)
-                            .setInterval(Interval.DAILY)
-                            .build())
-                    .build())
-            .putMetadata(StripeMetadataEntry.BUSINESS_ID.getKey(), card.getBusinessId().toString())
-            .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), card.getId().toString())
-            .putMetadata(StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(), stripeAccountRef)
             .build();
     log.debug("Physical card: cardParameters: {}", cardParameters);
 
@@ -849,7 +842,65 @@ public class StripeClient {
             com.stripe.model.issuing.Card.create(
                 cardParameters,
                 getRequestOptionsBetaApi(
-                    card.getId(), stripeProperties.getClearspendConnectedAccountId())));
+                    config.getCard().getId(), stripeProperties.getClearspendConnectedAccountId())));
+  }
+
+  private CardCreateParams.Builder buildCardCreateParams(final CreateCardConfig config) {
+    return CardCreateParams.builder()
+        .setCardholder(config.getStripeUserRef())
+        .setCurrency(Currency.USD.name())
+        .setReplacementFor(config.getReplacementFor())
+        .setReplacementReason(config.getStripeReplacementReason())
+        .putExtraParam("financial_account", stripeProperties.getClearspendFinancialAccountId())
+        .putMetadata(
+            StripeMetadataEntry.BUSINESS_ID.getKey(), config.getCard().getBusinessId().toString())
+        .putMetadata(StripeMetadataEntry.CARD_ID.getKey(), config.getCard().getId().toString())
+        .putMetadata(StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(), config.getStripeAccountRef())
+        .setSpendingControls(
+            SpendingControls.builder()
+                .addSpendingLimit(
+                    SpendingLimit.builder()
+                        .setAmount(10_000_00L)
+                        .setInterval(Interval.DAILY)
+                        .build())
+                .build());
+  }
+
+  @Getter
+  @SuperBuilder
+  @EqualsAndHashCode
+  public static class CreateCardConfig {
+    @NonNull private com.clearspend.capital.data.model.Card card;
+    @NonNull private String stripeAccountRef;
+    @NonNull private String stripeUserRef;
+    @Nullable private String replacementFor;
+
+    @Nullable private com.clearspend.capital.data.model.ReplacementReason replacementReason;
+
+    @Nullable
+    public ReplacementReason getStripeReplacementReason() {
+      return Optional.ofNullable(replacementReason)
+          .map(Enum::name)
+          .map(ReplacementReason::valueOf)
+          .orElse(null);
+    }
+  }
+
+  @Getter
+  @SuperBuilder
+  @EqualsAndHashCode(callSuper = true)
+  public static class CreatePhysicalCardConfig extends CreateCardConfig {
+    @NonNull private com.clearspend.capital.common.data.model.Address shippingAddress;
+    @NonNull private String shippingLabel;
+
+    public static CreatePhysicalCardConfigBuilder<?, ?> fromCreateCardConfig(
+        final CreateCardConfig config) {
+      return CreatePhysicalCardConfig.builder()
+          .card(config.getCard())
+          .stripeAccountRef(config.getStripeAccountRef())
+          .stripeUserRef(config.getStripeUserRef())
+          .replacementFor(config.getReplacementFor());
+    }
   }
 
   public FinancialAccount createFinancialAccount(

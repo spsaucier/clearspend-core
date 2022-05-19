@@ -30,6 +30,7 @@ import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBu
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.crypto.PasswordUtil;
@@ -59,7 +60,6 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
@@ -1060,24 +1060,21 @@ public class TestHelper {
       FundingType fundingType,
       CardType cardType,
       boolean activateCard) {
-    Card card =
-        cardService
-            .issueCard(
-                BinType.DEBIT,
-                fundingType,
-                cardType,
-                business.getId(),
-                allocation.getId(),
-                user.getId(),
-                currency,
-                true,
-                business.getLegalName(),
-                Map.of(Currency.USD, new HashMap<>()),
-                Collections.emptySet(),
-                Collections.emptySet(),
-                false,
-                business.getClearAddress().toAddress())
-            .card();
+    final IssueCardRequest request =
+        new IssueCardRequest(
+            Set.of(),
+            allocation.getId(),
+            user.getId(),
+            Currency.USD,
+            true,
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    request.setFundingType(fundingType);
+    request.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
+    Card card = cardService.issueCard(cardType, request).card();
     if (activateCard) {
       setCurrentUser(user);
       card = cardService.activateMyCard(card, CardStatusReason.NONE);

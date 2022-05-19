@@ -1,19 +1,22 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.client.stripe.StripeClient.CreateCardConfig;
+import com.clearspend.capital.client.stripe.StripeClient.CreatePhysicalCardConfig;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
-import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardReplacementDetails;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessSettings;
@@ -24,7 +27,6 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
-import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -92,49 +94,36 @@ public class CardService {
   public record CardRecord(Card card, Account account) {}
 
   @Transactional
-  @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_CARDS')")
-  public CardRecord issueCard(
-      BinType binType,
-      FundingType fundingType,
-      CardType cardType,
-      TypedId<BusinessId> businessId,
-      TypedId<AllocationId> allocationId,
-      TypedId<UserId> userId,
-      Currency currency,
-      Boolean isPersonal,
-      String businessLegalName,
-      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes,
-      Boolean disableForeign,
-      Address shippingAddress) {
+  @PreAuthorize("hasAllocationPermission(#request.allocationId, 'MANAGE_CARDS')")
+  public CardRecord issueCard(final CardType cardType, final IssueCardRequest request) {
 
-    if (retrievalService.retrieveAllocation(allocationId).isArchived()) {
+    if (retrievalService.retrieveAllocation(request.getAllocationId()).isArchived()) {
       throw new InvalidRequestException("Allocation is archived");
     }
 
     if (cardType == CardType.PHYSICAL) {
-      if (shippingAddress == null) {
+      if (request.getModelShippingAddress() == null) {
         throw new InvalidRequestException("Shipping address required for physical cards");
       }
 
       BusinessSettings businessSettings =
-          businessSettingsService.retrieveBusinessSettingsForService(businessId);
+          businessSettingsService.retrieveBusinessSettingsForService(CurrentUser.getBusinessId());
       if (businessSettings.getIssuedPhysicalCardsTotal()
           >= businessSettings.getIssuedPhysicalCardsLimit()) {
         throw new InvalidRequestException("Physical card issuance limit exceeded");
       }
     }
 
-    User user = retrievalService.retrieveUser(userId);
+    User user = retrievalService.retrieveUser(request.getUserId());
+    final Business business = retrievalService.retrieveBusiness(CurrentUser.getBusinessId(), true);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
     StringBuilder cardLine4 = new StringBuilder();
-    if (isPersonal) {
+    if (request.getIsPersonal()) {
       cardLine3.append(user.getFirstName()).append(" ").append(user.getLastName());
     } else {
-      cardLine3.append(businessLegalName);
+      cardLine3.append(business.getLegalName());
     }
     if (cardLine3.length() > 25) {
       StringBuilder name = new StringBuilder();
@@ -151,33 +140,40 @@ public class CardService {
 
     Card card =
         new Card(
-            businessId,
-            userId,
+            CurrentUser.getBusinessId(),
+            request.getUserId(),
             cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
             CardStatusReason.NONE,
-            binType,
-            fundingType,
+            request.getBinType(),
+            request.getFundingType(),
             cardType,
             OffsetDateTime.now(ZoneOffset.UTC),
             LocalDate.now(ZoneOffset.UTC).plusYears(3),
             cardLine3.toString(),
             StringUtils.EMPTY,
-            cardType.equals(CardType.PHYSICAL) ? shippingAddress : new Address());
-    card.setAllocationId(allocationId);
+            cardType.equals(CardType.PHYSICAL) ? request.getModelShippingAddress() : new Address(),
+            getReplacementDetails(request));
+    card.setAllocationId(request.getAllocationId());
     if (cardLine4.length() > 25) {
       cardLine4.setLength(25);
     }
     card.setCardLine4(cardLine4.toString());
 
     Account account;
-    if (fundingType == FundingType.INDIVIDUAL) {
+    if (request.getFundingType() == FundingType.INDIVIDUAL) {
       account =
           accountService.createAccount(
-              businessId, AccountType.CARD, allocationId, card.getId(), currency);
+              CurrentUser.getBusinessId(),
+              AccountType.CARD,
+              request.getAllocationId(),
+              card.getId(),
+              request.getCurrency());
     } else {
       // card retrieval works best if we always have a ref to the account, so we can always get
       // available balance
-      account = accountService.retrieveAllocationAccount(businessId, currency, allocationId);
+      account =
+          accountService.retrieveAllocationAccount(
+              CurrentUser.getBusinessId(), request.getCurrency(), request.getAllocationId());
     }
     card.setAccountId(account.getId());
 
@@ -186,17 +182,12 @@ public class CardService {
     transactionLimitService.createCardSpendLimit(
         card.getBusinessId(),
         card.getId(),
-        transactionLimits,
-        disabledMccGroups,
-        disabledPaymentTypes,
-        disableForeign);
+        request.getCurrencyLimitMap(),
+        request.getDisabledMccGroups(),
+        request.getDisabledPaymentTypes(),
+        request.getDisableForeign());
 
     cardRepository.flush();
-
-    Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
 
     // If user never had any cards, stripe cardholder id (ExternalRef) will be empty
     // we need to create a stripe cardholder before we can create the actual stripe card
@@ -214,20 +205,33 @@ public class CardService {
     // for whom the cards were not issued yet
     user = userWelcomeService.sendWelcomeEmailIfNeeded(user);
 
+    final CreateCardConfig config =
+        CreateCardConfig.builder()
+            .replacementFor(request.getReplacementFor())
+            .replacementReason(request.getReplacementReason())
+            .card(card)
+            .stripeAccountRef(business.getStripeData().getAccountRef())
+            .stripeUserRef(user.getExternalRef())
+            .build();
+
     com.stripe.model.issuing.Card stripeCard =
         switch (card.getType()) {
-          case PHYSICAL -> stripeClient.createPhysicalCard(
-              card,
-              shippingAddress,
-              "%s %s"
-                  .formatted(user.getFirstName().getEncrypted(), user.getLastName().getEncrypted()),
-              business.getStripeData().getAccountRef(),
-              user.getExternalRef());
+          case PHYSICAL -> {
+            final CreatePhysicalCardConfig physicalConfig =
+                CreatePhysicalCardConfig.fromCreateCardConfig(config)
+                    .shippingAddress(request.getModelShippingAddress())
+                    .shippingLabel(
+                        "%s %s"
+                            .formatted(
+                                user.getFirstName().getEncrypted(),
+                                user.getLastName().getEncrypted()))
+                    .build();
+            yield stripeClient.createPhysicalCard(physicalConfig);
+          }
           case VIRTUAL -> {
             card.setActivated(true);
             card.setActivationDate(OffsetDateTime.now(ZoneOffset.UTC));
-            yield stripeClient.createVirtualCard(
-                card, business.getStripeData().getAccountRef(), user.getExternalRef());
+            yield stripeClient.createVirtualCard(config);
           }
         };
 
@@ -238,7 +242,8 @@ public class CardService {
 
     rolesAndPermissionsService.ensureMinimumAllocationPermissions(
         user,
-        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId),
+        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(
+            CurrentUser.getBusinessId()),
         DefaultRoles.ALLOCATION_EMPLOYEE);
 
     twilioService.sendCardIssuedNotifyOwnerEmail(
@@ -258,6 +263,15 @@ public class CardService {
     }
 
     return new CardRecord(card, account);
+  }
+
+  private CardReplacementDetails getReplacementDetails(final IssueCardRequest request) {
+    return Optional.ofNullable(request.getReplacementFor())
+        .flatMap(cardRepository::findByExternalRef)
+        .map(
+            replacedCard ->
+                new CardReplacementDetails(replacedCard.getId(), request.getReplacementReason()))
+        .orElse(new CardReplacementDetails());
   }
 
   @PostAuthorize("hasPermission(returnObject, 'VIEW_OWN|MANAGE_CARDS|CUSTOMER_SERVICE')")
@@ -413,7 +427,7 @@ public class CardService {
     card.setStatusReason(statusReason);
     cardRepository.saveAndFlush(card);
 
-    stripeClient.updateCard(card.getExternalRef(), cardStatus);
+    stripeClient.updateCard(card.getExternalRef(), cardStatus, statusReason);
 
     User cardOwner = retrievalService.retrieveUser(card.getUserId());
     // We need to use separate email templates for initial physical card activation,

@@ -9,6 +9,8 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.controller.type.card.IssueCardRequest;
+import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.data.model.Allocation;
@@ -16,7 +18,6 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.UserType;
-import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -27,8 +28,8 @@ import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.github.javafaker.Faker;
 import com.stripe.model.Person;
 import com.stripe.model.issuing.Cardholder;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -197,22 +198,22 @@ class UserServiceTest extends BaseCapitalTest {
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
 
-    CardRecord cardRec =
-        cardService.issueCard(
-            BinType.DEBIT,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            employee.getBusinessId(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(),
+            createBusinessRecord.allocationRecord().account().getAllocationId(),
             employee.getId(),
             Currency.USD,
-            false,
-            createBusinessRecord.business().getLegalName(),
-            Collections.emptyMap(),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false,
-            employee.getAddress());
+            true,
+            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
+            Set.of(),
+            Set.of(),
+            false);
+    issueCardRequest.setFundingType(FundingType.POOLED);
+    issueCardRequest.setShippingAddress(
+        new com.clearspend.capital.controller.type.Address(employee.getAddress()));
+
+    CardRecord cardRec = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
 
     changeNameAndAddress(employee, Cardholder.class);
   }

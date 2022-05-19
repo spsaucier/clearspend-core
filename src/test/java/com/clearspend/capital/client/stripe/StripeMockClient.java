@@ -7,7 +7,6 @@ import com.clearspend.capital.client.stripe.types.FinancialAccountBalance;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.types.OutboundPayment;
 import com.clearspend.capital.client.stripe.types.OutboundTransfer;
-import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
@@ -15,11 +14,13 @@ import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.ReplacementReason;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
+import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.type.NetworkCommon;
@@ -46,6 +47,7 @@ import com.stripe.net.ApiResource;
 import com.stripe.param.AccountUpdateParams;
 import com.stripe.param.FileCreateParams.Purpose;
 import com.stripe.param.PersonUpdateParams.Verification.Document;
+import com.stripe.param.issuing.CardUpdateParams.CancellationReason;
 import java.io.FileReader;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -479,24 +481,25 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Card createVirtualCard(
-      com.clearspend.capital.data.model.Card card, String stripeAccountRef, String stripeUserRef) {
-    Card result = generateEntityWithId(Card.class);
-    result.setLast4(faker.numerify("####"));
-
+  public Card createVirtualCard(final CreateCardConfig config) {
+    final Card result = generateEntityWithId(Card.class);
+    populateFields(config, result);
     return result;
   }
 
-  @Override
-  public Card createPhysicalCard(
-      com.clearspend.capital.data.model.Card card,
-      Address shippingAddress,
-      String shippingLabel,
-      String stripeAccountRef,
-      String stripeUserRef) {
-    Card result = generateEntityWithId(Card.class);
-    result.setLast4(faker.numerify("####"));
+  private void populateFields(final CreateCardConfig config, final Card card) {
+    card.setLast4(faker.numerify("####"));
+    card.setReplacementFor(config.getReplacementFor());
+    card.setReplacementReason(
+        Optional.ofNullable(config.getReplacementReason())
+            .map(ReplacementReason::getValue)
+            .orElse(null));
+  }
 
+  @Override
+  public Card createPhysicalCard(final CreatePhysicalCardConfig config) {
+    final Card result = generateEntityWithId(Card.class);
+    populateFields(config, result);
     return result;
   }
 
@@ -507,9 +510,16 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Card updateCard(final String stripeCardId, final CardStatus cardStatus) {
+  public Card updateCard(
+      @NonNull final String stripeCardId,
+      @NonNull final CardStatus cardStatus,
+      @NonNull final CardStatusReason reason) {
     final Card card = generateEntityWithId(Card.class, stripeCardId);
-    card.setStatus(cardStatus.name());
+    card.setStatus(getCardStatus(cardStatus).name());
+    card.setCancellationReason(
+        Optional.ofNullable(getCancellationReason(cardStatus, reason))
+            .map(CancellationReason::getValue)
+            .orElse(null));
     createdObjects.put(stripeCardId, card);
     return card;
   }
