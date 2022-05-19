@@ -49,11 +49,10 @@ public class AccountingAuditProcessor {
     return rowKey;
   }
 
-  public String storeAccountingUserActivityAuditEventToBigTable(
-      AccountingUserActivityAuditEvent event) {
+  public String storeAccountingCodatSyncAuditEventToBigTable(AccountingCodatSyncAuditEvent event) {
     String timeKey = LocalDateTime.now(ZoneOffset.systemDefault()).format(formatter);
     String rowKey =
-        new StringBuilder(AccountActivityAuditEvent.ROW_KEY_PREFIX)
+        new StringBuilder(AccountingCodatSyncAuditEvent.ROW_KEY_PREFIX)
             .append(KEY_CONNECTOR)
             .append(event.getBusinessId())
             .append(KEY_CONNECTOR)
@@ -61,17 +60,9 @@ public class AccountingAuditProcessor {
             .append(KEY_CONNECTOR)
             .append(timeKey)
             .toString();
-    Map<String, String> columnMap = new HashMap<>();
-    columnMap.put(event.getEventType(), event.getMessage());
 
-    Row exist = bigTableClient.readOneRow(AUDIT_TABLE, rowKey);
-    if (exist != null) {
-      columnMap.put(event.getEventType(), "|" + event.getMessage());
-      bigTableClient.appendToExistingRow(AUDIT_TABLE, rowKey, AUDIT_COLUMN_FAMILY, columnMap);
-    } else {
-      columnMap.put(event.getEventType(), event.getMessage());
-      bigTableClient.saveOneRow(AUDIT_TABLE, rowKey, AUDIT_COLUMN_FAMILY, columnMap);
-    }
+    bigTableClient.saveOneRow(
+        AUDIT_TABLE, rowKey, AUDIT_COLUMN_FAMILY, event.getCodatSyncColumnData());
     return rowKey;
   }
 }

@@ -1,6 +1,7 @@
 package com.clearspend.capital.common.audit;
 
 import com.clearspend.capital.service.type.CurrentUser;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -53,9 +54,9 @@ public class AccountingAuditEventPublisher {
     applicationEventPublisher.publishEvent(event);
   }
 
-  public void publishAccountingUserActivityAuditEvent(
-      String message, String type, String businessId, String userId) {
-    applicationEventPublisher.publishEvent(
-        new AccountingUserActivityAuditEvent(this, message, type, businessId, userId));
+  public void publishAccountingCodatSyncAuditEvent(
+      Map<String, String> codatActivities, String businessId, String userId) {
+    AccountingCodatSyncAuditEvent event =
+        new AccountingCodatSyncAuditEvent(this, codatActivities, businessId, userId);
   }
 }

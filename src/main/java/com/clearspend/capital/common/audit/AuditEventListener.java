@@ -23,17 +23,11 @@ public class AuditEventListener {
         event.getTimestamp(),
         event.getEventType(),
         event.getMessage());
-    // Fire Accounting User Activity Event
-    publisher.publishAccountingUserActivityAuditEvent(
-        event.getMessage() + ":" + event.getAccountActivityId(),
-        AccountActivityAuditEvent.TYPE_TRANSACTION_SYNC,
-        event.getBusinessId(),
-        event.getUserId());
   }
 
   @EventListener
   @Async
-  public void onAccountingUserActivityAuditEvent(AccountingUserActivityAuditEvent event) {
-    processor.storeAccountingUserActivityAuditEventToBigTable(event);
+  public void onAccountingUserActivityAuditEvent(AccountingCodatSyncAuditEvent event) {
+    processor.storeAccountingCodatSyncAuditEventToBigTable(event);
   }
 }

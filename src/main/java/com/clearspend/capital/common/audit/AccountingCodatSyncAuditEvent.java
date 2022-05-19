@@ -1,5 +1,6 @@
 package com.clearspend.capital.common.audit;
 
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
@@ -13,21 +14,19 @@ import org.springframework.context.ApplicationEvent;
  */
 @Getter
 @Setter
-public class AccountingUserActivityAuditEvent extends ApplicationEvent {
+public class AccountingCodatSyncAuditEvent extends ApplicationEvent {
 
-  private String message;
-  private String eventType;
-
+  public static final String ROW_KEY_PREFIX = "CODAT_SYNC";
+  private Map<String, String> codatSyncColumnData;
   private String userId;
 
   private String businessId;
 
-  public AccountingUserActivityAuditEvent(
-      Object source, String message, String eventType, String businessId, String userId) {
+  public AccountingCodatSyncAuditEvent(
+      Object source, Map<String, String> codatSyncColumnData, String businessId, String userId) {
     super(source);
-    this.message = message;
-    this.eventType = eventType;
     this.businessId = businessId;
     this.userId = userId;
+    this.codatSyncColumnData = codatSyncColumnData;
   }
 }
