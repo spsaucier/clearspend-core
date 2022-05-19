@@ -373,7 +373,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   void updateAllocationBalance_addRemove_success() {
     // Bootstrap an admin user for this test
     User admin = createBusinessRecord.user();
-    fusionAuthService.changeUserRole(
+    testHelper.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
     testHelper.setCurrentUser(admin);
 
@@ -459,7 +459,7 @@ public class AllocationServiceTest extends BaseCapitalTest {
   void updateAllocationBalance_excessiveAddRemove_fail() {
     // Bootstrap an admin user for this test
     User admin = createBusinessRecord.user();
-    fusionAuthService.changeUserRole(
+    testHelper.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
     testHelper.setCurrentUser(admin);
 

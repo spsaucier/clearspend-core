@@ -7,7 +7,6 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
-import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,8 +27,7 @@ import org.springframework.stereotype.Service;
 public class SecuredRolesAndPermissionsService {
   private final UserAllocationRoleRepository userAllocationRoleRepository;
   private final RolesAndPermissionsService rolesAndPermissionsService;
-  private final FusionAuthService fusionAuthService;
-  private final UserRepository userRepository;
+  private final CoreFusionAuthService fusionAuthService;
 
   @PostFilter(
       "isSelfOwned(filterObject) OR hasRootPermission(filterObject, 'MANAGE_USERS|CUSTOMER_SERVICE')")
@@ -72,7 +69,6 @@ public class SecuredRolesAndPermissionsService {
       return CurrentUser.get().roles();
     }
 
-    final String fusionAuthId = userRepository.findById(userId).orElseThrow().getSubjectRef();
-    return fusionAuthService.getUserRoles(UUID.fromString(fusionAuthId));
+    return fusionAuthService.getUserRoles(userId);
   }
 }

@@ -75,19 +75,16 @@ import com.clearspend.capital.data.repository.business.BusinessOwnerRepository;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.data.repository.business.BusinessSettingsRepository;
-import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
 import com.clearspend.capital.service.BusinessBankAccountService;
-import com.clearspend.capital.service.BusinessOwnerService;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessProspectService;
 import com.clearspend.capital.service.BusinessProspectService.BusinessProspectRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardService;
-import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
 import com.clearspend.capital.service.FusionAuthService.RoleChange;
@@ -201,14 +198,11 @@ public class TestHelper {
   private final BusinessBankAccountBalanceRepository businessBankAccountBalanceRepo;
   private final ExpenseCategoryRepository expenseCategoryRepository;
 
-  private final AccountService accountService;
   private final AllocationService allocationService;
   private final BusinessBankAccountService businessBankAccountService;
-  private final BusinessOwnerService businessOwnerService;
   private final BusinessProspectService businessProspectService;
   private final BusinessService businessService;
   private final CardService cardService;
-  private final FusionAuthService fusionAuthService;
   private final NetworkMessageService networkMessageService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final UserService userService;
@@ -239,6 +233,20 @@ public class TestHelper {
 
   public void flush() {
     entityManager.flush();
+  }
+
+  public void changeUserRole(RoleChange grant, String subjectRef, String role) {
+    serviceHelper.coreFusionAuthService().changeUserRole(grant, subjectRef, role);
+  }
+
+  /**
+   * Get the FusionAuth user
+   *
+   * @param fusionAuthUserId e.g. user.getSubjectRef()
+   * @return the Fusion Auth User object
+   */
+  public io.fusionauth.domain.User getUser(UUID fusionAuthUserId) {
+    return serviceHelper.coreFusionAuthService().getUser(fusionAuthUserId);
   }
 
   public record OnboardBusinessRecord(
@@ -474,7 +482,9 @@ public class TestHelper {
       final Business business, final String role) {
     final CreateUpdateUserRecord user = createUser(business);
     // Bypassing RolesAndPermissionsService because this can't pass the permission check
-    fusionAuthService.changeUserRole(RoleChange.GRANT, user.user().getSubjectRef(), role);
+    serviceHelper
+        .coreFusionAuthService()
+        .changeUserRole(RoleChange.GRANT, user.user().getSubjectRef(), role);
     return user;
   }
 
@@ -489,15 +499,14 @@ public class TestHelper {
       explanation = "to look up roles that would normally come on the JWT")
   public void setCurrentUser(@NonNull User user) {
     CurrentUserSwitcher.setCurrentUser(
-        user, fusionAuthService.getUserRoles(UUID.fromString(user.getSubjectRef())));
+        user, serviceHelper.coreFusionAuthService().getUserRoles(user.getId()));
   }
 
   @SwitchesCurrentUser(reviewer = "Craig Miller", explanation = "For testing")
   public void setCurrentUser(final CurrentUser currentUser) {
     Optional.ofNullable(currentUser)
         .ifPresentOrElse(
-            theCurrentUser -> CurrentUserSwitcher.setCurrentUser(theCurrentUser),
-            () -> CurrentUserSwitcher.clearCurrentUser());
+            CurrentUserSwitcher::setCurrentUser, CurrentUserSwitcher::clearCurrentUser);
   }
 
   /**
@@ -746,7 +755,9 @@ public class TestHelper {
       TypedId<BusinessId> businessId, String email, String password, Boolean representative) {
     TypedId<BusinessOwnerId> businessOwnerId = new TypedId<>();
     UUID fusionAuthUserId =
-        fusionAuthService.createBusinessOwner(businessId, businessOwnerId, email, password);
+        serviceHelper
+            .coreFusionAuthService()
+            .createBusinessOwner(businessId, businessOwnerId, email, password);
     passwords.put(businessOwnerId, password);
     return serviceHelper
         .businessProspectService()

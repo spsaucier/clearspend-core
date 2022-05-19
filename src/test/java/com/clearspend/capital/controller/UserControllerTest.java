@@ -73,9 +73,10 @@ import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.CardService.CardRecord;
-import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.CoreFusionAuthService;
 import com.clearspend.capital.service.NetworkMessageService;
 import com.clearspend.capital.service.RolesAndPermissionsService;
+import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.data.TestDataHelper;
@@ -134,7 +135,8 @@ class UserControllerTest extends BaseCapitalTest {
   private final UserRepository userRepository;
 
   private final Faker faker = new Faker();
-  private final FusionAuthService fusionAuthService;
+  private final CoreFusionAuthService fusionAuthService;
+  private final ServiceHelper serviceHelper;
 
   private CreateBusinessRecord createBusinessRecord;
   private Business business;
@@ -2071,7 +2073,7 @@ class UserControllerTest extends BaseCapitalTest {
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
     // Confirming the user is in FusionAuth prior to test logic
-    assertDoesNotThrow(() -> fusionAuthService.getUser(employee));
+    assertDoesNotThrow(() -> serviceHelper.coreFusionAuthService().getUser(employee));
 
     final TypedId<CardId> virtualCardId =
         testHelper
@@ -2132,7 +2134,8 @@ class UserControllerTest extends BaseCapitalTest {
         .isNotNull()
         .hasFieldOrPropertyWithValue("status", CardUpdateParams.Status.CANCELED.name());
 
-    assertThrows(FusionAuthException.class, () -> fusionAuthService.getUser(employee));
+    assertThrows(
+        FusionAuthException.class, () -> serviceHelper.coreFusionAuthService().getUser(employee));
   }
 
   @Test

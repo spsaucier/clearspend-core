@@ -162,7 +162,10 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     twoFactorPending.put(
         twoFactorId, new TwoFactorPending(userId, state, null, code, request.trustChallenge));
 
-    List<TwoFactorMethod> methods = twoFactorConfiguration.get(userId).methods;
+    List<TwoFactorMethod> methods =
+        Optional.ofNullable(twoFactorConfiguration.get(userId))
+            .map(cfg -> cfg.methods)
+            .orElse(List.of());
     TwoFactorStartResponse response =
         new TwoFactorStartResponse(code, methods, twoFactorId.getTwoFactorId());
 
@@ -222,7 +225,10 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
             .orElse(null);
 
     boolean disableAll =
-        pendingAuth == null && twoFactorConfiguration.get(userId).recoveryCodes.remove(code);
+        pendingAuth == null
+            && Optional.ofNullable(twoFactorConfiguration.get(userId))
+                .map(c -> c.recoveryCodes.remove(code))
+                .orElse(false);
 
     if (pendingAuth == null && !disableAll) {
       return clientResponseFactory(421);
@@ -501,8 +507,9 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
             "[TrustTokenRequired]",
             "This request requires a Trust Token. Use the Start Two-Factor API to obtain a Trust Token required to complete this request.");
       } else {
-        if (validateTrustPair(request.trustChallenge, request.trustToken))
-          ;
+        if (!validateTrustPair(request.trustChallenge, request.trustToken)) {
+          return clientResponseFactoryErr(400, "trustToken", "token mismatch", "Gotta fix that.");
+        }
       }
     }
     request.trustChallenge = null;

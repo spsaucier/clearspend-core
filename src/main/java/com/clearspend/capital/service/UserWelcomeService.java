@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class UserWelcomeService {
   private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
-  private final FusionAuthService fusionAuthService;
+  private final CoreFusionAuthService fusionAuthService;
   private final TwilioService twilioService;
   /**
    * If the user has not already been assigned a subjectRef, generate a random password and send

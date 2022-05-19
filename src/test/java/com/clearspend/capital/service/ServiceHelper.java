@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
 import com.clearspend.capital.data.model.Account;
@@ -30,10 +31,13 @@ import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.BusinessService.BusinessRecord;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
+import io.fusionauth.domain.User;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -60,6 +64,7 @@ public class ServiceHelper {
   private final CodatService codatService;
   private final ChartOfAccountsService chartOfAccountsService;
   private final AllocationService allocationService;
+  private final CoreFusionAuthService coreFusionAuthService;
 
   public AccountServiceWrapper accountService() {
     return new AccountServiceWrapper(accountService);
@@ -95,6 +100,10 @@ public class ServiceHelper {
 
   public AllocationServiceWrapper allocationService() {
     return new AllocationServiceWrapper(allocationService);
+  }
+
+  public CoreFusionAuthServiceWrapper coreFusionAuthService() {
+    return new CoreFusionAuthServiceWrapper(coreFusionAuthService);
   }
 
   @RequiredArgsConstructor
@@ -263,6 +272,40 @@ public class ServiceHelper {
     public Account retrieveAccountById(
         final TypedId<AccountId> accountId, final boolean fetchHolds) {
       return accountService.retrieveAccountById(accountId, fetchHolds);
+    }
+  }
+
+  @RequiredArgsConstructor
+  public static class CoreFusionAuthServiceWrapper {
+    private final CoreFusionAuthService coreFusionAuthService;
+
+    public boolean changeUserRole(
+        @NonNull FusionAuthService.RoleChange change,
+        @NonNull String fusionAuthUserId,
+        @NonNull String changingRole) {
+      return coreFusionAuthService.changeUserRole(change, fusionAuthUserId, changingRole);
+    }
+
+    public Set<String> getUserRoles(TypedId<UserId> userId) {
+      return coreFusionAuthService.getUserRoles(userId);
+    }
+
+    public UUID createBusinessOwner(
+        TypedId<BusinessId> businessId,
+        TypedId<BusinessOwnerId> businessOwnerId,
+        String username,
+        String password) {
+      return coreFusionAuthService.createBusinessOwner(
+          businessId, businessOwnerId, username, password);
+    }
+
+    public User getUser(com.clearspend.capital.data.model.User user) {
+      // This usage comes up in tests repeatedly, but not in the regular code
+      return getUser(UUID.fromString(user.getSubjectRef()));
+    }
+
+    public User getUser(UUID fusionAuthId) {
+      return coreFusionAuthService.getUser(fusionAuthId);
     }
   }
 }

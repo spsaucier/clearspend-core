@@ -3,6 +3,9 @@ package com.clearspend.capital.controller;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
@@ -87,8 +90,7 @@ public class AuthenticationController {
     this.businessService = businessService;
     this.fusionAuthService = fusionAuthService;
     this.userService = userService;
-    refreshTokenTimeToLiveInMinutes =
-        fusionAuthService.getApplication().jwtConfiguration.refreshTokenTimeToLiveInMinutes;
+    refreshTokenTimeToLiveInMinutes = fusionAuthService.getJWTRefreshTokenTimeToLiveInMinutes();
   }
 
   @FusionAuthUserModifier(
@@ -170,21 +172,6 @@ public class AuthenticationController {
       }
     } catch (RecordNotFoundException rnfe) {
       log.debug("Unable to locate business during login", rnfe);
-    }
-
-    // Status 202 = The user was authenticated successfully. The user is not registered for
-    // the application specified by the applicationId on the request. The response will contain
-    // the User object that was authenticated.
-    if (loginResponse.status == 202) {
-      // populate-token.js populates the JWT
-      fusionAuthService.updateUser(
-          user.businessId(),
-          user.userId(),
-          null,
-          null,
-          user.userType(),
-          response.user.id.toString());
-      loginResponse.status = 200;
     }
 
     String userId = response.user.id.toString();
@@ -289,9 +276,11 @@ public class AuthenticationController {
               FusionAuthService.TwoFactorStartLoggedInResponse>
           function) {
 
-    User user = userService.retrieveUser(CurrentUser.getUserId());
+    User actor = userService.retrieveUser(CurrentUser.getUserId());
+    User target =
+        Optional.ofNullable(request.userId()).map(userService::retrieveUser).orElse(actor);
 
-    return Optional.ofNullable(function.apply(user, request.svc()))
+    return Optional.ofNullable(function.apply(actor, request.svc(target)))
         .map(r -> ResponseEntity.status(421).body(TwoFactorStartLoggedInResponse.of(r)))
         .orElse(ResponseEntity.status(204).build());
   }
@@ -315,33 +304,33 @@ public class AuthenticationController {
   record FirstTwoFactorValidateRequest(
       String code, TwoFactorAuthenticationMethod method, String destination) {}
 
-  @FusionAuthUserModifier(
-      explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
-      reviewer = "jscarbor")
   @PostMapping("/two-factor/first/validate")
   TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
     return fusionAuthService.validateFirstTwoFactorCode(
-        CurrentUser.getFusionAuthUserId(),
+        userService.retrieveUser(CurrentUser.getUserId()),
         firstTwoFactorValidateRequest.code,
         firstTwoFactorValidateRequest.method,
         firstTwoFactorValidateRequest.destination);
   }
 
   public record ChangePhoneNumberRequest(
-      String changingNumber, String trustChallenge, String twoFactorId, String twoFactorCode) {
+      TypedId<UserId> userId,
+      TypedId<BusinessId> businessId,
+      String changingNumber,
+      String trustChallenge,
+      String twoFactorId,
+      String twoFactorCode) {
 
-    public FusionAuthService.ChangePhoneNumberRequest svc() {
+    public FusionAuthService.ChangePhoneNumberRequest svc(User user) {
       return new FusionAuthService.ChangePhoneNumberRequest(
-          changingNumber, twoFactorCode, twoFactorId, trustChallenge);
-    }
-
-    static ChangePhoneNumberRequest of(FusionAuthService.ChangePhoneNumberRequest request) {
-      return new ChangePhoneNumberRequest(
-          request.changingNumber(),
-          request.trustChallenge(),
-          request.twoFactorId(),
-          request.twoFactorCode());
+          UUID.fromString(user.getSubjectRef()),
+          user.getBusinessId(),
+          user.getId(),
+          changingNumber,
+          twoFactorCode,
+          twoFactorId,
+          trustChallenge);
     }
   }
 
@@ -364,11 +353,10 @@ public class AuthenticationController {
    *
    * @return codes required to proceed
    */
-  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Starting to change the user")
   @PostMapping("/two-factor/start")
-  TwoFactorStartLoggedInResponse sendCodeToBegin2FA() {
+  TwoFactorStartLoggedInResponse beginStepUp() {
     return TwoFactorStartLoggedInResponse.of(
-        fusionAuthService.sendCodeToBegin2FA(
+        fusionAuthService.beginStepUp(
             userService.retrieveUser(CurrentUser.getUserId()), Collections.emptyMap()));
   }
 
@@ -379,12 +367,10 @@ public class AuthenticationController {
    *     valid method Id, and all methods will be disabled.
    * @param code the 2FA code
    */
-  @FusionAuthUserModifier(
-      reviewer = "jscarbor",
-      explanation = "Authentication Controller has responsibility for changing users")
   @DeleteMapping("/two-factor")
   void disable2FA(@RequestParam String methodId, @RequestParam String code) {
-    fusionAuthService.disableTwoFactor(CurrentUser.getFusionAuthUserId(), methodId, code);
+    fusionAuthService.disableTwoFactor(
+        userService.retrieveUser(CurrentUser.getUserId()), methodId, code);
   }
 
   @PostMapping("/logout")
@@ -409,16 +395,15 @@ public class AuthenticationController {
     fusionAuthService.resetPassword(request);
   }
 
-  @FusionAuthUserModifier(
-      reviewer = "jscarbor",
-      explanation = "Changing password, only for CurrentUser")
   @PostMapping(value = "/change-password", consumes = "application/json")
   ResponseEntity<TwoFactorStartLoggedInResponse> changePassword(
       @Validated @RequestBody ChangePasswordRequest request) {
     User user = userService.retrieveUser(CurrentUser.getUserId());
+    User targetUser =
+        Optional.ofNullable(request.getUserId()).map(userService::retrieveUser).orElse(user);
     FusionAuthService.TwoFactorStartLoggedInResponse response;
     try {
-      response = fusionAuthService.changePassword(user, request.toFusionAuthRequest());
+      response = fusionAuthService.changePassword(user, request.toFusionAuthRequest(targetUser));
     } catch (InvalidRequestException e) {
       if ("Unauthorized".equals(e.getMessage())) {
         return ResponseEntity.status(401).build();

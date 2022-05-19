@@ -91,7 +91,7 @@ public class RolesAndPermissionsService {
   private final UserAllocationRoleRepository userAllocationRoleRepository;
   private final UserRepository userRepository;
   private final GlobalRoleRepository globalRoleRepository;
-  private final FusionAuthService fusionAuthService;
+  private final CoreFusionAuthService fusionAuthService;
   private final AllocationRepository allocationRepository;
   private final EntityManager entityManager;
   private final AllocationRolePermissionsRepository allocationRolePermissionsRepository;

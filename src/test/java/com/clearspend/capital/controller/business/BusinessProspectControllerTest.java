@@ -29,6 +29,7 @@ import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import io.fusionauth.domain.User;
+import java.util.UUID;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -326,7 +327,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     setBusinessProspectPassword(businessProspect.getId());
 
     // then
-    User user = fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted());
+    User user = testHelper.getUser(UUID.fromString(businessProspect.getSubjectRef()));
     log.info("user: {}", user);
     assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();
@@ -367,7 +368,7 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
     String password = setBusinessProspectPassword(businessProspect.getId());
 
     // then
-    User user = fusionAuthService.retrieveUserByEmail(businessProspect.getEmail().getEncrypted());
+    User user = testHelper.getUser(UUID.fromString(businessProspect.getSubjectRef()));
     log.info("user: {}", user);
     assertThat(user.email).isEqualTo(businessProspect.getEmail().getEncrypted());
     dbRecord = businessProspectRepository.findById(businessProspect.getId()).orElseThrow();

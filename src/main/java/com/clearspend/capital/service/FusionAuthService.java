@@ -1,17 +1,14 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
-import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.common.typedid.data.business.BusinessOwnerId;
-import com.clearspend.capital.controller.Common;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
-import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.OwnerRelated;
 import com.clearspend.capital.permissioncheck.annotations.OpenAccessAPI;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -24,12 +21,10 @@ import io.fusionauth.domain.ChangePasswordReason;
 import io.fusionauth.domain.TwoFactorMethod;
 import io.fusionauth.domain.User;
 import io.fusionauth.domain.UserRegistration;
-import io.fusionauth.domain.api.ApplicationResponse;
 import io.fusionauth.domain.api.LoginRequest;
 import io.fusionauth.domain.api.LoginResponse;
 import io.fusionauth.domain.api.TwoFactorRequest;
 import io.fusionauth.domain.api.TwoFactorResponse;
-import io.fusionauth.domain.api.UserRequest;
 import io.fusionauth.domain.api.UserResponse;
 import io.fusionauth.domain.api.twoFactor.TwoFactorLoginRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
@@ -38,33 +33,36 @@ import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
 import io.fusionauth.domain.api.user.ForgotPasswordResponse;
 import io.fusionauth.domain.api.user.RegistrationRequest;
-import io.fusionauth.domain.api.user.RegistrationResponse;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Component;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @Slf4j
 @RequiredArgsConstructor
 public class FusionAuthService {
+
+  private final CoreFusionAuthService coreFusionAuthService;
+  private final UserService userService;
 
   public @interface FusionAuthUserCreator {
 
@@ -94,45 +92,10 @@ public class FusionAuthService {
     String explanation();
   }
 
-  private static final String BUSINESS_ID = "businessId";
-  private static final String USER_TYPE = "userType";
-  private static final String ROLES = "roles";
-
   private final io.fusionauth.client.FusionAuthClient client;
   private final FusionAuthProperties fusionAuthProperties;
   private final ObjectMapper objectMapper;
   private final TwilioService twilioService;
-
-  @RestrictedApi(
-      explanation = "This should only ever be used by UserService",
-      allowedOnPath = "test/.*",
-      allowlistAnnotations = {FusionAuthUserCreator.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public UUID createBusinessOwner(
-      TypedId<BusinessId> businessId,
-      TypedId<BusinessOwnerId> businessOwnerId,
-      String username,
-      String password) {
-    return createUser(
-        businessId,
-        new TypedId<>(businessOwnerId.toUuid()),
-        username,
-        password,
-        UserType.BUSINESS_OWNER,
-        Optional.empty());
-  }
-
-  @RestrictedApi(
-      explanation = "This should only ever be used by UserService",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {FusionAuthUserCreator.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public UUID createUser(
-      TypedId<BusinessId> businessId, TypedId<UserId> userId, String email, String password) {
-    return createUser(businessId, userId, email, password, UserType.EMPLOYEE, Optional.empty());
-  }
 
   /**
    * 1:1 mapping to the FusionAuth ChangePasswordReason, in case we want to change out FusionAuth
@@ -150,29 +113,6 @@ public class FusionAuthService {
     CapitalChangePasswordReason(ChangePasswordReason fusionAuthReason) {
       this.fusionAuthReason = fusionAuthReason;
     }
-  }
-
-  UUID createUser(
-      TypedId<BusinessId> businessId,
-      TypedId<UserId> userId,
-      String email,
-      String password,
-      UserType userType,
-      Optional<CapitalChangePasswordReason> changePasswordReason) {
-
-    UUID fusionAuthId = UUID.randomUUID();
-
-    RegistrationRequest request =
-        new RegistrationRequest(
-            userFactory(
-                email,
-                password,
-                fusionAuthId,
-                changePasswordReason.map(CapitalChangePasswordReason::getFusionAuthReason)),
-            userRegistrationFactory(
-                businessId, userId.toUuid(), userType, fusionAuthId, Collections.emptySet()));
-    validateResponse(client.register(fusionAuthId, request));
-    return fusionAuthId;
   }
 
   private Map<String, Object> getRegistrationData(UUID userId) {
@@ -199,70 +139,18 @@ public class FusionAuthService {
     setRegistrationData(user, data);
   }
 
+  private boolean isSteppedUp(FusionAuthUser user) {
+    return isSteppedUp(user.getFusionAuthId());
+  }
+
   private boolean isSteppedUp(UUID userId) {
     return Optional.ofNullable(getRegistrationData(userId).get("stepUpExpiry"))
         .map(e -> (((Number) e).doubleValue() >= System.currentTimeMillis() / 1000.0))
         .orElse(false);
   }
 
-  private UserRegistration userRegistrationFactory(
-      TypedId<BusinessId> businessId,
-      UUID userId,
-      UserType userType,
-      UUID fusionAuthId,
-      Set<String> roles) {
-    UserRegistration registration = new UserRegistration();
-    registration.data.put(Common.CAPITAL_USER_ID, userId.toString());
-    registration.data.put(BUSINESS_ID, businessId.toUuid());
-    registration.data.put(USER_TYPE, userType.name());
-    registration.data.put(ROLES, roles.toArray(String[]::new));
-    registration.applicationId = getApplicationId();
-    registration.id = fusionAuthId;
-    return registration;
-  }
-
-  private static User userFactory(String email, String password, UUID fusionAuthId) {
-    return userFactory(email, password, fusionAuthId, Optional.empty());
-  }
-
-  private static User userFactory(
-      String email,
-      String password,
-      @NonNull UUID fusionAuthId,
-      Optional<ChangePasswordReason> changePasswordReason) {
-    User user = new User();
-
-    user.id = fusionAuthId;
-
-    Optional.ofNullable(email).ifPresent(s -> user.email = s);
-    Optional.ofNullable(password).ifPresent(s -> user.password = s);
-
-    changePasswordReason.ifPresent(
-        r -> {
-          user.passwordChangeRequired = true;
-          user.passwordChangeReason = r;
-        });
-
-    return user;
-  }
-
-  @RestrictedApi(
-      explanation = "This should only ever be used by RolesAndPermissionsService",
-      allowedOnPath = "test/.*",
-      allowlistAnnotations = {FusionAuthUserAccessor.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public Set<String> getUserRoles(UUID fusionAuthUserId) {
-    return getUserRoles(getUser(fusionAuthUserId));
-  }
-
-  @SuppressWarnings("unchecked")
-  private Set<String> getUserRoles(User user) {
-    return Set.copyOf((List<String>) user.data.getOrDefault(ROLES, Collections.emptyList()));
-  }
-
   /**
-   * "/api/two-factor/login"
+   * Completing a 2-factor sequence by calling "/api/two-factor/login"
    *
    * @param request with parameters including a code and twoFactorId
    * @return the User if successful, several codes in the 400s for bad submissions
@@ -296,7 +184,7 @@ public class FusionAuthService {
     if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
       throw new AccessDeniedException("");
     }
-    if (twoFactorEnabled()) {
+    if (twoFactorEnabled(FusionAuthUser.fromCurrentUser())) {
       throw new AccessDeniedException("2-factor enabled");
     }
     sendTwoFactorCodeToNewDestination(fusionAuthUserId, method, destination);
@@ -320,12 +208,7 @@ public class FusionAuthService {
     validateResponse(client.sendTwoFactorCodeForEnableDisable(request));
   }
 
-  @RestrictedApi(
-      explanation = "Only for preparing 2FA cycle for disabling 2FA or changing password",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {FusionAuthUserModifier.class})
-  public TwoFactorStartResponse startTwoFactorLogin(
+  private TwoFactorStartResponse startTwoFactorLogin(
       com.clearspend.capital.data.model.User user,
       Map<String, Object> state,
       String trustChallenge) {
@@ -340,32 +223,23 @@ public class FusionAuthService {
   /**
    * Preceded by {@link #startTwoFactorLogin(com.clearspend.capital.data.model.User, Map, String)}
    *
-   * @param userId The FusionAuth User ID (clearspend User.getSubjectRef())
+   * @param user the user to modify
    * @param methodId the method ID to disable (from the request initiating the flow)
    * @param code the 2FA code
    */
-  @RestrictedApi(
-      explanation = "Only for turning off 2FA",
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
-      allowlistAnnotations = {FusionAuthUserModifier.class})
-  public void disableTwoFactor(UUID userId, String methodId, String code) {
-    client.disableTwoFactor(userId, methodId, code);
+  @PreAuthorize("hasGlobalPermission('CUSTOMER_SERVICE') or isSelfOwned(#user)")
+  public void disableTwoFactor(
+      com.clearspend.capital.data.model.User user, String methodId, String code) {
+    validateResponse(
+        client.disableTwoFactor(UUID.fromString(user.getSubjectRef()), methodId, code));
   }
 
-  @RestrictedApi(
-      explanation = "This should only ever be used by AuthenticationController",
-      allowlistAnnotations = {FusionAuthUserModifier.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("isSelfOwned(#user)")
   public TwoFactorResponse validateFirstTwoFactorCode(
-      @NonNull UUID fusionAuthUserId,
+      @NonNull com.clearspend.capital.data.model.User user,
       @NonNull String code,
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NonNull String destination) {
-    if (!fusionAuthUserId.equals(CurrentUser.getFusionAuthUserId())) {
-      throw new AccessDeniedException("");
-    }
 
     TwoFactorRequest request = new TwoFactorRequest();
     request.code = code;
@@ -375,7 +249,7 @@ public class FusionAuthService {
       case sms -> request.mobilePhone = destination;
       case authenticator -> request.secret = destination;
     }
-    return validateResponse(client.enableTwoFactor(fusionAuthUserId, request));
+    return validateResponse(client.enableTwoFactor(UUID.fromString(user.getSubjectRef()), request));
   }
 
   public enum RoleChange {
@@ -384,129 +258,11 @@ public class FusionAuthService {
   }
 
   /**
-   * @param change Either GRANT or REVOKE.
-   * @param fusionAuthUserId the FusionAuth user ID to change.
-   * @param changingRole the role to change.
-   * @return true if the role is granted, false if it was already there
-   */
-  @RestrictedApi(
-      explanation = "This should only ever be used by RolesAndPermissionsService",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {FusionAuthRoleAdministrator.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public boolean changeUserRole(
-      @NonNull RoleChange change, @NonNull String fusionAuthUserId, @NonNull String changingRole) {
-    User user = getUser(UUID.fromString(fusionAuthUserId));
-    Set<String> roles = new HashSet<>(getUserRoles(user));
-    if (!(change.equals(RoleChange.GRANT) ? roles.add(changingRole) : roles.remove(changingRole))) {
-      return false;
-    }
-    user.data.put(ROLES, List.copyOf(roles));
-    validateResponse(client.updateUser(user.id, new UserRequest(user)));
-    return true;
-  }
-
-  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "Delegation")
-  UUID updateUser(com.clearspend.capital.data.model.User user, @Nullable String password) {
-    return updateUser(
-        user.getBusinessId(),
-        user.getId(),
-        user.getEmail().getEncrypted(),
-        password,
-        user.getType(),
-        user.getSubjectRef());
-  }
-
-  @FusionAuthUserModifier(reviewer = "Craig Miller", explanation = "Delegation")
-  void deleteUser(com.clearspend.capital.data.model.User user) {
-    final ClientResponse<Void, Errors> response =
-        client.deleteUser(UUID.fromString(user.getSubjectRef()));
-    validateResponse(response);
-  }
-
-  /**
-   * @param businessId the user's business
-   * @param userId capital's number
-   * @param email null for no change, correct value will be persisted
-   * @param password null for no change, correct value will be persisted
-   * @param userType the compiler will tell you if this is wrong.
-   * @param fusionAuthUserIdStr fusionAuth's UUID for the user (subjectRef)
-   * @return the FusionAuth UUID for the user
-   */
-  @FusionAuthUserAccessor(reviewer = "jscarbor", explanation = "Keeping roles consistent")
-  @RestrictedApi(
-      explanation = "This should only ever be used by UserService",
-      allowedOnPath = "/test/.*",
-      allowlistAnnotations = {FusionAuthUserModifier.class, FusionAuthUserCreator.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public UUID updateUser(
-      TypedId<BusinessId> businessId,
-      @NonNull TypedId<UserId> userId,
-      @Sensitive String email,
-      @Sensitive String password,
-      UserType userType,
-      @NonNull String fusionAuthUserIdStr) {
-    UUID fusionAuthUserId = UUID.fromString(fusionAuthUserIdStr);
-
-    User user = userFactory(email, password, fusionAuthUserId);
-    if (email != null || password != null) {
-
-      final ClientResponse<UserResponse, Errors> response =
-          client.updateUser(fusionAuthUserId, new UserRequest(user));
-
-      validateResponse(response);
-    }
-
-    final ClientResponse<RegistrationResponse, Errors> response1 =
-        client.updateRegistration(
-            fusionAuthUserId,
-            new RegistrationRequest(
-                user,
-                userRegistrationFactory(
-                    businessId,
-                    userId.toUuid(),
-                    userType,
-                    fusionAuthUserId,
-                    getUserRoles(fusionAuthUserId))));
-
-    validateResponse(response1);
-
-    return fusionAuthUserId;
-  }
-
-  private <T> T validateResponse(ClientResponse<T, Errors> response) {
-    if (response.wasSuccessful()) {
-      return response.successResponse;
-    }
-
-    throw new FusionAuthException(response.status, response.errorResponse, response.exception);
-  }
-
-  @RestrictedApi(
-      explanation = "User information is generally PII",
-      allowlistAnnotations = {FusionAuthUserAccessor.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  public User retrieveUserByEmail(String email) {
-    ClientResponse<UserResponse, Errors> userResponseErrorsClientResponse =
-        client.retrieveUserByEmail(email);
-    return validateResponse(userResponseErrorsClientResponse).user;
-  }
-
-  // TODO making this method public is an issue for the permissions system
-  /**
    * @param user the ClearSpend user of interest
    * @return the FusionAuth user record
    */
-  public User getUser(com.clearspend.capital.data.model.User user) {
-    return getUser(UUID.fromString(user.getSubjectRef()));
-  }
-
-  private User getUser(UUID fusionAuthUserId) {
-    ClientResponse<UserResponse, Errors> user = client.retrieveUser(fusionAuthUserId);
-    return validateResponse(user).user;
+  User getUser(FusionAuthUser user) {
+    return coreFusionAuthService.getUser(UUID.fromString(user.getSubjectRef()));
   }
 
   @OpenAccessAPI(
@@ -517,7 +273,7 @@ public class FusionAuthService {
         new io.fusionauth.domain.api.user.ForgotPasswordRequest();
     fusionAuthRequest.loginId = request.getEmail();
     fusionAuthRequest.sendForgotPasswordEmail = false;
-    fusionAuthRequest.applicationId = UUID.fromString(fusionAuthProperties.getApplicationId());
+    fusionAuthRequest.applicationId = getApplicationId();
     ClientResponse<ForgotPasswordResponse, Errors> forgotPasswordResponse =
         client.forgotPassword(fusionAuthRequest);
 
@@ -582,15 +338,8 @@ public class FusionAuthService {
    * @param state any state to be returned after successful authentication
    * @return codes required to proceed
    */
-  @RestrictedApi(
-      explanation =
-          "This should only ever be used by AuthenticationController to step up"
-              + "permissions for an imminent risky operation",
-      allowlistAnnotations = {FusionAuthUserModifier.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "calling other restricted functions")
-  public TwoFactorStartLoggedInResponse sendCodeToBegin2FA(
+  @PreAuthorize("isSelfOwned(#user)")
+  public TwoFactorStartLoggedInResponse beginStepUp(
       com.clearspend.capital.data.model.User user, Map<String, Object> state) {
     if (!user.getId().equals(CurrentUser.getUserId())) {
       throw new IllegalArgumentException("user");
@@ -616,48 +365,65 @@ public class FusionAuthService {
     return methodId;
   }
 
-  private interface SteppedUpRequest {
+  private interface SteppedUpRequest extends OwnerRelated {
 
-    String trustChallenge();
+    String getTrustChallenge();
 
-    String twoFactorId();
+    String getTwoFactorId();
 
-    String twoFactorCode();
+    String getTwoFactorCode();
+
+    UUID getFusionAuthUserId();
   }
 
-  public record ChangePhoneNumberRequest(
-      String changingNumber, String twoFactorCode, String twoFactorId, String trustChallenge)
-      implements SteppedUpRequest {}
+  @Value
+  public static class ChangePhoneNumberRequest implements SteppedUpRequest {
+    UUID fusionAuthUserId;
+    TypedId<BusinessId> businessId;
+    TypedId<UserId> ownerId;
+    String changingNumber;
+    String twoFactorCode;
+    String twoFactorId;
+    String trustChallenge;
+  }
 
-  public record ChangePasswordRequest(
-      String currentPassword,
-      String newPassword,
-      String trustChallenge,
-      String twoFactorId,
-      String twoFactorCode)
-      implements SteppedUpRequest {}
+  @Value
+  public static class ChangePasswordRequest implements SteppedUpRequest {
+    UUID fusionAuthUserId;
+    TypedId<BusinessId> businessId;
+    TypedId<UserId> ownerId;
+    String currentPassword;
+    String newPassword;
+    String trustChallenge;
+    String twoFactorId;
+    String twoFactorCode;
+  }
 
   @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "modifying user")
   @SneakyThrows
   private <T extends SteppedUpRequest> TwoFactorStartLoggedInResponse stepUpRequest(
-      com.clearspend.capital.data.model.User user, T request, TriConsumer<T, T, String> operation) {
+      com.clearspend.capital.data.model.User actor,
+      T request,
+      TriConsumer<T, T, String> operation) {
+    @SuppressWarnings("unchecked")
+    Class<T> requestClass = (Class<T>) request.getClass();
 
     LoginResponse twoFactorLogin = null;
     T oldRequest = null;
-    UUID fusionAuthUserId = UUID.fromString(user.getSubjectRef());
 
-    if (twoFactorEnabled()) {
+    final FusionAuthUser fusionAuthActor = FusionAuthUser.fromUser(actor);
+    if (twoFactorEnabled(fusionAuthActor)) {
       // Check if the challenge has been answered
       if (StringUtils.isAnyEmpty(
-          request.trustChallenge(), request.twoFactorId(), request.twoFactorCode())) {
+          request.getTrustChallenge(), request.getTwoFactorId(), request.getTwoFactorCode())) {
         final Map<String, Object> persistentState =
             Map.of("stepUpRequest", objectMapper.writeValueAsString(request));
 
-        if (isSteppedUp(fusionAuthUserId)) {
+        if (isSteppedUp(fusionAuthActor)) {
           // Bypass the step-up by taking the code returned from startTwoFactorLogin
           String trustChallenge = RandomStringUtils.randomPrint(24);
           TwoFactorStartResponse initResponse =
-              startTwoFactorLogin(user, persistentState, trustChallenge);
+              startTwoFactorLogin(actor, persistentState, trustChallenge);
 
           // Assemble a request with the old data plus the two factor info needed to complete the
           // operation
@@ -669,31 +435,29 @@ public class FusionAuthService {
           mapRequest.put("twoFactorId", initResponse.twoFactorId);
           mapRequest.put("twoFactorCode", initResponse.code);
           request =
-              (T)
-                  objectMapper.readValue(
-                      objectMapper.writeValueAsString(mapRequest), request.getClass());
+              (T) objectMapper.readValue(objectMapper.writeValueAsString(mapRequest), requestClass);
         } else {
           // issue the challenge
-          return sendCodeToBegin2FA(user, persistentState);
+          return beginStepUp(actor, persistentState);
         }
       }
 
       // Validate the step-up challenge
       TwoFactorLoginRequest twoFactorLoginRequest =
           new TwoFactorLoginRequest(
-              getApplicationId(), request.twoFactorCode(), request.twoFactorId());
-      twoFactorLoginRequest.userId = fusionAuthUserId;
+              getApplicationId(), request.getTwoFactorCode(), request.getTwoFactorId());
+      twoFactorLoginRequest.userId = fusionAuthActor.getFusionAuthId();
       ClientResponse<LoginResponse, Errors> twoFactorLoginResponse =
           twoFactorLogin(twoFactorLoginRequest);
       validateResponse(twoFactorLoginResponse);
 
-      persistStepUp(getUser(user));
+      persistStepUp(getUser(fusionAuthActor));
       // Assemble a new request based on the successful challenge and original request
       twoFactorLogin = twoFactorLoginResponse.successResponse;
       oldRequest =
           (T)
               objectMapper.readValue(
-                  (String) twoFactorLogin.state.get("stepUpRequest"), request.getClass());
+                  (String) twoFactorLogin.state.get("stepUpRequest"), requestClass);
     }
 
     // Perform the password change
@@ -713,16 +477,7 @@ public class FusionAuthService {
    *     calls.
    * @return null upon success, non-null if 2FA is needed
    */
-  @RestrictedApi(
-      explanation =
-          "This should only ever be used by AuthenticationController, and only "
-              + "after validating that the logged-in user is making the change.",
-      allowlistAnnotations = {FusionAuthUserModifier.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
-  @FusionAuthUserModifier(
-      reviewer = "jscarbor",
-      explanation = "delegating some work within the class")
+  @PreAuthorize("isSelfOwned(#user)")
   @SneakyThrows
   public TwoFactorStartLoggedInResponse changePassword(
       com.clearspend.capital.data.model.User user, final ChangePasswordRequest request) {
@@ -734,25 +489,19 @@ public class FusionAuthService {
           final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
               new io.fusionauth.domain.api.user.ChangePasswordRequest(
                   user.getEmail().getEncrypted(),
-                  oldRequest.currentPassword(),
-                  oldRequest.newPassword());
+                  Optional.ofNullable(oldRequest).orElse(newRequest).getCurrentPassword(),
+                  Optional.ofNullable(oldRequest).orElse(newRequest).getNewPassword());
           changePasswordRequest.trustToken = trustToken;
-          changePasswordRequest.trustChallenge = request.trustChallenge();
+          changePasswordRequest.trustChallenge = request.getTrustChallenge();
           changePasswordRequest.applicationId = getApplicationId();
           validateResponse(client.changePasswordByIdentity(changePasswordRequest));
         });
   }
 
-  @RestrictedApi(
-      explanation =
-          "This should only ever be used by AuthenticationController, and only "
-              + "after validating that the logged-in user is making the change.",
-      allowlistAnnotations = {FusionAuthUserModifier.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("isSelfOwned(#request)")
   public TwoFactorStartLoggedInResponse addPhoneNumber(
       final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
-    requireTwoFactorEnabled();
+    requireTwoFactorEnabled(FusionAuthUser.fromUser(user));
     return stepUpRequest(
         user,
         request,
@@ -760,26 +509,20 @@ public class FusionAuthService {
             sendTwoFactorCodeToNewDestination(
                 UUID.fromString(user.getSubjectRef()),
                 TwoFactorAuthenticationMethod.sms,
-                Optional.ofNullable(oldRequest).orElse(newRequest).changingNumber));
+                Optional.ofNullable(oldRequest).orElse(newRequest).getChangingNumber()));
   }
 
-  private void requireTwoFactorEnabled() {
-    if (!twoFactorEnabled()) {
+  private void requireTwoFactorEnabled(FusionAuthUser fusionAuthUser) {
+    if (!twoFactorEnabled(fusionAuthUser)) {
       throw new InvalidRequestException("Enable two-factor first");
     }
   }
 
-  @RestrictedApi(
-      explanation =
-          "This should only ever be used by AuthenticationController, and only "
-              + "after validating that the logged-in user is making the change.",
-      allowlistAnnotations = {FusionAuthUserModifier.class},
-      link =
-          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
+  @PreAuthorize("isSelfOwned(#request)")
   public TwoFactorStartLoggedInResponse removePhoneNumber(
       final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
     UUID userId = UUID.fromString(user.getSubjectRef());
-    requireTwoFactorEnabled();
+    requireTwoFactorEnabled(FusionAuthUser.fromUser(user));
     return stepUpRequest(
         user,
         request,
@@ -797,7 +540,7 @@ public class FusionAuthService {
           User faUser = getUser(userId);
           String methodId =
               faUser.twoFactor.methods.stream()
-                  .filter(m -> m.mobilePhone.equals(oldRequest.changingNumber))
+                  .filter(m -> m.mobilePhone.equals(oldRequest.getChangingNumber()))
                   .map(m -> m.id)
                   .findFirst()
                   .orElseThrow(() -> new NoSuchElementException("mobileNumber not found"));
@@ -854,24 +597,63 @@ public class FusionAuthService {
     validateResponse(client.sendTwoFactorCodeForLoginUsingMethod(twoFactorId, request));
   }
 
-  @OpenAccessAPI(
-      explanation = "This is directory information about the application",
-      reviewer = "jscarbor")
+  @PreAuthorize("hasPermission(#user, 'VIEW_OWN|MANAGE_USERS|CUSTOMER_SERVICE')")
+  public boolean twoFactorEnabled(@NonNull FusionAuthUser user) {
+    return getUser(user).twoFactorEnabled();
+  }
+
+  User getUser(@NonNull UUID fusionAuthUserId) {
+    return coreFusionAuthService.getUser(fusionAuthUserId);
+  }
+
+  private Application getApplication() {
+    return coreFusionAuthService.getApplication();
+  }
+
+  @OpenAccessAPI(explanation = "directory information about the app", reviewer = "jscarbor")
+  public int getJWTRefreshTokenTimeToLiveInMinutes() {
+    return getApplication().jwtConfiguration.refreshTokenTimeToLiveInMinutes;
+  }
+
+  @OpenAccessAPI(explanation = "directory information about the app", reviewer = "jscarbor")
   public UUID getApplicationId() {
-    return UUID.fromString(fusionAuthProperties.getApplicationId());
+    return coreFusionAuthService.getApplicationId();
   }
 
-  @OpenAccessAPI(explanation = "Returns info about the current user only", reviewer = "jscarbor")
-  public boolean twoFactorEnabled() {
-    return getUser(CurrentUser.getFusionAuthUserId()).twoFactorEnabled();
+  static <T> T validateResponse(ClientResponse<T, Errors> response) {
+    return CoreFusionAuthService.validateResponse(response);
   }
 
-  public Application getApplication() {
-    ClientResponse<ApplicationResponse, Void> response =
-        client.retrieveApplication(getApplicationId());
-    if (response.wasSuccessful()) {
-      return response.successResponse.application;
+  /**
+   * For wrapping CurrentUser and User with a common interface (yes, the irony is not lost, but
+   * CurrentUser can't implement because it has static implementations of some of the methods we
+   * need on the instance) that contains the IDs for FusionAuth and permissions checking
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class FusionAuthUser implements OwnerRelated {
+    String subjectRef;
+    TypedId<UserId> userId;
+    TypedId<BusinessId> businessId;
+
+    public UUID getFusionAuthId() {
+      return UUID.fromString(getSubjectRef());
     }
-    throw new InvalidRequestException(String.valueOf(response.status), response.exception);
+
+    @Override
+    public TypedId<UserId> getOwnerId() {
+      return getUserId();
+    }
+
+    public static FusionAuthUser fromCurrentUser() {
+      return new FusionAuthUser(
+          CurrentUser.getFusionAuthUserId().toString(),
+          CurrentUser.getUserId(),
+          CurrentUser.getBusinessId());
+    }
+
+    public static FusionAuthUser fromUser(com.clearspend.capital.data.model.User user) {
+      return new FusionAuthUser(user.getSubjectRef(), user.getId(), user.getBusinessId());
+    }
   }
 }

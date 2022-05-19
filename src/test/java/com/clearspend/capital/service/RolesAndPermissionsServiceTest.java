@@ -709,7 +709,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     // Bootstrap an admin user for this test
     User admin = createBusinessRecord.user();
     // go under the radar using test privilege to call fusionAuthService for bootstrapping CSM role
-    fusionAuthService.changeUserRole(
+    testHelper.changeUserRole(
         RoleChange.GRANT, admin.getSubjectRef(), GLOBAL_CUSTOMER_SERVICE_MANAGER);
 
     setCurrentUser(admin);

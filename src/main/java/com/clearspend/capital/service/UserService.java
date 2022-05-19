@@ -66,8 +66,8 @@ public class UserService {
 
   private final UserRepository userRepository;
 
+  private final CoreFusionAuthService fusionAuthService;
   private final TwilioService twilioService;
-  private final FusionAuthService fusionAuthService;
   private final BusinessOwnerService businessOwnerService;
   private final CardService cardService;
   private final StripeClient stripeClient;

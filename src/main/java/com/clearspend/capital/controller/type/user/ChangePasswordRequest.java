@@ -1,10 +1,14 @@
 package com.clearspend.capital.controller.type.user;
 
 import com.clearspend.capital.common.masking.annotation.Sensitive;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,17 +25,21 @@ public class ChangePasswordRequest {
   }
 
   public ChangePasswordRequest(
+      @Nullable TypedId<UserId> userId,
       @Nullable String currentPassword,
       @Nullable String newPassword,
       @Nullable String trustChallenge,
       @Nullable String twoFactorId,
       @Nullable String twoFactorCode) {
+    this.userId = userId;
     this.currentPassword = currentPassword;
     this.newPassword = newPassword;
     this.trustChallenge = trustChallenge;
     this.twoFactorId = twoFactorId;
     this.twoFactorCode = twoFactorCode;
   }
+
+  @Nullable private TypedId<UserId> userId;
 
   @Sensitive
   @JsonProperty("currentPassword")
@@ -64,8 +72,15 @@ public class ChangePasswordRequest {
   @Nullable
   private String twoFactorCode;
 
-  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest() {
+  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest(User user) {
     return new FusionAuthService.ChangePasswordRequest(
-        currentPassword, newPassword, trustChallenge, twoFactorId, twoFactorCode);
+        UUID.fromString(user.getSubjectRef()),
+        user.getBusinessId(),
+        user.getId(),
+        currentPassword,
+        newPassword,
+        trustChallenge,
+        twoFactorId,
+        twoFactorCode);
   }
 }

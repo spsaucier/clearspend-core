@@ -68,7 +68,7 @@ public class BusinessProspectService {
   private final UserService userService;
   private final AllocationService allocationService;
   private final BusinessOwnerService businessOwnerService;
-  private final FusionAuthService fusionAuthService;
+  private final CoreFusionAuthService fusionAuthService;
   private final TwilioService twilioService;
 
   @RestrictedApi(

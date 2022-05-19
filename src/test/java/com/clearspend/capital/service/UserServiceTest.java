@@ -23,6 +23,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.UserRepositoryCustom.FilteredUserWithCardListRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.github.javafaker.Faker;
@@ -376,7 +377,7 @@ class UserServiceTest extends BaseCapitalTest {
         CardType.VIRTUAL,
         false);
 
-    assertThat(fusionAuthService.getUser(existing).email)
+    assertThat(fusionAuthService.getUser(FusionAuthUser.fromUser(existing)).email)
         .isEqualTo(existing.getEmail().getEncrypted());
     long cardholderObjs = stripeMockClient.countCreatedObjectsByType(Cardholder.class);
     testHelper.setCurrentUser(createBusinessRecord.user());
@@ -394,7 +395,7 @@ class UserServiceTest extends BaseCapitalTest {
                     false))
             .user();
 
-    assertThat(fusionAuthService.getUser(existing).email)
+    assertThat(fusionAuthService.getUser(FusionAuthUser.fromUser(existing)).email)
         .isEqualTo(existing.getEmail().getEncrypted());
     assertThat(stripeMockClient.countCreatedObjectsByType(Cardholder.class))
         .isEqualTo(cardholderObjs + 1);
