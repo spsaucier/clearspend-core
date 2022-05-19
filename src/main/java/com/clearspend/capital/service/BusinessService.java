@@ -86,7 +86,6 @@ public class BusinessService {
             convertBusinessProspect.getLegalName(),
             businessType,
             ClearAddress.of(convertBusinessProspect.getAddress()),
-            convertBusinessProspect.getEmployerIdentificationNumber(),
             Currency.USD,
             BusinessOnboardingStep.BUSINESS_OWNERS,
             KnowYourBusinessStatus.PENDING,
@@ -100,6 +99,8 @@ public class BusinessService {
       business.setId(businessId);
     }
 
+    business.setEmployerIdentificationNumber(
+        convertBusinessProspect.getEmployerIdentificationNumber());
     business.setBusinessName(convertBusinessProspect.getBusinessName());
     business.setDescription(convertBusinessProspect.getDescription());
     business.setBusinessPhone(
@@ -396,6 +397,10 @@ public class BusinessService {
   @Transactional
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void syncWithStripeAccountData(Business business, com.stripe.model.Account account) {
+    if (business.getType().isPartnerType()) {
+      // Partner-Type businesses do not have the required Stripe details to continue.
+      return;
+    }
     StringBuilder stringBuilder = new StringBuilder();
     Company company = account.getCompany();
     setOnNotEqual(

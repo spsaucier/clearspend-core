@@ -53,7 +53,7 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
   })
   private ClearAddress clearAddress;
 
-  @Sensitive @NonNull private String employerIdentificationNumber;
+  @Sensitive private String employerIdentificationNumber;
 
   @Sensitive @Embedded private RequiredEncryptedString businessEmail;
 
