@@ -178,17 +178,22 @@ public class CodatService {
 
     if (accountActivity.getAccountingDetails() != null) {
       if (accountActivity.getAccountingDetails().getCodatClassId() != null) {
-        CodatCategory classCategory =
-            codatCategoryRepository.getById(
+        Optional<CodatCategory> classCategory =
+            codatCategoryRepository.findById(
                 accountActivity.getAccountingDetails().getCodatClassId());
-        trackingCategoryRefs.add(new CodatTrackingCategoryRef(classCategory.getCodatCategoryId()));
+        if (classCategory.isPresent()) {
+          trackingCategoryRefs.add(
+              new CodatTrackingCategoryRef(classCategory.get().getCodatCategoryId()));
+        }
       }
       if (accountActivity.getAccountingDetails().getCodatLocationId() != null) {
-        CodatCategory locationCategory =
-            codatCategoryRepository.getById(
+        Optional<CodatCategory> locationCategory =
+            codatCategoryRepository.findById(
                 accountActivity.getAccountingDetails().getCodatLocationId());
-        trackingCategoryRefs.add(
-            new CodatTrackingCategoryRef(locationCategory.getCodatCategoryId()));
+        if (locationCategory.isPresent()) {
+          trackingCategoryRefs.add(
+              new CodatTrackingCategoryRef(locationCategory.get().getCodatCategoryId()));
+        }
       }
     }
 
