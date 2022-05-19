@@ -153,8 +153,8 @@ public class BusinessSettingsService {
         updateBusinessSettings.getIssuedPhysicalCardsLimit(),
         businessSettings::setIssuedPhysicalCardsLimit);
     BeanUtils.setNotNull(
-        updateBusinessSettings.getForeignTransactionFee(),
-        businessSettings::setForeignTransactionFee);
+        updateBusinessSettings.getForeignTransactionFeePercents(),
+        businessSettings::setForeignTransactionFeePercents);
     BeanUtils.setNotNull(
         updateBusinessSettings.getAchFundsAvailabilityMode(),
         businessSettings::setAchFundsAvailabilityMode);

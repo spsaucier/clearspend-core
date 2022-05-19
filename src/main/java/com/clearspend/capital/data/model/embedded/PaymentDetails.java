@@ -1,5 +1,6 @@
 package com.clearspend.capital.data.model.embedded;
 
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import java.math.BigDecimal;
@@ -26,21 +27,12 @@ public class PaymentDetails {
   @Enumerated(EnumType.STRING)
   private PaymentType paymentType;
 
-  // comes from business settings effective on authorization time
-  private BigDecimal foreignTransactionFee;
+  // calculated based from stripe Authorization
+  private Boolean foreignTransaction;
+
+  // calculated based on the business settings
+  private Amount foreignTransactionFee;
 
   // comes from stripe Transaction(capture)
   private BigDecimal interchange;
-
-  // calculated based from stripe Authorization
-  private Boolean foreign;
-
-  public static PaymentDetails clone(PaymentDetails paymentDetails) {
-    return new PaymentDetails(
-        paymentDetails.authorizationMethod,
-        paymentDetails.paymentType,
-        paymentDetails.foreignTransactionFee,
-        paymentDetails.interchange,
-        paymentDetails.foreign);
-  }
 }

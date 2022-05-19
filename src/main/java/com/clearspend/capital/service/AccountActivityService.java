@@ -386,11 +386,17 @@ public class AccountActivityService {
                 receiptRepository.saveAllAndFlush(receipts);
               });
 
-      PaymentDetails paymentDetails =
-          PaymentDetails.clone(priorAccountActivity.getPaymentDetails());
-      paymentDetails.setInterchange(common.getInterchange());
-      accountActivity.setPaymentDetails(paymentDetails);
+      PaymentDetails paymentDetails = new PaymentDetails();
+      // auth method only exists in the authorization object so copy from the previous
+      paymentDetails.setAuthorizationMethod(
+          priorAccountActivity.getPaymentDetails().getAuthorizationMethod());
+      paymentDetails.setPaymentType(priorAccountActivity.getPaymentDetails().getPaymentType());
 
+      paymentDetails.setForeignTransaction(common.getForeignTransaction());
+      paymentDetails.setForeignTransactionFee(common.getForeignTransactionFee());
+      paymentDetails.setInterchange(common.getInterchange());
+
+      accountActivity.setPaymentDetails(paymentDetails);
     } else {
       AuthorizationMethod authorizationMethod = common.getAuthorizationMethod();
       if (authorizationMethod != null) {
@@ -398,9 +404,9 @@ public class AccountActivityService {
             new PaymentDetails(
                 authorizationMethod,
                 PaymentType.from(authorizationMethod),
-                common.getBusinessSettings().getForeignTransactionFee(),
-                common.getInterchange(),
-                common.getForeign()));
+                common.getForeignTransaction(),
+                common.getForeignTransactionFee(),
+                common.getInterchange()));
       }
     }
 

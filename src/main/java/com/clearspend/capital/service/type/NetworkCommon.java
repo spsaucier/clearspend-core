@@ -142,7 +142,9 @@ public class NetworkCommon {
 
   private AuthorizationMethod authorizationMethod;
 
-  private Boolean foreign;
+  private Boolean foreignTransaction;
+
+  private Amount foreignTransactionFee;
 
   private String stripeAuthorizationExternalRef;
 
@@ -230,11 +232,12 @@ public class NetworkCommon {
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
       merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
 
-      foreign =
+      foreignTransaction =
           !Objects.equals(Country.of(merchantData.getCountry()), Country.USA)
               || !Objects.equals(Currency.of(authorization.getMerchantCurrency()), Currency.USD);
     } else {
-      foreign = !Objects.equals(Currency.of(authorization.getMerchantCurrency()), Currency.USD);
+      foreignTransaction =
+          !Objects.equals(Currency.of(authorization.getMerchantCurrency()), Currency.USD);
     }
 
     transactionDate =
@@ -283,11 +286,12 @@ public class NetworkCommon {
       merchantCategoryCode = Integer.parseInt(merchantData.getCategoryCode());
       merchantType = MerchantType.fromStripe(merchantData.getCategory().toLowerCase());
 
-      foreign =
+      foreignTransaction =
           !Objects.equals(Country.of(merchantData.getCountry()), Country.USA)
               || !Objects.equals(Currency.of(transaction.getMerchantCurrency()), Currency.USD);
     } else {
-      foreign = !Objects.equals(Currency.of(transaction.getMerchantCurrency()), Currency.USD);
+      foreignTransaction =
+          !Objects.equals(Currency.of(transaction.getMerchantCurrency()), Currency.USD);
     }
 
     transactionDate =

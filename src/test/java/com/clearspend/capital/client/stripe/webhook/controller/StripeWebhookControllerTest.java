@@ -235,8 +235,8 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new StripeWebhookController.ParseRecord(
                 new StripeWebhookLog(), authorization, authorization, stripeEventType),
             true);
-    if (networkCommon.getForeign()) {
-      amount += (amount / 100) * businessSettings.getForeignTransactionFee().longValue();
+    if (networkCommon.getForeignTransaction()) {
+      amount += (amount / 100) * businessSettings.getForeignTransactionFeePercents().longValue();
     }
     if (approved) {
       testHelper.assertPost(networkCommon, false, false, true);
@@ -495,9 +495,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new PaymentDetails(
                 AuthorizationMethod.CONTACTLESS,
                 PaymentType.from(AuthorizationMethod.CONTACTLESS),
-                businessSettings.getForeignTransactionFee(),
-                null,
-                true));
+                true,
+                Amount.fromStripeAmount(business.getCurrency(), 1000L)
+                    .percents(businessSettings.getForeignTransactionFeePercents()),
+                null));
   }
 
   @SneakyThrows
@@ -711,7 +712,9 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     long captureAmount = -authAmount;
     BigDecimal closingBalance =
         BigDecimal.valueOf(
-            100 - 10 - 10 / 100d * businessSettings.getForeignTransactionFee().doubleValue());
+            100
+                - 10
+                - 10 / 100d * businessSettings.getForeignTransactionFeePercents().doubleValue());
     capture(authorize, allocation, user, card, captureAmount, closingBalance);
 
     AccountActivity latestActivity = getLatestActivity();
@@ -720,9 +723,10 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new PaymentDetails(
                 AuthorizationMethod.CONTACTLESS,
                 PaymentType.from(AuthorizationMethod.CONTACTLESS),
-                businessSettings.getForeignTransactionFee(),
-                null,
-                true));
+                true,
+                Amount.fromStripeAmount(business.getCurrency(), 1000L)
+                    .percents(businessSettings.getForeignTransactionFeePercents()),
+                null));
   }
 
   @Test
@@ -1307,9 +1311,9 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             new PaymentDetails(
                 AuthorizationMethod.ONLINE,
                 PaymentType.ONLINE,
-                new BigDecimal(3),
-                new BigDecimal("38.4"),
-                false));
+                false,
+                null,
+                new BigDecimal("38.4")));
   }
 
   private AccountActivity getLatestActivity() {

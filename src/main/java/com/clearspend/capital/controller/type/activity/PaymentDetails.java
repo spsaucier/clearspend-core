@@ -1,8 +1,8 @@
 package com.clearspend.capital.controller.type.activity;
 
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.math.BigDecimal;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,10 +15,10 @@ public class PaymentDetails {
   private PaymentType paymentType;
 
   @JsonProperty("foreignTransactionFee")
-  private BigDecimal foreignTransactionFee;
+  private Amount foreignTransactionFee;
 
-  @JsonProperty("foreign")
-  private Boolean foreign;
+  @JsonProperty("foreignTransaction")
+  private Boolean foreignTransaction;
 
   public static PaymentDetails from(
       com.clearspend.capital.data.model.embedded.PaymentDetails paymentDetails) {
@@ -28,7 +28,7 @@ public class PaymentDetails {
                 new PaymentDetails(
                     details.getPaymentType(),
                     details.getForeignTransactionFee(),
-                    details.getForeign()))
+                    details.getForeignTransaction()))
         .orElse(null);
   }
 }

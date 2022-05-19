@@ -293,12 +293,13 @@ public class NetworkMessageService {
       }
     }
 
-    if (common.getForeign()) {
-      Amount foreignFee =
+    if (common.getForeignTransaction()) {
+      Amount foreignTransactionFee =
           common
               .getRequestedAmount()
-              .percents(common.getBusinessSettings().getForeignTransactionFee());
-      common.setPaddedAmount(common.getPaddedAmount().add(foreignFee));
+              .percents(common.getBusinessSettings().getForeignTransactionFeePercents());
+      common.setForeignTransactionFee(foreignTransactionFee.abs());
+      common.setPaddedAmount(common.getPaddedAmount().add(foreignTransactionFee));
     }
 
     common.getPaddedAmount().ensureNegative();
@@ -332,12 +333,13 @@ public class NetworkMessageService {
   private void processTransactionCreated(NetworkCommon common) {
     common.setApprovedAmount(common.getRequestedAmount());
 
-    if (common.getForeign()) {
-      Amount foreignFee =
+    if (common.getForeignTransaction()) {
+      Amount foreignTransactionFee =
           common
               .getApprovedAmount()
-              .percents(common.getBusinessSettings().getForeignTransactionFee());
-      common.setApprovedAmount(common.getApprovedAmount().add(foreignFee));
+              .percents(common.getBusinessSettings().getForeignTransactionFeePercents());
+      common.setApprovedAmount(common.getApprovedAmount().add(foreignTransactionFee));
+      common.setForeignTransactionFee(foreignTransactionFee.abs());
     }
 
     AccountActivityType accountActivityType = common.getAccountActivityType();
@@ -434,7 +436,7 @@ public class NetworkMessageService {
           common.getApprovedAmount(),
           common.getMerchantCategoryCode(),
           common.getAuthorizationMethod(),
-          common.getForeign());
+          common.getForeignTransaction());
     } catch (LimitViolationException | SpendControlViolationException e) {
       log.warn("Failed to accept a transaction due to a decline: {}", e.getMessage());
       if (e instanceof LimitViolationException limitViolationException) {

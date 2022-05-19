@@ -56,7 +56,7 @@ public class BusinessSettings extends TypedMutable<BusinessSettingsId> {
 
   @NonNull private Integer issuedPhysicalCardsLimit;
 
-  @NonNull private BigDecimal foreignTransactionFee;
+  @NonNull private BigDecimal foreignTransactionFeePercents;
 
   @NonNull
   @Enumerated(EnumType.STRING)

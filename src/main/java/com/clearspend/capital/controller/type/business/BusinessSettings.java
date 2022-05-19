@@ -52,8 +52,8 @@ public class BusinessSettings {
   @JsonProperty("issuedPhysicalCardsTotal")
   int issuedPhysicalCardsTotal;
 
-  @JsonProperty("foreignTransactionFee")
-  BigDecimal foreignTransactionFee;
+  @JsonProperty("foreignTransactionFeePercents")
+  BigDecimal foreignTransactionFeePercents;
 
   @JsonProperty("achFundsAvailabilityMode")
   AchFundsAvailabilityMode achFundsAvailabilityMode;
@@ -78,7 +78,7 @@ public class BusinessSettings {
         limitOperationRecords,
         businessSettings.getIssuedPhysicalCardsLimit(),
         businessSettings.getIssuedPhysicalCardsTotal(),
-        businessSettings.getForeignTransactionFee(),
+        businessSettings.getForeignTransactionFeePercents(),
         businessSettings.getAchFundsAvailabilityMode(),
         businessSettings.getImmediateAchFundsLimit());
   }

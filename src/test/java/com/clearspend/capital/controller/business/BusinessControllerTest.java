@@ -847,7 +847,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertThat(monthlyAchDepositOperations).isEqualTo(6);
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
-    assertThat(businessSettingsResponse.getForeignTransactionFee())
+    assertThat(businessSettingsResponse.getForeignTransactionFeePercents())
         .isEqualTo(BigDecimal.valueOf(5.0));
     assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
         .isEqualTo(AchFundsAvailabilityMode.FAST);
@@ -895,7 +895,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertThat(dailyAchDepositOperations).isEmpty();
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
-    assertThat(businessSettingsResponse.getForeignTransactionFee()).isEqualTo(BigDecimal.TEN);
+    assertThat(businessSettingsResponse.getForeignTransactionFeePercents())
+        .isEqualTo(BigDecimal.TEN);
     assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
         .isEqualTo(AchFundsAvailabilityMode.STANDARD);
     assertThat(businessSettingsResponse.getImmediateAchFundsLimit()).isEqualTo(BigDecimal.TEN);
@@ -976,7 +977,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertThat(monthlyAchDepositOperations).isEqualTo(6);
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsLimit()).isEqualTo(110);
     assertThat(businessSettingsResponse.getIssuedPhysicalCardsTotal()).isEqualTo(0);
-    assertThat(businessSettingsResponse.getForeignTransactionFee()).isEqualTo(BigDecimal.TEN);
+    assertThat(businessSettingsResponse.getForeignTransactionFeePercents())
+        .isEqualTo(BigDecimal.TEN);
     assertThat(businessSettingsResponse.getAchFundsAvailabilityMode())
         .isEqualTo(AchFundsAvailabilityMode.IMMEDIATE);
     assertThat(businessSettingsResponse.getImmediateAchFundsLimit()).isEqualTo(BigDecimal.ONE);
