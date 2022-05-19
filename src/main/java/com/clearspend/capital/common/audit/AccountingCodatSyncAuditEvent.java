@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationEvent;
 public class AccountingCodatSyncAuditEvent extends ApplicationEvent {
 
   public static final String ROW_KEY_PREFIX = "CODAT_SYNC";
+  public static final String COLUMN_FAMILY = "CODAT_SYNC_DATA";
   private Map<String, String> codatSyncColumnData;
   private String userId;
 
