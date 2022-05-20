@@ -1,5 +1,6 @@
-package com.clearspend.capital.common.audit;
+package com.clearspend.capital.data.audit;
 
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
@@ -20,9 +21,9 @@ public class AccountActivityAuditEvent extends ApplicationEvent {
   public static final String TYPE_RECEIPT_ADD = "receipt_added";
   public static final String TYPE_NOTES_ADD = "notes_add";
   public static final String ROW_KEY_PREFIX = "account_activity";
+  public static final String COLUMN_FAMILY = "entity_account_activity";
 
-  private String message;
-  private String eventType;
+  private Map<String, String> activityColumnData;
 
   private String accountActivityId;
 
@@ -31,14 +32,12 @@ public class AccountActivityAuditEvent extends ApplicationEvent {
 
   public AccountActivityAuditEvent(
       Object source,
-      String message,
-      String eventType,
+      Map<String, String> activityData,
       String businessId,
       String userId,
       String accountActivityId) {
     super(source);
-    this.message = message;
-    this.eventType = eventType;
+    this.activityColumnData = activityData;
     this.businessId = businessId;
     this.userId = userId;
     this.accountActivityId = accountActivityId;

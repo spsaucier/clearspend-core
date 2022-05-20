@@ -1,6 +1,7 @@
 package com.clearspend.capital.common.audit;
 
 import com.clearspend.capital.client.google.BigTableClient;
+import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -30,18 +31,14 @@ public class AccountingAuditProcessorTest {
   @Test
   @SneakyThrows
   public void testStoreAccountingEventToBigTable() {
-    AccountActivityAuditEvent event =
-        new AccountActivityAuditEvent(
-            this,
-            "test messsage",
-            AccountActivityAuditEvent.TYPE_NOTES_ADD,
-            "businessID1",
-            "userid1",
-            "activityId1");
     Map<String, String> columnMap = new HashMap<>();
-    columnMap.put(event.getEventType(), event.getMessage());
+    columnMap.put("testKye", "testValue");
+    columnMap.put("userid", "userid1");
+    AccountActivityAuditEvent event =
+        new AccountActivityAuditEvent(this, columnMap, "businessID1", "userid1", "activityId1");
     String rowKey = underTest.storeAccountingActivityEventToBigTable(event);
-    Mockito.verify(bigTableClient).saveOneRow("audit-table", rowKey, "cfaa", columnMap);
+    Mockito.verify(bigTableClient)
+        .saveOneRow("audit-table", rowKey, AccountActivityAuditEvent.COLUMN_FAMILY, columnMap);
   }
 
   @Test
@@ -52,5 +49,16 @@ public class AccountingAuditProcessorTest {
     String reversedFuture =
         String.valueOf(AccountingAuditProcessor.MAX_DATE - Integer.valueOf(futureDate));
     Assertions.assertTrue(actual.compareTo(reversedFuture) > 0);
+  }
+
+  @Test
+  public void testCodatSyncEventSent() {
+    Map<String, String> data = new HashMap<>();
+    data.put(CodatSyncEventType.SUPPLIER_SYNC_TO_CODAT.toString(), "my new supplier");
+    AccountingCodatSyncAuditEvent event =
+        new AccountingCodatSyncAuditEvent(this, data, "bussinessId", "userId");
+    String rowKey = underTest.storeAccountingCodatSyncAuditEventToBigTable(event);
+    Mockito.verify(bigTableClient)
+        .saveOneRow("audit-table", rowKey, AccountingCodatSyncAuditEvent.COLUMN_FAMILY, data);
   }
 }

@@ -31,6 +31,9 @@ import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
+import com.clearspend.capital.common.audit.AccountingAuditEventPublisher;
+import com.clearspend.capital.common.audit.AccountingCodatSyncAuditEvent;
+import com.clearspend.capital.common.audit.CodatSyncEventType;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.CodatApiCallException;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
@@ -62,9 +65,11 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -99,6 +104,8 @@ public class CodatService {
   private final CodatCategoryRepository codatCategoryRepository;
 
   private final CodatProperties codatProperties;
+
+  private final AccountingAuditEventPublisher accountingEventPublisher;
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
@@ -623,6 +630,14 @@ public class CodatService {
             business.getCodatCompanyRef(),
             currentUserDetails.getFirstName(),
             currentUserDetails.getLastName()));
+    // Emit Audit Event
+    Map<String, String> codatActivity = new HashMap<>();
+    codatActivity.put(CodatSyncEventType.SUPPLIER_SYNC_TO_CODAT.toString(), supplierName);
+    codatActivity.put(
+        AccountingCodatSyncAuditEvent.COLUMN_NAME_ACCOUNT_ACTIVITY, accountActivityId.toString());
+    accountingEventPublisher.publishAccountingCodatSyncAuditEvent(
+        codatActivity, businessId.toString(), currentUserDetails.getId().toString());
+
     return new CreateAssignSupplierResponse(accountActivityId);
   }
 

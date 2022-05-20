@@ -21,6 +21,7 @@ import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionC
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
+import com.clearspend.capital.client.google.MockBigTableClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
@@ -75,6 +76,7 @@ import lombok.With;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Ignore;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -114,6 +116,8 @@ public class CodatServiceTest extends BaseCapitalTest {
 
   @Autowired CacheManager cacheManager;
 
+  @Autowired MockBigTableClient bigTableClient;
+
   @BeforeEach
   public void setup() {
     createBusinessRecord = testHelper.createBusiness();
@@ -141,6 +145,11 @@ public class CodatServiceTest extends BaseCapitalTest {
     cacheManager.getCacheNames().stream()
         .map(it -> cacheManager.getCache(it))
         .forEach(it -> it.clear());
+  }
+
+  @AfterEach
+  void cleanUp() {
+    bigTableClient.getMockBigTable().clear();
   }
 
   @Test
@@ -188,7 +197,7 @@ public class CodatServiceTest extends BaseCapitalTest {
             newAccountActivity.getExpenseDetails().getExpenseCategoryId(),
             0,
             "1"));
-
+    newAccountActivity.setNotes("My test notes");
     newAccountActivity = accountActivityRepository.save(newAccountActivity);
 
     codatService.syncTransactionAsDirectCost(newAccountActivity.getId(), business.getId());
@@ -1232,6 +1241,7 @@ public class CodatServiceTest extends BaseCapitalTest {
         accountActivityRepository.findById(newAccountActivity.getId()).get();
     assertThat(updatedAccountActivity.getMerchant().getCodatSupplierId()).isEqualTo("123");
     assertThat(updatedAccountActivity.getMerchant().getCodatSupplierName()).isEqualTo("supplier-1");
+    assertThat(bigTableClient.getMockBigTable().keySet().size() > 0).isTrue();
   }
 
   public class CodatAccountBuilder {

@@ -19,6 +19,10 @@ public class MockBigTableClient extends BigTableClient {
 
   Map<String, String> mockBigTable = new HashMap<>();
 
+  public Map<String, String> getMockBigTable() {
+    return mockBigTable;
+  }
+
   public MockBigTableClient(@NonNull BigTableProperties bigTableProperties) {
     super(bigTableProperties);
   }

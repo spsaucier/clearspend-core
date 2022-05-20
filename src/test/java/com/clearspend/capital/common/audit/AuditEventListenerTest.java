@@ -1,5 +1,8 @@
 package com.clearspend.capital.common.audit;
 
+import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,14 +28,10 @@ public class AuditEventListenerTest {
   @Test
   @SneakyThrows
   public void testOnAccountingAuditEvent() {
+    Map<String, String> columnMap = new HashMap<>();
+    columnMap.put("testKye", "testValue");
     AccountActivityAuditEvent event =
-        new AccountActivityAuditEvent(
-            this,
-            "test messsage",
-            AccountActivityAuditEvent.TYPE_NOTES_ADD,
-            "businessID1",
-            "userid1",
-            "activity1");
+        new AccountActivityAuditEvent(this, columnMap, "businessID1", "userid1", "activity1");
     underTest.onAccountingAuditEvent(event);
     Mockito.verify(processor).storeAccountingActivityEventToBigTable(event);
   }

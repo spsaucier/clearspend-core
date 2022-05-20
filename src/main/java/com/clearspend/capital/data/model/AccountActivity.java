@@ -9,6 +9,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.audit.AccountActivityEntityEventListener;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
 import com.clearspend.capital.data.model.embedded.AccountingDetails;
 import com.clearspend.capital.data.model.embedded.AllocationDetails;
@@ -30,6 +31,7 @@ import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -51,6 +53,7 @@ import org.hibernate.annotations.Type;
 @RequiredArgsConstructor
 @DynamicUpdate
 @Slf4j
+@EntityListeners(AccountActivityEntityEventListener.class)
 public class AccountActivity extends TypedMutable<AccountActivityId> implements Permissionable {
 
   @NonNull
