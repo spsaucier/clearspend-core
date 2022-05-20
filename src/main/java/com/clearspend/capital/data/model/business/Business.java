@@ -124,6 +124,10 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
 
   private String codatCreditCardId;
 
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private BusinessPartnerType partnerType = BusinessPartnerType.CLIENT;
+
   @NonNull private Boolean autoCreateExpenseCategories;
 
   @NonNull
