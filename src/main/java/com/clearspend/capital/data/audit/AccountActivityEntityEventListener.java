@@ -15,7 +15,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AccountActivityEntityEventListener {
 
-  @Autowired private AccountingAuditEventPublisher publisher;
+  private static AccountingAuditEventPublisher publisher;
+
+  @Autowired
+  public void init(AccountingAuditEventPublisher publisher) {
+    AccountActivityEntityEventListener.publisher = publisher;
+    log.info("AccountActivityEntityEventListener publisher is injected {}", publisher.toString());
+  }
 
   @PostUpdate
   private void postUpdateAudit(AccountActivity accountActivity) {

@@ -25,6 +25,7 @@ public class MockBigTableClient extends BigTableClient {
 
   public MockBigTableClient(@NonNull BigTableProperties bigTableProperties) {
     super(bigTableProperties);
+    log.info("MockBigTableClient found bigtable cred file {}", bigTableProperties.getCredentials());
   }
 
   @Override

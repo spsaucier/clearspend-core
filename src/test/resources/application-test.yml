@@ -53,6 +53,10 @@ client:
     response-timeout: 15000
     read-timeout: 15000
     write-timeout: 10000
+  bigtable:
+    project-id: ${BIGTABLE_PROJECT_ID:silken-facet-324217}
+    instance-id: ${BIGTABLE_INSTANCE_ID:dev-bigtable}
+    credentials: ${GCS_BIGTABLE_SA:<your test SA json>}
 
 logging:
   level:

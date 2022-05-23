@@ -181,6 +181,7 @@ client:
   bigtable:
     project-id: ${BIGTABLE_PROJECT_ID:silken-facet-324217}
     instance-id: ${BIGTABLE_INSTANCE_ID:dev-bigtable}
+    credentials: ${GCS_BIGTABLE_SA:<not set>}
 logging:
   level:
     root: INFO

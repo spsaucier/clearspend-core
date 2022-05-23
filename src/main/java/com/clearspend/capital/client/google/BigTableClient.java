@@ -2,7 +2,9 @@ package com.clearspend.capital.client.google;
 
 import static com.google.cloud.bigtable.data.v2.models.Filters.FILTERS;
 
+import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.rpc.ServerStream;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 import com.google.cloud.bigtable.data.v2.models.Filters;
@@ -10,6 +12,8 @@ import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.ReadModifyWriteRow;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowMutation;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import lombok.NonNull;
@@ -24,15 +28,27 @@ import org.springframework.stereotype.Component;
 public class BigTableClient {
 
   private final BigTableProperties bigTableProperties;
-  private final BigtableDataSettings settings;
+  private BigtableDataSettings settings;
 
   public BigTableClient(@NonNull BigTableProperties bigTableProperties) {
     this.bigTableProperties = bigTableProperties;
-    this.settings =
-        BigtableDataSettings.newBuilder()
-            .setProjectId(bigTableProperties.getProjectId())
-            .setInstanceId(bigTableProperties.getInstanceId())
-            .build();
+    FixedCredentialsProvider provider = null;
+    try {
+      provider =
+          FixedCredentialsProvider.create(
+              GoogleCredentials.fromStream(
+                  new FileInputStream(bigTableProperties.getCredentials())));
+      this.settings =
+          BigtableDataSettings.newBuilder()
+              .setCredentialsProvider(provider)
+              .setProjectId(bigTableProperties.getProjectId())
+              .setInstanceId(bigTableProperties.getInstanceId())
+              .build();
+    } catch (IOException e) {
+      log.error("BigTableClient: SA file path is not configured correctly", e);
+    } catch (Exception e) {
+      log.error("BigTableClient: bigtable env is not configured properly", e);
+    }
   }
 
   public void saveOneRow(
@@ -41,9 +57,7 @@ public class BigTableClient {
       @NonNull String columFamily,
       @NonNull Map<String, String> columnData) {
     long timestamp = System.currentTimeMillis() * 1000;
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       RowMutation newRow = RowMutation.create(tableName, rowKey);
       for (Map.Entry<String, String> set : columnData.entrySet()) {
         newRow.setCell(columFamily, set.getKey(), timestamp, set.getValue());
@@ -55,9 +69,7 @@ public class BigTableClient {
   }
 
   public Row readOneRow(@NonNull String tableName, String rowKey) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       return dataClient.readRow(tableName, rowKey);
     } catch (Exception e) {
       log.error("BigTableClient readOneRow failed", e);
@@ -66,9 +78,7 @@ public class BigTableClient {
   }
 
   public Row readOneRowByFamily(@NonNull String tableName, String rowKey, String familyName) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       Filters.Filter filter = FILTERS.chain().filter(FILTERS.family().exactMatch(familyName));
       return dataClient.readRow(tableName, rowKey, filter);
     } catch (Exception e) {
@@ -79,9 +89,7 @@ public class BigTableClient {
 
   public ServerStream<Row> readMultipleRow(
       @NonNull String tableName, @NonNull List<String> rowKeys) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       Query query = Query.create(tableName);
       rowKeys.stream().forEach(key -> query.rowKey(key));
       return dataClient.readRows(query);
@@ -93,9 +101,7 @@ public class BigTableClient {
 
   public ServerStream<Row> readMultipleRowWithFilter(
       @NonNull String tableName, @NonNull String regex, String familyName) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
 
       Filters.Filter filter = null;
       if (StringUtils.isNoneBlank(familyName)) {
@@ -117,9 +123,7 @@ public class BigTableClient {
 
   public ServerStream<Row> readRangedRow(
       @NonNull String tableName, @NonNull String start, @NonNull String end) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       Query query = Query.create(tableName).range(start, end);
       return dataClient.readRows(query);
     } catch (Exception e) {
@@ -130,9 +134,7 @@ public class BigTableClient {
 
   public ServerStream<Row> readRowsByCustomFilter(
       @NonNull String tableName, @NonNull Filters.Filter filter) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       Query query = Query.create(tableName).filter(filter);
       return dataClient.readRows(query);
     } catch (Exception e) {
@@ -146,9 +148,7 @@ public class BigTableClient {
       @NonNull String rowKey,
       @NonNull String columFamily,
       @NonNull Map<String, String> columnData) {
-    try (BigtableDataClient dataClient =
-        BigtableDataClient.create(
-            bigTableProperties.getProjectId(), bigTableProperties.getInstanceId())) {
+    try (BigtableDataClient dataClient = BigtableDataClient.create(settings)) {
       ReadModifyWriteRow mutation = ReadModifyWriteRow.create(tableName, rowKey);
       for (Map.Entry<String, String> set : columnData.entrySet()) {
         mutation.append(columFamily, set.getKey(), set.getValue());
