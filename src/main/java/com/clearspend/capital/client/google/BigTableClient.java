@@ -12,7 +12,7 @@ import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.ReadModifyWriteRow;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowMutation;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class BigTableClient {
       provider =
           FixedCredentialsProvider.create(
               GoogleCredentials.fromStream(
-                  new FileInputStream(bigTableProperties.getCredentials())));
+                  new ByteArrayInputStream(bigTableProperties.getCredentials().getBytes())));
       this.settings =
           BigtableDataSettings.newBuilder()
               .setCredentialsProvider(provider)
