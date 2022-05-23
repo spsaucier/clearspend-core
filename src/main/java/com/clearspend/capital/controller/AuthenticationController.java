@@ -23,6 +23,7 @@ import com.clearspend.capital.service.BusinessProspectService.AuthenticationBusi
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.BusinessService.PreLoginOperation;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
@@ -48,6 +49,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import javax.validation.constraints.AssertTrue;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -255,7 +257,7 @@ public class AuthenticationController {
       summary =
           """
      Add a two-factor method once two-factor authentication is already enabled.  This method
-     performs two steps of a three-step operation.  Submit the add request, receive a 421
+     performs two steps of a three-step operation.  Submit the add request, receive a 242
      and codes for step-up to a prior method, then receive a 204 with no body then submit the
      code and new number at /authentication/two-factor/first/validate
      """)
@@ -281,7 +283,7 @@ public class AuthenticationController {
         Optional.ofNullable(request.userId()).map(userService::retrieveUser).orElse(actor);
 
     return Optional.ofNullable(function.apply(actor, request.svc(target)))
-        .map(r -> ResponseEntity.status(421).body(TwoFactorStartLoggedInResponse.of(r)))
+        .map(r -> ResponseEntity.status(242).body(TwoFactorStartLoggedInResponse.of(r)))
         .orElse(ResponseEntity.status(204).build());
   }
 
@@ -289,7 +291,7 @@ public class AuthenticationController {
       summary =
           """
       Remove a two-factor authentication method. This is a two-step operation.  Submit the delete
-      request, receive a 421, then submit the code and content from the 421 response.
+      request, receive a 242, then submit the code and content from the 242 response.
       204 on successful delete.
       """)
   @DeleteMapping("/two-factor/method")
@@ -308,7 +310,7 @@ public class AuthenticationController {
   TwoFactorResponse firstTwoFactorValidate(
       @Validated @RequestBody FirstTwoFactorValidateRequest firstTwoFactorValidateRequest) {
     return fusionAuthService.validateFirstTwoFactorCode(
-        userService.retrieveUser(CurrentUser.getUserId()),
+        FusionAuthUser.fromCurrentUser(),
         firstTwoFactorValidateRequest.code,
         firstTwoFactorValidateRequest.method,
         firstTwoFactorValidateRequest.destination);
@@ -321,6 +323,12 @@ public class AuthenticationController {
       String trustChallenge,
       String twoFactorId,
       String twoFactorCode) {
+    @AssertTrue(message = "Either the changing method or two factor codes must be submitted.")
+    @SuppressWarnings("unused")
+    private boolean isValid() {
+      return StringUtils.isNotBlank(changingNumber)
+          || StringUtils.isNoneBlank(trustChallenge, twoFactorCode, twoFactorId);
+    }
 
     public FusionAuthService.ChangePhoneNumberRequest svc(User user) {
       return new FusionAuthService.ChangePhoneNumberRequest(

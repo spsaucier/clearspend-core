@@ -202,6 +202,7 @@ public class FusionAuthService {
       case sms -> request.mobilePhone = destination;
       case authenticator -> throw new InvalidRequestException(
           "Authenticator does not support sending");
+      default -> throw new IllegalArgumentException("bad method " + method);
     }
     request.userId = fusionAuthUserId;
 
@@ -236,7 +237,7 @@ public class FusionAuthService {
 
   @PreAuthorize("isSelfOwned(#user)")
   public TwoFactorResponse validateFirstTwoFactorCode(
-      @NonNull com.clearspend.capital.data.model.User user,
+      @NonNull FusionAuthUser user,
       @NonNull String code,
       @NonNull FusionAuthService.TwoFactorAuthenticationMethod method,
       @NonNull String destination) {
@@ -244,12 +245,14 @@ public class FusionAuthService {
     TwoFactorRequest request = new TwoFactorRequest();
     request.code = code;
     request.method = method.name();
+    request.applicationId = getApplicationId();
     switch (method) {
       case email -> request.email = destination;
       case sms -> request.mobilePhone = destination;
       case authenticator -> request.secret = destination;
     }
-    return validateResponse(client.enableTwoFactor(UUID.fromString(user.getSubjectRef()), request));
+
+    return validateResponse(client.enableTwoFactor(user.getFusionAuthId(), request));
   }
 
   public enum RoleChange {
@@ -620,7 +623,8 @@ public class FusionAuthService {
     return coreFusionAuthService.getApplicationId();
   }
 
-  static <T> T validateResponse(ClientResponse<T, Errors> response) {
+  @OpenAccessAPI(explanation = "processing specific to FusionAuth", reviewer = "jscarbor")
+  public static <T> T validateResponse(ClientResponse<T, Errors> response) {
     return CoreFusionAuthService.validateResponse(response);
   }
 

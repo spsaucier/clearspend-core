@@ -22,6 +22,7 @@ import io.fusionauth.domain.api.twoFactor.TwoFactorSendRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartRequest;
 import io.fusionauth.domain.api.twoFactor.TwoFactorStartResponse;
 import io.fusionauth.domain.api.user.ChangePasswordRequest;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -58,6 +60,8 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
    * library offers.
    */
   private static final ObjectMapper objectMapper = new ObjectMapper();
+
+  private final Map<String, List<String>> sentCodes = new HashMap<>();
 
   private record TwoFactorEnable(TwoFactorSendRequest request, String code) {}
 
@@ -91,14 +95,6 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     trustTokensToChallenges.clear();
   }
 
-  public String getTwoFactorCodeForEnable(UUID userId) {
-    return pendingEnable.get(userId).code;
-  }
-
-  public String getTwoFactorCodeForLogin(String twoFactorId) {
-    return twoFactorPending.get(new TwoFactorId(twoFactorId)).code;
-  }
-
   private static String generateNextRecoveryCode() {
     return (RandomStringUtils.randomAlphanumeric(5) + "-" + RandomStringUtils.randomAlphanumeric(5))
         .toUpperCase(Locale.ROOT);
@@ -123,8 +119,36 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       TwoFactorSendRequest request) {
     String code = generateNextTwoFactorCode();
 
+    mockSendCode(getDestination(request.method, request.mobilePhone, request.email), code);
     pendingEnable.put(request.userId, new TwoFactorEnable(request, code));
     return clientResponseFactory(200);
+  }
+
+  private @NonNull String getDestination(@NonNull String method, String mobilePhone, String email) {
+    String destination;
+    switch (method) {
+      case TwoFactorMethod.SMS -> destination = mobilePhone;
+      case TwoFactorMethod.Email -> destination = email;
+      default -> throw new IllegalArgumentException("Bad request.method " + method);
+    }
+    return Objects.requireNonNull(destination);
+  }
+
+  private void mockSendCode(@NonNull String destination, @NonNull String code) {
+    Optional.ofNullable(sentCodes.get(destination))
+        .orElseGet(
+            () -> {
+              List<String> l = new ArrayList<>();
+              sentCodes.put(destination, l);
+              return l;
+            })
+        .add(code);
+  }
+
+  public String getLastCode(String destination) {
+    return Optional.ofNullable(sentCodes.get(destination))
+        .map(l -> l.get(l.size() - 1))
+        .orElse(null);
   }
 
   /**
@@ -270,12 +294,14 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   public ClientResponse<TwoFactorResponse, Errors> enableTwoFactor(
       UUID userId, TwoFactorRequest request) {
 
+    if (request.applicationId == null) {
+      return clientResponseFactoryErr(400, "code", "invalid", "Invalid");
+    }
     if (!pendingEnable.containsKey(userId)) {
       if (!retrieveUser(userId).wasSuccessful()) {
         return clientResponseFactory(404);
       }
-      return clientResponseFactoryErr(
-          400, "userId", "NO2FA", "No pending 2FA request - this error is a stub");
+      return clientResponseFactoryErr(400, "code", "invalid", "Invalid");
       // Better detail in the response would be nice
       // better to wait sending it until all the errors have been identified
     } else {
@@ -311,6 +337,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
   @SneakyThrows
   @Override
+  @SuppressWarnings("unchecked")
   public ClientResponse<UserResponse, Errors> patchUser(UUID userId, Map<String, Object> request) {
     Map<String, Object> userMod = (Map<String, Object>) request.get("user");
     User patch = objectMapper.readValue(objectMapper.writeValueAsString(userMod), User.class);
@@ -328,8 +355,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
 
     return super.patchUser(
         userId,
-        objectMapper.readValue(
-            objectMapper.writeValueAsString(patch), new TypeReference<Map<String, Object>>() {}));
+        objectMapper.readValue(objectMapper.writeValueAsString(patch), new TypeReference<>() {}));
   }
 
   @NotNull
@@ -407,7 +433,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
           "The [methodId] is not valid. No two-factor method with this Id was found enabled for the user.");
     }
     String code = generateNextTwoFactorCode();
-
+    mockSendCode(getDestination(method.method, method.mobilePhone, method.email), code);
     twoFactorPending.put(
         twoFactorId1,
         new TwoFactorPending(
@@ -472,8 +498,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
       response.status = 200;
       try {
         response.successResponse.state =
-            objectMapper.readValue(
-                twoFactorPending.state(), new TypeReference<Map<String, Object>>() {});
+            objectMapper.readValue(twoFactorPending.state(), new TypeReference<>() {});
       } catch (JsonProcessingException e) {
         throw new RuntimeException(e);
       }
@@ -573,7 +598,7 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
   }
 
   /**
-   * For mocking fidelity - retrieving user should yeild 2FA config
+   * For mocking fidelity - retrieving user should yield 2FA config
    *
    * @param response to be checked for a user and decorated
    * @return the same response, if successful, with mock 2FA config

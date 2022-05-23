@@ -192,8 +192,12 @@ public class CoreFusionAuthService {
     if (response.wasSuccessful()) {
       return response.successResponse;
     }
-
-    throw new FusionAuthException(response.status, response.errorResponse, response.exception);
+    try {
+      throw new FusionAuthException(response.status, response.errorResponse, response.exception);
+    } catch (FusionAuthException e) {
+      log.debug("FusionAuth potential problem - could well be user error", e);
+      throw e;
+    }
   }
 
   private UserRegistration userRegistrationFactory(

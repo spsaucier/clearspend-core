@@ -29,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -51,7 +52,8 @@ public class GlobalControllerExceptionHandler {
     CurrencyMismatchException.class,
     IdMismatchException.class,
     InvalidRequestException.class,
-    OperationDeclinedException.class
+    OperationDeclinedException.class,
+    MethodArgumentNotValidException.class
   })
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);

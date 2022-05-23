@@ -24,8 +24,18 @@ java {
 }
 
 jib {
-    from.image = "openjdk:17.0.2-jdk-oracle"
-    to.image = "capital/core"
+    container {
+      from.image = "openjdk:17.0.2-jdk-oracle"
+      to.image = "capital/core"
+      mainClass = "com.clearspend.capital.CapitalApplication"
+        jvmFlags = listOf(
+                "-server",
+                "-Djava.awt.headless=true",
+                "-XX:+UseG1GC",
+                "-XX:MaxGCPauseMillis=100",
+                "-XX:+UseStringDeduplication"
+        )
+    }
 }
 
 spotless {
@@ -178,7 +188,7 @@ dependencies {
     implementation("com.sendgrid:sendgrid-java:4.8.3")
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.25.1")
-    implementation("io.fusionauth:fusionauth-java-client:1.33.0")
+    implementation("io.fusionauth:fusionauth-java-client:1.36.0")
 
 //snyk fixes (revisit if fixed in the next spring boot version > 2.6.3)
     constraints {

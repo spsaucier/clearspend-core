@@ -96,7 +96,7 @@ class FusionAuthServiceTest extends BaseCapitalTest {
                 400,
                 () ->
                     fusionAuthService.validateFirstTwoFactorCode(
-                        createBusinessRecord.user(),
+                        FusionAuthUser.fromUser(createBusinessRecord.user()),
                         "12334",
                         TwoFactorAuthenticationMethod.sms,
                         "+9121113333")));
