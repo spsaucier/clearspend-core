@@ -31,6 +31,7 @@ services:
       - SEARCH_TYPE=database
       - FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json
       - FUSIONAUTH_PORT=9011
+    command: sh -c "while ! (timeout 1 bash -c 'cat <dev/null >/dev/tcp/capital-db/5432'); do sleep 5 ; done && /usr/local/fusionauth/fusionauth-app/apache-tomcat/bin/catalina.sh run"
     ports:
       - '9011:9011'
     volumes:
