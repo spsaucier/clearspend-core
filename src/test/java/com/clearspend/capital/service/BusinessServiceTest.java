@@ -1,16 +1,21 @@
 package com.clearspend.capital.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.security.DefaultRoles;
@@ -210,5 +215,40 @@ class BusinessServiceTest extends BaseCapitalTest {
             Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
         .build()
         .validateServiceMethod(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void updateBusinessPartnerType_whenBusinessIsNotFound_RecordNotFoundExceptionIsThrown() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    User cs =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE)
+            .user();
+    testHelper.setCurrentUser(cs);
+    TypedId<BusinessId> randomId = new TypedId<>();
+    assertThat(businessRepository.findById(randomId)).isEmpty();
+    assertThrows(
+        RecordNotFoundException.class,
+        () -> businessService.updateBusinessPartnerType(randomId, BusinessPartnerType.PARTNER));
+  }
+
+  @Test
+  @SneakyThrows
+  void updateBusinessPartnerType_whenBusinessExists_entityIsUpdated() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    User cs =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE)
+            .user();
+    testHelper.setCurrentUser(cs);
+    Business result =
+        businessService.updateBusinessPartnerType(
+            createBusinessRecord.businessSettings().getBusinessId(), BusinessPartnerType.PARTNER);
+    assertThat(result)
+        .isNotNull()
+        .matches(it -> it.getPartnerType() == BusinessPartnerType.PARTNER);
   }
 }

@@ -23,6 +23,7 @@ import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails;
 import com.clearspend.capital.controller.type.plaid.PlaidLogEntryMetadata;
 import com.clearspend.capital.controller.type.plaid.PlaidLogEntryRequest;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
@@ -36,6 +37,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -207,6 +209,28 @@ public class BusinessController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessId> businessId) {
     return businessService.updateBusinessStatus(businessId, BusinessStatus.ACTIVE);
+  }
+
+  @PostMapping("/{businessId}/partner/{type}")
+  public ResponseEntity<Business> setPartnerType(
+      @PathVariable(value = "businessId")
+          @Parameter(
+              required = true,
+              name = "businessId",
+              description = "ID of the business record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessId> businessId,
+      @PathVariable(value = "type")
+          @Parameter(
+              required = true,
+              name = "type",
+              description = "Client | Partner | Both",
+              example = "PARTNER")
+          String type) {
+    return ResponseEntity.ok(
+        new Business(
+            businessService.updateBusinessPartnerType(
+                businessId, BusinessPartnerType.valueOf(type.toUpperCase(Locale.ROOT)))));
   }
 
   @GetMapping

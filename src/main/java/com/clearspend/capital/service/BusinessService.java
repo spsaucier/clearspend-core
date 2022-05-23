@@ -502,6 +502,18 @@ public class BusinessService {
     return businessRepository.save(business);
   }
 
+  @Transactional
+  @PreAuthorize("hasGlobalPermission('CUSTOMER_SERVICE')")
+  public Business updateBusinessPartnerType(
+      TypedId<BusinessId> businessId, BusinessPartnerType type) {
+    Business business =
+        businessRepository
+            .findById(businessId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId, false));
+    business.setPartnerType(type);
+    return businessRepository.save(business);
+  }
+
   private void setOnNotEqual(
       String value, String value2, Consumer<Object> consumer, StringBuilder stringBuilder) {
     if (!StringUtils.equals(value, value2)) {
