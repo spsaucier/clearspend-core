@@ -202,7 +202,7 @@ public class JDBCUtils {
                     .query(query, source, rowMapping));
   }
 
-  private static <T> List<T> executeNativeQuery(
+  public static <T> List<T> executeNativeQuery(
       @NonNull final EntityManager entityManager,
       @NonNull final String query,
       @NonNull final Class<T> entity,

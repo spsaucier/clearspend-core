@@ -45,6 +45,7 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
+import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
@@ -57,6 +58,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -184,14 +186,18 @@ public class AllocationService {
     return new AllocationRecord(allocation, account);
   }
 
-  @PostFilter(
-      "hasPermission(filterObject?.allocation(), 'READ|MANAGE_FUNDS|CUSTOMER_SERVICE|GLOBAL_READ')")
+  @SqlPermissionAPI
+  /** READ|CUSTOMER_SERVICE|GLOBAL_READ -- findAllocationsWithPermissions.sql */
   public List<AllocationRecord> getAllocationsForBusiness(final TypedId<BusinessId> businessId) {
     final Business business =
         businessRepository
             .findById(businessId)
             .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
-    return getAllocationRecords(business, allocationRepository.findByBusinessId(businessId));
+    final TypedId<UserId> userId = CurrentUser.getUserId();
+    final Set<String> globalRoles = Optional.ofNullable(CurrentUser.getRoles()).orElse(Set.of());
+    return getAllocationRecords(
+        business,
+        allocationRepository.findByBusinessIdWithSqlPermissions(businessId, userId, globalRoles));
   }
 
   @Transactional
