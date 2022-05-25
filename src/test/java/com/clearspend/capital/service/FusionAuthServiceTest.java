@@ -9,8 +9,8 @@ import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.DefaultRoles;
+import com.clearspend.capital.service.FusionAuthService.ChangeMethodRequest;
 import com.clearspend.capital.service.FusionAuthService.ChangePasswordRequest;
-import com.clearspend.capital.service.FusionAuthService.ChangePhoneNumberRequest;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
@@ -113,7 +113,9 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             actionWithAllowedFailure(
                 NoSuchElementException.class,
                 t -> true,
-                () -> fusionAuthService.beginStepUp(createBusinessRecord.user(), Map.of())));
+                () ->
+                    fusionAuthService.beginStepUp(
+                        FusionAuthUser.fromUser(createBusinessRecord.user()), Map.of())));
   }
 
   @Test
@@ -138,7 +140,8 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             actionWithAllowedFailure(
                 400,
                 () ->
-                    fusionAuthService.changePassword(createBusinessRecord.user(), changeRequest)));
+                    fusionAuthService.changePassword(
+                        FusionAuthUser.fromUser(createBusinessRecord.user()), changeRequest)));
   }
 
   @Test
@@ -151,12 +154,13 @@ class FusionAuthServiceTest extends BaseCapitalTest {
                 createBusinessRecord.allocationRecord().allocation(),
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
-    ChangePhoneNumberRequest changeRequest =
-        new ChangePhoneNumberRequest(
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
             UUID.fromString(user.getSubjectRef()),
             user.getBusinessId(),
             user.getId(),
             "+6021023",
+            TwoFactorAuthenticationMethod.sms,
             null,
             null,
             null);
@@ -169,7 +173,7 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             actionWithAllowedFailure(
                 InvalidRequestException.class,
                 t -> t.getMessage().contains("Enable two-factor first"),
-                () -> fusionAuthService.addPhoneNumber(user, changeRequest)));
+                () -> fusionAuthService.addMethod(FusionAuthUser.fromUser(user), changeRequest)));
   }
 
   @Test
@@ -182,12 +186,13 @@ class FusionAuthServiceTest extends BaseCapitalTest {
                 createBusinessRecord.allocationRecord().allocation(),
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
-    ChangePhoneNumberRequest changeRequest =
-        new ChangePhoneNumberRequest(
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
             UUID.fromString(user.getSubjectRef()),
             user.getBusinessId(),
             user.getId(),
             "+6021023",
+            TwoFactorAuthenticationMethod.sms,
             null,
             null,
             null);
@@ -200,7 +205,8 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             actionWithAllowedFailure(
                 InvalidRequestException.class,
                 t -> t.getMessage().contains("Enable two-factor first"),
-                () -> fusionAuthService.removePhoneNumber(user, changeRequest)));
+                () ->
+                    fusionAuthService.removeMethod(FusionAuthUser.fromUser(user), changeRequest)));
   }
 
   @Test
@@ -228,7 +234,8 @@ class FusionAuthServiceTest extends BaseCapitalTest {
         .allowUser(user)
         .denyUser(createBusinessRecord.user())
         .build()
-        .validateServiceMethod(() -> fusionAuthService.changePassword(user, changeRequest));
+        .validateServiceMethod(
+            () -> fusionAuthService.changePassword(FusionAuthUser.fromUser(user), changeRequest));
   }
 
   @Test

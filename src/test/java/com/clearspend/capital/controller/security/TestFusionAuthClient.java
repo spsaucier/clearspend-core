@@ -1,5 +1,7 @@
 package com.clearspend.capital.controller.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.clearspend.capital.client.fusionauth.FusionAuthProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -307,8 +309,9 @@ public class TestFusionAuthClient extends io.fusionauth.client.FusionAuthClient 
     } else {
       TwoFactorSendRequest enableRequest = pendingEnable.get(userId).request;
       String sentCode = pendingEnable.get(userId).code;
-      assert enableRequest.mobilePhone.equals(request.mobilePhone);
-      assert enableRequest.method.equals(request.method);
+      assertThat(enableRequest.method).isEqualTo(request.method);
+      assertThat(enableRequest.mobilePhone).isEqualTo(request.mobilePhone);
+      assertThat(enableRequest.email).isEqualTo(request.email);
 
       if (!request.code.equals(sentCode)) {
         return clientResponseFactory(421);

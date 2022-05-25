@@ -12,7 +12,6 @@ import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.UserType;
@@ -26,7 +25,6 @@ import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserModifier;
-import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.LoginUserOp;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -249,7 +247,7 @@ public class AuthenticationController {
       @Validated @RequestBody FirstTwoFactorSendRequest firstTwoFactorSendRequest) {
     fusionAuthService.sendInitialTwoFactorCode(
         CurrentUser.getFusionAuthUserId(),
-        firstTwoFactorSendRequest.method,
+        firstTwoFactorSendRequest.method.svc(),
         firstTwoFactorSendRequest.destination);
   }
 
@@ -266,21 +264,23 @@ public class AuthenticationController {
       explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
       reviewer = "jscarbor")
   ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddMethod(
-      @Validated @RequestBody ChangePhoneNumberRequest request) {
-    return twoFactorAddRemoveMethod(request, fusionAuthService::addPhoneNumber);
+      @Validated @RequestBody ChangeMethodRequest request) {
+    return twoFactorAddRemoveMethod(request, fusionAuthService::addMethod);
   }
 
   private ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddRemoveMethod(
-      ChangePhoneNumberRequest request,
+      ChangeMethodRequest request,
       BiFunction<
-              User,
-              FusionAuthService.ChangePhoneNumberRequest,
+              FusionAuthUser,
+              FusionAuthService.ChangeMethodRequest,
               FusionAuthService.TwoFactorStartLoggedInResponse>
           function) {
 
-    User actor = userService.retrieveUser(CurrentUser.getUserId());
-    User target =
-        Optional.ofNullable(request.userId()).map(userService::retrieveUser).orElse(actor);
+    FusionAuthUser actor = FusionAuthUser.fromCurrentUser();
+    FusionAuthUser target =
+        Optional.ofNullable(request.userId())
+            .map(uid -> FusionAuthUser.fromUser(userService.retrieveUser(uid)))
+            .orElse(actor);
 
     return Optional.ofNullable(function.apply(actor, request.svc(target)))
         .map(r -> ResponseEntity.status(242).body(TwoFactorStartLoggedInResponse.of(r)))
@@ -299,8 +299,8 @@ public class AuthenticationController {
       explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
       reviewer = "jscarbor")
   ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorDeleteMethod(
-      @Validated @RequestBody ChangePhoneNumberRequest request) {
-    return twoFactorAddRemoveMethod(request, fusionAuthService::removePhoneNumber);
+      @Validated @RequestBody ChangeMethodRequest request) {
+    return twoFactorAddRemoveMethod(request, fusionAuthService::removeMethod);
   }
 
   record FirstTwoFactorValidateRequest(
@@ -312,30 +312,42 @@ public class AuthenticationController {
     return fusionAuthService.validateFirstTwoFactorCode(
         FusionAuthUser.fromCurrentUser(),
         firstTwoFactorValidateRequest.code,
-        firstTwoFactorValidateRequest.method,
+        firstTwoFactorValidateRequest.method.svc(),
         firstTwoFactorValidateRequest.destination);
   }
 
-  public record ChangePhoneNumberRequest(
+  public enum TwoFactorAuthenticationMethod {
+    sms,
+    email;
+    // authenticator
+
+    FusionAuthService.TwoFactorAuthenticationMethod svc() {
+      return Enum.valueOf(FusionAuthService.TwoFactorAuthenticationMethod.class, this.name());
+    }
+  }
+
+  public record ChangeMethodRequest(
       TypedId<UserId> userId,
       TypedId<BusinessId> businessId,
-      String changingNumber,
+      String destination,
+      TwoFactorAuthenticationMethod method,
       String trustChallenge,
       String twoFactorId,
       String twoFactorCode) {
     @AssertTrue(message = "Either the changing method or two factor codes must be submitted.")
     @SuppressWarnings("unused")
     private boolean isValid() {
-      return StringUtils.isNotBlank(changingNumber)
+      return StringUtils.isNotBlank(destination)
           || StringUtils.isNoneBlank(trustChallenge, twoFactorCode, twoFactorId);
     }
 
-    public FusionAuthService.ChangePhoneNumberRequest svc(User user) {
-      return new FusionAuthService.ChangePhoneNumberRequest(
+    public FusionAuthService.ChangeMethodRequest svc(FusionAuthUser user) {
+      return new FusionAuthService.ChangeMethodRequest(
           UUID.fromString(user.getSubjectRef()),
           user.getBusinessId(),
-          user.getId(),
-          changingNumber,
+          user.getUserId(),
+          destination,
+          Optional.ofNullable(method).map(TwoFactorAuthenticationMethod::svc).orElse(null),
           twoFactorCode,
           twoFactorId,
           trustChallenge);
@@ -364,8 +376,7 @@ public class AuthenticationController {
   @PostMapping("/two-factor/start")
   TwoFactorStartLoggedInResponse beginStepUp() {
     return TwoFactorStartLoggedInResponse.of(
-        fusionAuthService.beginStepUp(
-            userService.retrieveUser(CurrentUser.getUserId()), Collections.emptyMap()));
+        fusionAuthService.beginStepUp(FusionAuthUser.fromCurrentUser(), Collections.emptyMap()));
   }
 
   /**
@@ -406,9 +417,11 @@ public class AuthenticationController {
   @PostMapping(value = "/change-password", consumes = "application/json")
   ResponseEntity<TwoFactorStartLoggedInResponse> changePassword(
       @Validated @RequestBody ChangePasswordRequest request) {
-    User user = userService.retrieveUser(CurrentUser.getUserId());
-    User targetUser =
-        Optional.ofNullable(request.getUserId()).map(userService::retrieveUser).orElse(user);
+    FusionAuthUser user = FusionAuthUser.fromCurrentUser();
+    FusionAuthUser targetUser =
+        Optional.ofNullable(request.getUserId())
+            .map(uid -> FusionAuthUser.fromUser(userService.retrieveUser(uid)))
+            .orElse(user);
     FusionAuthService.TwoFactorStartLoggedInResponse response;
     try {
       response = fusionAuthService.changePassword(user, request.toFusionAuthRequest(targetUser));

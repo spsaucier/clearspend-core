@@ -8,15 +8,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
-import com.clearspend.capital.controller.AuthenticationController.ChangePhoneNumberRequest;
+import com.clearspend.capital.controller.AuthenticationController.ChangeMethodRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorSendRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
+import com.clearspend.capital.controller.AuthenticationController.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.controller.AuthenticationController.TwoFactorStartLoggedInResponse;
 import com.clearspend.capital.controller.security.TestFusionAuthClient;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -24,7 +26,6 @@ import com.clearspend.capital.controller.type.user.LoginRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService;
-import com.clearspend.capital.service.FusionAuthService.TwoFactorAuthenticationMethod;
 import com.inversoft.error.Errors;
 import com.inversoft.rest.ClientResponse;
 import io.fusionauth.client.FusionAuthClient;
@@ -46,6 +47,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -95,12 +97,18 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     String wrong2FCodeForEnable =
         generateWrongCode(() -> RandomStringUtils.randomNumeric(6), Set.of(twoFactorCodeForEnable));
 
-    response = enable2FA(userCookie, wrong2FCodeForEnable, userPhone);
+    response =
+        enable2FA(userCookie, wrong2FCodeForEnable, userPhone, TwoFactorAuthenticationMethod.sms);
     assertThat(response.getStatus()).isEqualTo(421);
 
     List<String> recoveryCodes =
         validateResponse(
-                enable2FA(userCookie, twoFactorCodeForEnable, userPhone), TwoFactorResponse.class)
+                enable2FA(
+                    userCookie,
+                    twoFactorCodeForEnable,
+                    userPhone,
+                    TwoFactorAuthenticationMethod.sms),
+                TwoFactorResponse.class)
             .recoveryCodes;
 
     // 2FA is enabled, now try logging in
@@ -222,7 +230,12 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     List<String> recoveryCodes =
         validateResponse(
-                enable2FA(userCookie, twoFactorCodeForEnable, userPhone), TwoFactorResponse.class)
+                enable2FA(
+                    userCookie,
+                    twoFactorCodeForEnable,
+                    userPhone,
+                    TwoFactorAuthenticationMethod.sms),
+                TwoFactorResponse.class)
             .recoveryCodes;
     assertThat(recoveryCodes.size()).isEqualTo(10);
 
@@ -255,7 +268,12 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     final String newUserPhone = testHelper.generatePhone();
     final UUID userId = UUID.fromString(user.getSubjectRef());
-    addNumber(user, userCookie, newUserPhone, user.getPhone().getEncrypted());
+    addMethod(
+        user,
+        userCookie,
+        newUserPhone,
+        TwoFactorAuthenticationMethod.sms,
+        user.getPhone().getEncrypted());
     TwoFactorMethod method =
         validateResponse(fusionAuthClient.retrieveUser(userId)).user.twoFactor.methods.stream()
             .filter(m -> newUserPhone.equals(m.mobilePhone))
@@ -264,10 +282,45 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     assertThat(method).isNotNull();
 
     String doomedPhone = user.getPhone().getEncrypted();
-    deleteNumber(user, userCookie, doomedPhone, false);
+    deleteMethod(user, userCookie, doomedPhone, TwoFactorAuthenticationMethod.sms, false);
     assertThat(
             validateResponse(fusionAuthClient.retrieveUser(userId)).user.twoFactor.methods.stream()
                 .noneMatch(m -> doomedPhone.equals(m.mobilePhone)))
+        .isTrue();
+  }
+
+  @Test
+  @SneakyThrows
+  void twoFactorChangeEmail() {
+    CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    User user = createBusinessRecord.user();
+
+    // Enable 2FA
+    Cookie userCookie = twoFactorSetup(user);
+
+    // First, register the user's verified address
+    addMethod(
+        user,
+        userCookie,
+        user.getEmail().getEncrypted(),
+        TwoFactorAuthenticationMethod.email,
+        user.getPhone().getEncrypted());
+
+    final String newEmail = testHelper.generateEmail();
+    final UUID userId = UUID.fromString(user.getSubjectRef());
+    addMethod(user, userCookie, newEmail, TwoFactorAuthenticationMethod.email, null);
+    TwoFactorMethod method =
+        validateResponse(fusionAuthClient.retrieveUser(userId)).user.twoFactor.methods.stream()
+            .filter(m -> newEmail.equals(m.email))
+            .findAny()
+            .orElseThrow();
+    assertThat(method).isNotNull();
+
+    String doomedEmail = user.getEmail().getEncrypted();
+    deleteMethod(user, userCookie, doomedEmail, TwoFactorAuthenticationMethod.email, false);
+    assertThat(
+            validateResponse(fusionAuthClient.retrieveUser(userId)).user.twoFactor.methods.stream()
+                .noneMatch(m -> doomedEmail.equals(m.email)))
         .isTrue();
   }
 
@@ -282,9 +335,15 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     final String newUserPhone = null;
 
-    ChangePhoneNumberRequest changeRequest =
-        new ChangePhoneNumberRequest(
-            user.getId(), user.getBusinessId(), newUserPhone, null, null, null);
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
+            user.getId(),
+            user.getBusinessId(),
+            newUserPhone,
+            TwoFactorAuthenticationMethod.sms,
+            null,
+            null,
+            null);
     MockHttpServletResponse response =
         mvc.perform(
                 patch("/authentication/two-factor/method")
@@ -302,13 +361,19 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
   }
 
   @SneakyThrows
-  private void addNumber(User user, Cookie userCookie, String newUserPhone, String existingPhone) {
+  private void addMethod(
+      User user,
+      Cookie userCookie,
+      String newDestination,
+      TwoFactorAuthenticationMethod method,
+      String stepUpCodeDestination) {
     TestFusionAuthClient faClient = (TestFusionAuthClient) fusionAuthClient;
-    ChangePhoneNumberRequest changeRequest =
-        new ChangePhoneNumberRequest(
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
             Optional.ofNullable(user).map(User::getId).orElse(null),
             Optional.ofNullable(user).map(User::getBusinessId).orElse(null),
-            newUserPhone,
+            newDestination,
+            method,
             null,
             null,
             null);
@@ -321,23 +386,45 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    assertThat(response.getStatus()).isEqualTo(242);
+    if (response.getStatus() == 242) {
+      stepUp(userCookie, response, stepUpCodeDestination, HttpMethod.PATCH);
+    } else {
+      assertThat(response.getStatus()).isEqualTo(204);
+    }
+
+    final String twoFactorCodeForEnable = faClient.getLastCode(newDestination);
+    validateResponse(
+        enable2FA(userCookie, twoFactorCodeForEnable, newDestination, method),
+        TwoFactorResponse.class);
+  }
+
+  @SneakyThrows
+  private void stepUp(
+      Cookie userCookie,
+      MockHttpServletResponse firstResponse,
+      String stepUpCodeDestination,
+      HttpMethod method) {
+    TestFusionAuthClient faClient = (TestFusionAuthClient) fusionAuthClient;
+
+    assertThat(firstResponse.getStatus()).isEqualTo(242);
 
     TwoFactorStartLoggedInResponse twoFactorStartLoggedInResponse =
-        objectMapper.readValue(response.getContentAsString(), TwoFactorStartLoggedInResponse.class);
+        objectMapper.readValue(
+            firstResponse.getContentAsString(), TwoFactorStartLoggedInResponse.class);
 
-    changeRequest =
-        new ChangePhoneNumberRequest(
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
+            null,
             null,
             null,
             null,
             twoFactorStartLoggedInResponse.trustChallenge(),
             twoFactorStartLoggedInResponse.twoFactorId(),
-            faClient.getLastCode(existingPhone));
+            faClient.getLastCode(stepUpCodeDestination));
 
-    response =
+    MockHttpServletResponse response =
         mvc.perform(
-                patch("/authentication/two-factor/method")
+                request(method, "/authentication/two-factor/method")
                     .contentType("application/json")
                     .content(objectMapper.writeValueAsString(changeRequest))
                     .cookie(userCookie))
@@ -346,26 +433,29 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     assertThat(response.getStatus()).isEqualTo(204);
     assertThat(response.getContentLength()).isEqualTo(0);
-
-    final String twoFactorCodeForEnable = faClient.getLastCode(newUserPhone);
-    validateResponse(
-        enable2FA(userCookie, twoFactorCodeForEnable, newUserPhone), TwoFactorResponse.class);
   }
 
   /**
    * @param user null for current user
    * @param userCookie for the user whose number is going away
-   * @param doomedUserPhone the plain text phone number, E.164 format
+   * @param doomedDestination the plain text phone number, E.164 format
+   * @param method
    * @param stepUp true if this call should require a step-up before the actual change
    */
   @SneakyThrows
-  private void deleteNumber(User user, Cookie userCookie, String doomedUserPhone, boolean stepUp) {
+  private void deleteMethod(
+      User user,
+      Cookie userCookie,
+      String doomedDestination,
+      TwoFactorAuthenticationMethod method,
+      boolean stepUp) {
     TestFusionAuthClient faClient = (TestFusionAuthClient) fusionAuthClient;
-    ChangePhoneNumberRequest changeRequest =
-        new ChangePhoneNumberRequest(
+    ChangeMethodRequest changeRequest =
+        new ChangeMethodRequest(
             Optional.ofNullable(user).map(User::getId).orElse(null),
             Optional.ofNullable(user).map(User::getBusinessId).orElse(null),
-            doomedUserPhone,
+            doomedDestination,
+            method,
             null,
             null,
             null);
@@ -387,11 +477,12 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
               response.getContentAsString(), TwoFactorStartLoggedInResponse.class);
 
       changeRequest =
-          new ChangePhoneNumberRequest(
+          new ChangeMethodRequest(
               Optional.ofNullable(user).map(User::getId).orElse(null),
               Optional.ofNullable(user).map(User::getBusinessId).orElse(null),
               null,
-              faClient.getLastCode(doomedUserPhone),
+              null,
+              faClient.getLastCode(doomedDestination),
               twoFactorStartLoggedInResponse.twoFactorId(),
               twoFactorStartLoggedInResponse.trustChallenge());
     }
@@ -516,11 +607,14 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
   @NotNull
   private MockHttpServletResponse enable2FA(
-      Cookie userCookie, String twoFactorCodeForEnable, String userPhone) throws Exception {
+      Cookie userCookie,
+      String twoFactorCodeForEnable,
+      String userPhone,
+      TwoFactorAuthenticationMethod method)
+      throws Exception {
     MockHttpServletResponse response;
     FirstTwoFactorValidateRequest firstTwoFactorValidateRequest =
-        new FirstTwoFactorValidateRequest(
-            twoFactorCodeForEnable, TwoFactorAuthenticationMethod.sms, userPhone);
+        new FirstTwoFactorValidateRequest(twoFactorCodeForEnable, method, userPhone);
 
     response =
         mvc.perform(

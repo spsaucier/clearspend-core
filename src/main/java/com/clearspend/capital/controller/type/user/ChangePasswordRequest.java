@@ -3,8 +3,8 @@ package com.clearspend.capital.controller.type.user;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
-import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService;
+import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -72,11 +72,11 @@ public class ChangePasswordRequest {
   @Nullable
   private String twoFactorCode;
 
-  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest(User user) {
+  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest(FusionAuthUser user) {
     return new FusionAuthService.ChangePasswordRequest(
         UUID.fromString(user.getSubjectRef()),
         user.getBusinessId(),
-        user.getId(),
+        user.getUserId(),
         currentPassword,
         newPassword,
         trustChallenge,

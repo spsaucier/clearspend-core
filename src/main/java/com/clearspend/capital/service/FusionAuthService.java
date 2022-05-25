@@ -6,6 +6,7 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.AuthenticationController.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.OwnerRelated;
@@ -210,19 +211,17 @@ public class FusionAuthService {
   }
 
   private TwoFactorStartResponse startTwoFactorLogin(
-      com.clearspend.capital.data.model.User user,
-      Map<String, Object> state,
-      String trustChallenge) {
+      FusionAuthUser user, Map<String, Object> state, String trustChallenge) {
     TwoFactorStartRequest request = new TwoFactorStartRequest();
     request.trustChallenge = trustChallenge;
     request.applicationId = getApplicationId();
-    request.loginId = user.getEmail().getEncrypted();
+    request.loginId = user.getEmail();
     request.state = Optional.ofNullable(state).orElse(Collections.emptyMap());
     return validateResponse(client.startTwoFactorLogin(request));
   }
 
   /**
-   * Preceded by {@link #startTwoFactorLogin(com.clearspend.capital.data.model.User, Map, String)}
+   * Preceded by {@link #startTwoFactorLogin(FusionAuthUser, Map, String)}
    *
    * @param user the user to modify
    * @param methodId the method ID to disable (from the request initiating the flow)
@@ -343,10 +342,7 @@ public class FusionAuthService {
    */
   @PreAuthorize("isSelfOwned(#user)")
   public TwoFactorStartLoggedInResponse beginStepUp(
-      com.clearspend.capital.data.model.User user, Map<String, Object> state) {
-    if (!user.getId().equals(CurrentUser.getUserId())) {
-      throw new IllegalArgumentException("user");
-    }
+      FusionAuthUser user, Map<String, Object> state) {
     String trustChallenge = RandomStringUtils.randomPrint(24);
     TwoFactorStartResponse initResponse = startTwoFactorLogin(user, state, trustChallenge);
     final List<TwoFactorMethod> userMethods = initResponse.methods;
@@ -380,14 +376,26 @@ public class FusionAuthService {
   }
 
   @Value
-  public static class ChangePhoneNumberRequest implements SteppedUpRequest {
+  public static class ChangeMethodRequest implements SteppedUpRequest {
     UUID fusionAuthUserId;
     TypedId<BusinessId> businessId;
     TypedId<UserId> ownerId;
-    String changingNumber;
+    String destination;
+    TwoFactorAuthenticationMethod method;
     String twoFactorCode;
     String twoFactorId;
     String trustChallenge;
+
+    boolean matches(TwoFactorMethod method) {
+      if (!this.method.name().equals(method.method)) {
+        return false;
+      }
+      return switch (this.method) {
+        case sms -> this.destination.equalsIgnoreCase(method.mobilePhone);
+        case email -> this.destination.equalsIgnoreCase(method.email);
+        default -> false;
+      };
+    }
   }
 
   @Value
@@ -405,24 +413,21 @@ public class FusionAuthService {
   @FusionAuthUserModifier(reviewer = "jscarbor", explanation = "modifying user")
   @SneakyThrows
   private <T extends SteppedUpRequest> TwoFactorStartLoggedInResponse stepUpRequest(
-      com.clearspend.capital.data.model.User actor,
-      T request,
-      TriConsumer<T, T, String> operation) {
+      final FusionAuthUser actor, T request, TriConsumer<T, T, String> operation) {
     @SuppressWarnings("unchecked")
     Class<T> requestClass = (Class<T>) request.getClass();
 
     LoginResponse twoFactorLogin = null;
     T oldRequest = null;
 
-    final FusionAuthUser fusionAuthActor = FusionAuthUser.fromUser(actor);
-    if (twoFactorEnabled(fusionAuthActor)) {
+    if (twoFactorEnabled(actor)) {
       // Check if the challenge has been answered
       if (StringUtils.isAnyEmpty(
           request.getTrustChallenge(), request.getTwoFactorId(), request.getTwoFactorCode())) {
         final Map<String, Object> persistentState =
             Map.of("stepUpRequest", objectMapper.writeValueAsString(request));
 
-        if (isSteppedUp(fusionAuthActor)) {
+        if (isSteppedUp(actor)) {
           // Bypass the step-up by taking the code returned from startTwoFactorLogin
           String trustChallenge = RandomStringUtils.randomPrint(24);
           TwoFactorStartResponse initResponse =
@@ -449,12 +454,12 @@ public class FusionAuthService {
       TwoFactorLoginRequest twoFactorLoginRequest =
           new TwoFactorLoginRequest(
               getApplicationId(), request.getTwoFactorCode(), request.getTwoFactorId());
-      twoFactorLoginRequest.userId = fusionAuthActor.getFusionAuthId();
+      twoFactorLoginRequest.userId = actor.getFusionAuthId();
       ClientResponse<LoginResponse, Errors> twoFactorLoginResponse =
           twoFactorLogin(twoFactorLoginRequest);
       validateResponse(twoFactorLoginResponse);
 
-      persistStepUp(getUser(fusionAuthActor));
+      persistStepUp(getUser(actor));
       // Assemble a new request based on the successful challenge and original request
       twoFactorLogin = twoFactorLoginResponse.successResponse;
       oldRequest =
@@ -483,7 +488,7 @@ public class FusionAuthService {
   @PreAuthorize("isSelfOwned(#user)")
   @SneakyThrows
   public TwoFactorStartLoggedInResponse changePassword(
-      com.clearspend.capital.data.model.User user, final ChangePasswordRequest request) {
+      FusionAuthUser user, final ChangePasswordRequest request) {
     return stepUpRequest(
         user,
         request,
@@ -491,7 +496,7 @@ public class FusionAuthService {
           // Perform the password change
           final io.fusionauth.domain.api.user.ChangePasswordRequest changePasswordRequest =
               new io.fusionauth.domain.api.user.ChangePasswordRequest(
-                  user.getEmail().getEncrypted(),
+                  user.getEmail(),
                   Optional.ofNullable(oldRequest).orElse(newRequest).getCurrentPassword(),
                   Optional.ofNullable(oldRequest).orElse(newRequest).getNewPassword());
           changePasswordRequest.trustToken = trustToken;
@@ -502,17 +507,17 @@ public class FusionAuthService {
   }
 
   @PreAuthorize("isSelfOwned(#request)")
-  public TwoFactorStartLoggedInResponse addPhoneNumber(
-      final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
-    requireTwoFactorEnabled(FusionAuthUser.fromUser(user));
+  public TwoFactorStartLoggedInResponse addMethod(
+      final FusionAuthUser user, final ChangeMethodRequest request) {
+    requireTwoFactorEnabled(user);
     return stepUpRequest(
         user,
         request,
         (oldRequest, newRequest, trustToken) ->
             sendTwoFactorCodeToNewDestination(
-                UUID.fromString(user.getSubjectRef()),
-                TwoFactorAuthenticationMethod.sms,
-                Optional.ofNullable(oldRequest).orElse(newRequest).getChangingNumber()));
+                user.getFusionAuthId(),
+                Optional.ofNullable(oldRequest).orElse(newRequest).getMethod(),
+                Optional.ofNullable(oldRequest).orElse(newRequest).getDestination()));
   }
 
   private void requireTwoFactorEnabled(FusionAuthUser fusionAuthUser) {
@@ -522,10 +527,10 @@ public class FusionAuthService {
   }
 
   @PreAuthorize("isSelfOwned(#request)")
-  public TwoFactorStartLoggedInResponse removePhoneNumber(
-      final com.clearspend.capital.data.model.User user, final ChangePhoneNumberRequest request) {
+  public TwoFactorStartLoggedInResponse removeMethod(
+      final FusionAuthUser user, final ChangeMethodRequest request) {
     UUID userId = UUID.fromString(user.getSubjectRef());
-    requireTwoFactorEnabled(FusionAuthUser.fromUser(user));
+    requireTwoFactorEnabled(user);
     return stepUpRequest(
         user,
         request,
@@ -543,10 +548,10 @@ public class FusionAuthService {
           User faUser = getUser(userId);
           String methodId =
               faUser.twoFactor.methods.stream()
-                  .filter(m -> m.mobilePhone.equals(oldRequest.getChangingNumber()))
+                  .filter(oldRequest::matches)
                   .map(m -> m.id)
                   .findFirst()
-                  .orElseThrow(() -> new NoSuchElementException("mobileNumber not found"));
+                  .orElseThrow(() -> new NoSuchElementException("2 factor method not found"));
           List<TwoFactorMethod> remainingMethods =
               faUser.twoFactor.methods.stream().filter(m -> !m.id.equals(methodId)).toList();
 
@@ -639,6 +644,7 @@ public class FusionAuthService {
     String subjectRef;
     TypedId<UserId> userId;
     TypedId<BusinessId> businessId;
+    @Sensitive String email;
 
     public UUID getFusionAuthId() {
       return UUID.fromString(getSubjectRef());
@@ -653,11 +659,13 @@ public class FusionAuthService {
       return new FusionAuthUser(
           CurrentUser.getFusionAuthUserId().toString(),
           CurrentUser.getUserId(),
-          CurrentUser.getBusinessId());
+          CurrentUser.getBusinessId(),
+          CurrentUser.getEmail());
     }
 
     public static FusionAuthUser fromUser(com.clearspend.capital.data.model.User user) {
-      return new FusionAuthUser(user.getSubjectRef(), user.getId(), user.getBusinessId());
+      return new FusionAuthUser(
+          user.getSubjectRef(), user.getId(), user.getBusinessId(), user.getEmail().getEncrypted());
     }
   }
 }
