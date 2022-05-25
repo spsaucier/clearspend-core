@@ -113,6 +113,7 @@ client:
     card-activation-completed-template-id: ${SENDGRID_CARD_ACTIVATION_COMPLETED_TEMPLATE_ID:d-852d5c75ec7644cca7535b2f4fbf7286}
     card-frozen-template-id: ${SENDGRID_CARD_FROZEN_TEMPLATE_ID:d-7fdf02b4c08b4f54bb73c4c977652321}
     card-cancelled-template-id: ${SENDGRID_CARD_CANCELLED_TEMPLATE_ID:d-2e07e8adbb414210a443af59135ee5a9}
+    card-unlinked-template-id: ${SENDGRID_CARD_UNLINKED_TEMPLATE_ID:d-167fae5fd7514c3da8bbdc190db18d9d}
     card-unfrozen-template-id: ${SENDGRID_CARD_UNFROZEN_TEMPLATE_ID:d-8aa17f4296c74c50bf86786540fab6d3}
     user-details-updated-template-id: ${SENDGRID_USER_DETAILS_UPDATED_TEMPLATE_ID:d-dedcc52329e1403f90986802aefeb6c6}
     user-account-created-template-id: ${SENDGRID_USER_ACCOUNT_CREATED_TEMPLATE_ID:d-5082896f143c46d886893ae08193a397}

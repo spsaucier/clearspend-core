@@ -46,6 +46,7 @@ public class TwilioService {
   private final String DOCS_LIST = "docs_list";
   private final String ENV_URL = "env-url";
   private final String FORGOT_PASSWORD_CHANGE_PASSWORD_ID_KEY = "change_password_id";
+  private final String ALLOCATION_NAME = "allocation_name";
   private final String COMPANY_NAME_KEY = "company_name";
   private final String PASSWORD_KEY = "password";
   private final String CARD_LAST_FOUR_KEY = "card_last_four";
@@ -494,6 +495,16 @@ public class TwilioService {
     personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
     send(
         initMailWithTemplate(sendGridProperties.getCardCancelledTemplateId(), to, personalization));
+  }
+
+  /* Card: Card Unlinked email */
+  protected void sendCardUnlinkedEmail(
+      final String to, final String firstName, final String lastFour, final String allocationName) {
+    final Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(CARD_LAST_FOUR_KEY, lastFour);
+    personalization.addDynamicTemplateData(ALLOCATION_NAME, allocationName);
+    send(initMailWithTemplate(sendGridProperties.getCardUnlinkedTemplateId(), to, personalization));
   }
 
   /* Card : Card Unfreeze email */

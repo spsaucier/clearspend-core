@@ -395,6 +395,12 @@ public class CardService {
       throw new InvalidRequestException("Cannot unlink a card that is already unlinked");
     }
 
+    final Allocation originalAllocation =
+        allocationRepository
+            .findById(card.getAllocationId())
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.ALLOCATION, card.getAllocationId()));
+
     final Account cardAccount;
     if (card.getFundingType() == FundingType.POOLED) {
       card.setAllocationId(null);
@@ -413,6 +419,15 @@ public class CardService {
       cardAccount = accountRepository.save(accountFromDb);
     }
     final Card unlinkedCard = cardRepository.save(card);
+
+    final User cardOwner = retrievalService.retrieveUser(card.getUserId());
+
+    twilioService.sendCardUnlinkedEmail(
+        cardOwner.getEmail().getEncrypted(),
+        cardOwner.getFirstName().getEncrypted(),
+        card.getLastFour(),
+        originalAllocation.getName());
+
     return new CardRecord(unlinkedCard, cardAccount);
   }
 
