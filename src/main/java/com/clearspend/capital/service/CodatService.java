@@ -32,7 +32,6 @@ import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.audit.AccountingAuditEventPublisher;
-import com.clearspend.capital.common.audit.AccountingCodatSyncAuditEvent;
 import com.clearspend.capital.common.audit.CodatSyncEventType;
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.error.CodatApiCallException;
@@ -639,8 +638,6 @@ public class CodatService {
     // Emit Audit Event
     Map<String, String> codatActivity = new HashMap<>();
     codatActivity.put(CodatSyncEventType.SUPPLIER_SYNC_TO_CODAT.toString(), supplierName);
-    codatActivity.put(
-        AccountingCodatSyncAuditEvent.COLUMN_NAME_ACCOUNT_ACTIVITY, accountActivityId.toString());
     accountingEventPublisher.publishAccountingCodatSyncAuditEvent(
         codatActivity, businessId.toString(), currentUserDetails.getId().toString());
 

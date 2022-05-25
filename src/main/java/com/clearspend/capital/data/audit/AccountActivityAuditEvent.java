@@ -21,7 +21,7 @@ public class AccountActivityAuditEvent extends ApplicationEvent {
   public static final String TYPE_RECEIPT_ADD = "receipt_added";
   public static final String TYPE_NOTES_ADD = "notes_add";
   public static final String ROW_KEY_PREFIX = "account_activity";
-  public static final String COLUMN_FAMILY = "entity_account_activity";
+  public static final String COLUMN_FAMILY = "ACCOUNTING_ACCOUNT_ACTIVITY";
 
   private Map<String, String> activityColumnData;
 

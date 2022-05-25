@@ -2,7 +2,10 @@ package com.clearspend.capital.common.audit;
 
 import com.clearspend.capital.client.google.BigTableClient;
 import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -17,8 +20,8 @@ import org.springframework.stereotype.Component;
 public class AccountingAuditProcessor {
 
   private final BigTableClient bigTableClient;
-  private final String AUDIT_TABLE = "audit-table";
-  private final String KEY_CONNECTOR = "#";
+  public static final String AUDIT_TABLE = "audit-table";
+  public static final String KEY_CONNECTOR = "#";
 
   private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -66,5 +69,12 @@ public class AccountingAuditProcessor {
     String timeKeyString = LocalDateTime.now(ZoneOffset.systemDefault()).format(formatter);
     Integer currentDateInt = Integer.valueOf(timeKeyString);
     return String.valueOf(MAX_DATE - currentDateInt);
+  }
+
+  public static OffsetDateTime getActualDate(String reversed) {
+    int reversedDateInt = Integer.valueOf(reversed);
+    String currentDateString = String.valueOf(MAX_DATE - reversedDateInt);
+    return OffsetDateTime.of(
+        LocalDate.parse(currentDateString, formatter), LocalTime.MIDNIGHT, ZoneOffset.UTC);
   }
 }

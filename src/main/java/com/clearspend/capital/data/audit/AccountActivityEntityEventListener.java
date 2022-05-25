@@ -26,6 +26,8 @@ public class AccountActivityEntityEventListener {
   @PostUpdate
   private void postUpdateAudit(AccountActivity accountActivity) {
     if (accountActivity == null) return;
+    // another write to the bigtable to audit whatever changed....
+
     Map<String, String> dataChanged = prepareEvent(accountActivity, "update");
     emitAccountingEvent(accountActivity, dataChanged);
   }

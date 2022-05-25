@@ -2,7 +2,10 @@ package com.clearspend.capital.common.audit;
 
 import com.clearspend.capital.client.google.BigTableClient;
 import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -60,5 +63,14 @@ public class AccountingAuditProcessorTest {
     String rowKey = underTest.storeAccountingCodatSyncAuditEventToBigTable(event);
     Mockito.verify(bigTableClient)
         .saveOneRow("audit-table", rowKey, AccountingCodatSyncAuditEvent.COLUMN_FAMILY, data);
+  }
+
+  @Test
+  public void testGetActualDate() {
+    OffsetDateTime actual =
+        AccountingAuditProcessor.getActualDate(AccountingAuditProcessor.getReversedDateString());
+    OffsetDateTime expected =
+        OffsetDateTime.of(LocalDate.from(LocalDateTime.now()), LocalTime.MIDNIGHT, ZoneOffset.UTC);
+    Assertions.assertEquals(actual, expected);
   }
 }

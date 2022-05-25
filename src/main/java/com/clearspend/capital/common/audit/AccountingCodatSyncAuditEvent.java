@@ -22,7 +22,6 @@ public class AccountingCodatSyncAuditEvent extends ApplicationEvent {
   public static final String COLUMN_NAME_ACCOUNT_ACTIVITY = "account_activity";
   private Map<String, String> codatSyncColumnData;
   private String userId;
-
   private String businessId;
 
   public AccountingCodatSyncAuditEvent(

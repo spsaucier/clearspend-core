@@ -18,10 +18,12 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
+import com.clearspend.capital.service.AccountingAuditLogService;
 import com.clearspend.capital.service.CodatService;
 import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -49,6 +51,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class CodatController {
   private final CodatService codatService;
   private final TransactionSyncLogRepository transactionSyncLogRepository;
+
+  private final AccountingAuditLogService auditLogService;
 
   @PostMapping("/quickbooks-online")
   String createQuickbooksOnlineConnectionLink() throws RuntimeException {
@@ -182,5 +186,19 @@ public class CodatController {
   List<CodatCategory> getLocationCategories() {
     return codatService.getCodatCategoriesByType(
         CurrentUser.getBusinessId(), CodatCategoryType.LOCATION);
+  }
+
+  @GetMapping("/audit-log")
+  public List<AuditLogDisplayValue> getAuditLogByBusiness(
+      @RequestParam(value = "limit", required = true)
+          @Parameter(
+              required = true,
+              name = "limit",
+              description = "number of days to travel back",
+              example = "50")
+          Integer limit) {
+
+    return auditLogService.searchAllAccountingAuditLogByBusiness(
+        CurrentUser.getBusinessId().toString(), limit);
   }
 }

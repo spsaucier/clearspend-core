@@ -97,7 +97,14 @@ tasks {
                     exclude("com/clearspend/capital/common/error/**")
                     exclude("com/clearspend/capital/common/typedid/**")
                     exclude("com/clearspend/capital/crypto/data/**")
-                    exclude("com/clearspend/capital/client/clearbit/response/**")
+                    exclude("com/clearspend/capital/client/clearbit/**")
+                    exclude("com/clearspend/capital/data/audit/**")
+                    exclude("com/clearspend/capital/controller/nonprod/**")
+                    exclude("com/clearspend/capital/client/codat/**")
+                    exclude("com/clearspend/capital/cache/**")
+                    exclude("com/clearspend/capital/client/stripe/**")
+                    exclude("com/clearspend/capital/client/plaid/**")
+                    exclude("com/clearspend/capital/client/google/**")
                 }
             }))
         }
@@ -127,7 +134,14 @@ tasks {
                     exclude("com/clearspend/capital/common/error/**")
                     exclude("com/clearspend/capital/common/typedid/**")
                     exclude("com/clearspend/capital/crypto/data/**")
-                    exclude("com/clearspend/capital/client/clearbit/response/**")
+                    exclude("com/clearspend/capital/client/clearbit/**")
+                    exclude("com/clearspend/capital/data/audit/**")
+                    exclude("com/clearspend/capital/controller/nonprod/**")
+                    exclude("com/clearspend/capital/client/codat/**")
+                    exclude("com/clearspend/capital/cache/**")
+                    exclude("com/clearspend/capital/client/stripe/**")
+                    exclude("com/clearspend/capital/client/plaid/**")
+                    exclude("com/clearspend/capital/client/google/**")
                 }
             }))
         }
