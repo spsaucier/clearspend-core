@@ -89,6 +89,11 @@ public class Business {
   @JsonProperty("codatCreditCardId")
   private String codatCreditCardId;
 
+  @JsonProperty("partnerType")
+  @Enumerated(EnumType.STRING)
+  @NonNull
+  private BusinessPartnerType partnerType;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -102,7 +107,8 @@ public class Business {
         business.getStatus(),
         business.getAccountingSetupStep(),
         business.getAutoCreateExpenseCategories(),
-        business.getMcc());
+        business.getMcc(),
+        business.getPartnerType());
 
     this.businessName = business.getBusinessName();
     this.description = business.getDescription();

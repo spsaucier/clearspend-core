@@ -34,7 +34,6 @@ import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
@@ -473,9 +472,5 @@ public class NetworkMessageService {
         .stream()
         .findFirst()
         .orElse(null);
-  }
-
-  public static void main(String[] args) {
-    System.out.println(OffsetDateTime.now(Clock.systemUTC()).toZonedDateTime());
   }
 }

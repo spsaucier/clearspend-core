@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Amount;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,10 @@ public class PartnerBusiness {
   @JsonProperty("businessId")
   @NonNull
   private TypedId<BusinessId> businessId;
+
+  @JsonProperty("status")
+  @NonNull
+  private BusinessStatus status;
 
   @JsonProperty("legalName")
   @NonNull
@@ -39,7 +44,10 @@ public class PartnerBusiness {
   public static PartnerBusiness of(Business business) {
     PartnerBusiness result =
         new PartnerBusiness(
-            business.getId(), business.getLegalName(), business.getOnboardingStep());
+            business.getId(),
+            business.getStatus(),
+            business.getLegalName(),
+            business.getOnboardingStep());
     result.setBusinessName(business.getBusinessName());
     return result;
   }

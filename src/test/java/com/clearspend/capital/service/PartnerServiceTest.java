@@ -14,8 +14,10 @@ import com.clearspend.capital.controller.type.partner.PartnerBusiness;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.PartnerUserDetails;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
@@ -66,9 +68,11 @@ public class PartnerServiceTest {
     // GIVEN
     when(mockUserAllocationRoleRepository.findAllByUserId(any()))
         .thenReturn(Collections.emptyList());
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(user);
 
     // THEN
     assertThat(result).isNotNull().isEmpty();
@@ -98,6 +102,7 @@ public class PartnerServiceTest {
     business.setLegalName("Test Business");
     business.setBusinessName("Something official");
     business.setOnboardingStep(BusinessOnboardingStep.COMPLETE);
+    business.setStatus(BusinessStatus.ACTIVE);
     when(mockBusinessService.retrieveBusinessForService(
             eq(allocation.getBusinessId()), anyBoolean()))
         .thenReturn(business);
@@ -107,9 +112,11 @@ public class PartnerServiceTest {
     when(mockAccountService.retrieveAllocationAccount(
             eq(business.getId()), eq(business.getCurrency()), eq(allocation.getId())))
         .thenReturn(account);
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(user);
 
     // THEN
     assertThat(result)
@@ -136,9 +143,11 @@ public class PartnerServiceTest {
 
     when(mockAllocationRepository.findById(eq(role.getAllocationId())))
         .thenReturn(Optional.empty());
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(user);
 
     // THEN
     assertThat(result).isNotNull().isEmpty();
@@ -176,6 +185,7 @@ public class PartnerServiceTest {
     business.setLegalName("Test Business");
     business.setBusinessName("Something official");
     business.setOnboardingStep(BusinessOnboardingStep.COMPLETE);
+    business.setStatus(BusinessStatus.ACTIVE);
     when(mockBusinessService.retrieveBusinessForService(
             eq(firstAllocation.getBusinessId()), anyBoolean()))
         .thenReturn(business);
@@ -190,9 +200,11 @@ public class PartnerServiceTest {
     when(mockAccountService.retrieveAllocationAccount(
             eq(business.getId()), eq(business.getCurrency()), eq(secondAllocation.getId())))
         .thenReturn(secondAccount);
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPartneredBusinessesForUser(user);
 
     // THEN
     assertThat(result)
@@ -217,9 +229,11 @@ public class PartnerServiceTest {
     when(mockPartnerUserDetailsRepository.findById(any())).thenReturn(Optional.of(details));
     when(mockUserAllocationRoleRepository.findAllByUserId(any()))
         .thenReturn(Collections.emptyList());
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPinnedBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPinnedBusinessesForUser(user);
 
     // THEN
     assertThat(result).isNotNull().isEmpty();
@@ -259,6 +273,7 @@ public class PartnerServiceTest {
     business.setLegalName("Test Business");
     business.setBusinessName("Something official");
     business.setOnboardingStep(BusinessOnboardingStep.COMPLETE);
+    business.setStatus(BusinessStatus.ACTIVE);
     when(mockBusinessService.retrieveBusinessForService(
             eq(firstAllocation.getBusinessId()), anyBoolean()))
         .thenReturn(business);
@@ -273,9 +288,11 @@ public class PartnerServiceTest {
     when(mockAccountService.retrieveAllocationAccount(
             eq(business.getId()), eq(business.getCurrency()), eq(secondAllocation.getId())))
         .thenReturn(secondAccount);
+    User user = new User();
+    user.setId(new TypedId<>());
 
     // WHEN
-    List<PartnerBusiness> result = underTest.getAllPinnedBusinessesForUser(new TypedId<>());
+    List<PartnerBusiness> result = underTest.getAllPinnedBusinessesForUser(user);
 
     // THEN
     assertThat(result).isNotNull().isEmpty();

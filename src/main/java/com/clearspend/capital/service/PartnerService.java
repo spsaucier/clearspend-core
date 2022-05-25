@@ -1,9 +1,8 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.partner.PartnerBusiness;
 import com.clearspend.capital.data.model.PartnerUserDetails;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.security.UserAllocationRole;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.PartnerUserDetailsRepository;
@@ -28,9 +27,9 @@ public class PartnerService {
   private final PartnerUserDetailsRepository partnerUserDetailsRepository;
   private final UserAllocationRoleRepository userAllocationRoleRepository;
 
-  @PreAuthorize("hasRootPermission('READ')")
-  public List<PartnerBusiness> getAllPartneredBusinessesForUser(TypedId<UserId> userId) {
-    return userAllocationRoleRepository.findAllByUserId(userId).stream()
+  @PreAuthorize("hasPermission(#user, 'VIEW_OWN')")
+  public List<PartnerBusiness> getAllPartneredBusinessesForUser(User user) {
+    return userAllocationRoleRepository.findAllByUserId(user.getId()).stream()
         .map(UserAllocationRole::getAllocationId)
         .map(it -> Tuple.of(it, allocationRepository.findById(it)))
         .filter(it -> it.y().isPresent())
@@ -63,11 +62,11 @@ public class PartnerService {
         .collect(Collectors.toList());
   }
 
-  @PreAuthorize("hasRootPermission('READ')")
-  public List<PartnerBusiness> getAllPinnedBusinessesForUser(TypedId<UserId> userId) {
-    Optional<PartnerUserDetails> details = partnerUserDetailsRepository.findById(userId);
+  @PreAuthorize("hasPermission(#user, 'VIEW_OWN')")
+  public List<PartnerBusiness> getAllPinnedBusinessesForUser(User user) {
+    Optional<PartnerUserDetails> details = partnerUserDetailsRepository.findById(user.getId());
     if (details.isPresent()) {
-      return getAllPartneredBusinessesForUser(userId).stream()
+      return getAllPartneredBusinessesForUser(user).stream()
           .filter(it -> details.get().getPinnedBusinesses().contains(it.getBusinessId()))
           .collect(Collectors.toList());
     }
