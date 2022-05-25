@@ -229,6 +229,12 @@ public class CodatService {
     accountActivityService.updateAccountActivitySyncStatus(
         business.getId(), accountActivityId, AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
 
+    Map<String, String> codatActivity = new HashMap<>();
+    codatActivity.put(CodatSyncEventType.DIRECT_COST_SYNC.toString(), accountActivityId.toString());
+
+    accountingEventPublisher.publishAccountingCodatSyncAuditEvent(
+        codatActivity, businessId.toString(), currentUserDetails.getId().toString());
+
     return new SyncTransactionResponse("IN_PROGRESS", directCostSyncResponse);
   }
 

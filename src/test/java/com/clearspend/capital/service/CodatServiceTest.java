@@ -247,6 +247,8 @@ public class CodatServiceTest extends BaseCapitalTest {
         .isEqualTo(AccountActivityIntegrationSyncStatus.SYNCED_LOCKED);
     assertThat(syncedAccountActivity.getLastSyncTime().getHour())
         .isEqualTo(OffsetDateTime.now().getHour());
+
+    assertThat(bigTableClient.getMockBigTable().keySet().size() > 0).isTrue();
   }
 
   @Test
