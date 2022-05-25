@@ -3,7 +3,6 @@ package com.clearspend.capital.data.repository.impl;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.JoinType;
 import com.blazebit.persistence.PagedList;
-import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.service.type.PageToken;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
@@ -24,10 +23,7 @@ import org.springframework.util.CollectionUtils;
 public class BlazePersistenceUtils {
 
   public static <T> CriteriaBuilder<T> joinOnForeignKey(
-      CriteriaBuilder<T> builder,
-      Class<? extends Versioned> from,
-      Class<? extends Versioned> to,
-      JoinType joinType) {
+      CriteriaBuilder<T> builder, Class<?> from, Class<?> to, JoinType joinType) {
     String fromName = getClassName(from);
     String toName = getClassName(to);
     String fromForeignKey = "%s.%sId".formatted(fromName, toName);
@@ -38,8 +34,8 @@ public class BlazePersistenceUtils {
 
   public static <T> CriteriaBuilder<T> joinOnPrimaryKey(
       CriteriaBuilder<T> builder,
-      Class<? extends Versioned> from,
-      Class<? extends Versioned> target,
+      Class<?> from,
+      Class<?> target,
       String targetForeignKeyName,
       JoinType joinType) {
     String targetName = getClassName(target);
@@ -113,7 +109,7 @@ public class BlazePersistenceUtils {
         .collect(Collectors.toList());
   }
 
-  private static String getClassName(Class<?> clazz) {
+  public static String getClassName(Class<?> clazz) {
     return StringUtils.uncapitalize(clazz.getSimpleName());
   }
 

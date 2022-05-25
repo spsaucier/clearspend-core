@@ -16,6 +16,7 @@ import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.CardReplacementDetails;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -33,6 +34,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -78,6 +80,7 @@ public class CardService {
   private final AllocationRepository allocationRepository;
   private final BusinessRepository businessRepository;
   private final CardRepository cardRepository;
+  private final CardAllocationRepository cardAllocationRepository;
   private final UserRepository userRepository;
   private final UserWelcomeService userWelcomeService;
 
@@ -176,8 +179,10 @@ public class CardService {
               CurrentUser.getBusinessId(), request.getCurrency(), request.getAllocationId());
     }
     card.setAccountId(account.getId());
+    card = cardRepository.saveAndFlush(card);
 
-    card = cardRepository.save(card);
+    cardAllocationRepository.saveAndFlush(
+        new CardAllocation(card.getId(), request.getAllocationId()));
 
     transactionLimitService.createCardSpendLimit(
         card.getBusinessId(),
@@ -494,22 +499,6 @@ public class CardService {
     }
 
     return accounts;
-  }
-
-  @Transactional
-  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
-  public Card updateCardAccount(@NonNull Card card, @NonNull Allocation allocation) {
-    if (card.getStatus() == CardStatus.CANCELLED) {
-      throw new InvalidRequestException("Cannot update account for cancelled card");
-    }
-
-    final Account account = accountService.retrieveAccountById(allocation.getAccountId(), false);
-
-    // update the card with the new allocation and accounts
-    card.setAllocationId(allocation.getId());
-    card.setAccountId(account.getId());
-
-    return cardRepository.save(card);
   }
 
   @Transactional

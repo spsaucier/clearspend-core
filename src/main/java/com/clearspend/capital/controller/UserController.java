@@ -18,7 +18,6 @@ import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardAccount;
 import com.clearspend.capital.controller.type.card.CardAndAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
-import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.receipt.Receipt;
@@ -326,23 +325,6 @@ public class UserController {
                 new CardAccount(
                     e.getAllocationId(), e.getId(), e.getType(), Amount.of(e.getLedgerBalance())))
         .toList();
-  }
-
-  @PatchMapping("/cards/{cardId}/account")
-  Card updateCardAccount(
-      @PathVariable(value = "cardId")
-          @Parameter(
-              required = true,
-              name = "cardId",
-              description = "ID of the card record.",
-              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<CardId> cardId,
-      @Validated @RequestBody UpdateCardAccountRequest request) {
-    return new Card(
-        cardService.updateCardAccount(
-            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
-            allocationService.getSingleAllocation(
-                CurrentUser.getBusinessId(), request.getAllocationId())));
   }
 
   @PostMapping("/cards/{cardId}/account-activity")

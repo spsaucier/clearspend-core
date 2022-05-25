@@ -8,11 +8,13 @@ import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.CardFilterCriteria;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import org.springframework.data.domain.Page;
@@ -20,7 +22,11 @@ import org.springframework.data.domain.Page;
 public interface CardRepositoryCustom {
 
   record CardDetailsRecord(
-      Card card, Allocation allocation, Account account, TransactionLimit transactionLimit) {}
+      Card card,
+      Allocation allocation,
+      Set<CardAllocation> allowedAllocations,
+      Account account,
+      TransactionLimit transactionLimit) {}
 
   record FilteredCardRecord(Card card, Allocation allocation, Account account, User user) {}
 

@@ -29,6 +29,7 @@ import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.ReplacementReason;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
@@ -45,6 +46,7 @@ import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
@@ -87,6 +89,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private final MockMvc mockMvc;
   private final EntityManager entityManager;
   private final CardRepository cardRepository;
+  private final CardAllocationRepository cardAllocationRepository;
   private final UserRepository userRepository;
   private final AllocationRepository allocationRepository;
   private final TransactionLimitRepository transactionLimitRepository;
@@ -163,6 +166,20 @@ public class CardControllerTest extends BaseCapitalTest {
             "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
 
     assertThat(issueCardResponse).hasSize(2);
+
+    final List<CardAllocation> cardAllocations1 =
+        cardAllocationRepository.findAllByCardId(issueCardResponse.get(0).getCardId());
+    assertThat(cardAllocations1)
+        .hasSize(1)
+        .filteredOn(item -> item.getAllocationId().equals(allocationId))
+        .hasSize(1);
+
+    final List<CardAllocation> cardAllocations2 =
+        cardAllocationRepository.findAllByCardId(issueCardResponse.get(1).getCardId());
+    assertThat(cardAllocations2)
+        .hasSize(1)
+        .filteredOn(item -> item.getAllocationId().equals(allocationId))
+        .hasSize(1);
   }
 
   @Test

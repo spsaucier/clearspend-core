@@ -19,6 +19,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
@@ -48,6 +49,7 @@ import com.clearspend.capital.data.model.ledger.LedgerAccount;
 import com.clearspend.capital.data.model.ledger.Posting;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
@@ -79,6 +81,7 @@ public class TestDataHelper {
   private final PostingRepository postingRepo;
   private final AccountActivityRepository accountActivityRepo;
   private final CardRepository cardRepo;
+  private final CardAllocationRepository cardAllocationRepo;
   private final TransactionLimitRepository transactionLimitRepo;
   private final ReceiptRepository receiptRepo;
   private final Faker faker = new Faker();
@@ -250,7 +253,9 @@ public class TestDataHelper {
     card.setLastFour("");
     card.setShippingAddress(new Address());
 
-    return cardRepo.save(card);
+    final Card dbCard = cardRepo.save(card);
+    cardAllocationRepo.save(new CardAllocation(card.getId(), cardConfig.getAllocationId()));
+    return dbCard;
   }
 
   @Data

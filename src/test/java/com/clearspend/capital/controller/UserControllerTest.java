@@ -2,7 +2,6 @@ package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -37,7 +36,6 @@ import com.clearspend.capital.controller.type.card.CardAccount;
 import com.clearspend.capital.controller.type.card.CardAndAccount;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
-import com.clearspend.capital.controller.type.card.UpdateCardAccountRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
@@ -50,8 +48,8 @@ import com.clearspend.capital.controller.type.user.User;
 import com.clearspend.capital.controller.type.user.UserPageData;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
-import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.business.Business;
@@ -65,6 +63,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
@@ -131,6 +130,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final PermissionValidationHelper permissionValidationHelper;
   private final AccountActivityRepository accountActivityRepo;
   private final ReceiptRepository receiptRepo;
+  private final CardAllocationRepository cardAllocationRepository;
   private final StripeMockClient stripeMockClient;
   private final UserRepository userRepository;
 
@@ -491,7 +491,18 @@ class UserControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @Test
   void getUserCards() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getBusinessId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    cardAllocationRepository.saveAndFlush(
+        new CardAllocation(card.getId(), childAllocation.allocation().getId()));
+
     testHelper.setCurrentUser(user.user());
+
     MockHttpServletResponse response =
         mvc.perform(get("/users/cards").contentType("application/json").cookie(userCookie))
             .andExpect(status().isOk())
@@ -521,6 +532,11 @@ class UserControllerTest extends BaseCapitalTest {
 
       assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
       assertThat(cardDetailsResponse.getDisabledPaymentTypes()).isEmpty();
+      if (cardDetailsResponse.getCard().getCardId().equals(card.getId())) {
+        assertThat(cardDetailsResponse.getAllowedAllocationIds()).hasSize(2);
+      } else {
+        assertThat(cardDetailsResponse.getAllowedAllocationIds()).hasSize(1);
+      }
     }
 
     assertThat(userCardListResponse)
@@ -793,130 +809,6 @@ class UserControllerTest extends BaseCapitalTest {
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
         .denyUser(employee)
-        .build()
-        .validateMockMvcCall(action);
-  }
-
-  @Test
-  @SneakyThrows
-  void updateCardAccount() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child",
-                createBusinessRecord.allocationRecord().allocation().getId())
-            .allocation();
-    final Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            createBusinessRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            false);
-    final UpdateCardAccountRequest request =
-        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
-
-    final String response =
-        mvc.perform(
-                patch("/users/cards/%s/account".formatted(card.getId()))
-                    .cookie(createBusinessRecord.authCookie())
-                    .contentType("application/json")
-                    .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
-
-    final com.clearspend.capital.controller.type.card.Card responseCard =
-        objectMapper.readValue(response, com.clearspend.capital.controller.type.card.Card.class);
-
-    final com.clearspend.capital.controller.type.card.Card expectedResponseCard =
-        new com.clearspend.capital.controller.type.card.Card(card);
-    expectedResponseCard.setAccountId(allocation.getAccountId());
-    expectedResponseCard.setAllocationId(allocation.getAllocationId());
-
-    assertEquals(expectedResponseCard, responseCard);
-
-    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
-    assertThat(dbCard)
-        .hasFieldOrPropertyWithValue("accountId", allocation.getAccountId())
-        .hasFieldOrPropertyWithValue("allocationId", allocation.getAllocationId());
-  }
-
-  @Test
-  @SneakyThrows
-  void updateCardAccount_CancelledCard() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child",
-                createBusinessRecord.allocationRecord().allocation().getId())
-            .allocation();
-    Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            createBusinessRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            false);
-    card.setStatus(CardStatus.CANCELLED);
-    card = cardRepository.save(card);
-    final UpdateCardAccountRequest request =
-        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
-
-    mvc.perform(
-            patch("/users/cards/%s/account".formatted(card.getId()))
-                .cookie(createBusinessRecord.authCookie())
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void updateCardAccount_UserPermissions() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
-    final Allocation allocation =
-        testHelper
-            .createAllocation(
-                createBusinessRecord.business().getId(),
-                "Child",
-                createBusinessRecord.allocationRecord().allocation().getId())
-            .allocation();
-    final Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            createBusinessRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            false);
-    final UpdateCardAccountRequest request =
-        new UpdateCardAccountRequest(allocation.getAllocationId(), allocation.getAccountId());
-
-    final ThrowingFunction<Cookie, ResultActions> action =
-        cookie ->
-            mvc.perform(
-                patch("/users/cards/%s/account".formatted(card.getId()))
-                    .cookie(cookie)
-                    .contentType("application/json")
-                    .content(objectMapper.writeValueAsString(request)));
-
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .allowGlobalRoles(
-            Set.of(
-                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
-        .allowRolesOnAllocation(
-            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
         .build()
         .validateMockMvcCall(action);
   }
@@ -2468,45 +2360,6 @@ class UserControllerTest extends BaseCapitalTest {
                 account.getId(),
                 account.getType(),
                 com.clearspend.capital.controller.type.Amount.of(account.getLedgerBalance())));
-  }
-
-  @Test
-  void updateCardAccount_CardIsUnlinked() {
-    final AllocationRecord allocationRecord =
-        testHelper.createAllocation(
-            createBusinessRecord.business().getId(),
-            "Child",
-            createBusinessRecord.allocationRecord().allocation().getId());
-    final Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            createBusinessRecord.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.PHYSICAL,
-            true);
-    card.setAllocationId(null);
-    card.setAccountId(null);
-    cardRepository.saveAndFlush(card);
-
-    com.clearspend.capital.controller.type.card.Card result =
-        mockMvcHelper.queryObject(
-            "/users/cards/%s/account".formatted(card.getId()),
-            HttpMethod.PATCH,
-            createBusinessRecord.authCookie(),
-            new UpdateCardAccountRequest(
-                allocationRecord.allocation().getId(), allocationRecord.account().getId()),
-            com.clearspend.capital.controller.type.card.Card.class);
-
-    assertThat(result)
-        .hasFieldOrPropertyWithValue("allocationId", allocationRecord.allocation().getId())
-        .hasFieldOrPropertyWithValue("accountId", allocationRecord.account().getId());
-
-    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
-    assertThat(dbCard)
-        .hasFieldOrPropertyWithValue("allocationId", allocationRecord.allocation().getId())
-        .hasFieldOrPropertyWithValue("accountId", allocationRecord.account().getId());
   }
 
   @Test

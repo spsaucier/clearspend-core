@@ -18,6 +18,7 @@ import com.clearspend.capital.crypto.Crypto;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
@@ -26,6 +27,7 @@ import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig;
 import com.clearspend.capital.service.BeanUtils;
@@ -43,10 +45,13 @@ import java.sql.Types;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -67,6 +72,7 @@ import org.springframework.util.CollectionUtils;
 public class CardRepositoryImpl implements CardRepositoryCustom {
 
   private final EntityManager entityManager;
+  private final CardAllocationRepository cardAllocationRepository;
   private final CriteriaBuilderFactory criteriaBuilderFactory;
   private final Crypto crypto;
 
@@ -77,11 +83,13 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
       Allocation allocation,
       Account account,
       User user,
-      TransactionLimit transactionLimit) {}
+      TransactionLimit transactionLimit,
+      CardAllocation cardAllocation) {}
 
   public CardRepositoryImpl(
       EntityManager entityManager,
       CriteriaBuilderFactory criteriaBuilderFactory,
+      CardAllocationRepository cardAllocationRepository,
       Crypto crypto,
       @Value("classpath:db/sql/cardRepository/filterCards.sql") Resource filterCardsQueryFile) {
     this.entityManager = entityManager;
@@ -89,6 +97,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     this.crypto = crypto;
     String filterCardsQueryText = SqlResourceLoader.load(filterCardsQueryFile);
     this.template = Mustache.compiler().compile(filterCardsQueryText);
+    this.cardAllocationRepository = cardAllocationRepository;
   }
 
   private SearchCardData cardFilterRowMapper(final ResultSet resultSet, final int rowNum)
@@ -194,20 +203,58 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         totalElements);
   }
 
+  private LinkedList<CardDetailsRecord> cardDetailsTupleToRecord(
+      final CardDetailsWithUserRecord tuple) {
+    final Set<CardAllocation> cardAllocations = new HashSet<>();
+    cardAllocations.add(tuple.cardAllocation());
+    final CardDetailsRecord record =
+        new CardDetailsRecord(
+            tuple.card(),
+            tuple.allocation(),
+            cardAllocations,
+            tuple.account(),
+            tuple.transactionLimit());
+    final LinkedList<CardDetailsRecord> list = new LinkedList<>();
+    list.add(record);
+    return list;
+  }
+
+  /** Reduce cartesian product to standard list. */
+  private LinkedList<CardDetailsRecord> reduceCardDetailsLists(
+      final LinkedList<CardDetailsRecord> resultList,
+      final LinkedList<CardDetailsRecord> recordList) {
+    return Optional.ofNullable(resultList.peekLast())
+        .filter(l -> l.card().getId().equals(recordList.peekFirst().card().getId()))
+        .map(
+            rec -> {
+              rec.allowedAllocations().addAll(recordList.peekFirst().allowedAllocations());
+              return resultList;
+            })
+        .orElseGet(
+            () -> {
+              resultList.add(recordList.peekFirst());
+              return resultList;
+            });
+  }
+
   private List<CardDetailsRecord> findDetails(
       @NonNull TypedId<BusinessId> businessId, TypedId<CardId> cardId, TypedId<UserId> userId) {
 
     CriteriaBuilder<Tuple> builder = createDefaultBuilder(businessId);
-
-    builder.where("card.businessId").eq(businessId);
+    BlazePersistenceUtils.joinOnPrimaryKey(
+        builder, Card.class, CardAllocation.class, "cardId", JoinType.LEFT);
+    builder
+        .select(BlazePersistenceUtils.getClassName(CardAllocation.class))
+        .where("card.businessId")
+        .eq(businessId);
 
     BeanUtils.setNotNull(cardId, id -> builder.where("card.id").eq(id));
     BeanUtils.setNotNull(userId, id -> builder.where("card.userId").eq(id));
 
-    List<CardDetailsRecord> result =
+    final List<CardDetailsRecord> result =
         BlazePersistenceUtils.queryTuples(CardDetailsWithUserRecord.class, builder, false).stream()
-            .map(r -> new CardDetailsRecord(r.card, r.allocation, r.account, r.transactionLimit))
-            .collect(Collectors.toList());
+            .map(this::cardDetailsTupleToRecord)
+            .reduce(new LinkedList<>(), this::reduceCardDetailsLists);
 
     calculateAvailableBalance(
         result.stream()
@@ -255,6 +302,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
     BlazePersistenceUtils.joinOnPrimaryKey(
         builder, Card.class, TransactionLimit.class, "ownerId", JoinType.INNER);
+    builder.orderBy("card.id", true);
 
     builder
         .select("card")
