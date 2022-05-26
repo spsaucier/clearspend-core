@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.persistence.PostPersist;
 import javax.persistence.PostUpdate;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +25,7 @@ public class AccountActivityEntityEventListener {
   }
 
   @PostUpdate
-  private void postUpdateAudit(AccountActivity accountActivity) {
+  public void postUpdateAudit(AccountActivity accountActivity) {
     if (accountActivity == null) return;
     // another write to the bigtable to audit whatever changed....
 
@@ -40,7 +41,7 @@ public class AccountActivityEntityEventListener {
   }
 
   @PostPersist
-  private void postInsert(AccountActivity accountActivity) {
+  public void postInsert(AccountActivity accountActivity) {
     if (accountActivity == null) return;
     Map<String, String> dataChanged = prepareEvent(accountActivity, "insert");
     emitAccountingEvent(accountActivity, dataChanged);
@@ -49,21 +50,33 @@ public class AccountActivityEntityEventListener {
   private Map<String, String> prepareEvent(AccountActivity accountActivity, String mode) {
     Map<String, String> data = new HashMap<>();
 
-    if (accountActivity.getNotes() != null) {
+    // notes
+    if (StringUtils.isNotBlank(accountActivity.getNotes())) {
       data.put("notes", accountActivity.getNotes());
     }
-
+    // receipt
     if (accountActivity.getReceipt() != null
         && accountActivity.getReceipt().getReceiptIds() != null) {
       String receiptList =
           accountActivity.getReceipt().getReceiptIds().stream()
               .map(Object::toString)
               .collect(Collectors.joining(","));
-      data.put("receipt", receiptList);
+      if (StringUtils.isNotBlank(receiptList)) {
+        data.put("receipt", receiptList);
+      }
     }
 
-    // TODO: add all the fields that are interested
-    // TODO: end
+    // supplier/vendor
+    if (accountActivity.getMerchant() != null
+        && StringUtils.isNotBlank(accountActivity.getMerchant().getCodatSupplierName())) {
+      data.put("codat_supplier", accountActivity.getMerchant().getCodatSupplierName());
+    }
+    // expense category
+    if (accountActivity.getExpenseDetails() != null
+        && StringUtils.isNotBlank(accountActivity.getExpenseDetails().getCategoryName())) {
+      data.put("expense_category", accountActivity.getExpenseDetails().getCategoryName());
+    }
+
     if (!data.isEmpty()) {
       data.put("mode", mode);
     }
