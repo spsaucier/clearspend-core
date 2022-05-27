@@ -148,6 +148,7 @@ public class AccountingAuditLogService {
         if (log.getExpenseCategoryList() != null) {
           for (AuditLogDisplayValue exc : log.getExpenseCategoryList()) {
             fulfillUserInfo(localUserCache, exc);
+            exc.setTransactionId(log.getAccountActivityId());
           }
           responseList.addAll(log.getExpenseCategoryList());
         }
@@ -155,6 +156,7 @@ public class AccountingAuditLogService {
         if (log.getSupplierList() != null) {
           for (AuditLogDisplayValue s : log.getSupplierList()) {
             fulfillUserInfo(localUserCache, s);
+            s.setTransactionId(log.getAccountActivityId());
           }
           responseList.addAll(log.getSupplierList());
         }
