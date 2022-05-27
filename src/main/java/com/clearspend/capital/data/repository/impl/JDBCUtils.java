@@ -69,6 +69,19 @@ public class JDBCUtils {
                     .query(sql, paramSource, rowMapper));
   }
 
+  public static <R> R queryForObject(
+      EntityManager entityManager,
+      String sql,
+      SqlParameterSource paramSource,
+      RowMapper<R> rowMapper) {
+    return entityManager
+        .unwrap(Session.class)
+        .doReturningWork(
+            connection ->
+                new NamedParameterJdbcTemplate(new SingleConnectionDataSource(connection, true))
+                    .queryForObject(sql, paramSource, rowMapper));
+  }
+
   public static <R> R query(
       EntityManager entityManager,
       String sql,

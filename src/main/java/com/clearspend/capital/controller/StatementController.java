@@ -1,12 +1,12 @@
 package com.clearspend.capital.controller;
 
+import com.clearspend.capital.controller.type.activity.BusinessStatementRequest;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.service.CardService;
-import com.clearspend.capital.service.CardStatementService;
-import com.clearspend.capital.service.CardStatementService.CardStatementRecord;
+import com.clearspend.capital.service.StatementService;
+import com.clearspend.capital.service.StatementService.StatementRecord;
 import com.clearspend.capital.service.type.CurrentUser;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -20,20 +20,36 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/card-statement")
+@RequestMapping("/statements")
 @RequiredArgsConstructor
-public class CardStatementController {
+public class StatementController {
 
-  private final CardStatementService cardStatementService;
+  private final StatementService statementService;
   private final CardService cardService;
 
-  @PostMapping("")
-  ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request)
-      throws IOException {
+  @PostMapping("card")
+  ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request) {
 
     final CardRepositoryCustom.CardDetailsRecord card =
         cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
-    CardStatementRecord result = cardStatementService.generatePdf(request, card);
+    StatementRecord result = statementService.generateCardStatementPdf(request, card);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_PDF);
+
+    headers.setContentDisposition(
+        ContentDisposition.builder("attachment").filename(result.fileName()).build());
+
+    return new ResponseEntity<>(result.pdf(), headers, HttpStatus.OK);
+  }
+
+  @PostMapping("business")
+  ResponseEntity<byte[]> businessStatement(
+      @Validated @RequestBody BusinessStatementRequest request) {
+
+    StatementRecord result =
+        statementService.generateBusinessStatementPdf(
+            CurrentUser.getBusinessId(), request.getStartDate(), request.getEndDate());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_PDF);

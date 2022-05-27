@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.controller.type.activity.BusinessStatementRequest;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
@@ -17,6 +18,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.testutils.statement.StatementHelper;
 import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Set;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +35,7 @@ import org.testcontainers.utility.ThrowingFunction;
 @SuppressWarnings({"JavaTimeDefaultTimeZone", "StringSplitter"})
 @RequiredArgsConstructor(onConstructor = @__({@Autowired}))
 @Slf4j
-public class CardStatementControllerTest extends BaseCapitalTest {
+public class StatementControllerTest extends BaseCapitalTest {
 
   private final MockMvc mvc;
   private final TestHelper testHelper;
@@ -75,7 +77,7 @@ public class CardStatementControllerTest extends BaseCapitalTest {
     final ThrowingFunction<Cookie, ResultActions> action =
         (cookie) ->
             mvc.perform(
-                post("/card-statement")
+                post("/statements/card")
                     .contentType("application/json")
                     .content(request.requestString())
                     .cookie(cookie));
@@ -102,12 +104,23 @@ public class CardStatementControllerTest extends BaseCapitalTest {
   }
 
   @SneakyThrows
+  private String getBusinessStatementRequest() {
+    BusinessStatementRequest businessStatementRequest = new BusinessStatementRequest();
+    businessStatementRequest.setStartDate(
+        OffsetDateTime.now().with(TemporalAdjusters.firstDayOfMonth()));
+    businessStatementRequest.setEndDate(
+        OffsetDateTime.now().with(TemporalAdjusters.lastDayOfMonth()));
+
+    return objectMapper.writeValueAsString(businessStatementRequest);
+  }
+
+  @SneakyThrows
   @Test
   void getCardStatement_ByBusinessOwnerUser_ValidateResponse() {
     final RequestObjAndString request = getCardStatementRequest();
     MockHttpServletResponse response =
         mvc.perform(
-                post("/card-statement")
+                post("/statements/card")
                     .contentType("application/json")
                     .content(request.requestString())
                     .cookie(createBusinessRecord.authCookie()))
@@ -115,7 +128,24 @@ public class CardStatementControllerTest extends BaseCapitalTest {
             .andReturn()
             .getResponse();
 
-    statementHelper.validatePdfContent(
+    statementHelper.validateCardPdfContent(
+        response.getContentAsByteArray(), createBusinessRecord.user(), card);
+  }
+
+  @SneakyThrows
+  @Test
+  void getBusinessStatement_ByBusinessOwnerUser_ValidateResponse() {
+    MockHttpServletResponse response =
+        mvc.perform(
+                post("/statements/business")
+                    .contentType("application/json")
+                    .content(getBusinessStatementRequest())
+                    .cookie(createBusinessRecord.authCookie()))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+
+    statementHelper.validateBusinessPdfContent(
         response.getContentAsByteArray(), createBusinessRecord.user(), card);
   }
 }

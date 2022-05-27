@@ -83,6 +83,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -108,6 +109,8 @@ import reactor.core.publisher.Mono;
 public class StripeClient {
 
   private static final Map<String, Object> REQUESTED_CAPABILITY = Map.of("requested", "true");
+
+  private static final TypedId<BusinessId> BLANK_BUSINESS_ID = new TypedId(new UUID(0, 0));
 
   // Treasury related API calls requires Stripe-treasury beta capabilities,
   // which can be enabled using a special version string
@@ -930,7 +933,7 @@ public class StripeClient {
 
   public FinancialAccount getClearspendFinancialAccount() {
     return getFinancialAccount(
-        null,
+        BLANK_BUSINESS_ID,
         stripeProperties.getClearspendConnectedAccountId(),
         stripeProperties.getClearspendFinancialAccountId());
   }

@@ -100,7 +100,7 @@ public class StatementHelper {
   }
 
   @SneakyThrows
-  public void validatePdfContent(
+  public void validateCardPdfContent(
       final byte[] content, final User businessOwnerUser, final Card card) {
     /*
       Parse PDF back into text, and try to find several pieces which we know should be there
@@ -167,5 +167,73 @@ public class StatementHelper {
     Assertions.assertTrue(foundCardholder);
     Assertions.assertTrue(foundCardNumber);
     Assertions.assertEquals("$909.00", lastWord);
+  }
+
+  @SneakyThrows
+  public void validateBusinessPdfContent(
+      final byte[] content, final User businessOwnerUser, final Card card) {
+    /*
+      Parse PDF back into text, and try to find several pieces which we know should be there
+      Expected string should look like below:
+
+      Monthly Statement
+       Balance delta this period:Statement 05/01/2022 - 05/31/2022
+       $91.00
+       Thank you for using ClearSpend.
+       For details and upcoming payments, log into your ClearSpend account
+       Transactions
+       DATE Account Transaction TypeReferenceEmployeeAMOUNTBALANCE
+       05/26/2022
+       **** 5390Card PaymentTuscon BakeryCornelia Stiedemann
+       $-9.00 $91.00
+       05/26/2022
+       **** 5390Card PaymentTuscon BakeryCornelia Stiedemann
+       $-900.00 $100.00
+       $91.00 $91.00
+
+    */
+
+    PdfTextExtractor pdfTextExtractor = new PdfTextExtractor(new PdfReader(content));
+
+    String pdfParsed = pdfTextExtractor.getTextFromPage(1);
+
+    boolean foundHeader = false;
+    boolean foundLine1 = false;
+    boolean foundLine2 = false;
+    boolean foundTotal = false;
+    boolean foundCardholder = false;
+    boolean foundCardNumber = false;
+
+    for (String line : pdfParsed.split("\n")) {
+
+      line = line.trim();
+      if (StringUtils.isEmpty(line)) {
+        continue;
+      }
+
+      if (line.contains("**** " + card.getLastFour())) {
+        foundCardNumber = true;
+      }
+
+      if (line.contains("DATE Account Transaction TypeReferenceEmployeeAMOUNTBALANCE")) {
+        foundHeader = true;
+      } else if (line.contains("$-9.00 $91.00")) {
+        foundLine1 = true;
+      } else if (line.contains("$-900.00 $100.00")) {
+        foundLine2 = true;
+      } else if (line.contains("$91.00 $91.00")) {
+        foundTotal = true;
+      } else if (line.contains(
+          businessOwnerUser.getFirstName() + " " + businessOwnerUser.getLastName())) {
+        foundCardholder = true;
+      }
+    }
+
+    Assertions.assertTrue(foundHeader);
+    Assertions.assertTrue(foundLine1);
+    Assertions.assertTrue(foundLine2);
+    Assertions.assertTrue(foundTotal);
+    Assertions.assertTrue(foundCardholder);
+    Assertions.assertTrue(foundCardNumber);
   }
 }

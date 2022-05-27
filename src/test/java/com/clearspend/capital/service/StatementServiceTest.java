@@ -21,9 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class CardStatementServiceTest extends BaseCapitalTest {
+public class StatementServiceTest extends BaseCapitalTest {
   @Autowired private TestHelper testHelper;
-  @Autowired private CardStatementService cardStatementService;
+  @Autowired private StatementService statementService;
   @Autowired private CardService cardService;
   @Autowired private StatementHelper statementHelper;
   @Autowired private PermissionValidationHelper permissionValidationHelper;
@@ -56,13 +56,14 @@ public class CardStatementServiceTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
-  void generatePdf_ValidateUserPermissions() {
+  void generateCardStatementPdf_ValidateUserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     final CardStatementRequest request = getRequest(card.getId());
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
 
-    final ThrowingRunnable action = () -> cardStatementService.generatePdf(request, cardDetails);
+    final ThrowingRunnable action =
+        () -> statementService.generateCardStatementPdf(request, cardDetails);
 
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
@@ -82,13 +83,14 @@ public class CardStatementServiceTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
-  void generatePdf_ValidatePdf() {
+  void generateCardStatementPdf_ValidatePdf() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     final CardStatementRequest request = getRequest(card.getId());
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
         cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
-    final CardStatementService.CardStatementRecord statementRecord =
-        cardStatementService.generatePdf(request, cardDetails);
-    statementHelper.validatePdfContent(statementRecord.pdf(), createBusinessRecord.user(), card);
+    final StatementService.StatementRecord statementRecord =
+        statementService.generateCardStatementPdf(request, cardDetails);
+    statementHelper.validateCardPdfContent(
+        statementRecord.pdf(), createBusinessRecord.user(), card);
   }
 }

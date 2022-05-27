@@ -69,6 +69,21 @@ public class AccountActivityFilterCriteria {
     this.pageToken = pageToken;
   }
 
+  public AccountActivityFilterCriteria(
+      TypedId<BusinessId> businessId,
+      List<AccountActivityType> types,
+      List<AccountActivityStatus> statuses,
+      OffsetDateTime from,
+      OffsetDateTime to,
+      PageToken pageToken) {
+    this.businessId = businessId;
+    this.types = types;
+    this.statuses = statuses;
+    this.from = from;
+    this.to = to;
+    this.pageToken = pageToken;
+  }
+
   public String getTypesString() {
     return types.stream()
         .map(s -> String.format("'%s'", s.name()))

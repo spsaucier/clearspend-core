@@ -9,7 +9,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface AdjustmentRepository extends JpaRepository<Adjustment, TypedId<AdjustmentId>> {
+public interface AdjustmentRepository
+    extends JpaRepository<Adjustment, TypedId<AdjustmentId>>, AdjustmentRepositoryCustom {
 
   List<Adjustment> findByBusinessIdAndTypeInAndEffectiveDateAfter(
       TypedId<BusinessId> businessId, List<AdjustmentType> types, OffsetDateTime after);

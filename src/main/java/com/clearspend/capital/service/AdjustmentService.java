@@ -9,6 +9,7 @@ import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
 import com.clearspend.capital.data.repository.AdjustmentRepository;
+import com.clearspend.capital.data.repository.AdjustmentRepositoryCustom.LedgerBalancePeriod;
 import com.clearspend.capital.service.LedgerService.BankJournalEntry;
 import com.clearspend.capital.service.LedgerService.ManualAdjustmentJournalEntry;
 import com.clearspend.capital.service.LedgerService.NetworkJournalEntry;
@@ -217,5 +218,10 @@ public class AdjustmentService {
     OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC).minusDays(daysAgo);
     return adjustmentRepository.findByBusinessIdAndTypeInAndEffectiveDateAfter(
         businessId, adjustmentTypes, before);
+  }
+
+  LedgerBalancePeriod getBusinessLedgerBalanceForPeriod(
+      TypedId<BusinessId> businessId, OffsetDateTime from, OffsetDateTime to) {
+    return adjustmentRepository.findBusinessLedgerBalanceForPeriod(businessId, from, to);
   }
 }

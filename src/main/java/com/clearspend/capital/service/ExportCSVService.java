@@ -147,8 +147,8 @@ public class ExportCSVService {
                         .trim();
                   };
 
-              String sourceAccount = getLedgerAccountName(record.getSourceAccount());
-              String targetAccount = getLedgerAccountName(record.getTargetAccount());
+              String sourceAccount = getLedgerAccountName(record.getAccount());
+              String targetAccount = getLedgerAccountName(record.getReferenceAccount());
 
               List<Object> values =
                   Arrays.asList(

@@ -117,9 +117,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(response.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
-    assertThat(response.getTargetAccount())
+    assertThat(response.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
+    assertThat(response.getReferenceAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 
     assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
@@ -155,8 +155,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PENDING);
     assertThat(response.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(response.getHold()).isEqualTo(LedgerHoldInfo.of(adjustmentAndHoldRecord.hold()));
-    assertThat(response.getSourceAccount()).isNull();
-    assertThat(response.getTargetAccount())
+    assertThat(response.getReferenceAccount()).isNull();
+    assertThat(response.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 
@@ -191,9 +191,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(response.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount())
+    assertThat(response.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(response.getTargetAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
+    assertThat(response.getReferenceAccount()).isEqualTo(LedgerBankAccount.of(businessBankAccount));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN.negate());
 
     assertThat(response.getRequestedAmount().getAmount())
@@ -245,9 +245,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(from.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(from.getHold()).isNull();
 
-    assertThat(from.getSourceAccount())
+    assertThat(from.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
-    assertThat(from.getTargetAccount())
+    assertThat(from.getReferenceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(from.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
 
@@ -264,9 +264,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(to.getUser()).isEqualTo(new LedgerUser(UserDetails.of(user)));
     assertThat(to.getHold()).isNull();
 
-    assertThat(to.getSourceAccount())
+    assertThat(to.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(to.getTargetAccount())
+    assertThat(to.getReferenceAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(to.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));
 
@@ -326,10 +326,10 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(returnActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(returnActivity.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
     assertThat(returnActivity.getHold()).isNull();
-    assertThat(returnActivity.getSourceAccount())
-        .isEqualTo(LedgerBankAccount.of(businessBankAccount));
-    assertThat(returnActivity.getTargetAccount())
+    assertThat(returnActivity.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
+    assertThat(returnActivity.getReferenceAccount())
+        .isEqualTo(LedgerBankAccount.of(businessBankAccount));
     assertThat(returnActivity.getAmount().getAmount())
         .isEqualByComparingTo(BigDecimal.TEN.negate());
 
@@ -395,9 +395,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(returnActivity.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(returnActivity.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
     assertThat(returnActivity.getHold()).isNull();
-    assertThat(returnActivity.getSourceAccount())
+    assertThat(returnActivity.getAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(returnActivity.getTargetAccount())
+    assertThat(returnActivity.getReferenceAccount())
         .isEqualTo(LedgerBankAccount.of(businessBankAccount));
     assertThat(returnActivity.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 
@@ -456,12 +456,12 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
     assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount())
+    assertThat(response.getAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
+    assertThat(response.getReferenceAccount())
         .isEqualTo(
             new LedgerBankAccount(
                 new BankInfo(usBankAccount.getBankName(), usBankAccount.getLastFour())));
-    assertThat(response.getTargetAccount())
-        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 
     assertThat(response.getRequestedAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
@@ -506,8 +506,8 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(response.getStatus()).isEqualTo(AccountActivityStatus.PROCESSED);
     assertThat(response.getUser()).isEqualTo(LedgerUser.EXTERNAL_USER);
     assertThat(response.getHold()).isNull();
-    assertThat(response.getSourceAccount()).isNull();
-    assertThat(response.getTargetAccount())
+    assertThat(response.getAccount()).isNull();
+    assertThat(response.getReferenceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(response.getAmount().getAmount()).isEqualByComparingTo(BigDecimal.TEN);
 

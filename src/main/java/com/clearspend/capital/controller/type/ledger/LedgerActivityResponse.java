@@ -48,11 +48,11 @@ public class LedgerActivityResponse {
   @JsonProperty("hold")
   private LedgerHoldInfo hold;
 
-  @JsonProperty("sourceAccount")
-  private LedgerAccount sourceAccount;
+  @JsonProperty("account")
+  private LedgerAccount account;
 
-  @JsonProperty("targetAccount")
-  private LedgerAccount targetAccount;
+  @JsonProperty("referenceAccount")
+  private LedgerAccount referenceAccount;
 
   @JsonProperty("amount")
   @NonNull
@@ -94,69 +94,52 @@ public class LedgerActivityResponse {
     LedgerHoldInfo holdInfo = LedgerHoldInfo.of(accountActivity.getHold());
 
     final LedgerUser ledgerUser;
-    LedgerAccount sourceAccount;
-    LedgerAccount targetAccount;
+    LedgerAccount account;
+    LedgerAccount referenceAccount;
 
     switch (accountActivity.getType()) {
       case FEE -> {
         ledgerUser = LedgerUser.SYSTEM_USER;
-        sourceAccount = null;
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = null;
+        referenceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
       case MANUAL -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
         // we don't have any manual activities so far so mapping logic might be different
-        sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-        targetAccount = null;
+        account = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        referenceAccount = null;
       }
       case REALLOCATE -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
-        sourceAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
+        referenceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
-      case BANK_DEPOSIT_STRIPE -> {
+      case BANK_DEPOSIT_STRIPE, BANK_WITHDRAWAL -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
-        sourceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        referenceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
-      case BANK_WITHDRAWAL -> {
-        ledgerUser = new LedgerUser(accountActivity.getUser());
-        sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-        targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
-      }
-      case BANK_DEPOSIT_RETURN, BANK_DEPOSIT_ACH, BANK_DEPOSIT_WIRE -> {
+      case BANK_DEPOSIT_RETURN, BANK_DEPOSIT_ACH, BANK_DEPOSIT_WIRE, BANK_WITHDRAWAL_RETURN -> {
         ledgerUser = LedgerUser.EXTERNAL_USER;
-        sourceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        referenceAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
       }
-      case BANK_WITHDRAWAL_RETURN -> {
-        ledgerUser = LedgerUser.EXTERNAL_USER;
-        sourceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
-        targetAccount = LedgerBankAccount.of(accountActivity.getBankAccount());
-      }
-      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE -> {
+      case NETWORK_AUTHORIZATION, NETWORK_CAPTURE, NETWORK_REFUND -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
-        sourceAccount =
+        account =
             LedgerCardAccount.of(
                 accountActivity.getAllocation().getName(), accountActivity.getCard());
-        targetAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
-      }
-      case NETWORK_REFUND -> {
-        ledgerUser = LedgerUser.SYSTEM_USER;
-        sourceAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
-        targetAccount =
-            LedgerCardAccount.of(
-                accountActivity.getAllocation().getName(), accountActivity.getCard());
+        referenceAccount = new LedgerMerchantAccount(accountActivity.getMerchant());
       }
       case CARD_FUND_RETURN -> {
         ledgerUser = LedgerUser.EXTERNAL_USER;
-        sourceAccount = null;
-        targetAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = null;
+        referenceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
       }
       default -> {
         ledgerUser = LedgerUser.SYSTEM_USER;
-        sourceAccount = null;
-        targetAccount = null;
+        account = null;
+        referenceAccount = null;
       }
     }
 
@@ -172,8 +155,8 @@ public class LedgerActivityResponse {
             accountActivity.getIntegrationSyncStatus());
 
     response.setHold(holdInfo);
-    response.setSourceAccount(sourceAccount);
-    response.setTargetAccount(targetAccount);
+    response.setAccount(account);
+    response.setReferenceAccount(referenceAccount);
     response.setReceipt(ReceiptDetails.toReceiptDetails(accountActivity.getReceipt()));
     response.setNotes(accountActivity.getNotes());
     response.setExpenseDetails(
