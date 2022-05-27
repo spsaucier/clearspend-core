@@ -9,6 +9,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.twilio.TwilioServiceMock;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
@@ -28,6 +29,7 @@ import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import io.fusionauth.domain.api.user.ChangePasswordResponse;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.Cookie;
@@ -196,21 +198,20 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
 
     // Issuing the card registers with FA and sends an email to reset their password
     testHelper.setCurrentUser(createBusinessRecord.user());
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
     final IssueCardRequest issueCardRequest =
         new IssueCardRequest(
-            Set.of(),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            newUser.user().getId(),
-            Currency.USD,
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+            Set.of(), newUser.user().getId(), Currency.USD, true, List.of(controls));
     issueCardRequest.setFundingType(FundingType.POOLED);
     issueCardRequest.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(newUser.user().getAddress()));
-    cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
+    cardService.issueCard(
+        createBusinessRecord.business().getId(), CardType.VIRTUAL, issueCardRequest);
 
     String newPassword = twilioServiceMock.getLastUserAccountCreatedPassword();
     // check that the email arrived

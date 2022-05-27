@@ -14,8 +14,7 @@ import com.clearspend.capital.controller.type.card.RevealCardRequest;
 import com.clearspend.capital.controller.type.card.RevealCardResponse;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
-import com.clearspend.capital.controller.type.card.UpdateCardRequest;
-import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
+import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
@@ -26,7 +25,6 @@ import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.stripe.model.EphemeralKey;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -66,10 +64,9 @@ public class CardController {
   }
 
   @PostMapping("")
-  List<IssueCardResponse> issueCard(@RequestBody @Validated IssueCardRequest request) {
-    List<IssueCardResponse> issueCardResponseList = new ArrayList<>();
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
-    String businessLegalName = businessService.getBusiness(businessId, true).getLegalName();
+  List<IssueCardResponse> issueCard(@RequestBody @Validated final IssueCardRequest request) {
+    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final String businessLegalName = businessService.getBusiness(businessId, true).getLegalName();
 
     // Keeping this at the controller level so as not to break some great test logic we have in
     // place for individual cards
@@ -81,42 +78,33 @@ public class CardController {
       throw new InvalidRequestException("User has been archived");
     }
 
-    request
-        .getCardType()
-        .forEach(
+    return request.getCardType().stream()
+        .map(
             cardType ->
-                issueCardResponseList.add(
-                    new IssueCardResponse(
-                        cardService.issueCard(cardType, request).card().getId(), null)));
-
-    return issueCardResponseList;
+                new IssueCardResponse(
+                    cardService.issueCard(businessId, cardType, request).card().getId(), null))
+        .toList();
   }
 
-  @PatchMapping("/{cardId}")
-  CardDetailsResponse updateCard(
+  @PatchMapping("/{cardId}/controls")
+  CardDetailsResponse updateCardSpendControls(
       @PathVariable(value = "cardId")
           @Parameter(
               required = true,
               name = "cardId",
               description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
-          TypedId<CardId> cardId,
-      @RequestBody @Validated UpdateCardRequest request) {
+          final TypedId<CardId> cardId,
+      @RequestBody @Validated final UpdateCardSpendControlsRequest request) {
 
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
-    cardService.updateCard(
-        cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
-        CurrencyLimit.toMap(request.getLimits()),
-        request.getDisabledMccGroups(),
-        request.getDisabledPaymentTypes(),
-        request.getDisableForeign());
+    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    cardService.updateCardSpendControls(cardService.retrieveCard(businessId, cardId), request);
 
     return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
   }
 
   @PostMapping("/search")
   PagedData<SearchCardData> search(@Validated @RequestBody SearchCardRequest request) {
-    // TODO: Implement proper security restrictions based on the outcome of CAP-202
     return PagedData.of(cardService.filterCards(CardFilterCriteria.fromSearchRequest(request)));
   }
 

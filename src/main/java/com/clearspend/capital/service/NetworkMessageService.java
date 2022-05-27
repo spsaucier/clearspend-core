@@ -426,27 +426,30 @@ public class NetworkMessageService {
       common.setHoldAmount(common.getApprovedAmount().add(common.getPriorHoldAmount().negate()));
     }
 
-    // Card spending limits and settings checks
-    try {
-      transactionLimitService.ensureWithinLimit(
-          common.getBusiness().getId(),
-          Optional.ofNullable(common.getAllocation()).map(Allocation::getId).orElse(null),
-          common.getCard().getId(),
-          common.getApprovedAmount(),
-          common.getMerchantCategoryCode(),
-          common.getAuthorizationMethod(),
-          common.getForeignTransaction());
-    } catch (LimitViolationException | SpendControlViolationException e) {
-      log.warn("Failed to accept a transaction due to a decline: {}", e.getMessage());
-      if (e instanceof LimitViolationException limitViolationException) {
-        common.getDeclineDetails().add(LimitExceeded.from(limitViolationException));
-      } else {
-        common
-            .getDeclineDetails()
-            .add(SpendControlViolated.from((SpendControlViolationException) e));
+    // We will have already declined the authorization if this is null
+    if (common.getAllocation() != null) {
+      // Card spending limits and settings checks
+      try {
+        transactionLimitService.ensureWithinLimit(
+            common.getBusiness().getId(),
+            common.getAllocation().getId(),
+            common.getCard().getId(),
+            common.getApprovedAmount(),
+            common.getMerchantCategoryCode(),
+            common.getAuthorizationMethod(),
+            common.getForeignTransaction());
+      } catch (LimitViolationException | SpendControlViolationException e) {
+        log.warn("Failed to accept a transaction due to a decline: {}", e.getMessage());
+        if (e instanceof LimitViolationException limitViolationException) {
+          common.getDeclineDetails().add(LimitExceeded.from(limitViolationException));
+        } else {
+          common
+              .getDeclineDetails()
+              .add(SpendControlViolated.from((SpendControlViolationException) e));
+        }
+        common.setPostDecline(true);
+        return;
       }
-      common.setPostDecline(true);
-      return;
     }
 
     common.getAccountActivityDetails().setAccountActivityStatus(AccountActivityStatus.PENDING);

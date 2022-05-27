@@ -12,10 +12,12 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.business.BusinessSettings;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
@@ -24,7 +26,7 @@ import com.clearspend.capital.controller.type.card.RevealCardRequest;
 import com.clearspend.capital.controller.type.card.RevealCardResponse;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
-import com.clearspend.capital.controller.type.card.UpdateCardRequest;
+import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
@@ -52,24 +54,27 @@ import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
+import com.clearspend.capital.testutils.assertions.AssertCardAllocationDetailsResponse;
+import com.clearspend.capital.testutils.assertions.AssertCardAllocationDetailsResponse.LimitsToAssert;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.javafaker.Faker;
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,6 +91,7 @@ public class CardControllerTest extends BaseCapitalTest {
 
   private final TestHelper testHelper;
   private final MockMvcHelper mockMvcHelper;
+  private final AssertCardAllocationDetailsResponse assertCardAllocationDetailsResponse;
   private final MockMvc mockMvc;
   private final EntityManager entityManager;
   private final CardRepository cardRepository;
@@ -137,26 +143,26 @@ public class CardControllerTest extends BaseCapitalTest {
             faker.name().name(),
             createBusinessRecord.allocationRecord().allocation().getId());
 
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limitMap =
+        Map.of(
+            Currency.USD,
+            Map.of(
+                LimitType.PURCHASE,
+                Map.of(LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)));
+
+    final CardAllocationSpendControls controls = new CardAllocationSpendControls(allocationId);
+    controls.setLimits(CurrencyLimit.ofMap(limitMap));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    controls.setDisableForeign(false);
+
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
-            allocationId,
             userId,
             Currency.USD,
             true,
-            CurrencyLimit.ofMap(
-                Map.of(
-                    Currency.USD,
-                    Map.of(
-                        LimitType.PURCHASE,
-                        Map.of(
-                            LimitPeriod.DAILY,
-                            BigDecimal.ONE,
-                            LimitPeriod.MONTHLY,
-                            BigDecimal.TEN)))),
-            Collections.emptySet(),
-            Set.of(PaymentType.MANUAL_ENTRY),
-            false);
+            List.of(controls));
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     entityManager.flush();
@@ -166,20 +172,129 @@ public class CardControllerTest extends BaseCapitalTest {
             "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
 
     assertThat(issueCardResponse).hasSize(2);
+    final CardAllocation cardAllocation1 =
+        testAndGetCardAllocations(issueCardResponse.get(0).getCardId(), List.of(allocationId))
+            .get(allocationId);
+    final CardAllocation cardAllocation2 =
+        testAndGetCardAllocations(issueCardResponse.get(1).getCardId(), List.of(allocationId))
+            .get(allocationId);
 
-    final List<CardAllocation> cardAllocations1 =
-        cardAllocationRepository.findAllByCardId(issueCardResponse.get(0).getCardId());
-    assertThat(cardAllocations1)
-        .hasSize(1)
-        .filteredOn(item -> item.getAllocationId().equals(allocationId))
-        .hasSize(1);
+    testTransactionLimit(cardAllocation1, controls);
+    testTransactionLimit(cardAllocation2, controls);
 
-    final List<CardAllocation> cardAllocations2 =
-        cardAllocationRepository.findAllByCardId(issueCardResponse.get(1).getCardId());
-    assertThat(cardAllocations2)
-        .hasSize(1)
-        .filteredOn(item -> item.getAllocationId().equals(allocationId))
-        .hasSize(1);
+    final Card dbCard1 =
+        cardRepository.findById(issueCardResponse.get(0).getCardId()).orElseThrow();
+    assertThat(dbCard1).hasFieldOrPropertyWithValue("allocationId", allocationId);
+    final Card dbCard2 =
+        cardRepository.findById(issueCardResponse.get(1).getCardId()).orElseThrow();
+    assertThat(dbCard2).hasFieldOrPropertyWithValue("allocationId", allocationId);
+  }
+
+  private void testTransactionLimit(
+      final CardAllocation cardAllocation, final CardAllocationSpendControls request) {
+    final TransactionLimit allocationLimit =
+        transactionLimitRepository
+            .findByBusinessIdAndTypeAndOwnerId(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.ALLOCATION,
+                cardAllocation.getAllocationId().toUuid())
+            .orElseThrow();
+    final TransactionLimit cardLimit =
+        transactionLimitRepository
+            .findByBusinessIdAndTypeAndOwnerId(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                cardAllocation.getId().toUuid())
+            .orElseThrow();
+
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
+        Optional.ofNullable(request.getLimits())
+            .map(CurrencyLimit::toMap)
+            .orElse(allocationLimit.getLimits());
+    final Set<MccGroup> disabledMccGroups =
+        Optional.ofNullable(request.getDisabledMccGroups())
+            .orElse(allocationLimit.getDisabledMccGroups());
+    final Set<PaymentType> disabledPaymentTypes =
+        Optional.ofNullable(request.getDisabledPaymentTypes())
+            .orElse(allocationLimit.getDisabledPaymentTypes());
+    final Boolean disableForeign =
+        Optional.ofNullable(request.getDisableForeign())
+            .orElse(allocationLimit.getDisableForeign());
+
+    assertThat(cardLimit)
+        .hasFieldOrPropertyWithValue("limits", limits)
+        .hasFieldOrPropertyWithValue("disabledMccGroups", disabledMccGroups)
+        .hasFieldOrPropertyWithValue("disabledPaymentTypes", disabledPaymentTypes)
+        .hasFieldOrPropertyWithValue("disableForeign", disableForeign);
+  }
+
+  private Map<TypedId<AllocationId>, CardAllocation> testAndGetCardAllocations(
+      final TypedId<CardId> cardId, final List<TypedId<AllocationId>> allocationIds) {
+    final List<CardAllocation> cardAllocations = cardAllocationRepository.findAllByCardId(cardId);
+    assertThat(cardAllocations)
+        .filteredOn(ca -> allocationIds.contains(ca.getAllocationId()))
+        .hasSize(allocationIds.size());
+    return cardAllocations.stream()
+        .collect(Collectors.toMap(CardAllocation::getAllocationId, Function.identity()));
+  }
+
+  @Test
+  void createCard_MultipleAllocations() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+
+    final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limitMap =
+        Map.of(
+            Currency.USD,
+            Map.of(
+                LimitType.PURCHASE,
+                Map.of(LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)));
+
+    final CardAllocationSpendControls rootControls =
+        new CardAllocationSpendControls(
+            createBusinessRecord.allocationRecord().allocation().getId());
+    rootControls.setLimits(CurrencyLimit.ofMap(limitMap));
+    rootControls.setDisabledMccGroups(Set.of());
+    rootControls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    rootControls.setDisableForeign(false);
+    final CardAllocationSpendControls childControls =
+        new CardAllocationSpendControls(childAllocation.allocation().getId());
+
+    IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(CardType.PHYSICAL),
+            userId,
+            Currency.USD,
+            true,
+            List.of(rootControls, childControls));
+    issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
+
+    entityManager.flush();
+
+    List<IssueCardResponse> issueCardResponse =
+        mockMvcHelper.queryList(
+            "/cards", HttpMethod.POST, userCookie, issueCardRequest, new TypeReference<>() {});
+
+    assertThat(issueCardResponse).hasSize(1);
+    final Map<TypedId<AllocationId>, CardAllocation> cardAllocations =
+        testAndGetCardAllocations(
+            issueCardResponse.get(0).getCardId(),
+            List.of(
+                createBusinessRecord.allocationRecord().allocation().getId(),
+                childAllocation.allocation().getId()));
+
+    final Card dbCard = cardRepository.findById(issueCardResponse.get(0).getCardId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId());
+
+    testTransactionLimit(
+        cardAllocations.get(createBusinessRecord.allocationRecord().allocation().getId()),
+        rootControls);
+    testTransactionLimit(cardAllocations.get(childAllocation.allocation().getId()), childControls);
   }
 
   @Test
@@ -203,27 +318,28 @@ public class CardControllerTest extends BaseCapitalTest {
             new UpdateCardStatusRequest(CardStatusReason.LOST),
             com.clearspend.capital.controller.type.card.Card.class);
 
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(
+        CurrencyLimit.ofMap(
+            Map.of(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(
+                        LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    controls.setDisableForeign(false);
+
     final String replacementFor = firstCard.getExternalRef();
     final IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL),
-            createBusinessRecord.allocationRecord().allocation().getAllocationId(),
             createBusinessRecord.user().getId(),
             Currency.USD,
             true,
-            CurrencyLimit.ofMap(
-                Map.of(
-                    Currency.USD,
-                    Map.of(
-                        LimitType.PURCHASE,
-                        Map.of(
-                            LimitPeriod.DAILY,
-                            BigDecimal.ONE,
-                            LimitPeriod.MONTHLY,
-                            BigDecimal.TEN)))),
-            Collections.emptySet(),
-            Set.of(PaymentType.MANUAL_ENTRY),
-            false);
+            List.of(controls));
     issueCardRequest.setReplacementFor(replacementFor);
     issueCardRequest.setReplacementReason(ReplacementReason.LOST);
 
@@ -265,26 +381,27 @@ public class CardControllerTest extends BaseCapitalTest {
     allocation.allocation().setArchived(true);
     allocationRepository.saveAndFlush(allocation.allocation());
 
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(allocation.allocation());
+    controls.setLimits(
+        CurrencyLimit.ofMap(
+            Map.of(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(
+                        LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    controls.setDisableForeign(false);
+
     final IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
-            allocation.allocation().getAllocationId(),
             employeeRecord.user().getId(),
             Currency.USD,
             true,
-            CurrencyLimit.ofMap(
-                Map.of(
-                    Currency.USD,
-                    Map.of(
-                        LimitType.PURCHASE,
-                        Map.of(
-                            LimitPeriod.DAILY,
-                            BigDecimal.ONE,
-                            LimitPeriod.MONTHLY,
-                            BigDecimal.TEN)))),
-            Collections.emptySet(),
-            Set.of(PaymentType.MANUAL_ENTRY),
-            false);
+            List.of(controls));
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     entityManager.flush();
@@ -309,26 +426,27 @@ public class CardControllerTest extends BaseCapitalTest {
     employeeRecord.user().setArchived(true);
     userRepository.save(employeeRecord.user());
 
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(
+        CurrencyLimit.ofMap(
+            Map.of(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(
+                        LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    controls.setDisableForeign(false);
+
     final IssueCardRequest issueCardRequest =
         new IssueCardRequest(
             Set.of(CardType.VIRTUAL, CardType.PHYSICAL),
-            createBusinessRecord.allocationRecord().allocation().getAllocationId(),
             employeeRecord.user().getId(),
             Currency.USD,
             true,
-            CurrencyLimit.ofMap(
-                Map.of(
-                    Currency.USD,
-                    Map.of(
-                        LimitType.PURCHASE,
-                        Map.of(
-                            LimitPeriod.DAILY,
-                            BigDecimal.ONE,
-                            LimitPeriod.MONTHLY,
-                            BigDecimal.TEN)))),
-            Collections.emptySet(),
-            Set.of(PaymentType.MANUAL_ENTRY),
-            false);
+            List.of(controls));
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     entityManager.flush();
@@ -366,20 +484,15 @@ public class CardControllerTest extends BaseCapitalTest {
     assertThat(cardDetailsResponse.getLedgerBalance().getCurrency())
         .isEqualTo(business.getCurrency());
 
-    assertThat(cardDetailsResponse.getLimits()).isNotNull();
-    CurrencyLimit currencyLimit = cardDetailsResponse.getLimits().get(0);
-    Assertions.assertThat(currencyLimit.getCurrency()).isEqualTo(Currency.USD);
-
-    assertThat(cardDetailsResponse.getLimits())
-        .containsOnly(new CurrencyLimit(Currency.USD, new HashMap<>()));
-
-    assertThat(cardDetailsResponse.getDisabledMccGroups()).isEmpty();
-    assertThat(cardDetailsResponse.getDisabledPaymentTypes()).isEmpty();
+    assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertCardAllocationDetailsResponse.doAssert(
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        cardDetailsResponse.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
   }
 
   @Test
   @SneakyThrows
-  void updateCard() {
+  void updateCardSpendControls() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     final Card card =
         testHelper.issueCard(
@@ -398,16 +511,20 @@ public class CardControllerTest extends BaseCapitalTest {
     final Set<PaymentType> disabledPaymentTypes =
         Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
     final boolean disableForeign = false;
-    final UpdateCardRequest request = new UpdateCardRequest();
-    request.setLimits(CurrencyLimit.ofMap(limits));
-    request.setDisabledMccGroups(disabledCategories);
-    request.setDisabledPaymentTypes(disabledPaymentTypes);
-    request.setDisableForeign(disableForeign);
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(CurrencyLimit.ofMap(limits));
+    controls.setDisabledMccGroups(disabledCategories);
+    controls.setDisabledPaymentTypes(disabledPaymentTypes);
+    controls.setDisableForeign(disableForeign);
+
+    final UpdateCardSpendControlsRequest request =
+        new UpdateCardSpendControlsRequest(List.of(controls));
 
     final String content =
         mockMvc
             .perform(
-                patch("/cards/%s".formatted(card.getId()))
+                patch("/cards/%s/controls".formatted(card.getId()))
                     .cookie(createBusinessRecord.authCookie())
                     .contentType("application/json")
                     .content(objectMapper.writeValueAsString(request)))
@@ -417,19 +534,30 @@ public class CardControllerTest extends BaseCapitalTest {
             .getContentAsString();
     final CardDetailsResponse response = objectMapper.readValue(content, CardDetailsResponse.class);
     assertThat(response)
-        .hasFieldOrPropertyWithValue("limits", CurrencyLimit.ofMap(limits))
-        .hasFieldOrPropertyWithValue("disabledMccGroups", disabledCategories)
-        .hasFieldOrPropertyWithValue("disabledPaymentTypes", disabledPaymentTypes)
-        .hasFieldOrPropertyWithValue("disableForeign", disableForeign)
         .hasFieldOrPropertyWithValue(
             "card", new com.clearspend.capital.controller.type.card.Card(card));
+    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
+
+    final LimitsToAssert limitsToAssert =
+        new LimitsToAssert(
+            CurrencyLimit.ofMap(limits), disabledCategories, disabledPaymentTypes, disableForeign);
+    assertCardAllocationDetailsResponse.doAssert(
+        limitsToAssert,
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        response.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(
+                card.getId(), createBusinessRecord.allocationRecord().allocation().getId())
+            .orElseThrow();
 
     final TransactionLimit transactionLimit =
         transactionLimitRepository
             .findByBusinessIdAndTypeAndOwnerId(
                 createBusinessRecord.business().getId(),
                 TransactionLimitType.CARD,
-                card.getId().toUuid())
+                cardAllocation.getId().toUuid())
             .orElseThrow();
     assertThat(transactionLimit)
         .hasFieldOrPropertyWithValue("limits", limits)
@@ -440,7 +568,7 @@ public class CardControllerTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
-  void updateCard_CancelledCard() {
+  void updateCardSpendControls_CancelledCard() {
     testHelper.setCurrentUser(createBusinessRecord.user());
     Card card =
         testHelper.issueCard(
@@ -461,15 +589,20 @@ public class CardControllerTest extends BaseCapitalTest {
     final Set<PaymentType> disabledPaymentTypes =
         Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
     final boolean disableForeign = false;
-    final UpdateCardRequest request = new UpdateCardRequest();
-    request.setLimits(CurrencyLimit.ofMap(limits));
-    request.setDisabledMccGroups(disabledCategories);
-    request.setDisabledPaymentTypes(disabledPaymentTypes);
-    request.setDisableForeign(disableForeign);
+
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(CurrencyLimit.ofMap(limits));
+    controls.setDisabledMccGroups(disabledCategories);
+    controls.setDisabledPaymentTypes(disabledPaymentTypes);
+    controls.setDisableForeign(disableForeign);
+
+    final UpdateCardSpendControlsRequest request =
+        new UpdateCardSpendControlsRequest(List.of(controls));
 
     mockMvc
         .perform(
-            patch("/cards/%s".formatted(card.getId()))
+            patch("/cards/%s/controls".formatted(card.getId()))
                 .cookie(createBusinessRecord.authCookie())
                 .contentType("application/json")
                 .content(objectMapper.writeValueAsString(request)))
@@ -477,8 +610,13 @@ public class CardControllerTest extends BaseCapitalTest {
   }
 
   @Test
-  void updateCard_UserPermissions() {
+  void updateCardSpendControls_UserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
     final Card card =
         testHelper.issueCard(
             business,
@@ -488,6 +626,7 @@ public class CardControllerTest extends BaseCapitalTest {
             FundingType.POOLED,
             CardType.PHYSICAL,
             true);
+
     final Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> limits =
         Map.of(
             Currency.USD,
@@ -496,16 +635,47 @@ public class CardControllerTest extends BaseCapitalTest {
     final Set<PaymentType> disabledPaymentTypes =
         Set.of(PaymentType.ONLINE, PaymentType.MANUAL_ENTRY);
     final boolean disableForeign = false;
-    final UpdateCardRequest request = new UpdateCardRequest();
-    request.setLimits(CurrencyLimit.ofMap(limits));
-    request.setDisabledMccGroups(disabledCategories);
-    request.setDisabledPaymentTypes(disabledPaymentTypes);
-    request.setDisableForeign(disableForeign);
+    final CardAllocation childCardAllocation =
+        cardAllocationRepository.save(
+            new CardAllocation(card.getId(), childAllocation.allocation().getId()));
+    transactionLimitRepository.save(
+        new TransactionLimit(
+            createBusinessRecord.business().getId(),
+            TransactionLimitType.CARD,
+            childCardAllocation.getId().toUuid(),
+            limits,
+            disabledCategories,
+            disabledPaymentTypes,
+            disableForeign));
+
+    final User managerOnChild =
+        testHelper
+            .createUserWithRole(childAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+
+    entityManager.flush();
+
+    final List<CardAllocationSpendControls> allControls =
+        Stream.of(
+                createBusinessRecord.allocationRecord().allocation(), childAllocation.allocation())
+            .map(
+                allocation -> {
+                  final CardAllocationSpendControls controls =
+                      CardAllocationSpendControls.of(allocation);
+                  controls.setLimits(CurrencyLimit.ofMap(limits));
+                  controls.setDisabledMccGroups(disabledCategories);
+                  controls.setDisabledPaymentTypes(disabledPaymentTypes);
+                  controls.setDisableForeign(disableForeign);
+                  return controls;
+                })
+            .toList();
+
+    final UpdateCardSpendControlsRequest request = new UpdateCardSpendControlsRequest(allControls);
 
     final ThrowingFunction<Cookie, ResultActions> action =
         cookie ->
             mockMvc.perform(
-                patch("/cards/%s".formatted(card.getId()))
+                patch("/cards/%s/controls".formatted(card.getId()))
                     .cookie(cookie)
                     .contentType("application/json")
                     .content(objectMapper.writeValueAsString(request)));
@@ -517,6 +687,7 @@ public class CardControllerTest extends BaseCapitalTest {
         .allowGlobalRoles(
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .denyUser(managerOnChild)
         .build()
         .validateMockMvcCall(action);
   }
@@ -536,9 +707,9 @@ public class CardControllerTest extends BaseCapitalTest {
             CardType.PHYSICAL,
             false);
 
-    // when
-    UpdateCardRequest updateCardRequest = new UpdateCardRequest();
-    updateCardRequest.setLimits(
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(
         CurrencyLimit.ofMap(
             Map.of(
                 Currency.USD,
@@ -546,26 +717,26 @@ public class CardControllerTest extends BaseCapitalTest {
                     LimitType.PURCHASE,
                     Map.of(
                         LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
-    updateCardRequest.setDisabledMccGroups(Set.of(MccGroup.CHILD_CARE));
-    updateCardRequest.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY, PaymentType.ONLINE));
-    updateCardRequest.setDisableForeign(true);
+    controls.setDisabledMccGroups(Set.of(MccGroup.CHILD_CARE));
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY, PaymentType.ONLINE));
+    controls.setDisableForeign(true);
+    final UpdateCardSpendControlsRequest request =
+        new UpdateCardSpendControlsRequest(List.of(controls));
 
     CardDetailsResponse cardDetailsResponse =
         mockMvcHelper.queryObject(
-            "/cards/" + card.getId(),
+            "/cards/%s/controls".formatted(card.getId()),
             HttpMethod.PATCH,
             userCookie,
-            updateCardRequest,
+            request,
             CardDetailsResponse.class);
 
-    // then
-    assertThat(cardDetailsResponse.getLimits())
-        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getLimits());
-    assertThat(cardDetailsResponse.getDisabledMccGroups())
-        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledMccGroups());
-    assertThat(cardDetailsResponse.getDisabledPaymentTypes())
-        .containsExactlyInAnyOrderElementsOf(updateCardRequest.getDisabledPaymentTypes());
-    assertThat(cardDetailsResponse.getDisableForeign()).isTrue();
+    assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+
+    assertCardAllocationDetailsResponse.doAssert(
+        LimitsToAssert.fromUpdateCardRequest(controls),
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        cardDetailsResponse.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
   }
 
   @SneakyThrows
@@ -601,17 +772,16 @@ public class CardControllerTest extends BaseCapitalTest {
         mockMvcHelper.queryObject(
             "/businesses/business-settings", HttpMethod.GET, userCookie, BusinessSettings.class);
 
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.ONLINE));
+    controls.setDisableForeign(false);
+
     IssueCardRequest issueCardRequest =
         new IssueCardRequest(
-            Set.of(CardType.PHYSICAL),
-            createBusinessRecord.allocationRecord().allocation().getId(),
-            userId,
-            Currency.USD,
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Collections.emptySet(),
-            Set.of(PaymentType.ONLINE),
-            false);
+            Set.of(CardType.PHYSICAL), userId, Currency.USD, true, List.of(controls));
     issueCardRequest.setShippingAddress(testHelper.generateApiAddress());
 
     for (int i = businessSettings.getIssuedPhysicalCardsTotal();
@@ -648,11 +818,15 @@ public class CardControllerTest extends BaseCapitalTest {
     card.setAccountId(null);
     cardRepository.saveAndFlush(card);
 
-    final UpdateCardRequest request = new UpdateCardRequest();
-    request.setDisableForeign(true);
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setDisableForeign(true);
+
+    final UpdateCardSpendControlsRequest request =
+        new UpdateCardSpendControlsRequest(List.of(controls));
     final CardDetailsResponse response =
         mockMvcHelper.queryObject(
-            "/cards/%s".formatted(card.getId()),
+            "/cards/%s/controls".formatted(card.getId()),
             HttpMethod.PATCH,
             createBusinessRecord.authCookie(),
             request,
@@ -661,7 +835,14 @@ public class CardControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("allocationId", null)
         .hasFieldOrPropertyWithValue("accountId", null)
         .hasFieldOrPropertyWithValue("cardId", card.getId());
-    assertThat(response).hasFieldOrPropertyWithValue("disableForeign", true);
+    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
+    final LimitsToAssert limitsToAssert =
+        new LimitsToAssert(
+            List.of(new CurrencyLimit(Currency.USD, new HashMap<>())), Set.of(), Set.of(), true);
+    assertCardAllocationDetailsResponse.doAssert(
+        limitsToAssert,
+        createBusinessRecord.allocationRecord().allocation().getId(),
+        response.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
   }
 
   @Test
@@ -683,7 +864,6 @@ public class CardControllerTest extends BaseCapitalTest {
             "/cards/%s".formatted(card.getId()),
             HttpMethod.GET,
             createBusinessRecord.authCookie(),
-            new UpdateCardStatusRequest(CardStatusReason.CARDHOLDER_REQUESTED),
             CardDetailsResponse.class);
 
     assertThat(result.getCard())
@@ -693,7 +873,58 @@ public class CardControllerTest extends BaseCapitalTest {
     assertThat(result)
         .hasFieldOrPropertyWithValue("ledgerBalance", null)
         .hasFieldOrPropertyWithValue("availableBalance", null)
-        .hasFieldOrPropertyWithValue("allocationName", null);
+        .hasFieldOrPropertyWithValue("linkedAllocationId", null)
+        .hasFieldOrPropertyWithValue("linkedAllocationName", null);
+  }
+
+  @Test
+  void getCard_Unlinked_NoCardAllocations() {
+    final Card card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), card.getAllocationId())
+            .orElseThrow();
+    final TransactionLimit transactionLimit =
+        transactionLimitRepository
+            .findByBusinessIdAndTypeAndOwnerId(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                cardAllocation.getId().toUuid())
+            .orElseThrow();
+    transactionLimitRepository.delete(transactionLimit);
+    cardAllocationRepository.delete(cardAllocation);
+    card.setAllocationId(null);
+    card.setAccountId(null);
+    cardRepository.save(card);
+
+    entityManager.flush();
+
+    final CardDetailsResponse result =
+        mockMvcHelper.queryObject(
+            "/cards/%s".formatted(card.getId()),
+            HttpMethod.GET,
+            createBusinessRecord.authCookie(),
+            CardDetailsResponse.class);
+
+    assertThat(result.getCard())
+        .hasFieldOrPropertyWithValue("allocationId", null)
+        .hasFieldOrPropertyWithValue("accountId", null)
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE);
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("ledgerBalance", null)
+        .hasFieldOrPropertyWithValue("availableBalance", null)
+        .hasFieldOrPropertyWithValue("linkedAllocationId", null)
+        .hasFieldOrPropertyWithValue("linkedAllocationName", null)
+        .hasFieldOrPropertyWithValue("allowedAllocationsAndLimits", List.of());
   }
 
   @Test

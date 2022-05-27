@@ -7,6 +7,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
+import com.clearspend.capital.common.typedid.data.CardAllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
@@ -218,18 +219,28 @@ public class TestDataHelper {
     return accountActivityRepo.save(accountActivity);
   }
 
-  public TransactionLimit createTransactionLimit(
-      final TypedId<BusinessId> businessId, final UUID ownerId) {
+  public TransactionLimit createCardTransactionLimit(
+      final TypedId<BusinessId> businessId, final TypedId<CardAllocationId> cardAllocationId) {
 
     return transactionLimitRepo.save(
         new TransactionLimit(
-            businessId, TransactionLimitType.CARD, ownerId, Map.of(), Set.of(), Set.of(), false));
+            businessId,
+            TransactionLimitType.CARD,
+            cardAllocationId.toUuid(),
+            Map.of(),
+            Set.of(),
+            Set.of(),
+            false));
   }
 
   public CardAndLimit createCardAndLimit(final CardConfig cardConfig) {
     final Card card = createCard(cardConfig);
+    final CardAllocation cardAllocation =
+        cardAllocationRepo
+            .findByCardIdAndAllocationId(card.getId(), card.getAllocationId())
+            .orElseThrow();
     final TransactionLimit transactionLimit =
-        createTransactionLimit(card.getBusinessId(), card.getId().toUuid());
+        createCardTransactionLimit(card.getBusinessId(), cardAllocation.getId());
     return new CardAndLimit(card, transactionLimit);
   }
 

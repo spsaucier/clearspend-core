@@ -81,4 +81,9 @@ public class TransactionLimit extends TypedMutable<TransactionLimitId> {
   @NonNull
   @NotNull(message = "disableForeign required")
   private Boolean disableForeign;
+
+  public TransactionLimit copyForType(final TransactionLimitType type, final UUID ownerId) {
+    return new TransactionLimit(
+        businessId, type, ownerId, limits, disabledMccGroups, disabledPaymentTypes, disableForeign);
+  }
 }

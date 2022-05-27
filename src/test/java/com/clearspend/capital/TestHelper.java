@@ -30,6 +30,7 @@ import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBu
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest;
 import com.clearspend.capital.controller.type.business.prospect.ValidateBusinessProspectIdentifierRequest.IdentifierType;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.user.LoginRequest;
@@ -1075,21 +1076,17 @@ public class TestHelper {
       FundingType fundingType,
       CardType cardType,
       boolean activateCard) {
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
     final IssueCardRequest request =
-        new IssueCardRequest(
-            Set.of(),
-            allocation.getId(),
-            user.getId(),
-            Currency.USD,
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+        new IssueCardRequest(Set.of(), user.getId(), Currency.USD, true, List.of(controls));
     request.setFundingType(fundingType);
     request.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
-    Card card = cardService.issueCard(cardType, request).card();
+    Card card = cardService.issueCard(business.getId(), cardType, request).card();
     if (activateCard) {
       setCurrentUser(user);
       card = cardService.activateMyCard(card, CardStatusReason.NONE);

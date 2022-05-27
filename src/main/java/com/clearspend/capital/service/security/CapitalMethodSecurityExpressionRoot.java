@@ -93,14 +93,6 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
   @SuppressWarnings("unused")
   public boolean hasPermissionAnyAllocation(
       @Nullable Object businessTarget, @NonNull String permissions) {
-    final PermissionEvaluationContext context =
-        PermissionEvaluationContext.fromTarget(businessTarget, AllocationStrategy.ANY_ALLOCATION);
-    return hasPermission(context, permissions);
-  }
-
-  @SuppressWarnings("unused")
-  public boolean hasPermissionAnyAllocationForBusiness(
-      @Nullable Object businessTarget, @NonNull String permissions) {
     final PermissionEvaluationContext context;
     if (businessTarget instanceof TypedId<?> typedId) {
       context =

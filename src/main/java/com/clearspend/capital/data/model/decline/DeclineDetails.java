@@ -16,6 +16,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.ToString;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -32,6 +33,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @EqualsAndHashCode
+@ToString
 public class DeclineDetails {
 
   @NonNull

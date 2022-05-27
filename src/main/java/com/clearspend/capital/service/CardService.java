@@ -13,21 +13,18 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.SearchCardData;
+import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.CardReplacementDetails;
+import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.enums.AccountType;
-import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
-import com.clearspend.capital.data.model.enums.LimitPeriod;
-import com.clearspend.capital.data.model.enums.LimitType;
-import com.clearspend.capital.data.model.enums.MccGroup;
-import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -40,12 +37,12 @@ import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRe
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
+import com.clearspend.capital.service.TransactionLimitService.CardSpendControls;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.google.common.base.Splitter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -53,9 +50,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import lombok.NonNull;
@@ -88,6 +83,7 @@ public class CardService {
   private final BusinessSettingsService businessSettingsService;
   private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
+  private final CardAllocationService cardAllocationService;
   private final TwilioService twilioService;
 
   private final EntityManager entityManager;
@@ -96,12 +92,19 @@ public class CardService {
 
   public record CardRecord(Card card, Account account) {}
 
-  @Transactional
-  @PreAuthorize("hasAllocationPermission(#request.allocationId, 'MANAGE_CARDS')")
-  public CardRecord issueCard(final CardType cardType, final IssueCardRequest request) {
+  private record CardAllocationAndLimit(
+      CardAllocation cardAllocation, TransactionLimit transactionLimit) {}
 
-    if (retrievalService.retrieveAllocation(request.getAllocationId()).isArchived()) {
-      throw new InvalidRequestException("Allocation is archived");
+  @Transactional
+  // Connecting the card to allocations will test for permissions on each allocation
+  @PreAuthorize("hasPermissionAnyAllocation(#businessId, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public CardRecord issueCard(
+      final TypedId<BusinessId> businessId,
+      final CardType cardType,
+      final IssueCardRequest request) {
+
+    if (request.getAllocationSpendControls().isEmpty()) {
+      throw new InvalidRequestException("At least one allocation must be set for issuing a card");
     }
 
     if (cardType == CardType.PHYSICAL) {
@@ -141,58 +144,71 @@ public class CardService {
       cardLine3 = name;
     }
 
-    Card card =
-        new Card(
-            CurrentUser.getBusinessId(),
-            request.getUserId(),
-            cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
-            CardStatusReason.NONE,
-            request.getBinType(),
-            request.getFundingType(),
-            cardType,
-            OffsetDateTime.now(ZoneOffset.UTC),
-            LocalDate.now(ZoneOffset.UTC).plusYears(3),
-            cardLine3.toString(),
-            StringUtils.EMPTY,
-            cardType.equals(CardType.PHYSICAL) ? request.getModelShippingAddress() : new Address(),
-            getReplacementDetails(request));
-    card.setAllocationId(request.getAllocationId());
+    final Card initialCard =
+        cardRepository.saveAndFlush(
+            new Card(
+                CurrentUser.getBusinessId(),
+                request.getUserId(),
+                cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
+                CardStatusReason.NONE,
+                request.getBinType(),
+                request.getFundingType(),
+                cardType,
+                OffsetDateTime.now(ZoneOffset.UTC),
+                LocalDate.now(ZoneOffset.UTC).plusYears(3),
+                cardLine3.toString(),
+                StringUtils.EMPTY,
+                cardType.equals(CardType.PHYSICAL)
+                    ? request.getModelShippingAddress()
+                    : new Address(),
+                getReplacementDetails(request)));
+
+    final List<CardAllocationAndLimit> cardAllocations =
+        request.getAllocationSpendControls().stream()
+            .map(
+                controls -> {
+                  final CardAllocation cardAllocation =
+                      cardAllocationService.addAllocationToCard(
+                          initialCard.getId(), controls.getAllocationId());
+                  final TransactionLimit transactionLimit =
+                      transactionLimitService.createCardSpendLimit(
+                          new CardSpendControls(initialCard, cardAllocation, controls));
+                  return new CardAllocationAndLimit(cardAllocation, transactionLimit);
+                })
+            .toList();
+
+    initialCard.setAllocationId(cardAllocations.get(0).cardAllocation().getAllocationId());
     if (cardLine4.length() > 25) {
       cardLine4.setLength(25);
     }
-    card.setCardLine4(cardLine4.toString());
+    initialCard.setCardLine4(cardLine4.toString());
 
     Account account;
-    if (request.getFundingType() == FundingType.INDIVIDUAL) {
+    if (request.getFundingType() == FundingType.INDIVIDUAL
+        && request.getAllocationSpendControls().size() > 1) {
+      throw new InvalidRequestException(
+          "Cannot set multiple allocations for an individual funded card");
+    } else if (request.getFundingType() == FundingType.INDIVIDUAL) {
       account =
           accountService.createAccount(
               CurrentUser.getBusinessId(),
               AccountType.CARD,
-              request.getAllocationId(),
-              card.getId(),
+              request.getAllocationSpendControls().get(0).getAllocationId(),
+              initialCard.getId(),
               request.getCurrency());
     } else {
       // card retrieval works best if we always have a ref to the account, so we can always get
       // available balance
       account =
           accountService.retrieveAllocationAccount(
-              CurrentUser.getBusinessId(), request.getCurrency(), request.getAllocationId());
+              CurrentUser.getBusinessId(),
+              request.getCurrency(),
+              cardAllocations.get(0).cardAllocation.getAllocationId());
     }
-    card.setAccountId(account.getId());
-    card = cardRepository.saveAndFlush(card);
+    initialCard.setAccountId(account.getId());
+    Card card = cardRepository.saveAndFlush(initialCard);
 
-    cardAllocationRepository.saveAndFlush(
-        new CardAllocation(card.getId(), request.getAllocationId()));
-
-    transactionLimitService.createCardSpendLimit(
-        card.getBusinessId(),
-        card.getId(),
-        request.getCurrencyLimitMap(),
-        request.getDisabledMccGroups(),
-        request.getDisabledPaymentTypes(),
-        request.getDisableForeign());
-
-    cardRepository.flush();
+    entityManager.flush();
 
     // If user never had any cards, stripe cardholder id (ExternalRef) will be empty
     // we need to create a stripe cardholder before we can create the actual stripe card
@@ -502,25 +518,31 @@ public class CardService {
   }
 
   @Transactional
-  @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
-  public void updateCard(
-      Card card,
-      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes,
-      Boolean disableForeign) {
+  // Connecting the card to allocations will test for permissions on each allocation
+  @PreAuthorize("hasPermissionAnyAllocation(#card.businessId, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public void updateCardSpendControls(
+      @NonNull final Card card, @NonNull final UpdateCardSpendControlsRequest request) {
     if (card.getStatus() == CardStatus.CANCELLED) {
-      throw new InvalidRequestException("Cannot update account for cancelled card");
+      throw new InvalidRequestException("Cannot update cancelled card");
     }
 
-    // TODO: When we add permissions to the TransactionLimitService, pass in the Entities not IDs
-    transactionLimitService.updateCardSpendLimit(
-        card.getBusinessId(),
-        card.getId(),
-        transactionLimits,
-        disabledMccGroups,
-        disabledPaymentTypes,
-        disableForeign);
+    request
+        .getAllocationSpendControls()
+        .forEach(
+            allocationSpendControls -> {
+              final CardAllocation cardAllocation =
+                  cardAllocationRepository
+                      .findByCardIdAndAllocationId(
+                          card.getId(), allocationSpendControls.getAllocationId())
+                      .orElseThrow(
+                          () ->
+                              new RecordNotFoundException(
+                                  Table.CARD_ALLOCATION,
+                                  card.getId(),
+                                  allocationSpendControls.getAllocationId()));
+              transactionLimitService.updateCardSpendLimit(
+                  new CardSpendControls(card, cardAllocation, allocationSpendControls));
+            });
   }
 
   @SqlPermissionAPI

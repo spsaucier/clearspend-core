@@ -78,13 +78,14 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
   private final Template template;
 
-  public record CardDetailsWithUserRecord(
+  public record CardDetailsTuple(
       Card card,
       Allocation allocation,
       Account account,
       User user,
+      CardAllocation cardAllocation,
       TransactionLimit transactionLimit,
-      CardAllocation cardAllocation) {}
+      String cardAllocationName) {}
 
   public CardRepositoryImpl(
       EntityManager entityManager,
@@ -203,17 +204,21 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         totalElements);
   }
 
-  private LinkedList<CardDetailsRecord> cardDetailsTupleToRecord(
-      final CardDetailsWithUserRecord tuple) {
-    final Set<CardAllocation> cardAllocations = new HashSet<>();
-    cardAllocations.add(tuple.cardAllocation());
+  private LinkedList<CardDetailsRecord> cardDetailsTupleToRecord(final CardDetailsTuple tuple) {
+    final Set<CardAllocationDetailsRecord> allowedAllocations = new HashSet<>();
+    Optional.ofNullable(tuple.cardAllocation())
+        .ifPresent(
+            cardAllocation -> {
+              allowedAllocations.add(
+                  new CardAllocationDetailsRecord(
+                      cardAllocation.getAllocationId(),
+                      tuple.cardAllocationName(),
+                      tuple.transactionLimit()));
+            });
+
     final CardDetailsRecord record =
         new CardDetailsRecord(
-            tuple.card(),
-            tuple.allocation(),
-            cardAllocations,
-            tuple.account(),
-            tuple.transactionLimit());
+            tuple.card(), tuple.allocation(), tuple.account(), allowedAllocations);
     final LinkedList<CardDetailsRecord> list = new LinkedList<>();
     list.add(record);
     return list;
@@ -226,8 +231,10 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     return Optional.ofNullable(resultList.peekLast())
         .filter(l -> l.card().getId().equals(recordList.peekFirst().card().getId()))
         .map(
-            rec -> {
-              rec.allowedAllocations().addAll(recordList.peekFirst().allowedAllocations());
+            currentRecord -> {
+              currentRecord
+                  .allowedAllocationsAndLimits()
+                  .addAll(recordList.peekFirst().allowedAllocationsAndLimits());
               return resultList;
             })
         .orElseGet(
@@ -238,21 +245,17 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   }
 
   private List<CardDetailsRecord> findDetails(
-      @NonNull TypedId<BusinessId> businessId, TypedId<CardId> cardId, TypedId<UserId> userId) {
+      @NonNull final TypedId<BusinessId> businessId,
+      final TypedId<CardId> cardId,
+      final TypedId<UserId> userId) {
 
-    CriteriaBuilder<Tuple> builder = createDefaultBuilder(businessId);
-    BlazePersistenceUtils.joinOnPrimaryKey(
-        builder, Card.class, CardAllocation.class, "cardId", JoinType.LEFT);
-    builder
-        .select(BlazePersistenceUtils.getClassName(CardAllocation.class))
-        .where("card.businessId")
-        .eq(businessId);
-
-    BeanUtils.setNotNull(cardId, id -> builder.where("card.id").eq(id));
-    BeanUtils.setNotNull(userId, id -> builder.where("card.userId").eq(id));
+    final CriteriaBuilder<Tuple> builder = createDefaultDetailsBuilder(businessId);
+    final String cardAlias = BlazePersistenceUtils.getClassName(Card.class);
+    BeanUtils.setNotNull(cardId, id -> builder.where("%s.id".formatted(cardAlias)).eq(id));
+    BeanUtils.setNotNull(userId, id -> builder.where("%s.userId".formatted(cardAlias)).eq(id));
 
     final List<CardDetailsRecord> result =
-        BlazePersistenceUtils.queryTuples(CardDetailsWithUserRecord.class, builder, false).stream()
+        BlazePersistenceUtils.queryTuples(CardDetailsTuple.class, builder, false).stream()
             .map(this::cardDetailsTupleToRecord)
             .reduce(new LinkedList<>(), this::reduceCardDetailsLists);
 
@@ -269,7 +272,6 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   @Override
   public Optional<CardDetailsRecord> findDetailsByBusinessIdAndId(
       TypedId<BusinessId> businessId, TypedId<CardId> cardId) {
-
     return toOptional(findDetails(businessId, cardId, null));
   }
 
@@ -281,37 +283,46 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
   @Override
   public List<CardDetailsRecord> findDetailsByBusinessIdAndUserId(
       TypedId<BusinessId> businessId, TypedId<UserId> userId) {
-
     return findDetails(businessId, null, userId);
   }
 
   @Override
   public Optional<CardDetailsRecord> findDetailsByBusinessIdAndUserIdAndId(
       TypedId<BusinessId> businessId, @NonNull TypedId<CardId> cardId, TypedId<UserId> userId) {
-
     return toOptional(findDetails(businessId, cardId, userId));
   }
 
-  private CriteriaBuilder<Tuple> createDefaultBuilder(TypedId<BusinessId> businessId) {
-    CriteriaBuilder<Tuple> builder =
-        criteriaBuilderFactory.create(entityManager, Tuple.class).from(Card.class, "card");
+  private CriteriaBuilder<Tuple> createDefaultDetailsBuilder(final TypedId<BusinessId> businessId) {
+    final String cardAlias = BlazePersistenceUtils.getClassName(Card.class);
+    final CriteriaBuilder<Tuple> builder =
+        criteriaBuilderFactory.create(entityManager, Tuple.class).from(Card.class, cardAlias);
 
     BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Allocation.class, JoinType.LEFT);
     BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, Account.class, JoinType.LEFT);
     BlazePersistenceUtils.joinOnForeignKey(builder, Card.class, User.class, JoinType.INNER);
-
     BlazePersistenceUtils.joinOnPrimaryKey(
-        builder, Card.class, TransactionLimit.class, "ownerId", JoinType.INNER);
-    builder.orderBy("card.id", true);
-
+        builder, Card.class, CardAllocation.class, "cardId", JoinType.LEFT);
+    BlazePersistenceUtils.joinOnPrimaryKey(
+        builder, CardAllocation.class, TransactionLimit.class, "ownerId", JoinType.LEFT);
+    final String cardAllocationDetailsAlias = "cardallocationdetails";
+    final String cardAllocationAlias = BlazePersistenceUtils.getClassName(CardAllocation.class);
     builder
-        .select("card")
-        .select("allocation")
-        .select("account")
-        .select("user")
-        .select("transactionLimit");
+        .joinOn(Allocation.class, cardAllocationDetailsAlias, JoinType.LEFT)
+        .on("%s.id".formatted(cardAllocationDetailsAlias))
+        .eqExpression("%s.allocationId".formatted(cardAllocationAlias))
+        .end();
 
-    return builder;
+    return builder
+        .select(cardAlias)
+        .select(BlazePersistenceUtils.getClassName(Allocation.class))
+        .select(BlazePersistenceUtils.getClassName(Account.class))
+        .select(BlazePersistenceUtils.getClassName(User.class))
+        .select(BlazePersistenceUtils.getClassName(CardAllocation.class))
+        .select(BlazePersistenceUtils.getClassName(TransactionLimit.class))
+        .select("%s.name".formatted(cardAllocationDetailsAlias), "card_allocation_details_name")
+        .where("%s.businessId".formatted(cardAlias))
+        .eq(businessId)
+        .orderBy("%s.id".formatted(cardAlias), true);
   }
 
   private Optional<CardDetailsRecord> toOptional(List<CardDetailsRecord> cardDetailsRecords) {

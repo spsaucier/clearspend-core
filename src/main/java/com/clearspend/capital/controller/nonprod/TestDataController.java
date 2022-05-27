@@ -15,6 +15,7 @@ import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataRes
 import com.clearspend.capital.controller.nonprod.type.testdata.CreateTestDataResponse.TestBusiness;
 import com.clearspend.capital.controller.nonprod.type.testdata.GetBusinessesResponse;
 import com.clearspend.capital.controller.type.business.owner.OwnersProvidedRequest;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.review.ApplicationReviewRequirements;
@@ -294,21 +295,19 @@ public class TestDataController {
 
     CreateUpdateUserRecord user = createUser(business);
     users.add(user);
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(parentAllocation);
+    controls.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
     final IssueCardRequest issueCardRequest1 =
         new IssueCardRequest(
-            Set.of(),
-            parentAllocation.getId(),
-            user.user().getId(),
-            business.getCurrency(),
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+            Set.of(), user.user().getId(), business.getCurrency(), true, List.of(controls));
     issueCardRequest1.setFundingType(FundingType.INDIVIDUAL);
     issueCardRequest1.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
-    CardRecord cardRecord = cardService.issueCard(CardType.VIRTUAL, issueCardRequest1);
+    CardRecord cardRecord =
+        cardService.issueCard(business.getId(), CardType.VIRTUAL, issueCardRequest1);
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -324,22 +323,19 @@ public class TestDataController {
         generateAuthorizationNetworkCommon(
                 user.user(), cardRecord.card(), cardRecord.account(), amount)
             .networkCommon);
+    final CardAllocationSpendControls controls2 = CardAllocationSpendControls.of(parentAllocation);
+    controls2.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls2.setDisabledMccGroups(Set.of());
+    controls2.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
     final IssueCardRequest issueCardRequest2 =
         new IssueCardRequest(
-            Set.of(),
-            parentAllocation.getId(),
-            user.user().getId(),
-            business.getCurrency(),
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+            Set.of(), user.user().getId(), business.getCurrency(), true, List.of(controls2));
     issueCardRequest2.setFundingType(FundingType.INDIVIDUAL);
     issueCardRequest2.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
 
-    cardRecord = cardService.issueCard(CardType.PHYSICAL, issueCardRequest2);
+    cardRecord = cardService.issueCard(business.getId(), CardType.PHYSICAL, issueCardRequest2);
     cards.add(cardRecord.card());
     allocationService.reallocateAllocationFunds(
         business,
@@ -358,22 +354,19 @@ public class TestDataController {
 
     CreateUpdateUserRecord user2 = createUser(business);
     users.add(user2);
+    final CardAllocationSpendControls controls3 = CardAllocationSpendControls.of(parentAllocation);
+    controls3.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls3.setDisabledMccGroups(Set.of());
+    controls3.setDisabledPaymentTypes(Set.of());
+    controls3.setDisableForeign(false);
     final IssueCardRequest issueCardRequest3 =
         new IssueCardRequest(
-            Set.of(),
-            parentAllocation.getId(),
-            user.user().getId(),
-            business.getCurrency(),
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+            Set.of(), user.user().getId(), business.getCurrency(), true, List.of(controls3));
     issueCardRequest3.setFundingType(FundingType.POOLED);
     issueCardRequest3.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
-    cards.add(cardService.issueCard(CardType.VIRTUAL, issueCardRequest3).card());
-    cards.add(cardService.issueCard(CardType.PHYSICAL, issueCardRequest3).card());
+    cards.add(cardService.issueCard(business.getId(), CardType.VIRTUAL, issueCardRequest3).card());
+    cards.add(cardService.issueCard(business.getId(), CardType.PHYSICAL, issueCardRequest3).card());
 
     // If this doesn't bomb, then something is right with the Stripe integration
     Name user2NewName = faker.name();
@@ -390,21 +383,19 @@ public class TestDataController {
 
     CreateUpdateUserRecord user3 = createUser(business);
     users.add(user3);
+    final CardAllocationSpendControls controls4 =
+        CardAllocationSpendControls.of(grandchildAllocation.allocation());
+    controls4.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls4.setDisabledMccGroups(Set.of());
+    controls4.setDisabledPaymentTypes(Set.of());
+    controls4.setDisableForeign(false);
     final IssueCardRequest issueCardRequest4 =
         new IssueCardRequest(
-            Set.of(),
-            grandchildAllocation.allocation().getId(),
-            user.user().getId(),
-            business.getCurrency(),
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+            Set.of(), user.user().getId(), business.getCurrency(), true, List.of(controls4));
     issueCardRequest4.setFundingType(FundingType.INDIVIDUAL);
     issueCardRequest4.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(business.getClearAddress()));
-    cards.add(cardService.issueCard(CardType.VIRTUAL, issueCardRequest4).card());
+    cards.add(cardService.issueCard(business.getId(), CardType.VIRTUAL, issueCardRequest4).card());
 
     return new CreateTestDataResponse(
         List.of(

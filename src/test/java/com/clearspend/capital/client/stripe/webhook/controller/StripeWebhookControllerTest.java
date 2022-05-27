@@ -19,10 +19,13 @@ import com.clearspend.capital.client.stripe.types.FinancialAccountAddress;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeWebhookController.ParseRecord;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.MustacheResourceLoader;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
+import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.PendingStripeTransfer;
 import com.clearspend.capital.data.model.Receipt;
@@ -61,9 +64,11 @@ import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
+import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.network.NetworkMessageRepository;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
 import com.clearspend.capital.service.AccountService;
@@ -73,6 +78,7 @@ import com.clearspend.capital.service.CardService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.TransactionLimitService;
+import com.clearspend.capital.service.TransactionLimitService.CardSpendControls;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.clearspend.capital.testutils.data.TestDataHelper;
 import com.clearspend.capital.testutils.data.TestDataHelper.ReceiptConfig;
@@ -88,13 +94,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -113,18 +119,21 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
 
   private final Faker faker = new Faker();
 
+  @Autowired private EntityManager entityManager;
   @Autowired private AssertionHelper assertionHelper;
   @Autowired private TestHelper testHelper;
   @Autowired private TestDataHelper testDataHelper;
   @Autowired private ReceiptRepository receiptRepository;
 
   @Autowired private AccountActivityRepository accountActivityRepository;
+  @Autowired private TransactionLimitRepository transactionLimitRepository;
   @Autowired private AllocationRepository allocationRepository;
   @Autowired private AccountRepository accountRepository;
   @Autowired private HoldRepository holdRepository;
   @Autowired private StripeWebhookLogRepository stripeWebhookLogRepository;
   @Autowired private NetworkMessageRepository networkMessageRepository;
   @Autowired private DeclineRepository declineRepository;
+  @Autowired private CardAllocationRepository cardAllocationRepository;
 
   @Autowired private AccountService accountService;
   @Autowired private StripeMockClient stripeMockClient;
@@ -1021,17 +1030,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(
+        CurrencyLimit.ofMap(
             Map.of(
                 Currency.USD,
-                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L)))),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false);
+                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(3L))))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
@@ -1058,17 +1073,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
             CardType.VIRTUAL,
             false);
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(
+        CurrencyLimit.ofMap(
             Map.of(
                 Currency.USD,
-                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(5L)))),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false);
+                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.DAILY, BigDecimal.valueOf(5L))))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     authorize_decline(allocation, user, card, BigDecimal.TEN, 700);
   }
@@ -1081,17 +1102,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(
+        CurrencyLimit.ofMap(
             Map.of(
                 Currency.USD,
-                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(5L)))),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            false);
+                Map.of(LimitType.PURCHASE, Map.of(LimitPeriod.MONTHLY, BigDecimal.valueOf(5L))))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(4L)));
@@ -1109,15 +1136,19 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
-            Map.of(),
-            Set.of(MccGroup.GAMBLING),
-            Collections.emptySet(),
-            false);
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(List.of());
+    controls.setDisabledMccGroups(Set.of(MccGroup.GAMBLING));
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     // check that we can make a trx against the card
     testHelper.createNetworkTransaction(
@@ -1143,19 +1174,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
     // check that we can make a trx against the card
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
-            Map.of(),
-            Collections.emptySet(),
-            Set.of(PaymentType.ONLINE),
-            false);
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(List.of());
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.ONLINE));
+    controls.setDisableForeign(false);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     // online has to be declined
     authorize_decline(
@@ -1177,19 +1212,23 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     User user = userRecord.user;
     Card card = userRecord.card;
 
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(card.getId(), allocation.getId())
+            .orElseThrow();
+
     // check that we can make a trx against the card
     testHelper.createNetworkTransaction(
         business, account, user, card, Amount.of(Currency.USD, BigDecimal.valueOf(1L)));
 
-    serviceHelper
-        .transactionLimitService()
-        .updateCardSpendLimit(
-            business.getId(),
-            card.getId(),
-            Map.of(),
-            Collections.emptySet(),
-            Collections.emptySet(),
-            true);
+    final CardAllocationSpendControls controls = CardAllocationSpendControls.of(allocation);
+    controls.setLimits(List.of());
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(true);
+    final CardSpendControls request = new CardSpendControls(card, cardAllocation, controls);
+
+    serviceHelper.transactionLimitService().updateCardSpendLimit(request);
 
     // foreign has to be declined
     authorize_decline(

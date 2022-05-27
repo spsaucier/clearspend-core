@@ -44,7 +44,7 @@ public class DeclineTest extends BaseCapitalTest {
             createBusinessRecord.allocationRecord().allocation(),
             createBusinessRecord.user(),
             Currency.USD,
-            FundingType.INDIVIDUAL,
+            FundingType.POOLED,
             CardType.VIRTUAL,
             false);
   }

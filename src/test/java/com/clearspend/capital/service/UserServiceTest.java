@@ -9,6 +9,7 @@ import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
@@ -199,22 +200,22 @@ class UserServiceTest extends BaseCapitalTest {
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
 
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of());
+    controls.setDisableForeign(false);
+
     final IssueCardRequest issueCardRequest =
-        new IssueCardRequest(
-            Set.of(),
-            createBusinessRecord.allocationRecord().account().getAllocationId(),
-            employee.getId(),
-            Currency.USD,
-            true,
-            CurrencyLimit.ofMap(Map.of(Currency.USD, Map.of())),
-            Set.of(),
-            Set.of(),
-            false);
+        new IssueCardRequest(Set.of(), employee.getId(), Currency.USD, true, List.of(controls));
     issueCardRequest.setFundingType(FundingType.POOLED);
     issueCardRequest.setShippingAddress(
         new com.clearspend.capital.controller.type.Address(employee.getAddress()));
 
-    CardRecord cardRec = cardService.issueCard(CardType.VIRTUAL, issueCardRequest);
+    CardRecord cardRec =
+        cardService.issueCard(
+            createBusinessRecord.business().getId(), CardType.VIRTUAL, issueCardRequest);
 
     changeNameAndAddress(employee, Cardholder.class);
   }

@@ -9,6 +9,11 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
+import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
+import com.clearspend.capital.data.model.AllocationRelated;
+import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -18,6 +23,7 @@ import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.service.type.CardAllocationSpendingDaily;
 import java.math.BigDecimal;
@@ -29,8 +35,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +49,7 @@ public class TransactionLimitService {
 
   private final TransactionLimitRepository transactionLimitRepository;
   private final AccountActivityRepository accountActivityRepository;
+  private final CardAllocationRepository cardAllocationRepository;
 
   @Transactional
   TransactionLimit initializeAllocationSpendLimit(
@@ -86,23 +95,28 @@ public class TransactionLimitService {
   }
 
   @Transactional
-  TransactionLimit createCardSpendLimit(
-      TypedId<BusinessId> businessId,
-      TypedId<CardId> cardId,
-      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledPaymentTypes,
-      Boolean disableForeign) {
+  @PreAuthorize("hasPermission(#request, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public TransactionLimit createCardSpendLimit(final CardSpendControls request) {
+    final TransactionLimit allocationLimit =
+        retrieveSpendLimit(
+            request.card().getBusinessId(),
+            TransactionLimitType.ALLOCATION,
+            request.allocationSpendControls().getAllocationId().toUuid());
+    final TransactionLimit cardLimit =
+        allocationLimit.copyForType(
+            TransactionLimitType.CARD, request.cardAllocation().getId().toUuid());
 
-    return transactionLimitRepository.save(
-        new TransactionLimit(
-            businessId,
-            TransactionLimitType.CARD,
-            cardId.toUuid(),
-            transactionLimits,
-            disabledMccGroups,
-            disabledPaymentTypes,
-            disableForeign));
+    BeanUtils.setNotNull(
+        CurrencyLimit.toMap(request.allocationSpendControls().getLimits()), cardLimit::setLimits);
+    BeanUtils.setNotNull(
+        request.allocationSpendControls().getDisabledMccGroups(), cardLimit::setDisabledMccGroups);
+    BeanUtils.setNotNull(
+        request.allocationSpendControls().getDisabledPaymentTypes(),
+        cardLimit::setDisabledPaymentTypes);
+    BeanUtils.setNotNull(
+        request.allocationSpendControls().getDisableForeign(), cardLimit::setDisableForeign);
+
+    return transactionLimitRepository.save(cardLimit);
   }
 
   @Transactional
@@ -124,23 +138,34 @@ public class TransactionLimitService {
         disableForeign);
   }
 
-  @Transactional
-  TransactionLimit updateCardSpendLimit(
-      TypedId<BusinessId> businessId,
-      TypedId<CardId> cardId,
-      Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-      Set<MccGroup> disabledMccGroups,
-      Set<PaymentType> disabledTransactionChannels,
-      Boolean disableForeign) {
+  public record CardSpendControls(
+      @NonNull Card card,
+      @NonNull CardAllocation cardAllocation,
+      @NonNull CardAllocationSpendControls allocationSpendControls)
+      implements AllocationRelated {
 
+    @Override
+    public TypedId<AllocationId> getAllocationId() {
+      return allocationSpendControls.getAllocationId();
+    }
+
+    @Override
+    public TypedId<BusinessId> getBusinessId() {
+      return card.getBusinessId();
+    }
+  }
+
+  @Transactional
+  @PreAuthorize("hasPermission(#request, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public TransactionLimit updateCardSpendLimit(@NonNull final CardSpendControls request) {
     return updateSpendLimit(
-        businessId,
+        request.card().getBusinessId(),
         TransactionLimitType.CARD,
-        cardId.toUuid(),
-        transactionLimits,
-        disabledMccGroups,
-        disabledTransactionChannels,
-        disableForeign);
+        request.cardAllocation().getId().toUuid(),
+        CurrencyLimit.toMap(request.allocationSpendControls().getLimits()),
+        request.allocationSpendControls().getDisabledMccGroups(),
+        request.allocationSpendControls().getDisabledPaymentTypes(),
+        request.allocationSpendControls().getDisableForeign());
   }
 
   private TransactionLimit updateSpendLimit(
@@ -171,12 +196,18 @@ public class TransactionLimitService {
       AuthorizationMethod authorizationMethod,
       boolean foreign) {
 
+    final CardAllocation cardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(cardId, allocationId)
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.CARD_ALLOCATION, cardId, allocationId));
+
     MccGroup mccGroup = MccGroup.fromMcc(mccCode);
     PaymentType paymentType = PaymentType.from(authorizationMethod);
 
     // card mcc groups and payment types
-    TransactionLimit cardTransactionLimits =
-        retrieveSpendLimit(businessId, TransactionLimitType.CARD, cardId.toUuid());
+    final TransactionLimit cardTransactionLimits =
+        retrieveSpendLimit(businessId, TransactionLimitType.CARD, cardAllocation.getId().toUuid());
     if (cardTransactionLimits.getDisabledMccGroups().contains(mccGroup)) {
       throw new SpendControlViolationException(cardId, TransactionLimitType.CARD, mccGroup);
     }
@@ -189,7 +220,7 @@ public class TransactionLimitService {
     }
 
     // spend limits
-    CardAllocationSpendingDaily cardAllocationSpendingDaily =
+    final CardAllocationSpendingDaily cardAllocationSpendingDaily =
         accountActivityRepository.findCardAllocationSpendingDaily(
             businessId, allocationId, cardId, 30);
 

@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Set;
 import javax.persistence.Embedded;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -91,6 +92,9 @@ public class Card {
 
   @JsonProperty("externalRef")
   private String externalRef;
+
+  @JsonProperty("availableAllocationIds")
+  private Set<TypedId<AllocationId>> availableAllocationIds;
 
   public Card(com.clearspend.capital.data.model.Card card) {
     cardId = card.getId();

@@ -5,7 +5,6 @@ import com.clearspend.capital.client.codat.types.CodatAccountNested;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
-import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -29,6 +28,7 @@ import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.BusinessService.BusinessRecord;
+import com.clearspend.capital.service.TransactionLimitService.CardSpendControls;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import io.fusionauth.domain.User;
@@ -201,20 +201,8 @@ public class ServiceHelper {
   public static class TransactionLimitServiceWrapper {
     private final TransactionLimitService transactionLimitService;
 
-    public TransactionLimit updateCardSpendLimit(
-        TypedId<BusinessId> businessId,
-        TypedId<CardId> cardId,
-        Map<Currency, Map<LimitType, Map<LimitPeriod, BigDecimal>>> transactionLimits,
-        Set<MccGroup> disabledMccGroups,
-        Set<PaymentType> disabledTransactionChannels,
-        Boolean disableForeign) {
-      return transactionLimitService.updateCardSpendLimit(
-          businessId,
-          cardId,
-          transactionLimits,
-          disabledMccGroups,
-          disabledTransactionChannels,
-          disableForeign);
+    public TransactionLimit updateCardSpendLimit(final CardSpendControls request) {
+      return transactionLimitService.updateCardSpendLimit(request);
     }
 
     public TransactionLimit updateAllocationSpendLimit(
