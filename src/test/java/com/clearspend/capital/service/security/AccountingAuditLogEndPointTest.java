@@ -93,6 +93,6 @@ public class AccountingAuditLogEndPointTest extends BaseCapitalTest {
         mockMvcHelper.queryList(
             "/codat/audit-log?limit=1", HttpMethod.GET, userCookie, null, new TypeReference<>() {});
 
-    assertThat(fullResult.size() == 3).isTrue();
+    assertThat(fullResult.size() == 5).isTrue();
   }
 }

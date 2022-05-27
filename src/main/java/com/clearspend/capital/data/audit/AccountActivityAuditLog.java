@@ -17,4 +17,6 @@ public class AccountActivityAuditLog {
   private OffsetDateTime activityDate;
   private List<AccountActivityNotesChangeDetail> notesList;
   private List<AccountActivityReceiptChangeDetail> receiptList;
+  private List<AuditLogDisplayValue> expenseCategoryList;
+  private List<AuditLogDisplayValue> supplierList;
 }

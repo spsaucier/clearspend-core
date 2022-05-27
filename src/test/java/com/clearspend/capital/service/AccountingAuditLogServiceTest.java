@@ -39,7 +39,7 @@ public class AccountingAuditLogServiceTest {
     List<CodatSyncLogValue> codatSyncLogList = new ArrayList<>();
     expected.setCodatSyncLogList(codatSyncLogList);
     Mockito.when(
-            bigTableClient.readCodatSupplierSyncLogs(
+            bigTableClient.readCodatSyncLogs(
                 AccountingCodatSyncAuditEvent.ROW_KEY_PREFIX + "#" + "business01#.*$",
                 AccountingCodatSyncAuditEvent.COLUMN_FAMILY,
                 10))

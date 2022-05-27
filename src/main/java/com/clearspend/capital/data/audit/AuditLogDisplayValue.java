@@ -19,4 +19,6 @@ public class AuditLogDisplayValue {
   private String changedValue;
   private String transactionId;
   private OffsetDateTime auditTime;
+  private long timestamp;
+  private String userId;
 }

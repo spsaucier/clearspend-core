@@ -4,6 +4,7 @@ import com.clearspend.capital.data.audit.AccountActivityAuditLog;
 import com.clearspend.capital.data.audit.AccountActivityNotesChangeDetail;
 import com.clearspend.capital.data.audit.AccountActivityReceiptChangeDetail;
 import com.clearspend.capital.data.audit.AccountingAuditResponse;
+import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValueDetail;
 import com.google.cloud.bigtable.data.v2.models.Row;
@@ -146,10 +147,31 @@ public class MockBigTableClient extends BigTableClient {
     receipt.setUserId(this.testUserId);
     receipt.setChangeTime(OffsetDateTime.now(ZoneOffset.UTC));
     rlist.add(receipt);
+
+    AuditLogDisplayValue exp =
+        AuditLogDisplayValue.builder()
+            .changedValue("new exp")
+            .auditTime(OffsetDateTime.now(ZoneOffset.UTC))
+            .userId(this.testUserId)
+            .eventType("expense_category")
+            .build();
+    List<AuditLogDisplayValue> exps = new ArrayList<>();
+    exps.add(exp);
+    alog.setExpenseCategoryList(exps);
+    AuditLogDisplayValue vendor =
+        AuditLogDisplayValue.builder()
+            .changedValue("new vendor")
+            .auditTime(OffsetDateTime.now(ZoneOffset.UTC))
+            .userId(this.testUserId)
+            .eventType("codat_supplier")
+            .build();
+    List<AuditLogDisplayValue> vendors = new ArrayList<>();
+    vendors.add(vendor);
+    alog.setSupplierList(vendors);
   }
 
   @Override
-  public AccountingAuditResponse readCodatSupplierSyncLogs(
+  public AccountingAuditResponse readCodatSyncLogs(
       @NonNull String regex, @NonNull String familyName, int limit) {
     return this.supplierSyncSample;
   }
