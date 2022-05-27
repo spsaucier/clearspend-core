@@ -3,6 +3,8 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.data.model.BatchSummary;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
+import com.clearspend.capital.data.model.enums.BatchSummaryStatus;
+import com.clearspend.capital.data.model.enums.BatchSummaryType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.repository.BatchSummaryRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
@@ -40,9 +42,13 @@ public class BatchService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security")
   public void holdChecker() {
     log.debug("BatchService holdChecker: execution started");
-    BatchSummary batchSummary = batchSummaryRepository.findByBatchType("HOLD_EXPIRATION_CHECK");
+    BatchSummary batchSummary =
+        batchSummaryRepository
+            .findByBatchType(BatchSummaryType.HOLD_EXPIRATION_CHECK)
+            .orElse(new BatchSummary());
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     OffsetDateTime previousLastRecordDate = batchSummary.getLastRecordDate();
+
     List<Hold> holds =
         holdRepository.findByStatusAndExpirationDateGreaterThanAndExpirationDateLessThanEqual(
             HoldStatus.PLACED, previousLastRecordDate, now);
@@ -75,10 +81,10 @@ public class BatchService {
           && (firstRecordDate.isBefore(lastRecordDate) || firstRecordDate.equals(lastRecordDate))) {
         batchSummary.setFirstRecordDate(firstRecordDate);
         batchSummary.setLastRecordDate(lastRecordDate);
-        batchSummary.setStatus("OK");
+        batchSummary.setStatus(BatchSummaryStatus.OK);
       } else {
         log.debug("Error validating first and last date {} / {}", firstRecordDate, lastRecordDate);
-        batchSummary.setStatus("ERROR");
+        batchSummary.setStatus(BatchSummaryStatus.ERROR);
       }
     }
 

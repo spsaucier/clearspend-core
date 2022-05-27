@@ -5,6 +5,7 @@ public enum Table {
   ACCOUNT_ACTIVITY("AccountActivity"),
   ADJUSTMENT("Adjustment"),
   ALLOCATION("Allocation"),
+  ALLOCATION_AUTO_TOP_UP_CONFIG("AllocationAutoTopUpConfig"),
   BUSINESS("Business"),
   BUSINESS_BANK_ACCOUNT("BusinessBankAccount"),
   BUSINESS_LIMIT("BusinessLimit"),

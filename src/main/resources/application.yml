@@ -118,6 +118,7 @@ client:
     user-details-updated-template-id: ${SENDGRID_USER_DETAILS_UPDATED_TEMPLATE_ID:d-dedcc52329e1403f90986802aefeb6c6}
     user-account-created-template-id: ${SENDGRID_USER_ACCOUNT_CREATED_TEMPLATE_ID:d-5082896f143c46d886893ae08193a397}
     bank-funds-deposit-request-template-id: ${SENDGRID_BANK_FUNDS_DEPOSIT_REQUEST_TEMPLATE_ID:d-46c77ecdafd545a9a33384d763fd96ad}
+    bank-funds-deposit-request-scheduled-action-template-id: ${SENDGRID_BANK_FUNDS_DEPOSIT_REQUEST_SCHEDULED_ACTION_TEMPLATE_ID:d-60669e8099b246f193dd29bc73a3278e}
     financial-account-ready-template-id: ${SENDGRID_FINANCIAL_ACCOUNT_READY_TEMPLATE_ID:d-b69e6245a61a4f0593ed3de9726cd7ec}
   stripe:
     # secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
@@ -208,3 +209,21 @@ async:
   max-pool-size: 2
   queue-capacity: 500
   thread-name-prefix: async-executor-
+
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
+      port: 8086
+    database:
+      skip-create: true
+      type: sql
+    job:
+      default-number-of-retries: 10
+      retry-back-off-time-seed: 3
+    job-scheduler:
+      enabled: true
+    miscellaneous:
+      allow-anonymous-data-usage: false # this is true by default

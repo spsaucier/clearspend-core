@@ -80,5 +80,7 @@ public class SendGridProperties {
 
   @NotBlank private String bankFundsDepositRequestTemplateId;
 
+  @NotBlank private String bankFundsDepositRequestScheduledActionTemplateId;
+
   @NotBlank private String financialAccountReadyTemplateId;
 }

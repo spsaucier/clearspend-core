@@ -74,9 +74,9 @@ public class BusinessBankAccountBalanceService {
    *     on the specific financial institution reporting strategy.
    */
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessBankAccount, 'LINK_BANK_ACCOUNTS')")
-  public @NonNull BusinessBankAccountBalance getNewBalance(
-      final BusinessBankAccount businessBankAccount) throws IOException {
+  @NonNull
+  BusinessBankAccountBalance getNewBalance(final BusinessBankAccount businessBankAccount)
+      throws IOException {
 
     @NonNull
     final RequiredEncryptedStringWithHash accessToken = businessBankAccount.getAccessToken();

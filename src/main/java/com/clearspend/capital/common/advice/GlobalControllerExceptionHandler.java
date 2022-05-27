@@ -21,6 +21,7 @@ import com.inversoft.error.Errors;
 import com.stripe.exception.StripeException;
 import com.stripe.model.StripeError;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -164,6 +167,21 @@ public class GlobalControllerExceptionHandler {
   public @ResponseBody ControllerError handleException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);
     return new ControllerError(exception.getMessage());
+  }
+
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ExceptionHandler(BindException.class)
+  public @ResponseBody ControllerError handleBindExceptions(BindException exception) {
+    log.error(String.format("%s exception processing request", exception.getClass()), exception);
+    List<FieldError> fieldErrors = exception.getBindingResult().getFieldErrors();
+    String field = fieldErrors.stream().map(FieldError::getField).findFirst().orElse(null);
+    String message =
+        fieldErrors.stream()
+            .map(FieldError::getDefaultMessage)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(exception.getMessage());
+    return new ControllerError(message, field);
   }
 
   @ResponseStatus(HttpStatus.PRECONDITION_REQUIRED)

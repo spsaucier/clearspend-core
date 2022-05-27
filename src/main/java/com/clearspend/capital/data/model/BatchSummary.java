@@ -2,9 +2,12 @@ package com.clearspend.capital.data.model;
 
 import com.clearspend.capital.common.data.model.TypedMutable;
 import com.clearspend.capital.common.typedid.data.BatchSummaryId;
+import com.clearspend.capital.data.model.enums.BatchSummaryStatus;
+import com.clearspend.capital.data.model.enums.BatchSummaryType;
 import java.time.OffsetDateTime;
-import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,34 +28,22 @@ import org.hibernate.annotations.DynamicUpdate;
 public class BatchSummary extends TypedMutable<BatchSummaryId> {
 
   @NonNull
-  @Column(name = "batch_type")
-  private String batchType;
+  @Enumerated(EnumType.STRING)
+  private BatchSummaryType batchType;
+
+  @NonNull private Integer totalExecutions;
+
+  @NonNull private OffsetDateTime lastRunDate;
+
+  @NonNull private Integer lastRecordsProcessed;
+
+  @NonNull private Integer totalRecordsProcessed;
+
+  @NonNull private OffsetDateTime firstRecordDate;
+
+  @NonNull private OffsetDateTime lastRecordDate;
 
   @NonNull
-  @Column(name = "total_executions")
-  private Integer totalExecutions;
-
-  @NonNull
-  @Column(name = "last_run_date")
-  private OffsetDateTime lastRunDate;
-
-  @NonNull
-  @Column(name = "last_records_processed")
-  private Integer lastRecordsProcessed;
-
-  @NonNull
-  @Column(name = "total_records_processed")
-  private Integer totalRecordsProcessed;
-
-  @NonNull
-  @Column(name = "first_record_date")
-  private OffsetDateTime firstRecordDate;
-
-  @NonNull
-  @Column(name = "last_record_date")
-  private OffsetDateTime lastRecordDate;
-
-  @NonNull
-  @Column(name = "status")
-  private String status;
+  @Enumerated(EnumType.STRING)
+  private BatchSummaryStatus status;
 }

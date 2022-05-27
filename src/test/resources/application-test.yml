@@ -74,3 +74,22 @@ clearspend:
         card:
           physical: 100000
   onboarding-validation: ${ONBOARD_EMAIL_PHONE_VALIDATION:true}
+
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+      poll-interval: 2 #check for new work every 1 seconds
+    dashboard:
+      enabled: true
+      port: 8086
+    database:
+      skip-create: true
+      type: sql
+    job:
+      default-number-of-retries: 10
+      retry-back-off-time-seed: 3
+    job-scheduler:
+      enabled: true
+    miscellaneous:
+      allow-anonymous-data-usage: false # this is true by default

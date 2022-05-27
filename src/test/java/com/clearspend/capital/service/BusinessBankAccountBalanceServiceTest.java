@@ -213,16 +213,4 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
         BalanceNotFoundException.class,
         () -> businessBankAccountBalanceService.getNewBalance(bankAccount));
   }
-
-  @Test
-  void getNewBalance_UserPermissions() {
-    final ThrowingRunnable action =
-        () -> businessBankAccountBalanceService.getNewBalance(businessBankAccount);
-    permissionValidationHelper
-        .buildValidator(createBusinessRecord)
-        .setAllocation(childAllocation)
-        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
-        .build()
-        .validateServiceMethod(action);
-  }
 }

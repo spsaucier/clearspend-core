@@ -152,6 +152,7 @@ dependencies {
     val testContainersVersion = "1.16.3"
     val blazePersistenceVersion = "1.6.6"
     val jmustacheVersion = "1.15"
+    val jobrunrVersion = "5.1.1"
 
 //annotation processor and dependencies
     annotationProcessor("org.projectlombok:lombok")
@@ -195,6 +196,7 @@ dependencies {
     implementation("com.samskivert:jmustache:$jmustacheVersion")
     implementation("com.jayway.jsonpath:json-path:2.7.0")
     implementation("com.google.cloud:google-cloud-bigtable:2.6.2")
+    implementation("org.jobrunr:jobrunr-spring-boot-starter:$jobrunrVersion")
 
 //client libs
     implementation("com.stripe:stripe-java:20.111.0") // from: https://github.com/stripe/stripe-java

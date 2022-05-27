@@ -3,6 +3,7 @@ package com.clearspend.capital.service;
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
 import com.clearspend.capital.client.twilio.TwilioProperties;
 import com.clearspend.capital.data.model.business.BusinessProspect;
+import com.clearspend.capital.service.type.CurrentJob;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.sendgrid.Method;
@@ -26,6 +27,7 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -358,9 +360,14 @@ public class TwilioService {
     personalization.addDynamicTemplateData(
         DATE_KEY,
         Instant.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
-    Mail mail =
-        initMailWithTemplate(
-            sendGridProperties.getBankFundsDepositRequestTemplateId(), to, personalization);
+    String emailTemplateId;
+    if (BooleanUtils.isTrue(CurrentJob.getScheduledJob())) {
+      emailTemplateId = sendGridProperties.getBankFundsDepositRequestScheduledActionTemplateId();
+    } else {
+      emailTemplateId = sendGridProperties.getBankFundsDepositRequestTemplateId();
+    }
+    Mail mail = initMailWithTemplate(emailTemplateId, to, personalization);
+
     send(mail);
   }
 
