@@ -94,7 +94,8 @@ public class BusinessService {
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
             false,
-            AccountingSetupStep.AWAITING_SYNC);
+            AccountingSetupStep.AWAITING_SYNC,
+            convertBusinessProspect.getTimeZone());
     if (businessId != null) {
       business.setId(businessId);
     }
@@ -199,8 +200,7 @@ public class BusinessService {
 
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
-  public com.clearspend.capital.controller.type.business.Business updateBusiness(
-      TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
+  public Business updateBusiness(TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
     Business business = retrieveBusiness(businessId, true);
 
     BeanUtils.setNotNull(updateBusiness.getBusinessType(), business::setType);
@@ -211,20 +211,21 @@ public class BusinessService {
         business::setEmployerIdentificationNumber);
     BeanUtils.setNotNull(updateBusiness.getDescription(), business::setDescription);
     BeanUtils.setNotNull(updateBusiness.getUrl(), business::setUrl);
-
-    if (updateBusiness.getMcc() != null) {
-      business.setMcc(updateBusiness.getMcc());
-    }
+    BeanUtils.setNotNull(updateBusiness.getTimeZone(), business::setTimeZone);
+    BeanUtils.setNotNull(updateBusiness.getMcc(), business::setMcc);
 
     if (updateBusiness.getAddress() != null) {
       business.setClearAddress(ClearAddress.of(updateBusiness.getAddress().toAddress()));
     }
+    if (updateBusiness.getBusinessPhone() != null) {
+      business.setBusinessPhone(new RequiredEncryptedString(updateBusiness.getBusinessPhone()));
+    }
 
-    businessRepository.save(business);
+    businessRepository.saveAndFlush(business);
 
     stripeClient.updateAccount(business);
 
-    return new com.clearspend.capital.controller.type.business.Business(business);
+    return business;
   }
 
   @Transactional

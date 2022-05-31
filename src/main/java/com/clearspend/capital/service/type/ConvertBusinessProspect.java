@@ -4,6 +4,7 @@ import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.data.model.enums.MerchantType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -28,4 +29,6 @@ public class ConvertBusinessProspect {
   private String description;
 
   private String url;
+
+  private TimeZone timeZone;
 }

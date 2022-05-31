@@ -277,9 +277,9 @@ public class BusinessController {
   }
 
   @PostMapping("/update")
-  ResponseEntity<?> updateBusinessDetails(@RequestBody @Validated UpdateBusiness request) {
+  ResponseEntity<Business> updateBusinessDetails(@RequestBody @Validated UpdateBusiness request) {
     TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
-    return ResponseEntity.ok(businessService.updateBusiness(businessId, request));
+    return ResponseEntity.ok(new Business(businessService.updateBusiness(businessId, request)));
   }
 
   @PostMapping("/accounting-step")

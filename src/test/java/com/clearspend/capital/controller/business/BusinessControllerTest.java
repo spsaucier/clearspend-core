@@ -24,6 +24,7 @@ import com.clearspend.capital.controller.type.allocation.SearchBusinessAllocatio
 import com.clearspend.capital.controller.type.allocation.UpdateAllocationBalanceRequest;
 import com.clearspend.capital.controller.type.business.BusinessSettings;
 import com.clearspend.capital.controller.type.business.BusinessSettings.BusinessLimitOperationRecord;
+import com.clearspend.capital.controller.type.business.UpdateBusiness;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessFundAllocationResponse;
 import com.clearspend.capital.controller.type.business.reallocation.BusinessReallocationRequest;
 import com.clearspend.capital.controller.type.plaid.PlaidLogEntryDetails;
@@ -38,11 +39,14 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
 import com.clearspend.capital.data.model.enums.BusinessStatus;
+import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.PlaidResponseType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
@@ -1046,5 +1050,49 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .business();
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.COMPLETE);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.ACTIVE);
+  }
+
+  @Test
+  @SneakyThrows
+  void updateBusiness() {
+    Address address = new Address("Line 1", "Line 2", "AFG", "Washington", "123456", Country.AFG);
+
+    UpdateBusiness updateBusiness = new UpdateBusiness();
+    updateBusiness.setBusinessType(BusinessType.INDIVIDUAL);
+    updateBusiness.setLegalName("My legal name");
+    updateBusiness.setBusinessPhone("+123213121");
+    updateBusiness.setBusinessName("My Business Name");
+    updateBusiness.setEmployerIdentificationNumber("887721121");
+    updateBusiness.setDescription("My Description");
+    updateBusiness.setUrl("My URL");
+    updateBusiness.setMcc("8241");
+    updateBusiness.setAddress(address);
+    updateBusiness.setTimeZone(TimeZone.US_MOUNTAIN);
+
+    mvc.perform(
+            post("/businesses/update")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(updateBusiness))
+                .cookie(authCookie))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse();
+
+    Business business =
+        serviceHelper
+            .businessService()
+            .getBusiness(createBusinessRecord.business().getId())
+            .business();
+
+    assertThat(business.getBusinessName()).isEqualTo(updateBusiness.getBusinessName());
+    assertThat(business.getBusinessPhone().getEncrypted())
+        .isEqualTo(updateBusiness.getBusinessPhone());
+    assertThat(business.getDescription()).isEqualTo(updateBusiness.getDescription());
+    assertThat(business.getEmployerIdentificationNumber())
+        .isEqualTo(updateBusiness.getEmployerIdentificationNumber());
+    assertThat(business.getLegalName()).isEqualTo(updateBusiness.getLegalName());
+    assertThat(business.getMcc()).isEqualTo(updateBusiness.getMcc());
+    assertThat(business.getTimeZone()).isEqualTo(updateBusiness.getTimeZone());
+    assertThat(new Address(business.getClearAddress())).isEqualTo(address);
   }
 }

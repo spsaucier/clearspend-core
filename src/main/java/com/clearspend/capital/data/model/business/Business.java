@@ -134,6 +134,10 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;
 
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private TimeZone timeZone;
+
   @Override
   public TypedId<BusinessId> getBusinessId() {
     return getId();

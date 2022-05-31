@@ -39,6 +39,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MerchantType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.enums.network.NetworkMessageType;
@@ -463,7 +464,8 @@ public class TestDataController {
                     Country.USA),
                 MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
                 "Description of business",
-                faker.internet().url()));
+                faker.internet().url(),
+                TimeZone.US_CENTRAL));
 
     Business business = convertBusinessProspectRecord.business();
 
@@ -636,7 +638,8 @@ public class TestDataController {
                     Country.USA),
                 MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
                 "Description of business",
-                faker.internet().url()));
+                faker.internet().url(),
+                TimeZone.US_CENTRAL));
 
     Business business = convertBusinessProspectRecord.business();
 

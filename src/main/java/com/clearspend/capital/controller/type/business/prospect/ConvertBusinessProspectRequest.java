@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.data.model.enums.MerchantType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -61,6 +62,12 @@ public class ConvertBusinessProspectRequest {
   @Schema(title = "Description", example = "Business small description")
   private String description;
 
+  @JsonProperty("timeZone")
+  @NonNull
+  @NotNull(message = "Business time zone is required")
+  @Schema(title = "Timezone", example = "US_CENTRAL")
+  private TimeZone timeZone;
+
   public ConvertBusinessProspect toConvertBusinessProspect(
       TypedId<BusinessProspectId> businessProspectId) {
     return new ConvertBusinessProspect(
@@ -72,6 +79,7 @@ public class ConvertBusinessProspectRequest {
         address.toAddress(),
         MerchantType.fromMccCode(mcc),
         description,
-        url);
+        url,
+        timeZone);
   }
 }

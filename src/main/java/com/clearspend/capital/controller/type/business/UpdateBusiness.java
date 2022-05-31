@@ -2,6 +2,7 @@ package com.clearspend.capital.controller.type.business;
 
 import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.data.model.enums.BusinessType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -38,4 +39,7 @@ public class UpdateBusiness {
 
   @JsonProperty("url")
   private String url;
+
+  @JsonProperty("timeZone")
+  private TimeZone timeZone;
 }

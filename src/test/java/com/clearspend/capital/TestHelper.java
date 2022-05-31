@@ -60,6 +60,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.clearspend.capital.data.model.enums.MerchantType;
+import com.clearspend.capital.data.model.enums.TimeZone;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -707,7 +708,8 @@ public class TestHelper {
             generatePhone(),
             generateApiAddress(),
             "7311",
-            "Business default description.");
+            "Business default description.",
+            TimeZone.US_CENTRAL);
     String body = objectMapper.writeValueAsString(request);
 
     MockHttpServletResponse response =
@@ -976,7 +978,8 @@ public class TestHelper {
                     generateEntityAddress(),
                     MerchantType.AGRICULTURAL_COOPERATIVE,
                     MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
-                    faker.internet().url()),
+                    faker.internet().url(),
+                    TimeZone.US_CENTRAL),
                 new TosAcceptance(
                     OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS),
                     faker.internet().ipV4Address(),
