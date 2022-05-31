@@ -75,6 +75,12 @@ public class TransactionLimitService {
   }
 
   @Transactional
+  void removeSpendLimit(
+      final TypedId<BusinessId> businessId, final TransactionLimitType type, final UUID ownerId) {
+    transactionLimitRepository.deleteByBusinessIdAndTypeAndOwnerId(businessId, type, ownerId);
+  }
+
+  @Transactional
   TransactionLimit createAllocationSpendLimit(
       TypedId<BusinessId> businessId,
       TypedId<AllocationId> allocationId,

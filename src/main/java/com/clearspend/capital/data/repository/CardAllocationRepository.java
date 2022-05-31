@@ -15,4 +15,7 @@ public interface CardAllocationRepository
 
   Optional<CardAllocation> findByCardIdAndAllocationId(
       final TypedId<CardId> cardId, final TypedId<AllocationId> allocationId);
+
+  void removeByCardIdAndAllocationId(
+      final TypedId<CardId> cardId, final TypedId<AllocationId> allocationId);
 }

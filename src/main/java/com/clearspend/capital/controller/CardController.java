@@ -6,6 +6,8 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.card.CardAllocationDetails;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
@@ -31,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,6 +87,40 @@ public class CardController {
                 new IssueCardResponse(
                     cardService.issueCard(businessId, cardType, request).card().getId(), null))
         .toList();
+  }
+
+  @PostMapping("/{cardId}/allocations")
+  CardDetailsResponse addAllocationsToCard(
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<CardId> cardId,
+      @RequestBody @Validated final List<CardAllocationSpendControls> allocationsAndSpendControls) {
+    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    cardService.addAllocationsToCard(
+        cardService.retrieveCard(businessId, cardId), allocationsAndSpendControls);
+
+    return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
+  }
+
+  @DeleteMapping("/{cardId}/allocations")
+  CardDetailsResponse removeAllocationsFromCard(
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<CardId> cardId,
+      @RequestBody @Validated List<CardAllocationDetails> allocationsToRemove) {
+    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    cardService.removeAllocationsFromCard(
+        cardService.retrieveCard(businessId, cardId), allocationsToRemove);
+
+    return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
   }
 
   @PatchMapping("/{cardId}/controls")

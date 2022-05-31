@@ -6,6 +6,7 @@ import com.clearspend.capital.common.error.CurrencyMismatchException;
 import com.clearspend.capital.common.error.DataAccessViolationException;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.common.error.IdMismatchException;
+import com.clearspend.capital.common.error.InvalidCardAllocationException;
 import com.clearspend.capital.common.error.InvalidKycDataException;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.InvalidStateException;
@@ -56,7 +57,8 @@ public class GlobalControllerExceptionHandler {
     IdMismatchException.class,
     InvalidRequestException.class,
     OperationDeclinedException.class,
-    MethodArgumentNotValidException.class
+    MethodArgumentNotValidException.class,
+    InvalidCardAllocationException.class
   })
   public @ResponseBody ControllerError handleCapitalException(Exception exception) {
     log.error(String.format("%s exception processing request", exception.getClass()), exception);

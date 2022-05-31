@@ -1,6 +1,7 @@
 package com.clearspend.capital.controller;
 
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.ReceiptId;
 import com.clearspend.capital.common.typedid.data.TypedId;
@@ -292,6 +293,27 @@ public class UserController {
         cardService.cancelCard(
             cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
             request.getStatusReason()));
+  }
+
+  @PatchMapping("/cards/{cardId}/link/{allocationId}")
+  CardAndAccount linkCard(
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<CardId> cardId,
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "allocationId",
+              description = "ID of the allocation record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<AllocationId> allocationId) {
+    return CardAndAccount.of(
+        cardService.linkCard(
+            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId), allocationId));
   }
 
   @PatchMapping("/cards/{cardId}/unlink")

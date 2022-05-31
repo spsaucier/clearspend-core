@@ -64,10 +64,19 @@ public record PermissionEvaluationContext(
       return context;
     }
 
-    if (targetObject instanceof Permissionable permissionable) {
+    if (targetObject instanceof Permissionable permissionable
+        && allocationStrategy == AllocationStrategy.SINGLE_ALLOCATION) {
       return new PermissionEvaluationContext(
           permissionable.getBusinessId(),
           permissionable.getAllocationId(),
+          singleOwnerSet(permissionable.getOwnerId()),
+          allocationStrategy);
+    }
+
+    if (targetObject instanceof Permissionable permissionable) {
+      return new PermissionEvaluationContext(
+          permissionable.getBusinessId(),
+          null,
           singleOwnerSet(permissionable.getOwnerId()),
           allocationStrategy);
     }
@@ -80,12 +89,18 @@ public record PermissionEvaluationContext(
           allocationStrategy);
     }
 
-    if (targetObject instanceof AllocationRelated allocationRelated) {
+    if (targetObject instanceof AllocationRelated allocationRelated
+        && allocationStrategy == AllocationStrategy.SINGLE_ALLOCATION) {
       return new PermissionEvaluationContext(
           allocationRelated.getBusinessId(),
           allocationRelated.getAllocationId(),
           Set.of(),
           allocationStrategy);
+    }
+
+    if (targetObject instanceof AllocationRelated allocationRelated) {
+      return new PermissionEvaluationContext(
+          allocationRelated.getBusinessId(), null, Set.of(), allocationStrategy);
     }
 
     if (targetObject instanceof OwnerRelated ownerRelated) {

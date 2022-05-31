@@ -17,6 +17,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.business.BusinessSettings;
+import com.clearspend.capital.controller.type.card.CardAllocationDetails;
 import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
 import com.clearspend.capital.controller.type.card.EphemeralKeyRequest;
@@ -961,5 +962,161 @@ public class CardControllerTest extends BaseCapitalTest {
             .collect(Collectors.toList());
     assertThat(unlinkedCards).hasSize(1);
     assertThat(unlinkedCards.get(0)).hasFieldOrPropertyWithValue("cardId", card.getId());
+  }
+
+  @Test
+  void addAllocationsToCard() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final CardAllocationSpendControls controls1 =
+        new CardAllocationSpendControls(
+            createBusinessRecord.allocationRecord().allocation().getId());
+    controls1.setDisabledPaymentTypes(Set.of(PaymentType.ONLINE));
+    final CardAllocationSpendControls controls2 =
+        new CardAllocationSpendControls(childAllocation.allocation().getId());
+    controls2.setDisabledPaymentTypes(Set.of(PaymentType.ONLINE));
+
+    final CardDetailsResponse response =
+        mockMvcHelper.queryObject(
+            "/cards/%s/allocations".formatted(card.getId()),
+            HttpMethod.POST,
+            createBusinessRecord.authCookie(),
+            List.of(controls1, controls2),
+            CardDetailsResponse.class);
+
+    assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
+    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(2);
+    final List<CardAllocationSpendControls> allowedAllocationsAndLimits =
+        response.getAllowedAllocationsAndLimits().stream()
+            .sorted(
+                (a, b) ->
+                    a.getAllocationId()
+                            .equals(createBusinessRecord.allocationRecord().allocation().getId())
+                        ? -1
+                        : 1)
+            .toList();
+    assertThat(allowedAllocationsAndLimits.get(0))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId())
+        .hasFieldOrPropertyWithValue("disabledPaymentTypes", Set.of());
+    assertThat(allowedAllocationsAndLimits.get(1))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocation.allocation().getId())
+        .hasFieldOrPropertyWithValue("disabledPaymentTypes", Set.of(PaymentType.ONLINE));
+  }
+
+  @Test
+  void addAllocationsToCard_UserPermissions() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final AllocationRecord grandchildAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(), "Child", childAllocation.allocation().getId());
+    final User managerOnGrandchild =
+        testHelper
+            .createUserWithRole(grandchildAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    final CardAllocationSpendControls controls =
+        new CardAllocationSpendControls(childAllocation.allocation().getId());
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvcHelper.query(
+                "/cards/%s/allocations".formatted(card.getId()),
+                HttpMethod.POST,
+                cookie,
+                List.of(controls));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_MANAGER, DefaultRoles.ALLOCATION_ADMIN))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .denyUser(managerOnGrandchild)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  void removeAllocationsFromCard() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final CardAllocation childCardAllocation =
+        cardAllocationRepository.save(
+            new CardAllocation(card.getId(), childAllocation.allocation().getId()));
+    final TransactionLimit transactionLimit =
+        transactionLimitRepository.save(
+            new TransactionLimit(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                childCardAllocation.getId().toUuid(),
+                Map.of(),
+                Set.of(),
+                Set.of(),
+                false));
+    final CardAllocationDetails allocations =
+        new CardAllocationDetails(childAllocation.allocation().getId());
+
+    final CardDetailsResponse response =
+        mockMvcHelper.queryObject(
+            "/cards/%s/allocations".formatted(card.getId()),
+            HttpMethod.DELETE,
+            createBusinessRecord.authCookie(),
+            List.of(allocations),
+            CardDetailsResponse.class);
+
+    assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
+    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(response.getAllowedAllocationsAndLimits().get(0))
+        .hasFieldOrPropertyWithValue(
+            "allocationId", createBusinessRecord.allocationRecord().allocation().getId());
+
+    assertThat(cardAllocationRepository.findById(childCardAllocation.getId())).isEmpty();
+    assertThat(transactionLimitRepository.findById(transactionLimit.getId())).isEmpty();
+  }
+
+  @Test
+  void removeAllocationsFromCard_UserPermissions() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final AllocationRecord grandchildAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(), "Child", childAllocation.allocation().getId());
+    final User managerOnGrandchild =
+        testHelper
+            .createUserWithRole(grandchildAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    final CardAllocationDetails allocations =
+        new CardAllocationDetails(childAllocation.allocation().getId());
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvcHelper.query(
+                "/cards/%s/allocations".formatted(card.getId()),
+                HttpMethod.DELETE,
+                cookie,
+                List.of(allocations));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(DefaultRoles.ALLOCATION_MANAGER, DefaultRoles.ALLOCATION_ADMIN))
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .denyUser(managerOnGrandchild)
+        .build()
+        .validateMockMvcCall(action);
   }
 }

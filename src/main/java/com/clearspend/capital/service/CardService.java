@@ -7,10 +7,13 @@ import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.controller.type.card.CardAllocationDetails;
+import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.IssueCardRequest;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
@@ -25,6 +28,7 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.enums.AccountType;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -166,15 +170,22 @@ public class CardService {
     final List<CardAllocationAndLimit> cardAllocations =
         request.getAllocationSpendControls().stream()
             .map(
-                controls -> {
-                  final CardAllocation cardAllocation =
-                      cardAllocationService.addAllocationToCard(
-                          initialCard.getId(), controls.getAllocationId());
-                  final TransactionLimit transactionLimit =
-                      transactionLimitService.createCardSpendLimit(
-                          new CardSpendControls(initialCard, cardAllocation, controls));
-                  return new CardAllocationAndLimit(cardAllocation, transactionLimit);
-                })
+                controls ->
+                    cardAllocationService
+                        .addAllocationToCard(initialCard.getId(), controls.getAllocationId())
+                        .ifWasCreated(
+                            cardAllocation -> {
+                              final TransactionLimit transactionLimit =
+                                  transactionLimitService.createCardSpendLimit(
+                                      new CardSpendControls(initialCard, cardAllocation, controls));
+                              return new CardAllocationAndLimit(cardAllocation, transactionLimit);
+                            })
+                        .orElseThrow(
+                            () ->
+                                new IllegalStateException(
+                                    "Card/Allocation record should not exist for newly created card. Card ID: %s Allocation ID: %s"
+                                        .formatted(
+                                            initialCard.getId(), controls.getAllocationId()))))
             .toList();
 
     initialCard.setAllocationId(cardAllocations.get(0).cardAllocation().getAllocationId());
@@ -408,10 +419,6 @@ public class CardService {
   @Transactional
   @PreAuthorize("hasPermission(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
   public CardRecord unlinkCard(final Card card) {
-    if (card.getType() == CardType.VIRTUAL) {
-      throw new InvalidRequestException("Cannot unlink a virtual card");
-    }
-
     if (!card.isLinkedToAllocation()) {
       throw new InvalidRequestException("Cannot unlink a card that is already unlinked");
     }
@@ -643,5 +650,49 @@ public class CardService {
             .orElse(null);
 
     return new CardRecord(card, account);
+  }
+
+  @Transactional
+  // Connecting the card to allocations will test for permissions on each allocation
+  @PreAuthorize("hasPermissionAnyAllocation(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public void addAllocationsToCard(
+      final Card card, final List<CardAllocationSpendControls> allocationsAndSpendControls) {
+    allocationsAndSpendControls.forEach(
+        controls ->
+            cardAllocationService
+                .addAllocationToCard(card.getId(), controls.getAllocationId())
+                .ifWasCreated(
+                    cardAllocation ->
+                        transactionLimitService.createCardSpendLimit(
+                            new CardSpendControls(card, cardAllocation, controls))));
+  }
+
+  @Transactional
+  // Connecting the card to allocations will test for permissions on each allocation
+  @PreAuthorize("hasPermissionAnyAllocation(#card, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
+  public void removeAllocationsFromCard(
+      final Card card, final List<CardAllocationDetails> allocationsToRemove) {
+    allocationsToRemove.forEach(
+        allocation ->
+            cardAllocationService
+                .removeAllocationFromCard(card.getId(), allocation.getAllocationId())
+                .ifPresent(
+                    cardAllocation ->
+                        transactionLimitService.removeSpendLimit(
+                            card.getBusinessId(),
+                            TransactionLimitType.CARD,
+                            cardAllocation.getId().toUuid())));
+  }
+
+  @Transactional
+  @PreAuthorize("isSelfOwned(#card)")
+  public CardRecord linkCard(final Card card, final TypedId<AllocationId> allocationId) {
+    cardAllocationService.allowLinkingCardToAllocation(card.getId(), allocationId);
+    final Allocation allocation = retrievalService.retrieveAllocation(allocationId);
+    card.setAllocationId(allocationId);
+    card.setAccountId(allocation.getAccountId());
+
+    final Account account = accountService.retrieveAccountById(allocation.getAccountId(), true);
+    return new CardRecord(cardRepository.saveAndFlush(card), account);
   }
 }

@@ -1034,24 +1034,6 @@ class UserControllerTest extends BaseCapitalTest {
 
   @Test
   @SneakyThrows
-  void unlinkCard_IsVirtualCard() {
-    final Card card =
-        testHelper.issueCard(
-            business,
-            createBusinessRecord.allocationRecord().allocation(),
-            user.user(),
-            Currency.USD,
-            FundingType.POOLED,
-            CardType.VIRTUAL,
-            false);
-    mvc.perform(
-            patch("/users/cards/%s/unlink".formatted(card.getId()))
-                .cookie(createBusinessRecord.authCookie()))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  @SneakyThrows
   void unlinkCard_IsAlreadyUnlinked() {
     Card card =
         testHelper.issueCard(
@@ -2674,5 +2656,109 @@ class UserControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("status", CardStatus.ACTIVE)
         .hasFieldOrPropertyWithValue("allocationId", null)
         .hasFieldOrPropertyWithValue("accountId", null);
+  }
+
+  @Test
+  void linkCard() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    cardService.addAllocationsToCard(
+        card, List.of(new CardAllocationSpendControls(childAllocation.allocation().getId())));
+
+    final CardAndAccount response =
+        mockMvcHelper.queryObject(
+            "/users/cards/%s/link/%s".formatted(card.getId(), childAllocation.allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            CardAndAccount.class);
+    assertThat(response.card())
+        .hasFieldOrPropertyWithValue("cardId", card.getId())
+        .hasFieldOrPropertyWithValue("allocationId", childAllocation.allocation().getId());
+    assertThat(response.account())
+        .hasFieldOrPropertyWithValue("accountId", childAllocation.account().getId());
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard)
+        .hasFieldOrPropertyWithValue("allocationId", childAllocation.allocation().getId())
+        .hasFieldOrPropertyWithValue("accountId", childAllocation.account().getId());
+  }
+
+  @Test
+  void linkCard_UserPermissions() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final com.clearspend.capital.data.model.User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            employee,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    cardService.addAllocationsToCard(
+        card, List.of(new CardAllocationSpendControls(childAllocation.allocation().getId())));
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvcHelper.query(
+                "/users/cards/%s/link/%s"
+                    .formatted(card.getId(), childAllocation.allocation().getId()),
+                HttpMethod.PATCH,
+                cookie);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowUser(employee)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void linkCard_AllocationNotAllowed() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+
+    mockMvcHelper
+        .query(
+            "/users/cards/%s/link/%s".formatted(card.getId(), childAllocation.allocation().getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie())
+        .andExpect(status().isBadRequest());
   }
 }

@@ -7,7 +7,9 @@ import com.clearspend.capital.data.model.TransactionLimit;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import java.util.Optional;
 import java.util.UUID;
+import javax.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 
 public interface TransactionLimitRepository
     extends JpaRepository<TransactionLimit, TypedId<TransactionLimitId>> {
@@ -16,4 +18,9 @@ public interface TransactionLimitRepository
       TypedId<BusinessId> businessId, TransactionLimitType type, UUID ownerId);
 
   void deleteByBusinessId(TypedId<BusinessId> businessId);
+
+  @Modifying
+  @Transactional
+  void deleteByBusinessIdAndTypeAndOwnerId(
+      final TypedId<BusinessId> businessId, final TransactionLimitType type, final UUID ownerId);
 }
