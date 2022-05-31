@@ -81,9 +81,7 @@ public class ReceiptService {
   }
 
   @Transactional
-  @PreAuthorize(
-      "(isSelfOwned(#accountActivity) and isSelfOwned(#receipt)) or "
-          + "(hasPermission(#accountActivity, 'LINK_RECEIPTS') and hasPermission(#receipt, 'READ'))")
+  @PreAuthorize("hasPermission(#accountActivity, 'VIEW_OWN|LINK_RECEIPTS')")
   public void linkReceipt(Receipt receipt, AccountActivity accountActivity) {
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.isLinked()) {

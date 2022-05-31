@@ -320,17 +320,11 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @Tag("PERMISSIONS")
   @Test
-  void linkReceipt_requiresOwnershipOrLinkReceiptsAndReadPermission() {
+  void linkReceipt_UserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    // Create three users to test.
-    User manager =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_MANAGER).user();
-    User employee =
+    final User employee =
         testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-    User snooper =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-
-    // Create a Receipt for the Employee user
+    final AccountActivity accountActivity = createAccountActivity(employee);
     receipt =
         receiptService.storeReceiptImage(
             userRecord.user().getBusinessId(),
@@ -338,21 +332,18 @@ class ReceiptServiceTest extends BaseCapitalTest {
             fileContents.getBytes(),
             contentType);
 
-    // Create an Account Activity object to 'link'
-    AccountActivity accountActivity = createAccountActivity(employee);
+    final ThrowingRunnable action = () -> receiptService.linkReceipt(receipt, accountActivity);
 
-    // Ensure that the Manager can link a receipt
-    testHelper.setCurrentUser(manager);
-    assertDoesNotThrow(() -> receiptService.linkReceipt(receipt, accountActivity));
-
-    // The Employee that owns the Receipt and the Activity should be able to link the two
-    testHelper.setCurrentUser(employee);
-    assertDoesNotThrow(() -> receiptService.linkReceipt(receipt, accountActivity));
-
-    // The sibling employee (Snooper) should NOT be allowed to link the Receipt
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class, () -> receiptService.linkReceipt(receipt, accountActivity));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_ADMIN,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_VIEW_ONLY))
+        .allowUser(employee)
+        .build()
+        .validateServiceMethod(action);
   }
 
   @SneakyThrows
