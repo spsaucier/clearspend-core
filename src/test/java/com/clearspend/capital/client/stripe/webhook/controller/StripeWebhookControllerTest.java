@@ -75,6 +75,7 @@ import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.DistributedLockerService;
 import com.clearspend.capital.service.PendingStripeTransferService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.clearspend.capital.service.TransactionLimitService;
@@ -100,6 +101,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import javax.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -109,6 +111,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -242,8 +245,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, authorization, stripeEventType),
-            true);
+                new StripeWebhookLog(), authorization, authorization, stripeEventType));
     if (networkCommon.getForeignTransaction()) {
       amount += (amount / 100) * businessSettings.getForeignTransactionFeePercents().longValue();
     }
@@ -311,8 +313,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         stripeWebhookController.handleDirectRequest(
             Instant.now(),
             new StripeWebhookController.ParseRecord(
-                new StripeWebhookLog(), authorization, authorization, stripeEventType),
-            true);
+                new StripeWebhookLog(), authorization, authorization, stripeEventType));
     testHelper.assertPost(networkCommon, false, true, false);
     assertionHelper.assertBalance(
         business, allocation, networkCommon.getAccount(), openingBalance, openingBalance);
@@ -392,8 +393,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 new StripeWebhookLog(),
                 authorizationCreated,
                 authorizationCreated,
-                stripeEventType),
-            true);
+                stripeEventType));
     testHelper.assertPost(networkCommon, false, false, false);
     assertionHelper.assertBalance(
         business, allocation, networkCommon.getAccount(), BigDecimal.TEN, BigDecimal.TEN);
@@ -439,8 +439,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 new StripeWebhookLog(),
                 authorizationUpdated,
                 authorizationUpdated,
-                stripeEventType),
-            true);
+                stripeEventType));
     log.debug("networkCommon: {}", networkCommon);
     testHelper.assertPost(networkCommon, false, false, amountUpdated);
     assertionHelper.assertBalance(
@@ -787,8 +786,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 stripeWebhookLog,
                 transaction,
                 transaction,
-                StripeEventType.ISSUING_TRANSACTION_CREATED),
-            true);
+                StripeEventType.ISSUING_TRANSACTION_CREATED));
 
     final AccountActivity captureActivity =
         accountActivityRepository.findAll().stream()
@@ -960,8 +958,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 stripeWebhookLog,
                 transaction,
                 transaction,
-                StripeEventType.ISSUING_TRANSACTION_CREATED),
-            true);
+                StripeEventType.ISSUING_TRANSACTION_CREATED));
 
     log.debug("capture networkCommon\n{}", networkCommon);
 
@@ -1028,8 +1025,7 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
                 new StripeWebhookLog(),
                 incrementalAuthorization,
                 incrementalAuthorization,
-                stripeEventType),
-            true);
+                stripeEventType));
 
     log.debug("incrementalAuthorization\n{}", networkCommon);
     testHelper.assertPost(networkCommon, false, false, true);
@@ -2151,5 +2147,32 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
         .extracting("ledgerBalance", "availableBalance")
         .map(Object::toString)
         .containsExactly("99.00USD", "99.00USD");
+  }
+
+  @Test
+  void concurrent_AuthAndCaptureEventsShouldBeSequenced() {
+    // given
+    String authorizationId = UUID.randomUUID().toString();
+    Authorization authorization = new Authorization();
+    authorization.setId(authorizationId);
+
+    Transaction transaction = new Transaction();
+    transaction.setId(UUID.randomUUID().toString());
+    transaction.setAuthorization(authorizationId);
+
+    DistributedLockerService lockServiceMock = Mockito.mock(DistributedLockerService.class);
+
+    StripeWebhookController controller =
+        new StripeWebhookController(null, null, null, null, null, null, lockServiceMock);
+
+    // when
+    controller.executeWithObjectLock(authorization, () -> {});
+    controller.executeWithObjectLock(transaction, () -> {});
+
+    // then
+    // make sure that we call DLS with lockId = authId two times. Actual verification of a fact that
+    // processing is actually sequenced for the same lock is done in the DLS test
+    Mockito.verify(lockServiceMock, Mockito.times(2))
+        .doWithLock(Mockito.eq(authorizationId), Mockito.<Runnable>any());
   }
 }

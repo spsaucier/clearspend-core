@@ -24,8 +24,7 @@ public class StripeDirectHandler {
   private final CardService cardService;
   private final StripeClient stripeClient;
 
-  NetworkCommon processAuthorization(ParseRecord parseRecord, boolean isTest)
-      throws StripeException {
+  NetworkCommon processAuthorization(ParseRecord parseRecord) throws StripeException {
     StripeEventType stripeEventType = parseRecord.stripeEventType();
     StripeObject stripeObject = parseRecord.stripeObject();
 

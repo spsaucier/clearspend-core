@@ -30,6 +30,16 @@ public interface ThrowableFunctions {
     };
   }
 
+  static void sneakyThrows(ThrowingRunnable fn) {
+    try {
+      fn.run();
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
+  }
+
   @FunctionalInterface
   interface ThrowingFunction<I, O> {
     O apply(final I input) throws Exception;
@@ -38,5 +48,10 @@ public interface ThrowableFunctions {
   @FunctionalInterface
   interface ThrowingSupplier<O> {
     O get() throws Exception;
+  }
+
+  @FunctionalInterface
+  interface ThrowingRunnable {
+    void run() throws Exception;
   }
 }

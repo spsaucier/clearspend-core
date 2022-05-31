@@ -8,6 +8,7 @@ import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.data.model.network.StripeWebhookLog;
 import com.clearspend.capital.data.repository.network.StripeWebhookLogRepository;
+import com.clearspend.capital.service.DistributedLockerService;
 import com.clearspend.capital.service.NetworkMessageEnrichmentService;
 import com.clearspend.capital.service.type.NetworkCommon;
 import com.google.common.annotations.VisibleForTesting;
@@ -17,7 +18,9 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.Event;
+import com.stripe.model.HasId;
 import com.stripe.model.StripeObject;
+import com.stripe.model.issuing.Transaction;
 import com.stripe.net.ApiResource;
 import com.stripe.net.Webhook;
 import java.io.IOException;
@@ -54,6 +57,7 @@ public class StripeWebhookController {
   private final StripeConnectHandler stripeConnectHandler;
   private final StripeDirectHandler stripeDirectHandler;
   private final WebClient authFallbackClient;
+  private final DistributedLockerService distributedLockerService;
 
   public StripeWebhookController(
       StripeWebhookLogRepository stripeWebhookLogRepository,
@@ -61,20 +65,27 @@ public class StripeWebhookController {
       StripeConnectHandler stripeConnectHandler,
       StripeDirectHandler stripeDirectHandler,
       NetworkMessageEnrichmentService networkMessageEnrichmentService,
-      @Autowired(required = false) @Qualifier("authFallbackClient") WebClient authFallbackClient) {
+      @Autowired(required = false) @Qualifier("authFallbackClient") WebClient authFallbackClient,
+      DistributedLockerService distributedLockerService) {
     this.stripeWebhookLogRepository = stripeWebhookLogRepository;
     this.stripeProperties = stripeProperties;
     this.stripeConnectHandler = stripeConnectHandler;
     this.stripeDirectHandler = stripeDirectHandler;
     this.authFallbackClient = authFallbackClient;
     this.networkMessageEnrichmentService = networkMessageEnrichmentService;
+    this.distributedLockerService = distributedLockerService;
   }
 
   @PostMapping("/webhook/connect")
   void connectWebhook(HttpServletRequest request) {
-    Instant start = Instant.now();
-
+    Instant instant = Instant.now();
     ParseRecord parseRecord = parseRequest("connect", request, stripeProperties.getConnectSecret());
+
+    executeWithObjectLock(
+        parseRecord.stripeObject(), () -> handleConnectRequest(instant, parseRecord));
+  }
+
+  void handleConnectRequest(Instant start, ParseRecord parseRecord) {
     StripeObject stripeObject = parseRecord.stripeObject();
 
     switch (parseRecord.stripeEventType) {
@@ -131,27 +142,26 @@ public class StripeWebhookController {
 
   @PostMapping("/webhook/issuing")
   void directWebhook(HttpServletRequest request) {
-    handleDirectRequest(
-        Instant.now(),
-        parseRequest("issuing", request, stripeProperties.getIssuingSecret()),
-        false);
+    Instant instant = Instant.now();
+    ParseRecord parseRecord = parseRequest("issuing", request, stripeProperties.getIssuingSecret());
+
+    executeWithObjectLock(
+        parseRecord.stripeObject(), () -> handleDirectRequest(instant, parseRecord));
   }
 
   @VisibleForTesting
   @SuppressWarnings("CatchAndPrintStackTrace")
-  NetworkCommon handleDirectRequest(Instant start, ParseRecord parseRecord, boolean isTest) {
+  NetworkCommon handleDirectRequest(Instant start, ParseRecord parseRecord) {
     NetworkCommon networkCommon = null;
     try {
       switch (parseRecord.stripeEventType) {
         case ISSUING_AUTHORIZATION_REQUEST,
             ISSUING_AUTHORIZATION_CREATED,
             ISSUING_AUTHORIZATION_UPDATED -> networkCommon =
-            stripeDirectHandler.processAuthorization(parseRecord, isTest);
+            stripeDirectHandler.processAuthorization(parseRecord);
         case ISSUING_TRANSACTION_CREATED -> networkCommon =
             stripeDirectHandler.processCapture(parseRecord);
-        case ISSUING_CARD_CREATED -> stripeDirectHandler.processCard(
-            parseRecord.stripeEventType, parseRecord);
-        case ISSUING_CARD_UPDATED -> stripeDirectHandler.processCard(
+        case ISSUING_CARD_CREATED, ISSUING_CARD_UPDATED -> stripeDirectHandler.processCard(
             parseRecord.stripeEventType, parseRecord);
         case ISSUING_CARDHOLDER_CREATED, ISSUING_CARDHOLDER_UPDATED -> stripeDirectHandler
             .processCardHolder(parseRecord.stripeEventType, parseRecord.stripeObject);
@@ -255,5 +265,29 @@ public class StripeWebhookController {
     StripeEventType stripeEventType = StripeEventType.fromString(stripeWebhookLog.getEventType());
 
     return new ParseRecord(stripeWebhookLog, stripeObject, event, stripeEventType);
+  }
+
+  /**
+   * In order to prevent concurrent modification updates when we receive two stripe events for the
+   * same object at the same time we need to block on the underlying object id
+   */
+  @VisibleForTesting
+  void executeWithObjectLock(StripeObject stripeObject, Runnable runnable) {
+    String objectId = null;
+
+    if (stripeObject instanceof Transaction transaction) {
+      // for captures we need to reference original authorization to avoid auth update/capture pairs
+      objectId = transaction.getAuthorization();
+    } else if (stripeObject instanceof HasId identifiableStripeObject) {
+      // this mechanism only supports official events (non beta). If we ever see concurrent
+      // modification with beta events we need to handle it separately
+      objectId = identifiableStripeObject.getId();
+    }
+
+    if (objectId != null) {
+      distributedLockerService.doWithLock(objectId, runnable);
+    } else {
+      runnable.run();
+    }
   }
 }

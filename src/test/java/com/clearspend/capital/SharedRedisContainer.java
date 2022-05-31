@@ -14,6 +14,7 @@ public class SharedRedisContainer extends GenericContainer<SharedRedisContainer>
   public SharedRedisContainer() {
     super(DockerImageName.parse("redis:6.2.7"));
     addFixedExposedPort(16379, 6379);
+    setCommand("redis-server", "--requirepass password");
   }
 
   public static GenericContainer<SharedRedisContainer> getInstance() {

@@ -11,7 +11,7 @@ import org.hibernate.annotations.Type;
 @Data
 @MappedSuperclass
 @EqualsAndHashCode(callSuper = true)
-public abstract class TypedMutable<T> extends Versioned {
+public abstract class TypedMutable<T> extends Versioned implements TypedObject<T> {
 
   @Column(columnDefinition = "binary(16)")
   @Id

@@ -33,11 +33,16 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${client.fusionauth.base-url}
+  cache:
+    # Redisson and spring redis provide different cache implementations (JCACHE and REDIS).
+    # To avoid clashing a specific type can be specified.
+    # Alternative approach is to implement custom CacheResolver bean
+    type: REDIS
   redis:
     database: 0
     host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:16379}
-    password: ${REDIS_PASSWORD:}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:password}
     timeout: ${REDIS_TIMEOUT:60000}
 
 clearspend:

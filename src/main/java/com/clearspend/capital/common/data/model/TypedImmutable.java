@@ -15,7 +15,7 @@ import org.hibernate.annotations.Type;
 @Data
 @MappedSuperclass
 @EqualsAndHashCode
-public abstract class TypedImmutable<T> {
+public abstract class TypedImmutable<T> implements TypedObject<T> {
 
   @Id
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")

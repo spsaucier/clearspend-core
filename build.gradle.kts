@@ -180,6 +180,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
     implementation("io.netty:netty-resolver-dns-native-macos:4.1.76.Final:osx-aarch_64")
+    implementation("org.redisson:redisson-spring-boot-starter:3.17.2")
     runtimeOnly("org.postgresql:postgresql")
 
 //other 3rd party libs
@@ -205,13 +206,6 @@ dependencies {
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.25.1")
     implementation("io.fusionauth:fusionauth-java-client:1.36.0")
-
-//snyk fixes (revisit if fixed in the next spring boot version > 2.6.3)
-    constraints {
-        implementation("org.postgresql:postgresql:24.3.2") {
-            because("https://security.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONDATATYPE-173759")
-        }
-    }
 
 //monitoring support
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")

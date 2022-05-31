@@ -74,10 +74,9 @@ services:
     container_name: redis
     command:
       - redis-server
+      - --requirepass password
     ports:
       - '6379:6379'
-    environment:
-      - REDIS_PASSWORD=password
 
   capital-ui:
     build: ./../capital-ui
