@@ -1,19 +1,32 @@
 package com.clearspend.capital.client.stripe.types;
 
-import java.util.Map;
 import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
+@Getter
+@RequiredArgsConstructor
 public enum TransactionType {
-  CAPTURE,
-  REFUND,
-  UNKNOWN;
+  CAPTURE(StripeKey.CAPTURE),
+  REFUND(StripeKey.REFUND),
+  UNKNOWN("");
 
-  private static final Map<String, TransactionType> mapping =
-      Map.of(
-          "capture", CAPTURE,
-          "refund", REFUND);
+  private final String stripeKey;
 
-  public static TransactionType from(String value) {
-    return Optional.ofNullable(value).map(v -> mapping.getOrDefault(v, UNKNOWN)).orElse(UNKNOWN);
+  public static TransactionType fromStripeKey(String value) {
+    return Optional.ofNullable(value)
+        .map(
+            v ->
+                switch (v) {
+                  case StripeKey.CAPTURE -> CAPTURE;
+                  case StripeKey.REFUND -> REFUND;
+                  default -> UNKNOWN;
+                })
+        .orElse(UNKNOWN);
+  }
+
+  private interface StripeKey {
+    String CAPTURE = "capture";
+    String REFUND = "refund";
   }
 }

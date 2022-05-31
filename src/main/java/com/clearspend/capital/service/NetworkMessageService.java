@@ -1,6 +1,5 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.client.stripe.types.TransactionType;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.LimitViolationException;
@@ -9,7 +8,6 @@ import com.clearspend.capital.common.error.SpendControlViolationException;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.Account;
-import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.decline.AddressPostalCodeMismatch;
 import com.clearspend.capital.data.model.decline.Decline;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -127,11 +125,9 @@ public class NetworkMessageService {
               });
     }
 
-    if (Optional.ofNullable(common.getAllocation()).filter(Allocation::isArchived).isPresent()
-        && common.getNetworkMessageType() == NetworkMessageType.TRANSACTION_CREATED
-        && TransactionType.from(common.getNetworkMessageSubType()) == TransactionType.REFUND) {
+    if (NetworkCommonUtils.test(common)) {
       final AllocationRecord rootAllocation =
-          allocationService.getRootAllocation(common.getAllocation().getBusinessId());
+          allocationService.getRootAllocation(common.getBusiness().getId());
       common.setAllocation(rootAllocation.allocation());
       common.setAccount(rootAllocation.account());
     }

@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
@@ -64,6 +65,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Data
 @RequiredArgsConstructor
+@NoArgsConstructor
 public class NetworkCommon {
   private static final Configuration jsonPathConfiguration =
       Configuration.defaultConfiguration()
@@ -391,7 +393,7 @@ public class NetworkCommon {
 
   public AccountActivityType getAccountActivityType() {
     if (networkMessageType == NetworkMessageType.TRANSACTION_CREATED
-        && TransactionType.from(networkMessageSubType) == TransactionType.REFUND) {
+        && TransactionType.fromStripeKey(networkMessageSubType) == TransactionType.REFUND) {
       return AccountActivityType.NETWORK_REFUND;
     }
 

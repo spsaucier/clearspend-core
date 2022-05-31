@@ -841,6 +841,30 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     capture(null, allocation, user, card, captureAmount, closingBalance);
   }
 
+  @Test
+  @SneakyThrows
+  void processCompletion_forcePostCapture_CardUnlinked() {
+    final BigDecimal openingBalance = BigDecimal.TEN;
+    final UserRecord userRecord = createUser(openingBalance);
+    final Allocation allocation = userRecord.allocation;
+    final User user = userRecord.user;
+    final Card card = cardService.unlinkCard(userRecord.card).card();
+
+    final AllocationRecord rootAllocation =
+        serviceHelper
+            .allocationService()
+            .getRootAllocation(createBusinessRecord.business().getId());
+
+    final long captureAmount = -1000L;
+    final BigDecimal closingBalance =
+        rootAllocation
+            .account()
+            .getLedgerBalance()
+            .sub(new Amount(Currency.USD, new BigDecimal("10")))
+            .getAmount();
+    capture(null, rootAllocation.allocation(), user, card, captureAmount, closingBalance);
+  }
+
   @SneakyThrows
   @Test
   void processCompletion_forcePostRefund() {
@@ -853,6 +877,30 @@ public class StripeWebhookControllerTest extends BaseCapitalTest {
     long captureAmount = 1000L;
     BigDecimal closingBalance = BigDecimal.valueOf(20);
     capture(null, allocation, user, card, captureAmount, closingBalance);
+  }
+
+  @Test
+  @SneakyThrows
+  void processCompletion_forcePostRefund_CardUnlinked() {
+    final BigDecimal openingBalance = BigDecimal.TEN;
+    final UserRecord userRecord = createUser(openingBalance);
+    final Allocation allocation = userRecord.allocation;
+    final User user = userRecord.user;
+    final Card card = cardService.unlinkCard(userRecord.card).card();
+
+    final AllocationRecord rootAllocation =
+        serviceHelper
+            .allocationService()
+            .getRootAllocation(createBusinessRecord.business().getId());
+
+    long captureAmount = 1000L;
+    final BigDecimal closingBalance =
+        rootAllocation
+            .account()
+            .getLedgerBalance()
+            .add(new Amount(Currency.USD, new BigDecimal("10")))
+            .getAmount();
+    capture(null, rootAllocation.allocation(), user, card, captureAmount, closingBalance);
   }
 
   private Transaction createCaptureTransaction(
