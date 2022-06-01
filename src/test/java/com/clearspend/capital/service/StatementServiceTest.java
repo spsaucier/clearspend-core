@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.activity.CardStatementRequest;
 import com.clearspend.capital.data.model.Card;
+import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardType;
@@ -58,9 +59,25 @@ public class StatementServiceTest extends BaseCapitalTest {
   @SneakyThrows
   void generateCardStatementPdf_ValidateUserPermissions() {
     testHelper.setCurrentUser(createBusinessRecord.user());
+    final User employee =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_EMPLOYEE)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            employee,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+
     final CardStatementRequest request = getRequest(card.getId());
     final CardRepositoryCustom.CardDetailsRecord cardDetails =
-        cardService.getCard(createBusinessRecord.user().getBusinessId(), request.getCardId());
+        cardService.getCard(createBusinessRecord.user().getBusinessId(), card.getId());
 
     final ThrowingRunnable action =
         () -> statementService.generateCardStatementPdf(request, cardDetails);
@@ -77,6 +94,7 @@ public class StatementServiceTest extends BaseCapitalTest {
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE,
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER,
                 DefaultRoles.GLOBAL_VIEWER))
+        .allowUser(employee)
         .build()
         .validateServiceMethod(action);
   }

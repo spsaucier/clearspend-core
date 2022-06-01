@@ -419,8 +419,7 @@ public class StatementService {
     return new StatementRecord(fileName, pdfStream.toByteArray());
   }
 
-  @PreAuthorize(
-      "hasAllocationPermission(#card.allocation().getId(), 'READ') or hasGlobalPermission('GLOBAL_READ|CUSTOMER_SERVICE')")
+  @PreAuthorize("hasPermission(#card.card(), 'VIEW_OWN|READ|GLOBAL_READ|CUSTOMER_SERVICE')")
   public StatementRecord generateCardStatementPdf(
       final CardStatementRequest request, final CardDetailsRecord card) {
 
