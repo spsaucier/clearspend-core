@@ -118,11 +118,10 @@ public class NetworkMessageService {
       common.setAccount(cardRecord.account());
       Optional.ofNullable(cardRecord.card().getAllocationId())
           .ifPresent(
-              allocationId -> {
-                common.setAllocation(
-                    allocationService.retrieveAllocation(
-                        common.getBusiness().getId(), allocationId));
-              });
+              allocationId ->
+                  common.setAllocation(
+                      allocationService.retrieveAllocation(
+                          common.getBusiness().getId(), allocationId)));
     }
 
     if (NetworkCommonUtils.test(common)) {

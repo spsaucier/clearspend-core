@@ -42,6 +42,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityIntegrationSyncSta
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
+import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.MccGroup;
 import com.clearspend.capital.data.model.enums.PaymentType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
@@ -83,6 +84,9 @@ public class AccountActivityService {
   private final ExpenseCategoryService expenseCategoryService;
   private final UserRepository userRepository;
   private final ReceiptRepository receiptRepository;
+
+  public record AdjustmentAndHoldActivitiesRecord(
+      AccountActivity adjustmentActivity, AccountActivity holdActivity) {}
 
   @Transactional(TxType.REQUIRES_NEW)
   void recordBankAccountAccountActivityDecline(
@@ -151,7 +155,7 @@ public class AccountActivityService {
             type,
             AccountActivityStatus.PROCESSED,
             AllocationDetails.of(allocation),
-            adjustment.getEffectiveDate(),
+            adjustment.getCreated(),
             adjustment.getAmount(),
             adjustment.getAmount(),
             AccountActivityIntegrationSyncStatus.NOT_READY);
@@ -256,7 +260,44 @@ public class AccountActivityService {
   }
 
   @Transactional(TxType.REQUIRED)
+  AdjustmentAndHoldActivitiesRecord recordHoldReleaseAccountActivity(
+      Adjustment adjustment, Hold hold) {
+    if (adjustment.getEffectiveDate().isAfter(OffsetDateTime.now(Clock.systemUTC()))) {
+      throw new RuntimeException(
+          "Cannot record hold release for adjustment with effective date set in the future %s"
+              .formatted(adjustment));
+    }
+
+    AccountActivity holdAccountActivity = recordHoldReleaseAccountActivity(hold);
+
+    // since we are releasing hold for the ach transfer case (adjustment is already present) we need
+    // to use adjustment effective date as hide/show
+    holdAccountActivity.setHideAfter(adjustment.getEffectiveDate());
+
+    AccountActivity adjustmentAccountActivity =
+        accountActivityRepository.findByAdjustmentId(adjustment.getId()).stream()
+            .min(Comparator.comparing(Versioned::getCreated))
+            .orElseThrow(
+                () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, adjustment.getId()));
+
+    adjustmentAccountActivity.setVisibleAfter(adjustment.getEffectiveDate());
+
+    log.debug(
+        "updating account activity {}: visibleAfter: {}",
+        adjustmentAccountActivity.getId(),
+        adjustmentAccountActivity.getHideAfter());
+
+    return new AdjustmentAndHoldActivitiesRecord(
+        accountActivityRepository.save(adjustmentAccountActivity), holdAccountActivity);
+  }
+
+  @Transactional(TxType.REQUIRED)
   AccountActivity recordHoldReleaseAccountActivity(Hold hold) {
+    if (hold.getStatus() != HoldStatus.RELEASED) {
+      throw new RuntimeException(
+          "Cannot record hold release activity for non released hold: %s".formatted(hold));
+    }
+
     AccountActivity accountActivity =
         accountActivityRepository.findByHoldId(hold.getId()).stream()
             .min(Comparator.comparing(Versioned::getCreated))

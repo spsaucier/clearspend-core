@@ -1,6 +1,9 @@
 package com.clearspend.capital.service;
 
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.Table;
+import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -41,7 +44,7 @@ public class AdjustmentService {
   public record AdjustmentRecord(JournalEntry journalEntry, Adjustment adjustment) {}
 
   @Transactional(TxType.REQUIRED)
-  Adjustment recordDepositFunds(Account account, Amount amount) {
+  Adjustment recordDepositFunds(Account account, OffsetDateTime effectiveDate, Amount amount) {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
 
@@ -54,7 +57,7 @@ public class AdjustmentService {
             bankJournalEntry.journalEntry().getId(),
             bankJournalEntry.accountPosting().getId(),
             AdjustmentType.DEPOSIT,
-            OffsetDateTime.now(ZoneOffset.UTC),
+            effectiveDate,
             amount));
   }
 
@@ -218,6 +221,13 @@ public class AdjustmentService {
     OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC).minusDays(daysAgo);
     return adjustmentRepository.findByBusinessIdAndTypeInAndEffectiveDateAfter(
         businessId, adjustmentTypes, before);
+  }
+
+  Adjustment retrieveAdjustment(
+      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId) {
+    return adjustmentRepository
+        .findByBusinessIdAndId(businessId, adjustmentId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.ADJUSTMENT, businessId, adjustmentId));
   }
 
   LedgerBalancePeriod getBusinessLedgerBalanceForPeriod(

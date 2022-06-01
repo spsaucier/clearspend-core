@@ -27,6 +27,7 @@ import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.DeclineRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
 import com.clearspend.capital.service.AdjustmentService.ReallocateFundsRecord;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
@@ -104,7 +105,13 @@ public class AccountService {
 
     businessSettingsService.ensureWithinDepositLimit(businessId, amount);
 
-    Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
+    OffsetDateTime holdExpirationDate =
+        standardHold
+            ? OffsetDateTime.now(ZoneOffset.UTC).plusDays(5)
+            : OffsetDateTime.now(ZoneOffset.UTC);
+
+    Adjustment adjustment =
+        adjustmentService.recordDepositFunds(rootAllocationAccount, holdExpirationDate, amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
     Hold hold =
@@ -114,9 +121,7 @@ public class AccountService {
                 rootAllocationAccount.getId(),
                 HoldStatus.PLACED,
                 amount.negate(),
-                standardHold
-                    ? OffsetDateTime.now(ZoneOffset.UTC).plusDays(5)
-                    : adjustment.getCreated()));
+                holdExpirationDate));
     log.debug("creating ACH hold {} for account {}", hold.getId(), rootAllocationAccount.getId());
 
     return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, hold);
@@ -126,7 +131,9 @@ public class AccountService {
   AdjustmentAndHoldRecord depositExternalAchFunds(Account rootAllocationAccount, Amount amount) {
     amount.ensureNonNegative();
 
-    Adjustment adjustment = adjustmentService.recordDepositFunds(rootAllocationAccount, amount);
+    Adjustment adjustment =
+        adjustmentService.recordDepositFunds(
+            rootAllocationAccount, OffsetDateTime.now(Clock.systemUTC()), amount);
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
     return new AdjustmentAndHoldRecord(rootAllocationAccount, adjustment, null);
@@ -340,9 +347,9 @@ public class AccountService {
     return new AccountReallocateFundsRecord(fromAccount, toAccount, reallocateFundsRecord);
   }
 
-  Hold retrieveHold(TypedId<HoldId> holdId) {
+  Hold retrieveHold(TypedId<BusinessId> businessId, TypedId<HoldId> holdId) {
     return holdRepository
-        .findById(holdId)
-        .orElseThrow(() -> new RecordNotFoundException(Table.HOLD, holdId));
+        .findByBusinessIdAndId(businessId, holdId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.HOLD, businessId, holdId));
   }
 }

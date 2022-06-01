@@ -25,8 +25,10 @@ import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
+import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AccountActivityType;
+import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
@@ -34,9 +36,12 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
+import com.clearspend.capital.data.repository.AdjustmentRepository;
 import com.clearspend.capital.data.repository.HoldRepository;
-import com.clearspend.capital.service.AccountService;
+import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
+import com.clearspend.capital.service.BusinessBankAccountService;
 import com.clearspend.capital.service.BusinessService;
+import com.clearspend.capital.service.BusinessSettingsService;
 import com.clearspend.capital.service.ServiceHelper;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -69,11 +74,13 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
   private final TestHelper testHelper;
   private final MockMvcHelper mvcHelper;
   private final BusinessService businessService;
+  private final BusinessSettingsService businessSettingsService;
   private final StripeConnectHandler stripeConnectHandler;
   private final StripeMockClient stripeMockClient;
   private final HoldRepository holdRepository;
   private final AccountActivityRepository accountActivityRepository;
-  private final AccountService accountService;
+  private final BusinessBankAccountService businessBankAccountService;
+  private final AdjustmentRepository adjustmentRepository;
   private final ServiceHelper serviceHelper;
 
   private CreateBusinessRecord createBusinessRecord;
@@ -360,5 +367,187 @@ class StripeConnectHandler_InboundTransferTest extends BaseCapitalTest {
 
     assertThat(adjustmentAccountActivity.getType()).isEqualTo(AccountActivityType.CARD_FUND_RETURN);
     assertThat(adjustmentAccountActivity.getBankAccount()).isNull();
+  }
+
+  @Test
+  void inboundTransfer_adjustmentEffectiveDate_standardHolds() {
+    // given
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    com.clearspend.capital.common.data.model.Amount amount =
+        com.clearspend.capital.common.data.model.Amount.of(Currency.USD, BigDecimal.TEN);
+
+    // when
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        businessBankAccountService.transactBankAccount(
+            business.getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isEqualTo(
+            holdRepository
+                .findByBusinessIdAndId(business.getId(), adjustmentAndHoldRecord.hold().getId())
+                .orElseThrow()
+                .getExpirationDate());
+
+    // when
+    InboundTransfer inboundTransfer = new InboundTransfer();
+    inboundTransfer.setMetadata(
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
+    inboundTransfer.setCurrency("usd");
+    inboundTransfer.setAmount(amount.toStripeAmount());
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
+    stripeConnectHandler.processInboundTransferResult(inboundTransfer);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isEqualTo(
+            holdRepository
+                .findByBusinessIdAndId(business.getId(), adjustmentAndHoldRecord.hold().getId())
+                .orElseThrow()
+                .getExpirationDate());
+  }
+
+  @Test
+  void inboundTransfer_adjustmentEffectiveDate_fasterFunding() {
+    // given
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    BusinessSettings businessSettings =
+        businessSettingsService.retrieveBusinessSettings(business.getId());
+    businessSettings.setAchFundsAvailabilityMode(AchFundsAvailabilityMode.FAST);
+
+    com.clearspend.capital.common.data.model.Amount amount =
+        com.clearspend.capital.common.data.model.Amount.of(Currency.USD, BigDecimal.TEN);
+
+    // when
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        businessBankAccountService.transactBankAccount(
+            business.getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isEqualTo(
+            holdRepository
+                .findByBusinessIdAndId(business.getId(), adjustmentAndHoldRecord.hold().getId())
+                .orElseThrow()
+                .getExpirationDate());
+
+    // when
+    InboundTransfer inboundTransfer = new InboundTransfer();
+    inboundTransfer.setMetadata(
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString(),
+            StripeMetadataEntry.ADJUSTMENT_ID.getKey(),
+            adjustmentAndHoldRecord.adjustment().getId().toString(),
+            StripeMetadataEntry.HOLD_ID.getKey(),
+            adjustmentAndHoldRecord.hold().getId().toString()));
+    inboundTransfer.setCurrency("usd");
+    inboundTransfer.setAmount(amount.toStripeAmount());
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
+    stripeConnectHandler.processInboundTransferResult(inboundTransfer);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isBefore(OffsetDateTime.now(Clock.systemUTC()));
+  }
+
+  @Test
+  void inboundTransfer_adjustmentEffectiveDate_failedTransfer() {
+    // given
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    com.clearspend.capital.common.data.model.Amount amount =
+        com.clearspend.capital.common.data.model.Amount.of(Currency.USD, BigDecimal.TEN);
+
+    // when
+    AdjustmentAndHoldRecord adjustmentAndHoldRecord =
+        businessBankAccountService.transactBankAccount(
+            business.getId(),
+            businessBankAccount.getId(),
+            createBusinessRecord.user().getId(),
+            BankAccountTransactType.DEPOSIT,
+            amount,
+            true);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isEqualTo(
+            holdRepository
+                .findByBusinessIdAndId(business.getId(), adjustmentAndHoldRecord.hold().getId())
+                .orElseThrow()
+                .getExpirationDate());
+
+    // when
+    InboundTransfer inboundTransfer = new InboundTransfer();
+    inboundTransfer.setMetadata(
+        Map.of(
+            StripeMetadataEntry.BUSINESS_ID.getKey(),
+            business.getId().toString(),
+            StripeMetadataEntry.ADJUSTMENT_ID.getKey(),
+            adjustmentAndHoldRecord.adjustment().getId().toString(),
+            StripeMetadataEntry.HOLD_ID.getKey(),
+            adjustmentAndHoldRecord.hold().getId().toString(),
+            StripeMetadataEntry.BUSINESS_BANK_ACCOUNT_ID.getKey(),
+            businessBankAccount.getId().toString()));
+    inboundTransfer.setCurrency("usd");
+    inboundTransfer.setAmount(amount.toStripeAmount());
+    inboundTransfer.setFailureDetails(new InboundTransferFailureDetails("could_not_process"));
+
+    testHelper.setCurrentUserAsWebhook(createBusinessRecord.user());
+
+    stripeConnectHandler.processInboundTransferResult(inboundTransfer);
+
+    // then
+    assertThat(
+            adjustmentRepository
+                .findByBusinessIdAndId(
+                    business.getId(), adjustmentAndHoldRecord.adjustment().getId())
+                .orElseThrow()
+                .getEffectiveDate())
+        .isBefore(OffsetDateTime.now(Clock.systemUTC()));
   }
 }

@@ -25,6 +25,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
+import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.User;
@@ -46,6 +47,7 @@ import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
 import com.clearspend.capital.data.repository.business.BusinessBankAccountRepository;
+import com.clearspend.capital.service.AccountActivityService.AdjustmentAndHoldActivitiesRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentAndHoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.ContactValidator.ValidationResult;
@@ -95,6 +97,7 @@ public class BusinessBankAccountService {
   private final BusinessBankAccountBalanceService businessBankAccountBalanceService;
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
+  private final AdjustmentService adjustmentService;
   private final BusinessService businessService;
   private final BusinessSettingsService businessSettingsService;
   private final AllocationService allocationService;
@@ -695,14 +698,7 @@ public class BusinessBankAccountService {
           businessId,
           amount,
           businessSettings.getAchFundsAvailabilityMode());
-      Hold hold = accountService.retrieveHold(holdId);
-      hold.setStatus(HoldStatus.RELEASED);
-
-      accountActivityService.recordHoldReleaseAccountActivity(hold);
-
-      AccountActivity accountActivity =
-          accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
-      accountActivity.setVisibleAfter(OffsetDateTime.now(Clock.systemUTC()));
+      releaseAchHold(businessId, adjustmentId, holdId);
     }
 
     stripeClient.pushFundsToClearspendFinancialAccount(
@@ -715,6 +711,17 @@ public class BusinessBankAccountService {
         "Company [%s] ACH pull funds relocation".formatted(business.getLegalName()));
   }
 
+  private AdjustmentAndHoldActivitiesRecord releaseAchHold(
+      TypedId<BusinessId> businessId, TypedId<AdjustmentId> adjustmentId, TypedId<HoldId> holdId) {
+    Hold hold = accountService.retrieveHold(businessId, holdId);
+    hold.setStatus(HoldStatus.RELEASED);
+
+    Adjustment adjustment = adjustmentService.retrieveAdjustment(businessId, adjustmentId);
+    adjustment.setEffectiveDate(OffsetDateTime.now(Clock.systemUTC()));
+
+    return accountActivityService.recordHoldReleaseAccountActivity(adjustment, hold);
+  }
+
   @Transactional
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void processBankAccountDepositFailure(
@@ -725,19 +732,13 @@ public class BusinessBankAccountService {
       Amount amount,
       DeclineReason declineReason) {
     Business business = retrievalService.retrieveBusiness(businessId, true);
-    AccountActivity accountActivity =
-        accountActivityService.retrieveAccountActivityByAdjustmentId(businessId, adjustmentId);
 
     // if deposit has failed we need to release original deposit hold and decrease ledger balance
-    Hold hold = accountService.retrieveHold(holdId);
-    hold.setStatus(HoldStatus.RELEASED);
-
-    accountActivityService.recordHoldReleaseAccountActivity(hold);
-
-    // make sure the adjustment account activity becomes visible because hold related one is
-    // now
-    // hidden due to the recordHoldReleaseAccountActivity method invocation
-    accountActivity.setVisibleAfter(OffsetDateTime.now(Clock.systemUTC()));
+    AccountActivity adjustmentActivity =
+        releaseAchHold(businessId, adjustmentId, holdId).adjustmentActivity();
+    // mark adjustment account activity as DECLINED
+    adjustmentActivity.setStatus(AccountActivityStatus.DECLINED);
+    adjustmentActivity.setDeclineDetails(List.of(new DeclineDetails(declineReason)));
 
     // withdraw funds and create bank account activity record about it
     AllocationRecord rootAllocationRecord = allocationService.getRootAllocation(businessId);
@@ -753,10 +754,6 @@ public class BusinessBankAccountService {
         adjustmentAndHoldRecord.hold(),
         retrieveBusinessBankAccount(businessBankAccountId),
         null);
-
-    // mark adjustment account activity as DECLINED
-    accountActivity.setStatus(AccountActivityStatus.DECLINED);
-    accountActivity.setDeclineDetails(List.of(new DeclineDetails(declineReason)));
 
     // apply fee if provided
     if (achReturnFee > 0) {

@@ -4,16 +4,20 @@ import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.Hold;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface HoldRepository extends JpaRepository<Hold, TypedId<HoldId>> {
+
+  Optional<Hold> findByBusinessIdAndId(TypedId<BusinessId> businessId, TypedId<HoldId> holdId);
 
   List<Hold> findByAccountIdAndStatusAndExpirationDateAfter(
       TypedId<AccountId> accountId, HoldStatus holdStatus, OffsetDateTime expirationDate);

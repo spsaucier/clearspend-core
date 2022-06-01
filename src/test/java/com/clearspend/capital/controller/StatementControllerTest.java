@@ -17,6 +17,7 @@ import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import com.clearspend.capital.testutils.statement.StatementHelper;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Set;
@@ -107,9 +108,9 @@ public class StatementControllerTest extends BaseCapitalTest {
   private String getBusinessStatementRequest() {
     BusinessStatementRequest businessStatementRequest = new BusinessStatementRequest();
     businessStatementRequest.setStartDate(
-        OffsetDateTime.now().with(TemporalAdjusters.firstDayOfMonth()));
+        OffsetDateTime.now().with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN));
     businessStatementRequest.setEndDate(
-        OffsetDateTime.now().with(TemporalAdjusters.lastDayOfMonth()));
+        OffsetDateTime.now().with(TemporalAdjusters.lastDayOfMonth()).with(LocalTime.MAX));
 
     return objectMapper.writeValueAsString(businessStatementRequest);
   }
