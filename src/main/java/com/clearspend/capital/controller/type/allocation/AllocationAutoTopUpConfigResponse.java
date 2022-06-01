@@ -45,7 +45,11 @@ public class AllocationAutoTopUpConfigResponse {
                 .next(Instant.now(), ZoneId.systemDefault())
                 .atZone(ZoneId.systemDefault())
                 .getDayOfMonth(),
-            new Amount(Currency.USD, (BigDecimal) allocationAutoTopUp.getJobContext().get(AMOUNT)));
+            new Amount(
+                Currency.USD,
+                BigDecimal.valueOf(
+                    Double.parseDouble(
+                        allocationAutoTopUp.getJobContext().get(AMOUNT).toString()))));
     allocationAutoTopUpConfigResponse.setActive(allocationAutoTopUp.getActive());
     return allocationAutoTopUpConfigResponse;
   }

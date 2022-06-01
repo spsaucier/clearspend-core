@@ -96,7 +96,13 @@ public class AllocationAutoTopUpConfigService {
 
     List<JobConfig> jobs = jobConfigRepository.findByBusinessId(businessId);
     return jobs.stream()
-        .filter(jobConfig -> jobConfig.getJobContext().get(ALLOCATION_ID).equals(allocationId))
+        .filter(
+            jobConfig ->
+                jobConfig
+                    .getJobContext()
+                    .get(ALLOCATION_ID)
+                    .toString()
+                    .equals(allocationId.toString()))
         .toList();
   }
 
