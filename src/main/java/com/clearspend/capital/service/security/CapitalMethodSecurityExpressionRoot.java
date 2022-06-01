@@ -52,7 +52,7 @@ public class CapitalMethodSecurityExpressionRoot extends SecurityExpressionRoot
       throw new IllegalArgumentException(
           "Invalid business target: %s".formatted(businessTarget.getClass().getName()));
     }
-    return Optional.ofNullable(CurrentUser.getBusinessId())
+    return Optional.ofNullable(CurrentUser.getActiveBusinessId())
         .filter(id -> id.equals(businessId))
         .isPresent();
   }

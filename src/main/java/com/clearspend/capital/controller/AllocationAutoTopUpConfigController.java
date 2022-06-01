@@ -42,7 +42,7 @@ public class AllocationAutoTopUpConfigController {
 
     return AllocationAutoTopUpConfigResponse.of(
         allocationAutoTopUpConfigService.createAllocationAutoTopUp(
-            CurrentUser.getBusinessId(),
+            CurrentUser.getActiveBusinessId(),
             allocationId,
             CurrentUser.getUserId(),
             request.getAmount(),
@@ -63,7 +63,7 @@ public class AllocationAutoTopUpConfigController {
     return AllocationAutoTopUpConfigResponse.of(
         allocationAutoTopUpConfigService.updateAllocationAutoTopUp(
             request.getId(),
-            CurrentUser.getBusinessId(),
+            CurrentUser.getActiveBusinessId(),
             allocationId,
             CurrentUser.getUserId(),
             request.getAmount(),
@@ -82,7 +82,7 @@ public class AllocationAutoTopUpConfigController {
           TypedId<JobConfigId> autoTopUpId) {
 
     return allocationAutoTopUpConfigService.deleteAllocationAutoTopUpConfig(
-        CurrentUser.getBusinessId(), autoTopUpId);
+        CurrentUser.getActiveBusinessId(), autoTopUpId);
   }
 
   @GetMapping("/{allocationId}/auto-top-up")
@@ -96,7 +96,7 @@ public class AllocationAutoTopUpConfigController {
           TypedId<AllocationId> allocationId) {
 
     return allocationAutoTopUpConfigService
-        .retrieveAllocationAutoTopUpConfig(CurrentUser.getBusinessId(), allocationId)
+        .retrieveAllocationAutoTopUpConfig(CurrentUser.getActiveBusinessId(), allocationId)
         .stream()
         .map(AllocationAutoTopUpConfigResponse::of)
         .toList();

@@ -155,7 +155,7 @@ public class CodatService {
 
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(
-            CurrentUser.getBusinessId(), accountActivityId);
+            CurrentUser.getActiveBusinessId(), accountActivityId);
 
     if (accountActivity.getMerchant().getCodatSupplierId() == null) {
       return null;

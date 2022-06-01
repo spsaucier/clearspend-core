@@ -1,8 +1,10 @@
 package com.clearspend.capital.common.audit;
 
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
 import com.clearspend.capital.service.type.CurrentUser;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,12 +23,12 @@ public class AccountingAuditEventPublisher {
         new AccountActivityAuditEvent(
             this,
             activityData,
-            CurrentUser.getBusinessId() != null
-                ? CurrentUser.getBusinessId().toString()
-                : "Application",
-            CurrentUser.getUserId() != null
-                ? CurrentUser.getUserId().toString()
-                : "Application User",
+            Optional.ofNullable(CurrentUser.getActiveBusinessId())
+                .map(TypedId::toString)
+                .orElse("Application"),
+            Optional.ofNullable(CurrentUser.getUserId())
+                .map(TypedId::toString)
+                .orElse("Application User"),
             accountActivityId);
     applicationEventPublisher.publishEvent(event);
   }

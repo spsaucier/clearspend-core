@@ -117,7 +117,8 @@ public class CardService {
       }
 
       BusinessSettings businessSettings =
-          businessSettingsService.retrieveBusinessSettingsForService(CurrentUser.getBusinessId());
+          businessSettingsService.retrieveBusinessSettingsForService(
+              CurrentUser.getActiveBusinessId());
       if (businessSettings.getIssuedPhysicalCardsTotal()
           >= businessSettings.getIssuedPhysicalCardsLimit()) {
         throw new InvalidRequestException("Physical card issuance limit exceeded");
@@ -125,7 +126,8 @@ public class CardService {
     }
 
     User user = retrievalService.retrieveUser(request.getUserId());
-    final Business business = retrievalService.retrieveBusiness(CurrentUser.getBusinessId(), true);
+    final Business business =
+        retrievalService.retrieveBusiness(CurrentUser.getActiveBusinessId(), true);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
@@ -151,7 +153,7 @@ public class CardService {
     final Card initialCard =
         cardRepository.saveAndFlush(
             new Card(
-                CurrentUser.getBusinessId(),
+                CurrentUser.getActiveBusinessId(),
                 request.getUserId(),
                 cardType.equals(CardType.PHYSICAL) ? CardStatus.INACTIVE : CardStatus.ACTIVE,
                 CardStatusReason.NONE,
@@ -202,7 +204,7 @@ public class CardService {
     } else if (request.getFundingType() == FundingType.INDIVIDUAL) {
       account =
           accountService.createAccount(
-              CurrentUser.getBusinessId(),
+              CurrentUser.getActiveBusinessId(),
               AccountType.CARD,
               request.getAllocationSpendControls().get(0).getAllocationId(),
               initialCard.getId(),
@@ -212,7 +214,7 @@ public class CardService {
       // available balance
       account =
           accountService.retrieveAllocationAccount(
-              CurrentUser.getBusinessId(),
+              CurrentUser.getActiveBusinessId(),
               request.getCurrency(),
               cardAllocations.get(0).cardAllocation.getAllocationId());
     }
@@ -275,7 +277,7 @@ public class CardService {
     rolesAndPermissionsService.ensureMinimumAllocationPermissions(
         user,
         allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(
-            CurrentUser.getBusinessId()),
+            CurrentUser.getActiveBusinessId()),
         DefaultRoles.ALLOCATION_EMPLOYEE);
 
     twilioService.sendCardIssuedNotifyOwnerEmail(
@@ -324,7 +326,7 @@ public class CardService {
   @PostFilter("isSelfOwned(filterObject.card())")
   public List<CardDetailsRecord> getCardsForCurrentUser() {
     return cardRepository.findDetailsByBusinessIdAndUserId(
-        CurrentUser.getBusinessId(), CurrentUser.getUserId());
+        CurrentUser.getActiveBusinessId(), CurrentUser.getUserId());
   }
 
   List<Card> getNotCancelledCardsForUser(
@@ -342,12 +344,12 @@ public class CardService {
   @PostAuthorize("isSelfOwned(returnObject)")
   public Card getMyCardByIdAndLastFour(TypedId<CardId> cardId, String lastFour) {
     return cardRepository
-        .findByBusinessIdAndIdAndLastFour(CurrentUser.getBusinessId(), cardId, lastFour)
+        .findByBusinessIdAndIdAndLastFour(CurrentUser.getActiveBusinessId(), cardId, lastFour)
         .orElseThrow(
             () ->
                 new RecordNotFoundException(
                     Table.CARD,
-                    CurrentUser.getBusinessId(),
+                    CurrentUser.getActiveBusinessId(),
                     CurrentUser.getUserId(),
                     cardId,
                     lastFour));
@@ -356,7 +358,7 @@ public class CardService {
   @PostFilter("isSelfOwned(filterObject)")
   public List<Card> getMyUnactivatedCardsByLastFour(String lastFour) {
     return cardRepository.findNonActivatedByBusinessIdAndLastFour(
-        CurrentUser.getBusinessId(), lastFour);
+        CurrentUser.getActiveBusinessId(), lastFour);
   }
 
   @Transactional
@@ -370,7 +372,7 @@ public class CardService {
   public Card activateMyCards(List<Card> cards, CardStatusReason statusReason) {
     if (cards.isEmpty()) {
       throw new RecordNotFoundException(
-          Table.CARD, CurrentUser.getBusinessId(), CurrentUser.getUserId());
+          Table.CARD, CurrentUser.getActiveBusinessId(), CurrentUser.getUserId());
     }
 
     Card activatedCard = activateMyCard(cards.get(0), statusReason);
@@ -378,7 +380,7 @@ public class CardService {
     if (cards.size() > 1) {
       log.warn(
           "Found a card collision during card activation for businessId={}. Total activated cards: {}",
-          CurrentUser.getBusinessId(),
+          CurrentUser.getActiveBusinessId(),
           cards.size());
       cards.subList(1, cards.size()).forEach(card -> activateCard(card, statusReason));
     }

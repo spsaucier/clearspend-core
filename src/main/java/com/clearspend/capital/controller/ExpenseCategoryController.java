@@ -26,7 +26,7 @@ public class ExpenseCategoryController {
   @GetMapping("/list")
   List<ExpenseCategory> getCategories() {
     return expenseCategoryService
-        .retrieveExpenseCategoriesForBusiness(CurrentUser.getBusinessId())
+        .retrieveExpenseCategoriesForBusiness(CurrentUser.getActiveBusinessId())
         .stream()
         .map(ExpenseCategory::of)
         .sorted(Comparator.comparing(ExpenseCategory::getCategoryName))
@@ -37,7 +37,7 @@ public class ExpenseCategoryController {
   List<ExpenseCategory> disableExpenseCategories(
       @Validated @RequestBody List<TypedId<ExpenseCategoryId>> expenseCategories) {
     return expenseCategoryService
-        .disableExpenseCategories(CurrentUser.getBusinessId(), expenseCategories)
+        .disableExpenseCategories(CurrentUser.getActiveBusinessId(), expenseCategories)
         .stream()
         .map(ExpenseCategory::of)
         .collect(Collectors.toList());
@@ -45,7 +45,9 @@ public class ExpenseCategoryController {
 
   @PostMapping("/enable-all")
   List<ExpenseCategory> enableAllExpenseCategories() {
-    return expenseCategoryService.enableAllExpenseCategories(CurrentUser.getBusinessId()).stream()
+    return expenseCategoryService
+        .enableAllExpenseCategories(CurrentUser.getActiveBusinessId())
+        .stream()
         .map(ExpenseCategory::of)
         .collect(Collectors.toList());
   }

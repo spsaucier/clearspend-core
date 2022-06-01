@@ -112,7 +112,7 @@ public class AllocationService {
   @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS|CUSTOMER_SERVICE')")
   public ArchiveAllocationResponse archiveAllocation(final TypedId<AllocationId> allocationId) {
     final Allocation targetAllocation =
-        retrieveAllocation(CurrentUser.getBusinessId(), allocationId);
+        retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId);
     if (targetAllocation.isArchived()) {
       throw new InvalidRequestException("Allocation is already archived");
     }
@@ -122,7 +122,7 @@ public class AllocationService {
     }
 
     final List<Allocation> children =
-        getAllocationChildren(CurrentUser.getBusinessId(), allocationId);
+        getAllocationChildren(CurrentUser.getActiveBusinessId(), allocationId);
     final List<Allocation> allAllocations = ListUtils.union(List.of(targetAllocation), children);
     final Set<TypedId<AllocationId>> allAllocationIds =
         allAllocations.stream().map(Allocation::getId).collect(Collectors.toSet());
@@ -399,7 +399,7 @@ public class AllocationService {
   @PreAuthorize("hasAllocationPermission(#allocationId, 'MANAGE_FUNDS|CUSTOMER_SERVICE')")
   public StopAllCardsResponse stopAllCards(
       final TypedId<AllocationId> allocationId, final StopAllCardsRequest request) {
-    if (retrieveAllocation(CurrentUser.getBusinessId(), allocationId).isArchived()) {
+    if (retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId).isArchived()) {
       throw new InvalidRequestException("Allocation is archived");
     }
 
@@ -446,7 +446,7 @@ public class AllocationService {
     final Stream<StopAllCardsResponse> childResponses;
     if (request.applyToChildAllocations()) {
       childResponses =
-          getAllocationChildren(CurrentUser.getBusinessId(), allocationId).stream()
+          getAllocationChildren(CurrentUser.getActiveBusinessId(), allocationId).stream()
               .map(allocation -> stopAllCards(allocation.getId(), request));
     } else {
       childResponses = Stream.empty();

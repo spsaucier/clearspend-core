@@ -20,12 +20,19 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nullable;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+@Slf4j
 public record CurrentUser(
-    UserType userType, TypedId<UserId> userId, TypedId<BusinessId> businessId, Set<String> roles) {
+    UserType userType,
+    TypedId<UserId> userId,
+    TypedId<BusinessId> homeBusinessId,
+    Set<String> roles) {
 
   @SneakyThrows
   @Nullable
@@ -63,10 +70,22 @@ public record CurrentUser(
   }
 
   @Nullable
-  public static TypedId<BusinessId> getBusinessId() {
-    return Optional.ofNullable(getClaim(BUSINESS_ID))
-        .map(Object::toString)
-        .map(value -> new TypedId<BusinessId>(value))
+  public static TypedId<BusinessId> getActiveBusinessId() {
+    String businessIdHeader = null;
+    try {
+      businessIdHeader =
+          ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+              .getRequest()
+              .getHeader(BUSINESS_ID);
+    } catch (Exception e) {
+      log.warn("Being called outside of spring runtine environmnet", e);
+    }
+
+    return Optional.ofNullable(businessIdHeader)
+        .map(TypedId<BusinessId>::new)
+        .or(
+            () ->
+                Optional.ofNullable(getClaim(BUSINESS_ID)).map(Object::toString).map(TypedId::new))
         .orElse(null);
   }
 

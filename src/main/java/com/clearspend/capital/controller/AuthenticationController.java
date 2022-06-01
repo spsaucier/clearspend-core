@@ -166,7 +166,8 @@ public class AuthenticationController {
     CurrentUser user = CurrentUser.get(getClaims(response));
 
     try {
-      Business business = businessService.retrieveBusinessPriorToLogin(user.businessId(), false);
+      Business business =
+          businessService.retrieveBusinessPriorToLogin(user.homeBusinessId(), false);
       if (business != null && business.getStatus() == BusinessStatus.SUSPENDED) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
       }

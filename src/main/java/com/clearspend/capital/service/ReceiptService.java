@@ -63,16 +63,17 @@ public class ReceiptService {
   @PostAuthorize("isSelfOwned(returnObject) or hasPermission(returnObject, 'READ')")
   public Receipt getReceipt(TypedId<ReceiptId> receiptId) {
     return receiptRepository
-        .findReceiptByBusinessIdAndId(CurrentUser.getBusinessId(), receiptId)
+        .findReceiptByBusinessIdAndId(CurrentUser.getActiveBusinessId(), receiptId)
         .orElseThrow(
             () ->
-                new RecordNotFoundException(Table.RECEIPT, CurrentUser.getBusinessId(), receiptId));
+                new RecordNotFoundException(
+                    Table.RECEIPT, CurrentUser.getActiveBusinessId(), receiptId));
   }
 
   @PostFilter("isSelfOwned(filterObject)")
   public List<Receipt> getReceiptsForCurrentUser() {
     return receiptRepository.findReceiptByBusinessIdAndUserIdAndUnLinked(
-        CurrentUser.getBusinessId(), CurrentUser.getUserId());
+        CurrentUser.getActiveBusinessId(), CurrentUser.getUserId());
   }
 
   private String getReceiptPath(
@@ -86,7 +87,8 @@ public class ReceiptService {
     // if this receipt is already linked to an existing adjustment, unlink it
     if (receipt.isLinked()) {
       AccountActivity previousAccountActivity =
-          accountActivityService.findByReceiptId(CurrentUser.getBusinessId(), receipt.getId());
+          accountActivityService.findByReceiptId(
+              CurrentUser.getActiveBusinessId(), receipt.getId());
       receipt.setAllocationId(null);
       receipt.setAccountId(null);
       receipt.setLinked(true);
@@ -143,7 +145,8 @@ public class ReceiptService {
   public void deleteReceipt(Receipt receipt) {
     if (receipt.isLinked()) {
       AccountActivity accountActivity =
-          accountActivityService.findByReceiptId(CurrentUser.getBusinessId(), receipt.getId());
+          accountActivityService.findByReceiptId(
+              CurrentUser.getActiveBusinessId(), receipt.getId());
       accountActivity.getReceipt().getReceiptIds().remove(receipt.getId());
       accountActivityRepository.save(accountActivity);
 

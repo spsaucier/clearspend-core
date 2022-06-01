@@ -210,15 +210,15 @@ public class PermissionEnrichmentService {
             () -> {
               log.trace(
                   "Permissions Cache Miss. Querying by Business ({}) for User ({})",
-                  CurrentUser.getBusinessId(),
+                  CurrentUser.getActiveBusinessId(),
                   CurrentUser.getUserId());
               // Will cache an empty list which will short-circuit this query from running
               // again
               cache.cachePermissionsForBusiness(
-                  CurrentUser.getBusinessId(),
+                  CurrentUser.getActiveBusinessId(),
                   rolesAndPermissionsService.findAllByUserIdAndBusinessId(
                       CurrentUser.getUserId(),
-                      CurrentUser.getBusinessId(),
+                      CurrentUser.getActiveBusinessId(),
                       CurrentUser.getRoles()));
               return cache.getPermissionsForGlobal();
             })

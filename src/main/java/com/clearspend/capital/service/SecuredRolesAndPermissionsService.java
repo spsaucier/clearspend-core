@@ -44,7 +44,7 @@ public class SecuredRolesAndPermissionsService {
     CurrentUser currentUser = CurrentUser.get();
     Map<TypedId<UserId>, UserRolesAndPermissions> permissionsMap =
         userAllocationRoleRepository.getActiveUsersWithAllocationPermission(
-            currentUser.businessId(), allocationId);
+            CurrentUser.getActiveBusinessId(), allocationId);
 
     if (rolesAndPermissionsService
             .ensureNonNullPermissions(

@@ -119,7 +119,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                 Access Denied: Permission Evaluation Failures
-                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
                     PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
@@ -148,7 +148,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                 Access Denied: Permission Evaluation Failures
-                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
                     PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
@@ -176,7 +176,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                     Access Denied: Permission Evaluation Failures
-                    CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                    CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                     Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE],[VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE],[VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
                         PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=null, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=ANY_ALLOCATION]
                         UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
@@ -204,7 +204,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                 Access Denied: Permission Evaluation Failures
-                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual [VIEW_OWN|GLOBAL_READ|CUSTOMER_SERVICE]
                     PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=true, allocationRole=Employee, allocationPermissions=[VIEW_OWN], globalPermissions=[GLOBAL_READ, CUSTOMER_SERVICE]]
@@ -230,7 +230,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                 Access Denied: Permission Evaluation Failures
-                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual []
                     PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[businessId=a641fdde-0d05-4c0a-902d-0df087e6b5c3, allocationId=79f25a7c-691f-4f49-9baf-58a9b21237aa, isRoot=false, allocationRole=Employee, allocationPermissions=[], globalPermissions=[]]
@@ -253,7 +253,7 @@ public class FailedPermissionsTest {
     assertEquals(
         """
                 Access Denied: Permission Evaluation Failures
-                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, businessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
+                CurrentUser[userType=BUSINESS_OWNER, userId=c2d56628-b08f-41ea-bfda-93f356eb4780, homeBusinessId=b462aa55-c1eb-410b-b705-22c3d893481f, roles=[customer_service]]
                 Failure 0. Expected One Of [READ|MANAGE_USERS], Actual []
                     PermissionEvaluationContext[businessId=7feb9c45-b163-453f-bfc8-822c3ed2df80, allocationId=2ad6e753-5547-453c-a1c6-83ad4e05ddca, ownerIds=[c7f4e625-158f-42f9-9fc6-e18bda5253ec], allocationStrategy=SINGLE_ALLOCATION]
                     UserPermissions[NONE]

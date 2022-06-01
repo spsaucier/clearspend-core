@@ -56,7 +56,7 @@ public class RolesAndPermissionsController {
       return new AllocationsAndPermissionsResponse(List.of(), List.of());
     }
     final TypedId<UserId> userId = CurrentUser.getUserId();
-    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     final List<Allocation> allocations =
         allocationService.getAllocationsForBusiness(businessId).stream()
             .map(Allocation::of)
@@ -85,7 +85,7 @@ public class RolesAndPermissionsController {
 
   @GetMapping("/")
   UserRolesAndPermissionsRecord getUserAllocationRolesForOwnBusiness() {
-    return getUserAllocationRolesForBusiness(CurrentUser.get().businessId());
+    return getUserAllocationRolesForBusiness(CurrentUser.get().homeBusinessId());
   }
 
   record AllocationsAndPermissionsResponse(

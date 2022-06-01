@@ -54,13 +54,13 @@ public class BusinessBankAccountController {
 
   @GetMapping("/link-token")
   LinkTokenResponse linkToken() throws IOException {
-    Business business = businessService.getBusiness(CurrentUser.get().businessId(), true);
+    Business business = businessService.getBusiness(CurrentUser.getActiveBusinessId(), true);
     // in case we are in steps previous to LINK_ACCOUNT then is not allowed to continue
     if (business.getOnboardingStep().canTransferTo(BusinessOnboardingStep.LINK_ACCOUNT)) {
       throw new InvalidKycStepException();
     }
     return new LinkTokenResponse(
-        businessBankAccountService.getLinkToken(CurrentUser.get().businessId()));
+        businessBankAccountService.getLinkToken(CurrentUser.getActiveBusinessId()));
   }
 
   @GetMapping("/re-link/{businessBankAccountId}")
@@ -74,7 +74,8 @@ public class BusinessBankAccountController {
           TypedId<BusinessBankAccountId> businessBankAccountId)
       throws IOException {
     return new LinkTokenResponse(
-        businessBankAccountService.reLink(CurrentUser.getBusinessId(), businessBankAccountId));
+        businessBankAccountService.reLink(
+            CurrentUser.getActiveBusinessId(), businessBankAccountId));
   }
 
   @GetMapping(
@@ -84,7 +85,7 @@ public class BusinessBankAccountController {
       reviewer = "Craig Miller",
       explanation = "This method uses the Business for onboarding tasks")
   List<BankAccount> linkBusinessBankAccounts(@PathVariable String linkToken) throws IOException {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     List<BankAccount> bankAccounts =
         toListBankAccount(
@@ -115,7 +116,8 @@ public class BusinessBankAccountController {
   @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
   List<BankAccount> getBusinessBankAccounts() {
     return toListBankAccount(
-        businessBankAccountService.getBusinessBankAccounts(CurrentUser.get().businessId(), true));
+        businessBankAccountService.getBusinessBankAccounts(
+            CurrentUser.getActiveBusinessId(), true));
   }
 
   @PostMapping(
@@ -130,11 +132,9 @@ public class BusinessBankAccountController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId,
       @RequestBody @Validated TransactBankAccountRequest request) {
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
-
     AdjustmentAndHoldRecord adjustmentAndHoldRecord =
         businessBankAccountService.transactBankAccount(
-            businessId,
+            CurrentUser.getActiveBusinessId(),
             businessBankAccountId,
             CurrentUser.getUserId(),
             request.getBankAccountTransactType(),
@@ -155,9 +155,8 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId) {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-
-    businessBankAccountService.registerExternalBank(businessId, businessBankAccountId);
+    businessBankAccountService.registerExternalBank(
+        CurrentUser.getActiveBusinessId(), businessBankAccountId);
 
     return ResponseEntity.ok().build();
   }
@@ -173,9 +172,8 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId) {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-
-    businessBankAccountService.unregisterExternalBank(businessId, businessBankAccountId);
+    businessBankAccountService.unregisterExternalBank(
+        CurrentUser.getActiveBusinessId(), businessBankAccountId);
 
     return ResponseEntity.ok().build();
   }

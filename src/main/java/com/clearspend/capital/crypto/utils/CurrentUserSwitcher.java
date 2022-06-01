@@ -127,7 +127,7 @@ public class CurrentUserSwitcher implements AuthenticationProvider {
     jwt.getOtherClaims().put(ROLES, new ArrayList<>(user.roles()).toArray(String[]::new));
     jwt.getOtherClaims().put(USER_TYPE, user.userType());
     jwt.getOtherClaims().put(CAPITAL_USER_ID, user.userId());
-    jwt.getOtherClaims().put(BUSINESS_ID, user.businessId());
+    jwt.getOtherClaims().put(BUSINESS_ID, user.homeBusinessId());
 
     // Sign and encode the JWT to a JSON string representation
     String encodedJWT = JWT.getEncoder().encode(jwt, signer);

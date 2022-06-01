@@ -425,7 +425,7 @@ public class StatementService {
 
     CardStatementData generalStatementData =
         accountActivityRepository.findDataForCardStatement(
-            CurrentUser.getBusinessId(),
+            CurrentUser.getActiveBusinessId(),
             new CardStatementFilterCriteria(
                 request.getCardId(), request.getStartDate(), request.getEndDate()));
 

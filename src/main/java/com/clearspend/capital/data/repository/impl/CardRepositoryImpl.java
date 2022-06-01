@@ -277,7 +277,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
   @Override
   public Optional<CardDetailsRecord> findDetailsById(@NotNull TypedId<CardId> cardId) {
-    return findDetailsByBusinessIdAndId(CurrentUser.getBusinessId(), cardId);
+    return findDetailsByBusinessIdAndId(CurrentUser.getActiveBusinessId(), cardId);
   }
 
   @Override

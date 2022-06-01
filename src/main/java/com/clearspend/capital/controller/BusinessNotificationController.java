@@ -21,18 +21,18 @@ public class BusinessNotificationController {
   @GetMapping("/chart-of-accounts")
   List<BusinessNotification> getChartOfAccountsNotifications() {
     return businessNotificationService.getUnseenNotificationsForUser(
-        CurrentUser.getBusinessId(), CurrentUser.get().userId());
+        CurrentUser.getActiveBusinessId(), CurrentUser.get().userId());
   }
 
   @PostMapping("/accept-chart-of-accounts")
   BusinessNotification acceptChartOfAccountChangesForUser() {
     return businessNotificationService.acceptChartOfAccountChangesForUser(
-        CurrentUser.getBusinessId(), CurrentUser.get().userId());
+        CurrentUser.getActiveBusinessId(), CurrentUser.get().userId());
   }
 
   @GetMapping("/chart-of-accounts/recent")
   List<BusinessNotification> getRecentChartOfAccountsNotifications() {
     return businessNotificationService.getRecentChartOfAccountsNotifications(
-        CurrentUser.getBusinessId());
+        CurrentUser.getActiveBusinessId());
   }
 }

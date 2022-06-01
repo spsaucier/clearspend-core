@@ -49,7 +49,7 @@ public class AllocationController {
       @Validated @RequestBody CreateAllocationRequest request) {
     AllocationRecord allocationRecord =
         allocationService.createAllocation(
-            CurrentUser.getBusinessId(),
+            CurrentUser.getActiveBusinessId(),
             request.getParentAllocationId(),
             request.getName(),
             request.getAmount().toAmount(),
@@ -78,7 +78,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     AllocationDetailsRecord allocationRecord =
         allocationService.getAllocation(
-            businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId);
+            businessService.getBusiness(CurrentUser.getActiveBusinessId(), true), allocationId);
 
     return AllocationDetailsResponse.of(allocationRecord);
   }
@@ -106,7 +106,7 @@ public class AllocationController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AllocationId> allocationId,
       @RequestBody @Validated UpdateAllocationRequest request) {
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     allocationService.updateAllocation(
         businessId,
@@ -136,7 +136,7 @@ public class AllocationController {
           TypedId<AllocationId> allocationId) {
     return allocationService
         .getAllocationChildrenRecords(
-            businessService.getBusiness(CurrentUser.getBusinessId(), true), allocationId)
+            businessService.getBusiness(CurrentUser.getActiveBusinessId(), true), allocationId)
         .stream()
         .map(Allocation::of)
         .collect(Collectors.toList());
@@ -155,7 +155,7 @@ public class AllocationController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         allocationService.reallocateAllocationFunds(
-            businessService.getBusiness(CurrentUser.getBusinessId(), true),
+            businessService.getBusiness(CurrentUser.getActiveBusinessId(), true),
             CurrentUser.getUserId(),
             allocationId,
             request.getAllocationAccountId(),

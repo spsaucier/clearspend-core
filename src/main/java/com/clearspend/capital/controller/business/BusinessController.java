@@ -105,7 +105,7 @@ public class BusinessController {
 
     AccountReallocateFundsRecord reallocateFundsRecord =
         businessService.reallocateBusinessFunds(
-            CurrentUser.getBusinessId(),
+            CurrentUser.getActiveBusinessId(),
             CurrentUser.getUserId(),
             request.getAllocationIdFrom(),
             request.getAllocationIdTo(),
@@ -121,7 +121,7 @@ public class BusinessController {
   @GetMapping("/accounts")
   Account getRootAllocationAccount() {
     return Account.of(
-        allocationService.securedGetRootAllocation(CurrentUser.getBusinessId()).account());
+        allocationService.securedGetRootAllocation(CurrentUser.getActiveBusinessId()).account());
   }
 
   @GetMapping("/allocations")
@@ -129,7 +129,7 @@ public class BusinessController {
     Map<TypedId<AllocationId>, Allocation> result =
         allocationService
             .searchBusinessAllocations(
-                businessService.getBusiness(CurrentUser.getBusinessId(), true))
+                businessService.getBusiness(CurrentUser.getActiveBusinessId(), true))
             .stream()
             .map(Allocation::of)
             .collect(Collectors.toMap(Allocation::getAllocationId, Function.identity()));
@@ -156,7 +156,7 @@ public class BusinessController {
       @RequestBody @Validated SearchBusinessAllocationRequest request) {
     return allocationService
         .searchBusinessAllocations(
-            businessService.getBusiness(CurrentUser.getBusinessId(), true), request.getName())
+            businessService.getBusiness(CurrentUser.getActiveBusinessId(), true), request.getName())
         .stream()
         .map(Allocation::of)
         .toList();
@@ -236,13 +236,13 @@ public class BusinessController {
   @GetMapping
   ResponseEntity<Business> getBusiness() {
     return ResponseEntity.ok(
-        new Business(businessService.getBusiness(CurrentUser.getBusinessId(), false)));
+        new Business(businessService.getBusiness(CurrentUser.getActiveBusinessId(), false)));
   }
 
   @GetMapping("/business-settings")
   BusinessSettings getBusinessSettings() {
     return BusinessSettings.of(
-        businessSettingsService.retrieveBusinessSettings(CurrentUser.getBusinessId()));
+        businessSettingsService.retrieveBusinessSettings(CurrentUser.getActiveBusinessId()));
   }
 
   @PatchMapping("/business-settings")
@@ -252,7 +252,7 @@ public class BusinessController {
     businessSettingsRequest.checkDuplicateLimits();
     return BusinessSettings.of(
         businessSettingsService.updateBusinessSettings(
-            CurrentUser.getBusinessId(), businessSettingsRequest));
+            CurrentUser.getActiveBusinessId(), businessSettingsRequest));
   }
 
   @PostMapping("/complete-onboarding")
@@ -260,7 +260,7 @@ public class BusinessController {
       reviewer = "Craig Miller",
       explanation = "This method uses the Business for onboarding tasks")
   ResponseEntity<?> completeOnboarding() {
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     Business business =
         new Business(businessService.retrieveBusinessForOnboarding(businessId, false));
 
@@ -278,7 +278,7 @@ public class BusinessController {
 
   @PostMapping("/update")
   ResponseEntity<Business> updateBusinessDetails(@RequestBody @Validated UpdateBusiness request) {
-    TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     return ResponseEntity.ok(new Business(businessService.updateBusiness(businessId, request)));
   }
 
@@ -289,7 +289,7 @@ public class BusinessController {
     return ResponseEntity.ok(
         new Business(
             businessService.updateBusinessAccountingSetupStep(
-                CurrentUser.getBusinessId(),
+                CurrentUser.getActiveBusinessId(),
                 updateBusinessAccountingStepRequest.getAccountingSetupStep())));
   }
 
@@ -300,7 +300,7 @@ public class BusinessController {
     return ResponseEntity.ok(
         new Business(
             businessService.setAutomaticExpenseCategories(
-                CurrentUser.getBusinessId(),
+                CurrentUser.getActiveBusinessId(),
                 updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories())));
   }
 }

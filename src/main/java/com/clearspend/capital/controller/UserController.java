@@ -93,7 +93,7 @@ public class UserController {
 
     CreateUpdateUserRecord userServiceUser =
         userService.createUser(
-            CurrentUser.get().businessId(),
+            CurrentUser.getActiveBusinessId(),
             UserType.EMPLOYEE,
             request.getFirstName(),
             request.getLastName(),
@@ -115,7 +115,7 @@ public class UserController {
           TypedId<UserId> userId,
       @RequestBody UpdateUserRequest request) {
     try {
-      request.setBusinessId(CurrentUser.getBusinessId());
+      request.setBusinessId(CurrentUser.getActiveBusinessId());
       request.setUserId(userId);
       final CreateUpdateUserRecord updateUserRecord = userService.updateUser(request);
       return new UpdateUserResponse(updateUserRecord.user().getId(), null);
@@ -131,7 +131,7 @@ public class UserController {
     for (CreateUserRequest createUserRequest : request) {
       CreateUpdateUserRecord userServiceUser =
           userService.createUser(
-              CurrentUser.get().businessId(),
+              CurrentUser.getActiveBusinessId(),
               UserType.EMPLOYEE,
               createUserRequest.getFirstName(),
               createUserRequest.getLastName(),
@@ -191,13 +191,14 @@ public class UserController {
 
   @GetMapping(value = "/list")
   List<User> getUsersByUserName() {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
-    return userService.retrieveUsersForBusiness(businessId).stream().map(User::new).toList();
+    return userService.retrieveUsersForBusiness(CurrentUser.getActiveBusinessId()).stream()
+        .map(User::new)
+        .toList();
   }
 
   @PostMapping(value = "/search")
   PagedData<UserPageData> retrieveUsersPageData(@Validated @RequestBody SearchUserRequest request) {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     var userPage = userService.retrieveUserPage(businessId, new UserFilterCriteria(request));
 
     return PagedData.of(userPage, user -> new UserPageData(user.user(), user.card()));
@@ -234,7 +235,7 @@ public class UserController {
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
         cardService.blockCard(
-            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId),
             request.getStatusReason()));
   }
 
@@ -275,7 +276,7 @@ public class UserController {
 
     return new Card(
         cardService.unblockCard(
-            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId),
             request.getStatusReason()));
   }
 
@@ -291,7 +292,7 @@ public class UserController {
       @Validated @RequestBody UpdateCardStatusRequest request) {
     return new Card(
         cardService.cancelCard(
-            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId),
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId),
             request.getStatusReason()));
   }
 
@@ -313,7 +314,7 @@ public class UserController {
           final TypedId<AllocationId> allocationId) {
     return CardAndAccount.of(
         cardService.linkCard(
-            cardService.retrieveCard(CurrentUser.getBusinessId(), cardId), allocationId));
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId), allocationId));
   }
 
   @PatchMapping("/cards/{cardId}/unlink")
@@ -326,7 +327,8 @@ public class UserController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           final TypedId<CardId> cardId) {
     return CardAndAccount.of(
-        cardService.unlinkCard(cardService.retrieveCard(CurrentUser.getBusinessId(), cardId)));
+        cardService.unlinkCard(
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId)));
   }
 
   @GetMapping("/cards/{cardId}/accounts")
@@ -340,7 +342,7 @@ public class UserController {
           TypedId<CardId> cardId,
       @RequestParam(required = false) AccountType type) {
     return cardService
-        .getCardAccounts(cardService.retrieveCard(CurrentUser.getBusinessId(), cardId), type)
+        .getCardAccounts(cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId), type)
         .stream()
         .map(
             e ->
@@ -365,9 +367,9 @@ public class UserController {
 
     Page<AccountActivity> accountActivities =
         accountActivityService.find(
-            CurrentUser.get().businessId(),
+            CurrentUser.getActiveBusinessId(),
             new AccountActivityFilterCriteria(
-                CurrentUser.get().businessId(),
+                CurrentUser.getActiveBusinessId(),
                 request.getAllocationId(),
                 request.getUserId(),
                 request.getCardId() != null ? request.getCardId() : cardId,
@@ -413,7 +415,7 @@ public class UserController {
     Page<AccountActivity> accountActivity =
         accountActivityService
             .getCardAccountActivity(
-                currentUser.businessId(), currentUser.userId(), cardId, criteria)
+                CurrentUser.getActiveBusinessId(), currentUser.userId(), cardId, criteria)
             .activityPage();
 
     return PagedData.of(accountActivity, AccountActivityResponse::new);
@@ -496,7 +498,7 @@ public class UserController {
           TypedId<AccountActivityId> accountActivityId) {
     return new AccountActivityResponse(
         accountActivityService.unlockAccountActivityForSync(
-            CurrentUser.getBusinessId(), accountActivityId));
+            CurrentUser.getActiveBusinessId(), accountActivityId));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")
@@ -559,8 +561,6 @@ public class UserController {
               description = "ID of the receipt record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<ReceiptId> receiptId) {
-    CurrentUser currentUser = CurrentUser.get();
-
     receiptService.deleteReceipt(receiptService.getReceipt(receiptId));
   }
 
@@ -573,13 +573,13 @@ public class UserController {
               description = "ID of the user record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<UserId> userId) {
-    return userService.archiveUser(CurrentUser.get().businessId(), userId);
+    return userService.archiveUser(CurrentUser.getActiveBusinessId(), userId);
   }
 
   @PostMapping(value = "/export-csv")
   ResponseEntity<byte[]> exportCsv(@Validated @RequestBody SearchUserRequest request)
       throws IOException {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     // export must return all records, regardless if pagination is set in "view records" mode
     request.setPageRequest(new PageRequest(0, Integer.MAX_VALUE));

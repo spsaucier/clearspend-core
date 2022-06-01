@@ -1635,10 +1635,78 @@ class UserControllerTest extends BaseCapitalTest {
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
+    // FIXME(hdavid) this assertion is invalid, it does not check the returned usernames
     Assertions.assertTrue(
         objectMapper.readValue(responseFilteredByUserName.getContentAsString(), List.class).size()
             > 0);
     log.info(responseFilteredByUserName.getContentAsString());
+  }
+
+  @Test
+  void getUsersForBusinessIdOfNonLoggedInUser() {
+    CreateBusinessRecord foreignBusiness = testHelper.createBusiness();
+    testHelper.setCurrentUser(foreignBusiness.user());
+
+    final String userFromForeignBusinessName = "userFromForeignBusiness";
+    CreateUpdateUserRecord userFromForeignBusiness =
+        userService.createUser(
+            foreignBusiness.business().getBusinessId(),
+            UserType.EMPLOYEE,
+            userFromForeignBusinessName,
+            "LastName",
+            testHelper.generateEntityAddress(),
+            testHelper.createRandomEmail(),
+            faker.phoneNumber().phoneNumber());
+
+    Business business = createBusinessRecord.business();
+    CreateUpdateUserRecord userWithCustomerServiceRole =
+        testHelper.createUserWithGlobalRole(business, DefaultRoles.GLOBAL_CUSTOMER_SERVICE);
+    Cookie authCookie = testHelper.login(userWithCustomerServiceRole.user());
+    testHelper.setCurrentUser(userWithCustomerServiceRole.user());
+
+    final ThrowingFunction<Cookie, ResultActions> requestUsersFromLogggedInBusinessUser =
+        cookie ->
+            mvc.perform(get("/users/list").contentType("application/json").cookie(authCookie));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowAllRolesOnAllocation()
+        .<ResultActions>allowAllGlobalRolesWithResult(
+            ra -> {
+              Assertions.assertFalse(
+                  objectMapper
+                      .readValue(
+                          ra.andReturn().getResponse().getContentAsString(),
+                          new TypeReference<List<User>>() {})
+                      .stream()
+                      .anyMatch(u -> u.getFirstName().equals(userFromForeignBusinessName)));
+            })
+        .build()
+        .validateMockMvcCall(requestUsersFromLogggedInBusinessUser);
+
+    final ThrowingFunction<Cookie, ResultActions> requestUsersFromForeignBusiness =
+        cookie ->
+            mvc.perform(
+                get("/users/list")
+                    .header(Common.BUSINESS_ID, foreignBusiness.business().getBusinessId())
+                    .contentType("application/json")
+                    .cookie(authCookie));
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowAllGlobalRoles()
+        .<ResultActions>allowAllRolesOnAllocationWithResult(
+            ra -> {
+              Assertions.assertTrue(
+                  objectMapper
+                      .readValue(
+                          ra.andReturn().getResponse().getContentAsString(),
+                          new TypeReference<List<User>>() {})
+                      .stream()
+                      .anyMatch(u -> u.getFirstName().equals(userFromForeignBusinessName)));
+            })
+        .build()
+        .validateMockMvcCall(requestUsersFromForeignBusiness);
   }
 
   @SneakyThrows

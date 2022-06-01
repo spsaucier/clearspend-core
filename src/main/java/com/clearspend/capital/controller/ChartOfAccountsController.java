@@ -32,42 +32,42 @@ public class ChartOfAccountsController {
   CodatAccountNestedResponse getChartOfAccountsForBusiness() {
     return new CodatAccountNestedResponse(
         chartOfAccountsService
-            .getChartOfAccountsForBusiness(CurrentUser.getBusinessId())
+            .getChartOfAccountsForBusiness(CurrentUser.getActiveBusinessId())
             .getNestedAccounts());
   }
 
   @PostMapping("/update")
   ChartOfAccounts updateChartOfAccountsFromCodat() {
-    return chartOfAccountsService.updateChartOfAccountsFromCodat(CurrentUser.getBusinessId());
+    return chartOfAccountsService.updateChartOfAccountsFromCodat(CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/total-changes")
   Integer getTotalChartOfAccountsChangesForBusiness() {
-    return chartOfAccountsService.getTotalChangesForBusiness(CurrentUser.getBusinessId());
+    return chartOfAccountsService.getTotalChangesForBusiness(CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/mappings")
   GetChartOfAccountsMappingResponse getMappings() {
     return new GetChartOfAccountsMappingResponse(
-        mappingService.getAllMappingsForBusiness(CurrentUser.getBusinessId()));
+        mappingService.getAllMappingsForBusiness(CurrentUser.getActiveBusinessId()));
   }
 
   @PostMapping("/mappings")
   GetChartOfAccountsMappingResponse addChartOfAccountsMappings(
       @Validated @RequestBody List<AddChartOfAccountsMappingRequest> request) {
     return new GetChartOfAccountsMappingResponse(
-        mappingService.overwriteAllMappings(CurrentUser.getBusinessId(), request));
+        mappingService.overwriteAllMappings(CurrentUser.getActiveBusinessId(), request));
   }
 
   @DeleteMapping("/mappings")
   Boolean deleteChartOfAccountsMappings() {
-    mappingService.deleteChartOfAccountsMappingsForBusiness(CurrentUser.getBusinessId());
+    mappingService.deleteChartOfAccountsMappingsForBusiness(CurrentUser.getActiveBusinessId());
     return true;
   }
 
   @PostMapping("/resync")
   Boolean resyncChartOfAccounts() {
-    chartOfAccountsService.resyncChartOfAccountsForBusiness(CurrentUser.getBusinessId());
+    chartOfAccountsService.resyncChartOfAccountsForBusiness(CurrentUser.getActiveBusinessId());
     return true;
   }
 }

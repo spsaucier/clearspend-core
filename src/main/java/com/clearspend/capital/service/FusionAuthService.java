@@ -6,7 +6,6 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.controller.AuthenticationController.TwoFactorAuthenticationMethod;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.data.model.OwnerRelated;
@@ -659,7 +658,7 @@ public class FusionAuthService {
       return new FusionAuthUser(
           CurrentUser.getFusionAuthUserId().toString(),
           CurrentUser.getUserId(),
-          CurrentUser.getBusinessId(),
+          CurrentUser.get().homeBusinessId(),
           CurrentUser.getEmail());
     }
 

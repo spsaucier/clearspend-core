@@ -81,7 +81,7 @@ public class CardFilterCriteria {
 
   public static CardFilterCriteria fromSearchRequest(SearchCardRequest request) {
     return new CardFilterCriteria(
-        CurrentUser.getBusinessId(),
+        CurrentUser.getActiveBusinessId(),
         CurrentUser.getUserId(),
         "",
         request.getUsers(),

@@ -42,7 +42,7 @@ public class ImageController {
     CurrentUser currentUser = CurrentUser.get();
     final Receipt receipt =
         receiptService.storeReceiptImage(
-            currentUser.businessId(),
+            CurrentUser.getActiveBusinessId(),
             currentUser.userId(),
             receiptFile.getBytes(),
             receiptFile.getContentType());
@@ -78,7 +78,7 @@ public class ImageController {
     byte[] receiptImage = receiptService.getReceiptImage(receipt);
     log.info(
         "returning image: businessIid {}, userId {}, receiptId {} ({} bytes)",
-        currentUser.businessId(),
+        CurrentUser.getActiveBusinessId(),
         currentUser.userId(),
         receiptId,
         receiptImage.length);

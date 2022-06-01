@@ -47,7 +47,7 @@ public class BusinessOwnerController {
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
     log.info("Create business owner. {}", request);
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     BusinessOwnerData businessOwnerData = request.toBusinessOwnerData(businessId);
     businessOwnerService.validateOwner(businessOwnerData);
     BusinessOwnerAndStripePersonRecord businessOwnerAndStripePersonRecord =
@@ -65,7 +65,7 @@ public class BusinessOwnerController {
       @Validated @RequestBody CreateOrUpdateBusinessOwnerRequest request) {
 
     log.info("Update business owner. {}", request);
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     BusinessOwnerData businessOwnerData = request.toBusinessOwnerData(businessId);
     businessOwnerService.validateOwner(businessOwnerData);
     BusinessOwnerAndStripePersonRecord businessOwnerAndStripePersonRecord =
@@ -85,7 +85,7 @@ public class BusinessOwnerController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessOwnerId> businessOwnerId) {
     log.info("Delete business owner. {}", businessOwnerId);
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     businessOwnerService.deleteBusinessOwner(businessOwnerId, businessId);
 
@@ -94,7 +94,7 @@ public class BusinessOwnerController {
 
   @GetMapping(value = "/list")
   List<BusinessOwnerInfo> getBusinessOwnersForCurrentLoggedBusiness() {
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     return businessOwnerService.secureFindBusinessOwner(businessId).stream()
         .map(BusinessOwnerInfo::fromBusinessOwner)
         .toList();
@@ -105,7 +105,7 @@ public class BusinessOwnerController {
       @Validated @RequestBody(required = false) OwnersProvidedRequest ownersProvidedRequest) {
 
     log.info("Trigger end of onboarding owners process.");
-    TypedId<BusinessId> businessId = CurrentUser.get().businessId();
+    TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     businessOwnerService.validateBusinessOwners(businessId, ownersProvidedRequest);
 

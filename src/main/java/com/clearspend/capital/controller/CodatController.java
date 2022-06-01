@@ -49,17 +49,17 @@ public class CodatController {
 
   @PostMapping("/quickbooks-online")
   String createQuickbooksOnlineConnectionLink() throws RuntimeException {
-    return codatService.createQboConnectionForBusiness(CurrentUser.getBusinessId());
+    return codatService.createQboConnectionForBusiness(CurrentUser.getActiveBusinessId());
   }
 
   @DeleteMapping("/connection")
   Boolean deleteCodatIntegrationConnection() throws RuntimeException {
-    return codatService.deleteCodatIntegrationConnection(CurrentUser.getBusinessId());
+    return codatService.deleteCodatIntegrationConnection(CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/connection-status")
   Boolean getIntegrationConnectionStatus() {
-    return codatService.getIntegrationConnectionStatus(CurrentUser.getBusinessId());
+    return codatService.getIntegrationConnectionStatus(CurrentUser.getActiveBusinessId());
   }
 
   @PostMapping("/sync/{accountActivityId}")
@@ -72,52 +72,54 @@ public class CodatController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<AccountActivityId> accountActivityId)
       throws RuntimeException {
-    return codatService.syncTransactionAsDirectCost(accountActivityId, CurrentUser.getBusinessId());
+    return codatService.syncTransactionAsDirectCost(
+        accountActivityId, CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/sync-count")
   SyncCountResponse getCountOfSyncableTransactions() {
-    return new SyncCountResponse(codatService.getSyncReadyCount(CurrentUser.getBusinessId()));
+    return new SyncCountResponse(codatService.getSyncReadyCount(CurrentUser.getActiveBusinessId()));
   }
 
   @PostMapping("/sync")
   List<SyncTransactionResponse> syncTransactionListToCodat(
       @Validated @RequestBody List<TypedId<AccountActivityId>> accountActivityIds) {
-    return codatService.syncMultipleTransactions(accountActivityIds, CurrentUser.getBusinessId());
+    return codatService.syncMultipleTransactions(
+        accountActivityIds, CurrentUser.getActiveBusinessId());
   }
 
   @PostMapping("/sync-all")
   List<SyncTransactionResponse> syncAllTransactionsToCodat() {
-    return codatService.syncAllReadyTransactions(CurrentUser.getBusinessId());
+    return codatService.syncAllReadyTransactions(CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/bank-accounts")
   CodatBankAccountsResponse getBankAccountsForBusiness() {
-    return codatService.getBankAccountsForBusiness(CurrentUser.getBusinessId());
+    return codatService.getBankAccountsForBusiness(CurrentUser.getActiveBusinessId());
   }
 
   @PostMapping("/bank-accounts")
   CodatCreateBankAccountResponse createBankAccountForBusiness(
       @Validated @RequestBody CreateCreditCardRequest request) {
-    return codatService.createBankAccountForBusiness(CurrentUser.getBusinessId(), request);
+    return codatService.createBankAccountForBusiness(CurrentUser.getActiveBusinessId(), request);
   }
 
   @PutMapping("/bank-accounts")
   Business setBankAccountForBusiness(@Validated @RequestBody SetCreditCardRequest request) {
     return new Business(
         codatService.updateCodatCreditCardForBusiness(
-            CurrentUser.getBusinessId(), request.getAccountId()));
+            CurrentUser.getActiveBusinessId(), request.getAccountId()));
   }
 
   @GetMapping("/chart-of-accounts")
   CodatAccountNestedResponse getChartOfAccountsForBusiness() {
-    return codatService.getChartOfAccountsForBusiness(CurrentUser.getBusinessId());
+    return codatService.getChartOfAccountsForBusiness(CurrentUser.getActiveBusinessId());
   }
 
   @GetMapping("/chart-of-accounts/expense")
   CodatAccountNestedResponse getExpenseChartOfAccountsForBusiness() {
     return codatService.getCodatChartOfAccountsForBusiness(
-        CurrentUser.getBusinessId(),
+        CurrentUser.getActiveBusinessId(),
         List.of(
             CodatAccountSubtype.EXPENSE,
             CodatAccountSubtype.OTHER_EXPENSE,
@@ -142,10 +144,11 @@ public class CodatController {
           String targetName) {
 
     if (StringUtils.isBlank(targetName)) {
-      return codatService.getAllSuppliersFromQboByBusiness(CurrentUser.getBusinessId(), limit);
+      return codatService.getAllSuppliersFromQboByBusiness(
+          CurrentUser.getActiveBusinessId(), limit);
     } else {
       return codatService.getMatchedSuppliersFromQboByBusiness(
-          CurrentUser.getBusinessId(), limit, targetName);
+          CurrentUser.getActiveBusinessId(), limit, targetName);
     }
   }
 
@@ -153,7 +156,7 @@ public class CodatController {
   CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
       @Validated @RequestBody CreateAssignSupplierRequest createAssignSupplierRequest) {
     return codatService.createVendorAssignedToAccountActivity(
-        CurrentUser.getBusinessId(),
+        CurrentUser.getActiveBusinessId(),
         createAssignSupplierRequest.getAccountActivityId(),
         createAssignSupplierRequest.getSupplierName());
   }
@@ -161,13 +164,13 @@ public class CodatController {
   @GetMapping("/classes")
   List<CodatCategory> getClassCategories() {
     return codatService.getCodatCategoriesByType(
-        CurrentUser.getBusinessId(), CodatCategoryType.CLASS);
+        CurrentUser.getActiveBusinessId(), CodatCategoryType.CLASS);
   }
 
   @GetMapping("/locations")
   List<CodatCategory> getLocationCategories() {
     return codatService.getCodatCategoriesByType(
-        CurrentUser.getBusinessId(), CodatCategoryType.LOCATION);
+        CurrentUser.getActiveBusinessId(), CodatCategoryType.LOCATION);
   }
 
   @GetMapping("/audit-log")
@@ -181,6 +184,6 @@ public class CodatController {
           Integer limit) {
 
     return auditLogService.searchAllAccountingAuditLogByBusiness(
-        CurrentUser.getBusinessId(), limit);
+        CurrentUser.getActiveBusinessId(), limit);
   }
 }

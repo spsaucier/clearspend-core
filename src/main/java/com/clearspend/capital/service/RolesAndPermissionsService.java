@@ -117,7 +117,7 @@ public class RolesAndPermissionsService {
       @NonNull String newRole) {
     return createUserAllocationRole(
         userRepository.getById(granteeId),
-        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId),
         newRole);
   }
 
@@ -154,7 +154,7 @@ public class RolesAndPermissionsService {
       @NonNull String newRole) {
     return createOrUpdateUserAllocationRole(
         userRepository.getById(granteeId),
-        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId),
         newRole);
   }
 
@@ -191,7 +191,7 @@ public class RolesAndPermissionsService {
       @NonNull String newRole) {
     return updateUserAllocationRole(
         userRepository.getById(granteeId),
-        retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+        retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId),
         newRole);
   }
 
@@ -431,7 +431,7 @@ public class RolesAndPermissionsService {
     Optional<UserAllocationRole> doomedRecord =
         prepareUserAllocationRoleChange(
             userRepository.getById(granteeId),
-            retrieveAllocation(CurrentUser.getBusinessId(), allocationId),
+            retrieveAllocation(CurrentUser.getActiveBusinessId(), allocationId),
             null);
     UserAllocationRole record =
         doomedRecord.orElseThrow(
@@ -460,7 +460,7 @@ public class RolesAndPermissionsService {
     entityManager.flush();
     CurrentUser user = CurrentUser.get();
     if (!userAllocationRoleRepository.userHasPermission(
-        user.businessId(),
+        CurrentUser.getActiveBusinessId(),
         allocationId,
         user.userId(),
         user.roles(),
@@ -469,7 +469,7 @@ public class RolesAndPermissionsService {
       throw new AccessDeniedException(
           Map.of(
                   "businessId",
-                  user.businessId(),
+                  CurrentUser.getActiveBusinessId(),
                   "allocationId",
                   allocationId,
                   "userId",
@@ -496,7 +496,10 @@ public class RolesAndPermissionsService {
     CurrentUser currentUser = CurrentUser.get();
     return ensureNonNullPermissions(
         userAllocationRoleRepository.getUserPermissionAtAllocation(
-            currentUser.businessId(), allocationId, currentUser.userId(), currentUser.roles()),
+            CurrentUser.getActiveBusinessId(),
+            allocationId,
+            currentUser.userId(),
+            currentUser.roles()),
         allocationId);
   }
 
@@ -611,7 +614,7 @@ public class RolesAndPermissionsService {
               user.userId(),
               allocationId,
               null,
-              CurrentUser.getBusinessId(),
+              CurrentUser.getActiveBusinessId(),
               false,
               null,
               EnumSet.noneOf(AllocationPermission.class),

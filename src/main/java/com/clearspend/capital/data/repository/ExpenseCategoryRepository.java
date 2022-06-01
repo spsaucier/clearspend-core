@@ -23,13 +23,13 @@ public interface ExpenseCategoryRepository
       final List<TypedId<ExpenseCategoryId>> expenseCategoryId);
 
   default Optional<ExpenseCategory> findFirstCategoryByName(String categoryName) {
-    return findFirstByBusinessIdAndCategoryName(CurrentUser.getBusinessId(), categoryName);
+    return findFirstByBusinessIdAndCategoryName(CurrentUser.getActiveBusinessId(), categoryName);
   }
 
   default Optional<ExpenseCategory> findFirstCategoryByNameAndStatus(
       String categoryName, ExpenseCategoryStatus status) {
     return findFirstByBusinessIdAndCategoryNameAndStatus(
-        CurrentUser.getBusinessId(), categoryName, status);
+        CurrentUser.getActiveBusinessId(), categoryName, status);
   }
 
   Optional<ExpenseCategory> findFirstByBusinessIdAndCategoryNameAndStatus(

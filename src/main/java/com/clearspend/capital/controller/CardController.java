@@ -63,12 +63,12 @@ public class CardController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
 
-    return CardDetailsResponse.of(cardService.getCard(CurrentUser.getBusinessId(), cardId));
+    return CardDetailsResponse.of(cardService.getCard(CurrentUser.getActiveBusinessId(), cardId));
   }
 
   @PostMapping("")
   List<IssueCardResponse> issueCard(@RequestBody @Validated final IssueCardRequest request) {
-    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     final String businessLegalName = businessService.getBusiness(businessId, true).getLegalName();
 
     // Keeping this at the controller level so as not to break some great test logic we have in
@@ -99,7 +99,7 @@ public class CardController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           final TypedId<CardId> cardId,
       @RequestBody @Validated final List<CardAllocationSpendControls> allocationsAndSpendControls) {
-    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     cardService.addAllocationsToCard(
         cardService.retrieveCard(businessId, cardId), allocationsAndSpendControls);
 
@@ -116,7 +116,7 @@ public class CardController {
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           final TypedId<CardId> cardId,
       @RequestBody @Validated List<CardAllocationDetails> allocationsToRemove) {
-    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     cardService.removeAllocationsFromCard(
         cardService.retrieveCard(businessId, cardId), allocationsToRemove);
 
@@ -134,7 +134,7 @@ public class CardController {
           final TypedId<CardId> cardId,
       @RequestBody @Validated final UpdateCardSpendControlsRequest request) {
 
-    final TypedId<BusinessId> businessId = CurrentUser.getBusinessId();
+    final TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
     cardService.updateCardSpendControls(cardService.retrieveCard(businessId, cardId), request);
 
     return CardDetailsResponse.of(cardService.getCard(businessId, cardId));
@@ -148,7 +148,7 @@ public class CardController {
   @PostMapping("/reveal")
   RevealCardResponse reveal(@RequestBody @Validated RevealCardRequest request) {
     CardDetailsRecord cardDetailsRecord =
-        cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
+        cardService.getCard(CurrentUser.getActiveBusinessId(), request.getCardId());
     String ephemeralKey =
         stripeClient.getEphemeralKey(cardDetailsRecord.card().getExternalRef(), request.getNonce());
     return new RevealCardResponse(cardDetailsRecord.card().getExternalRef(), ephemeralKey);
@@ -174,7 +174,7 @@ public class CardController {
       produces = "application/json")
   String ephemeralKey(@RequestBody @Validated EphemeralKeyRequest request) {
     CardDetailsRecord cardDetailsRecord =
-        cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
+        cardService.getCard(CurrentUser.getActiveBusinessId(), request.getCardId());
     EphemeralKey stripeEphemeralKey =
         stripeClient.getEphemeralKeyObjectForCard(
             cardDetailsRecord.card().getExternalRef(), request.getApiVersion());

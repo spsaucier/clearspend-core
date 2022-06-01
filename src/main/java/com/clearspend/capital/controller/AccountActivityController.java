@@ -57,9 +57,9 @@ public class AccountActivityController {
       @Validated @RequestBody AccountActivityRequest request) {
     Page<AccountActivity> accountActivities =
         accountActivityService.find(
-            CurrentUser.get().businessId(),
+            CurrentUser.getActiveBusinessId(),
             new AccountActivityFilterCriteria(
-                CurrentUser.get().businessId(),
+                CurrentUser.getActiveBusinessId(),
                 request.getAllocationId(),
                 request.getUserId(),
                 request.getCardId(),
@@ -91,7 +91,7 @@ public class AccountActivityController {
           TypedId<AccountActivityId> accountActivityId) {
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(
-            CurrentUser.get().businessId(), accountActivityId);
+            CurrentUser.getActiveBusinessId(), accountActivityId);
 
     return new AccountActivityResponse(accountActivity);
   }
@@ -100,7 +100,7 @@ public class AccountActivityController {
   DashboardGraphData retrieveDashboardGraphData(@Validated @RequestBody GraphDataRequest request) {
     DashboardData dashboardData =
         accountActivityService.findDataForLineGraph(
-            CurrentUser.get().businessId(),
+            CurrentUser.getActiveBusinessId(),
             new GraphFilterCriteria(
                 request.getAllocationId(),
                 request.getUserId(),
@@ -134,7 +134,7 @@ public class AccountActivityController {
   ChartDataResponse getResultSpendByCategory(@Validated @RequestBody ChartDataRequest request) {
     return new ChartDataResponse(
         accountActivityService.findDataForChart(
-            CurrentUser.get().businessId(), new ChartFilterCriteria(request)),
+            CurrentUser.getActiveBusinessId(), new ChartFilterCriteria(request)),
         request.getChartFilter());
   }
 
@@ -148,9 +148,9 @@ public class AccountActivityController {
         exportCSVService.fromAccountActivity(
             accountActivityService
                 .find(
-                    CurrentUser.getBusinessId(),
+                    CurrentUser.getActiveBusinessId(),
                     new AccountActivityFilterCriteria(
-                        CurrentUser.get().businessId(),
+                        CurrentUser.getActiveBusinessId(),
                         request.getAllocationId(),
                         request.getUserId(),
                         request.getCardId(),
@@ -190,7 +190,7 @@ public class AccountActivityController {
           TypedId<AccountActivityId> ledgerActivityId) {
     AccountActivity accountActivity =
         accountActivityService.retrieveAccountActivity(
-            CurrentUser.get().businessId(), ledgerActivityId);
+            CurrentUser.getActiveBusinessId(), ledgerActivityId);
 
     return LedgerActivityResponse.of(accountActivity);
   }
@@ -200,9 +200,9 @@ public class AccountActivityController {
       @Validated @RequestBody LedgerActivityRequest request) {
     Page<AccountActivity> accountActivities =
         accountActivityService.find(
-            CurrentUser.get().businessId(),
+            CurrentUser.getActiveBusinessId(),
             new AccountActivityFilterCriteria(
-                CurrentUser.get().businessId(),
+                CurrentUser.getActiveBusinessId(),
                 request.getAllocationId(),
                 request.getUserId(),
                 request.getCardId(),

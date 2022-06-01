@@ -31,7 +31,7 @@ public class StatementController {
   ResponseEntity<byte[]> cardStatement(@Validated @RequestBody CardStatementRequest request) {
 
     final CardRepositoryCustom.CardDetailsRecord card =
-        cardService.getCard(CurrentUser.getBusinessId(), request.getCardId());
+        cardService.getCard(CurrentUser.getActiveBusinessId(), request.getCardId());
     StatementRecord result = statementService.generateCardStatementPdf(request, card);
 
     HttpHeaders headers = new HttpHeaders();
@@ -49,7 +49,7 @@ public class StatementController {
 
     StatementRecord result =
         statementService.generateBusinessStatementPdf(
-            CurrentUser.getBusinessId(), request.getStartDate(), request.getEndDate());
+            CurrentUser.getActiveBusinessId(), request.getStartDate(), request.getEndDate());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_PDF);
