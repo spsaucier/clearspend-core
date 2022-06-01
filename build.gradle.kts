@@ -2,13 +2,17 @@ import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     java
-    id("org.springframework.boot") version "2.6.7"
+    id("org.springframework.boot") version "2.6.8"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
-    id("com.diffplug.spotless") version "5.16.0"
+    id("com.diffplug.spotless") version "6.6.1"
     id("net.ltgt.errorprone") version "2.0.2"
     jacoco
+}
+
+jacoco {
+    toolVersion = "0.8.8"
 }
 
 group = "com.clearspend.capital"
@@ -19,13 +23,13 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_18
+    targetCompatibility = JavaVersion.VERSION_18
 }
 
 jib {
     container {
-      from.image = "openjdk:17.0.2-jdk-oracle"
+      from.image = "openjdk:18.0.1-jdk-oracle"
       to.image = "capital/core"
       mainClass = "com.clearspend.capital.CapitalApplication"
         jvmFlags = listOf(
@@ -179,7 +183,7 @@ dependencies {
     implementation("commons-codec:commons-codec")
     implementation("org.flywaydb:flyway-core")
     implementation("com.google.code.gson:gson")
-    implementation("io.netty:netty-resolver-dns-native-macos:4.1.76.Final:osx-aarch_64")
+    implementation("io.netty:netty-resolver-dns-native-macos:4.1.77.Final:osx-aarch_64")
     implementation("org.redisson:redisson-spring-boot-starter:3.17.2")
     runtimeOnly("org.postgresql:postgresql")
 
@@ -187,7 +191,7 @@ dependencies {
     implementation("com.google.guava:guava:31.0.1-jre")
     implementation("org.apache.commons:commons-csv:1.9.0")
     implementation("org.apache.commons:commons-text:1.9")
-    implementation("org.springdoc:springdoc-openapi-ui:1.6.5")
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.9")
     implementation("com.idealista:format-preserving-encryption:1.0.0")
     implementation("com.github.librepdf:openpdf:1.3.26")
     implementation("com.vladmihalcea:hibernate-types-55:2.14.0")
@@ -201,7 +205,7 @@ dependencies {
 
 //client libs
     implementation("com.stripe:stripe-java:20.111.0") // from: https://github.com/stripe/stripe-java
-    implementation("com.google.cloud:google-cloud-nio:0.123.20")
+    implementation("com.google.cloud:google-cloud-nio:0.124.2")
     implementation("com.sendgrid:sendgrid-java:4.8.3")
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.25.1")

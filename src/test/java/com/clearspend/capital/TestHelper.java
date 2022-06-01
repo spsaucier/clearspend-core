@@ -324,7 +324,9 @@ public class TestHelper {
         new com.clearspend.capital.common.data.model.Amount(Currency.USD, amount));
   }
 
-  /** @return the first unused BusinessId from {@link #businessIds} */
+  /**
+   * @return the first unused BusinessId from {@link #businessIds}
+   */
   private TypedId<BusinessId> getNextBusinessId() {
     Set<TypedId<BusinessId>> used =
         businessRepository.findAll().stream().map(Business::getId).collect(Collectors.toSet());
