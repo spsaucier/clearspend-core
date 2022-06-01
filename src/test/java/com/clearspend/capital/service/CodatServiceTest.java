@@ -15,8 +15,6 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
-import com.clearspend.capital.client.codat.types.SyncLogRequest;
-import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
@@ -27,7 +25,6 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
@@ -541,16 +538,6 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .collect(Collectors.toUnmodifiableList())
                 .size())
         .isEqualTo(2);
-
-    PagedData<SyncLogResponse> syncLog =
-        mockMvcHelper.queryObject(
-            "/codat/sync-log",
-            HttpMethod.POST,
-            userCookie,
-            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
-            PagedData.class);
-
-    assertThat(syncLog.getTotalElements() > 1).isTrue();
   }
 
   @Test
@@ -657,16 +644,6 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .collect(Collectors.toUnmodifiableList())
                 .size())
         .isEqualTo(2);
-
-    PagedData<SyncLogResponse> syncLog =
-        mockMvcHelper.queryObject(
-            "/codat/sync-log",
-            HttpMethod.POST,
-            userCookie,
-            new SyncLogRequest(new PageRequest(0, Integer.MAX_VALUE)),
-            PagedData.class);
-
-    assertThat(syncLog.getTotalElements() > 1).isTrue();
   }
 
   @SneakyThrows

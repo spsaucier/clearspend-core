@@ -1,4 +1,4 @@
-package com.clearspend.capital.service.security;
+package com.clearspend.capital.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,7 +77,6 @@ public class AccountingAuditLogEndPointTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void testSearchAllAccountingAuditLogByBusiness() {
-    testHelper.setCurrentUser(createBusinessRecord.user());
     bigTableClient.setTestUserId(createBusinessRecord.user().getId().toString());
     bigTableClient.prepareEmptyAuditData(createBusinessRecord.business().getId().toString());
 
@@ -94,5 +93,6 @@ public class AccountingAuditLogEndPointTest extends BaseCapitalTest {
             "/codat/audit-log?limit=1", HttpMethod.GET, userCookie, null, new TypeReference<>() {});
 
     assertThat(fullResult.size() == 5).isTrue();
+    assertThat(fullResult.get(0).getChangedValue()).isEqualTo("new vendor");
   }
 }

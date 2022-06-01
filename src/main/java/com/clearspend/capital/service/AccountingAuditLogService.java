@@ -2,9 +2,9 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.google.BigTableClient;
 import com.clearspend.capital.common.audit.AccountingCodatSyncAuditEvent;
-import com.clearspend.capital.common.audit.CodatSyncEventType;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
+import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
 import com.clearspend.capital.data.audit.AccountActivityAuditLog;
 import com.clearspend.capital.data.audit.AccountActivityNotesChangeDetail;
@@ -14,6 +14,7 @@ import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValueDetail;
 import com.clearspend.capital.data.model.User;
+import com.google.common.collect.Ordering;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,12 +34,14 @@ public class AccountingAuditLogService {
 
   private final UserService userService;
 
-  public AccountingAuditResponse searchSupplierCodatSyncByBusiness(String businessId, int limit) {
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  public AccountingAuditResponse searchSupplierCodatSyncByBusiness(
+      TypedId<BusinessId> businessId, int limit) {
 
     StringBuilder rowKeyBuilder =
         new StringBuilder(AccountingCodatSyncAuditEvent.ROW_KEY_PREFIX)
             .append("#")
-            .append(businessId)
+            .append(businessId.toString())
             .append("#");
     String filterRegex = rowKeyBuilder.toString() + ".*$";
 
@@ -48,12 +52,14 @@ public class AccountingAuditLogService {
     return response;
   }
 
-  public AccountingAuditResponse searchAccountActivityByBusiness(String businessId, int limit) {
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  public AccountingAuditResponse searchAccountActivityByBusiness(
+      TypedId<BusinessId> businessId, int limit) {
 
     StringBuilder rowKeyBuilder =
         new StringBuilder(AccountActivityAuditEvent.ROW_KEY_PREFIX)
             .append("#")
-            .append(businessId)
+            .append(businessId.toString())
             .append("#");
     String filterRegex = rowKeyBuilder.toString() + ".*$";
 
@@ -64,8 +70,9 @@ public class AccountingAuditLogService {
     return response;
   }
 
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<AuditLogDisplayValue> searchAllAccountingAuditLogByBusiness(
-      String businessId, int limit) {
+      TypedId<BusinessId> businessId, int limit) {
     List<AuditLogDisplayValue> responseList = new ArrayList<>();
     AccountingAuditResponse transactionLog =
         this.searchAccountActivityByBusiness(businessId, limit);
@@ -81,7 +88,7 @@ public class AccountingAuditLogService {
           AuditLogDisplayValue supplierSyncLog =
               AuditLogDisplayValue.builder()
                   .changedValue(d.getSyncDetail())
-                  .eventType(d.getSyncType())
+                  .eventType("Supplier Sync")
                   .auditTime(d.getCodatSyncDate())
                   .firstName(firstName)
                   .lastName(lastName)
@@ -94,7 +101,8 @@ public class AccountingAuditLogService {
           responseList.add(
               AuditLogDisplayValue.builder()
                   .changedValue(v.getDirectCostSyncIds())
-                  .eventType(CodatSyncEventType.DIRECT_COST_SYNC.toString())
+                  .transactionId(v.getDirectCostSyncIds())
+                  .eventType("Direct Cost Sync")
                   .auditTime(v.getCodatSyncDate())
                   .firstName(firstName)
                   .lastName(lastName)
@@ -162,6 +170,20 @@ public class AccountingAuditLogService {
         }
       }
     }
+
+    responseList.sort(
+        new Ordering<AuditLogDisplayValue>() {
+          @Override
+          public int compare(AuditLogDisplayValue left, AuditLogDisplayValue right) {
+            if (left == null || left.getAuditTime() == null) {
+              return 1;
+            }
+            if (right == null || right.getAuditTime() == null) {
+              return -1;
+            }
+            return right.getAuditTime().compareTo(left.getAuditTime());
+          }
+        });
 
     return responseList;
   }

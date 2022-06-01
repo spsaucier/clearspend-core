@@ -70,11 +70,11 @@ public class BigTableClientUtil {
       String familyName,
       String codat_supplier,
       List<AuditLogDisplayValue> supplierList,
-      String Supplier_Changed) {
+      String eventName) {
     for (RowCell s : r.getCells(familyName, codat_supplier)) {
       supplierList.add(
           AuditLogDisplayValue.builder()
-              .eventType(Supplier_Changed)
+              .eventType(eventName)
               .changedValue(s.getValue().toStringUtf8())
               .auditTime(
                   OffsetDateTime.ofInstant(

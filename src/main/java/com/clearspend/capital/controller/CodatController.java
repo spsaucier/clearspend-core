@@ -10,29 +10,22 @@ import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.SetCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncCountResponse;
-import com.clearspend.capital.client.codat.types.SyncLogRequest;
-import com.clearspend.capital.client.codat.types.SyncLogResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.business.Business;
-import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.model.CodatCategory;
-import com.clearspend.capital.data.model.TransactionSyncLog;
 import com.clearspend.capital.data.model.enums.CodatCategoryType;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.clearspend.capital.service.AccountingAuditLogService;
 import com.clearspend.capital.service.CodatService;
-import com.clearspend.capital.service.TransactionSyncLogFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -131,17 +124,6 @@ public class CodatController {
             CodatAccountSubtype.FIXED_ASSET));
   }
 
-  @PostMapping("/sync-log")
-  PagedData<SyncLogResponse> retreiveSyncLogByPage(@Validated @RequestBody SyncLogRequest request) {
-    Page<TransactionSyncLog> transactionSyncLogs =
-        transactionSyncLogRepository.find(
-            CurrentUser.get().businessId(),
-            new TransactionSyncLogFilterCriteria(
-                PageRequest.toPageToken(request.getPageRequest())));
-
-    return PagedData.of(transactionSyncLogs, SyncLogResponse::new);
-  }
-
   @GetMapping("/accounting-suppliers")
   GetSuppliersResponse getMatchedQboSuppliersByBusiness(
       @RequestParam(value = "limit", required = false)
@@ -199,6 +181,6 @@ public class CodatController {
           Integer limit) {
 
     return auditLogService.searchAllAccountingAuditLogByBusiness(
-        CurrentUser.getBusinessId().toString(), limit);
+        CurrentUser.getBusinessId(), limit);
   }
 }

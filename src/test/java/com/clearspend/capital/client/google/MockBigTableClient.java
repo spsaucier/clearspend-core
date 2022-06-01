@@ -122,7 +122,7 @@ public class MockBigTableClient extends BigTableClient {
     List<CodatSyncLogValueDetail> details = new ArrayList<>();
     v.setDetails(details);
     CodatSyncLogValueDetail detail = new CodatSyncLogValueDetail();
-    detail.setCodatSyncDate(OffsetDateTime.now(ZoneOffset.UTC));
+    detail.setCodatSyncDate(OffsetDateTime.now(ZoneOffset.UTC).minusDays(5));
     detail.setSyncType("SUPPLIER_SYNC");
     detail.setSyncDetail("my new supplier");
     details.add(detail);
@@ -139,19 +139,19 @@ public class MockBigTableClient extends BigTableClient {
     alog.setReceiptList(rlist);
     AccountActivityNotesChangeDetail oneNote = new AccountActivityNotesChangeDetail();
     oneNote.setNotesValue("my new notes");
-    oneNote.setChangeTime(OffsetDateTime.now(ZoneOffset.UTC));
+    oneNote.setChangeTime(OffsetDateTime.now(ZoneOffset.UTC).minusDays(4));
     oneNote.setUserId(this.testUserId);
     nlist.add(oneNote);
     AccountActivityReceiptChangeDetail receipt = new AccountActivityReceiptChangeDetail();
     receipt.setReceiptListValue("receipt1234");
     receipt.setUserId(this.testUserId);
-    receipt.setChangeTime(OffsetDateTime.now(ZoneOffset.UTC));
+    receipt.setChangeTime(OffsetDateTime.now(ZoneOffset.UTC).minusDays(4));
     rlist.add(receipt);
 
     AuditLogDisplayValue exp =
         AuditLogDisplayValue.builder()
             .changedValue("new exp")
-            .auditTime(OffsetDateTime.now(ZoneOffset.UTC))
+            .auditTime(OffsetDateTime.now(ZoneOffset.UTC).minusDays(3))
             .userId(this.testUserId)
             .eventType("expense_category")
             .build();

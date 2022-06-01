@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.google.BigTableClient;
 import com.clearspend.capital.common.audit.AccountingCodatSyncAuditEvent;
+import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.audit.AccountActivityAuditEvent;
 import com.clearspend.capital.data.audit.AccountActivityAuditLog;
 import com.clearspend.capital.data.audit.AccountingAuditResponse;
@@ -40,11 +41,15 @@ public class AccountingAuditLogServiceTest {
     expected.setCodatSyncLogList(codatSyncLogList);
     Mockito.when(
             bigTableClient.readCodatSyncLogs(
-                AccountingCodatSyncAuditEvent.ROW_KEY_PREFIX + "#" + "business01#.*$",
+                AccountingCodatSyncAuditEvent.ROW_KEY_PREFIX
+                    + "#"
+                    + "97758f27-d6eb-460b-a295-80f670d9ada3#.*$",
                 AccountingCodatSyncAuditEvent.COLUMN_FAMILY,
                 10))
         .thenReturn(expected);
-    AccountingAuditResponse actual = underTest.searchSupplierCodatSyncByBusiness("business01", 10);
+    AccountingAuditResponse actual =
+        underTest.searchSupplierCodatSyncByBusiness(
+            new TypedId<>("97758f27-d6eb-460b-a295-80f670d9ada3"), 10);
     Assertions.assertEquals(expected, actual);
   }
 
@@ -56,11 +61,14 @@ public class AccountingAuditLogServiceTest {
     expected.setAccountActivityAuditLogs(accountActivityAuditLogs);
     Mockito.when(
             bigTableClient.readAccountingTransactionActivityLog(
-                AccountActivityAuditEvent.ROW_KEY_PREFIX + "#business01#.*$",
+                AccountActivityAuditEvent.ROW_KEY_PREFIX
+                    + "#97758f27-d6eb-460b-a295-80f670d9ada3#.*$",
                 AccountActivityAuditEvent.COLUMN_FAMILY,
                 10))
         .thenReturn(expected);
-    AccountingAuditResponse actual = underTest.searchAccountActivityByBusiness("business01", 10);
+    AccountingAuditResponse actual =
+        underTest.searchAccountActivityByBusiness(
+            new TypedId<>("97758f27-d6eb-460b-a295-80f670d9ada3"), 10);
     Assertions.assertEquals(expected, actual);
   }
 }
