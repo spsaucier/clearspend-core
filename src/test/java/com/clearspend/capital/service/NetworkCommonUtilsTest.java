@@ -64,33 +64,33 @@ public class NetworkCommonUtilsTest {
   @Test
   void isAuthorization() {
     setIsAuthorization(common);
-    assertFalse(NetworkCommonUtils.test(common));
+    assertFalse(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
   void isCapture_HasAuth_Normal() {
     setIsCapture(common);
-    assertFalse(NetworkCommonUtils.test(common));
+    assertFalse(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
   void isRefund_HasAuth_Normal() {
     setIsRefund(common);
-    assertFalse(NetworkCommonUtils.test(common));
+    assertFalse(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
   void isCapture_HasAuth_CardUnlinked() {
     setIsCapture(common);
     unlinkCard(common);
-    assertFalse(NetworkCommonUtils.test(common));
+    assertFalse(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
   void isRefund_HasAuth_CardUnlinked() {
     setIsRefund(common);
     unlinkCard(common);
-    assertFalse(NetworkCommonUtils.test(common));
+    assertFalse(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
@@ -98,7 +98,7 @@ public class NetworkCommonUtilsTest {
     setIsCapture(common);
     clearAuth(common);
     unlinkCard(common);
-    assertTrue(NetworkCommonUtils.test(common));
+    assertTrue(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
@@ -106,7 +106,7 @@ public class NetworkCommonUtilsTest {
     setIsCapture(common);
     clearAuth(common);
     archiveAllocation(common);
-    assertTrue(NetworkCommonUtils.test(common));
+    assertTrue(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
@@ -114,7 +114,7 @@ public class NetworkCommonUtilsTest {
     setIsRefund(common);
     clearAuth(common);
     unlinkCard(common);
-    assertTrue(NetworkCommonUtils.test(common));
+    assertTrue(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
@@ -122,13 +122,13 @@ public class NetworkCommonUtilsTest {
     setIsRefund(common);
     clearAuth(common);
     archiveAllocation(common);
-    assertTrue(NetworkCommonUtils.test(common));
+    assertTrue(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 
   @Test
   void isRefund_HasAuth_AllocationArchived() {
     setIsRefund(common);
     archiveAllocation(common);
-    assertTrue(NetworkCommonUtils.test(common));
+    assertTrue(NetworkCommonUtils.shouldUseRootAllocation(common));
   }
 }

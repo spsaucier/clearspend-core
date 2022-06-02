@@ -11,7 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class NetworkCommonUtils {
-  public static boolean test(final NetworkCommon common) {
+  public static boolean shouldUseRootAllocation(final NetworkCommon common) {
     return (isRefund(common) && allocationIsArchived(common))
         || (isCaptureOrRefund(common)
             && hasNoAuthorization(common)

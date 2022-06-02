@@ -124,7 +124,7 @@ public class NetworkMessageService {
                           common.getBusiness().getId(), allocationId)));
     }
 
-    if (NetworkCommonUtils.test(common)) {
+    if (NetworkCommonUtils.shouldUseRootAllocation(common)) {
       final AllocationRecord rootAllocation =
           allocationService.getRootAllocation(common.getBusiness().getId());
       common.setAllocation(rootAllocation.allocation());
