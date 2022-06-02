@@ -67,6 +67,8 @@ import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -145,6 +147,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
     assertThat(jsonBusiness.getKnowYourBusinessStatus())
         .isEqualTo(business.getKnowYourBusinessStatus());
     assertThat(jsonBusiness.getStatus()).isEqualTo(business.getStatus());
+    assertThat(jsonBusiness.getTimeZone()).isNotNull();
   }
 
   @Test
@@ -1050,6 +1053,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
             .business();
     assertThat(business.getOnboardingStep()).isEqualTo(BusinessOnboardingStep.COMPLETE);
     assertThat(business.getStatus()).isEqualTo(BusinessStatus.ACTIVE);
+    assertThat(business.getFormationDate()).isBefore(OffsetDateTime.now(Clock.systemUTC()));
   }
 
   @Test

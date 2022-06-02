@@ -6,6 +6,7 @@ import com.clearspend.capital.controller.type.Address;
 import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.OffsetDateTime;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import lombok.Data;
@@ -94,6 +95,12 @@ public class Business {
   @NonNull
   private BusinessPartnerType partnerType;
 
+  @JsonProperty("timeZone")
+  private TimeZone timeZone;
+
+  @JsonProperty("formationDate")
+  private OffsetDateTime formationDate;
+
   public Business(@NonNull com.clearspend.capital.data.model.business.Business business) {
     this(
         business.getId(),
@@ -122,5 +129,8 @@ public class Business {
     if (business.getStripeData().getBankRoutingNumber() != null) {
       this.routingNumber = business.getStripeData().getBankRoutingNumber().getEncrypted();
     }
+
+    formationDate = business.getFormationDate();
+    timeZone = business.getTimeZone();
   }
 }

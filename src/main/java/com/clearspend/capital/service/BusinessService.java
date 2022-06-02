@@ -29,6 +29,8 @@ import com.google.errorprone.annotations.RestrictedApi;
 import com.stripe.model.Account.BusinessProfile;
 import com.stripe.model.Account.Company;
 import com.stripe.model.Address;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -194,6 +196,10 @@ public class BusinessService {
     BeanUtils.setNotNull(onboardingStep, business::setOnboardingStep);
     BeanUtils.setNotNull(status, business::setStatus);
     BeanUtils.setNotNull(knowYourBusinessStatus, business::setKnowYourBusinessStatus);
+
+    if (onboardingStep == BusinessOnboardingStep.COMPLETE) {
+      business.setFormationDate(OffsetDateTime.now(Clock.systemUTC()));
+    }
 
     return business;
   }

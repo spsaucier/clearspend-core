@@ -9,6 +9,7 @@ import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString
 import com.clearspend.capital.data.model.BusinessRelated;
 import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
@@ -137,6 +138,8 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
   @NonNull
   @Enumerated(EnumType.STRING)
   private TimeZone timeZone;
+
+  private OffsetDateTime formationDate;
 
   @Override
   public TypedId<BusinessId> getBusinessId() {
