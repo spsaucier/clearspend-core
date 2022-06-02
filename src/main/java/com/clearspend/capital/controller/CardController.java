@@ -6,6 +6,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.allocation.AllocationFundsManagerResponse;
 import com.clearspend.capital.controller.type.card.CardAllocationDetails;
 import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
@@ -18,11 +19,14 @@ import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.controller.type.user.UserData;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.BusinessService;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.CardService;
+import com.clearspend.capital.service.SecuredRolesAndPermissionsService;
 import com.clearspend.capital.service.UserService;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.stripe.model.EphemeralKey;
@@ -52,6 +56,8 @@ public class CardController {
   private final BusinessService businessService;
   private final UserService userService;
   private final StripeClient stripeClient;
+
+  private final SecuredRolesAndPermissionsService securedRolesAndPermissionsService;
 
   @GetMapping("/{cardId}")
   CardDetailsResponse getCard(
@@ -179,5 +185,31 @@ public class CardController {
         stripeClient.getEphemeralKeyObjectForCard(
             cardDetailsRecord.card().getExternalRef(), request.getApiVersion());
     return stripeEphemeralKey.getRawJson();
+  }
+
+  @GetMapping("/{cardId}/funds-managers")
+  AllocationFundsManagerResponse getAllocationManagersForAllocation(
+      @PathVariable(value = "cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<CardId> cardId) {
+    Card card = cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId);
+    return new AllocationFundsManagerResponse(
+        securedRolesAndPermissionsService
+            .getManagerRolesAndPermissionsForAllocation(card)
+            .values()
+            .stream()
+            .map(
+                userRolesAndPermissions ->
+                    new UserData(
+                        userRolesAndPermissions.userId(),
+                        userRolesAndPermissions.userType(),
+                        userRolesAndPermissions.firstName(),
+                        userRolesAndPermissions.lastName(),
+                        false))
+            .toList());
   }
 }

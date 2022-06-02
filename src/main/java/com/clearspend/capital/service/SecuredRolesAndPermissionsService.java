@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.repository.security.UserAllocationRoleRepository;
@@ -58,6 +59,24 @@ public class SecuredRolesAndPermissionsService {
     }
 
     throw new AccessDeniedException("");
+  }
+
+  @PreAuthorize("hasAllocationPermission(#card, 'VIEW_OWN|READ|GLOBAL_READ|CUSTOMER_SERVICE')")
+  public Map<TypedId<UserId>, UserRolesAndPermissions> getManagerRolesAndPermissionsForAllocation(
+      Card card) {
+    CurrentUser currentUser = CurrentUser.get();
+    Map<TypedId<UserId>, UserRolesAndPermissions> permissionsMap =
+        userAllocationRoleRepository.getActiveUsersWithAllocationPermission(
+            currentUser.homeBusinessId(), card.getAllocationId());
+    permissionsMap
+        .values()
+        .removeIf(
+            userRolesAndPermissions ->
+                !userRolesAndPermissions
+                    .allocationPermissions()
+                    .contains(AllocationPermission.MANAGE_FUNDS));
+
+    return permissionsMap;
   }
 
   @FusionAuthUserAccessor(

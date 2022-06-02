@@ -2,7 +2,10 @@ package com.clearspend.capital.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -16,6 +19,7 @@ import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.PagedData;
+import com.clearspend.capital.controller.type.allocation.AllocationFundsManagerResponse;
 import com.clearspend.capital.controller.type.business.BusinessSettings;
 import com.clearspend.capital.controller.type.card.CardAllocationDetails;
 import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
@@ -31,6 +35,7 @@ import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsReques
 import com.clearspend.capital.controller.type.card.UpdateCardStatusRequest;
 import com.clearspend.capital.controller.type.card.limits.CurrencyLimit;
 import com.clearspend.capital.controller.type.common.PageRequest;
+import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.CardAllocation;
 import com.clearspend.capital.data.model.ReplacementReason;
@@ -81,6 +86,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
@@ -1118,5 +1125,70 @@ public class CardControllerTest extends BaseCapitalTest {
         .denyUser(managerOnGrandchild)
         .build()
         .validateMockMvcCall(action);
+  }
+
+  @SneakyThrows
+  @Test
+  void getAllocationManagers() {
+    TestHelper.CreateBusinessRecord createBusinessRecord = testHelper.init();
+    final Allocation rootAllocation = createBusinessRecord.allocationRecord().allocation();
+    final User rootAllocationOwner = createBusinessRecord.user();
+    testHelper.setCurrentUser(rootAllocationOwner);
+    User manager = testHelper.createUser(createBusinessRecord.business()).user();
+    User employee = testHelper.createUser(createBusinessRecord.business()).user();
+    mockMvc
+        .perform(
+            put("/user-allocation-roles/allocation/%s/user/%s"
+                    .formatted(
+                        rootAllocation.getId().toUuid().toString(),
+                        manager.getId().toUuid().toString()))
+                .contentType(MediaType.TEXT_PLAIN)
+                .content(DefaultRoles.ALLOCATION_MANAGER)
+                .cookie(testHelper.getDefaultAuthCookie()))
+        .andExpect(status().is2xxSuccessful())
+        .andReturn()
+        .getResponse();
+    mockMvc
+        .perform(
+            put("/user-allocation-roles/allocation/%s/user/%s"
+                    .formatted(
+                        rootAllocation.getId().toUuid().toString(),
+                        employee.getId().toUuid().toString()))
+                .contentType(MediaType.TEXT_PLAIN)
+                .content(DefaultRoles.ALLOCATION_EMPLOYEE)
+                .cookie(testHelper.getDefaultAuthCookie()))
+        .andExpect(status().is2xxSuccessful())
+        .andReturn()
+        .getResponse();
+    entityManager.flush();
+
+    MockHttpServletResponse response403 =
+        mockMvc
+            .perform(
+                get("/cards/%s/funds-managers".formatted(card.getId().toUuid().toString()))
+                    .contentType("application/json")
+                    .cookie(testHelper.login(employee)))
+            .andExpect(status().is(403))
+            .andReturn()
+            .getResponse();
+    log.info(response403.getContentAsString());
+
+    // Test that the employee gets back the appropriate data when assigned permissions.
+    MockHttpServletResponse response =
+        mockMvc
+            .perform(
+                get("/cards/%s/funds-managers".formatted(card.getId().toUuid().toString()))
+                    .contentType("application/json")
+                    .cookie(testHelper.login(entityManager.getReference(User.class, userId))))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    log.info(response.getContentAsString());
+    AllocationFundsManagerResponse allocationFundsManagerResponse =
+        objectMapper.readValue(response.getContentAsString(), AllocationFundsManagerResponse.class);
+
+    // Should be 3, two business owners, plus one manager, and the employee who is not a manager is
+    // not returned.
+    assertEquals(3, allocationFundsManagerResponse.getUserData().size());
   }
 }
