@@ -15,6 +15,7 @@ import com.clearspend.capital.client.codat.types.CodatAccountType;
 import com.clearspend.capital.client.codat.types.CodatSupplier;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.SetCategoryNamesRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
@@ -31,6 +32,7 @@ import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.ChartOfAccountsMapping;
+import com.clearspend.capital.data.model.CodatCategory;
 import com.clearspend.capital.data.model.ExpenseCategory;
 import com.clearspend.capital.data.model.Receipt;
 import com.clearspend.capital.data.model.TransactionSyncLog;
@@ -53,6 +55,7 @@ import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.data.repository.AccountActivityRepository;
 import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
+import com.clearspend.capital.data.repository.CodatCategoryRepository;
 import com.clearspend.capital.data.repository.ExpenseCategoryRepository;
 import com.clearspend.capital.data.repository.TransactionSyncLogRepository;
 import com.github.javafaker.Faker;
@@ -114,6 +117,8 @@ public class CodatServiceTest extends BaseCapitalTest {
   @Autowired CacheManager cacheManager;
 
   @Autowired MockBigTableClient bigTableClient;
+
+  @Autowired CodatCategoryRepository codatCategoryRepository;
 
   @BeforeEach
   public void setup() {
@@ -1221,6 +1226,31 @@ public class CodatServiceTest extends BaseCapitalTest {
     assertThat(updatedAccountActivity.getMerchant().getCodatSupplierId()).isEqualTo("123");
     assertThat(updatedAccountActivity.getMerchant().getCodatSupplierName()).isEqualTo("supplier-1");
     assertThat(bigTableClient.getMockBigTable().keySet().size() > 0).isTrue();
+  }
+
+  @Test
+  public void canUpdateNamesForStoredCategories() {
+    CodatCategory firstCategory = new CodatCategory();
+    firstCategory.setCategoryName("First Category");
+    CodatCategory secondCategory = new CodatCategory();
+    secondCategory.setCategoryName("Second Category");
+    CodatCategory thirdCategory = new CodatCategory();
+    thirdCategory.setCategoryName("Third Category");
+
+    codatCategoryRepository.saveAll(List.of(firstCategory, secondCategory, thirdCategory));
+
+    codatService.setClearspendNamesForCategories(
+        business.getBusinessId(),
+        List.of(
+            new SetCategoryNamesRequest(firstCategory.getId(), "New First Name"),
+            new SetCategoryNamesRequest(secondCategory.getId(), "New Second Name")));
+
+    assertThat(codatCategoryRepository.findById(firstCategory.getId()).get().getCategoryName())
+        .isEqualTo("New First Name");
+    assertThat(codatCategoryRepository.findById(secondCategory.getId()).get().getCategoryName())
+        .isEqualTo("New Second Name");
+    assertThat(codatCategoryRepository.findById(thirdCategory.getId()).get().getCategoryName())
+        .isEqualTo("Third Category");
   }
 
   public class CodatAccountBuilder {

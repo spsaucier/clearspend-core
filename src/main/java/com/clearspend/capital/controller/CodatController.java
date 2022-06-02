@@ -8,6 +8,7 @@ import com.clearspend.capital.client.codat.types.CreateAssignSupplierRequest;
 import com.clearspend.capital.client.codat.types.CreateAssignSupplierResponse;
 import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
+import com.clearspend.capital.client.codat.types.SetCategoryNamesRequest;
 import com.clearspend.capital.client.codat.types.SetCreditCardRequest;
 import com.clearspend.capital.client.codat.types.SyncCountResponse;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
@@ -185,5 +186,11 @@ public class CodatController {
 
     return auditLogService.searchAllAccountingAuditLogByBusiness(
         CurrentUser.getActiveBusinessId(), limit);
+  }
+
+  @PostMapping("/category-names")
+  public Boolean setClearspendNamesForCategories(
+      @Validated @RequestBody List<SetCategoryNamesRequest> request) {
+    return codatService.setClearspendNamesForCategories(CurrentUser.getActiveBusinessId(), request);
   }
 }

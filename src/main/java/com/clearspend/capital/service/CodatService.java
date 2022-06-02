@@ -30,6 +30,7 @@ import com.clearspend.capital.client.codat.types.CreateCreditCardRequest;
 import com.clearspend.capital.client.codat.types.GetAccountsResponse;
 import com.clearspend.capital.client.codat.types.GetSuppliersResponse;
 import com.clearspend.capital.client.codat.types.GetTrackingCategoriesResponse;
+import com.clearspend.capital.client.codat.types.SetCategoryNamesRequest;
 import com.clearspend.capital.client.codat.types.SyncTransactionResponse;
 import com.clearspend.capital.common.audit.AccountingAuditEventPublisher;
 import com.clearspend.capital.common.audit.CodatSyncEventType;
@@ -697,6 +698,22 @@ public class CodatService {
         }
       }
     }
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  public Boolean setClearspendNamesForCategories(
+      TypedId<BusinessId> businessId, List<SetCategoryNamesRequest> nameUpdateRequests) {
+    nameUpdateRequests.forEach(
+        update -> {
+          Optional<CodatCategory> category =
+              codatCategoryRepository.findById(update.getCategoryId());
+          category.ifPresent(
+              codatCategory -> {
+                codatCategory.setCategoryName(update.getName());
+                codatCategoryRepository.save(codatCategory);
+              });
+        });
+    return true;
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
