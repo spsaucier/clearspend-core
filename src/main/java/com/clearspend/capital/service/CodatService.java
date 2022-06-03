@@ -534,10 +534,11 @@ public class CodatService {
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
-  public CodatSyncResponse updateChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
+  public CodatSyncResponse updateDataTypeForBusiness(
+      TypedId<BusinessId> businessId, String dataType) {
     Business business = businessService.getBusiness(businessId, true);
     if (business.getCodatCompanyRef() != null) {
-      return codatClient.syncDataTypeForCompany(business.getCodatCompanyRef(), "chartOfAccounts");
+      return codatClient.syncDataTypeForCompany(business.getCodatCompanyRef(), dataType);
     }
     return null;
   }

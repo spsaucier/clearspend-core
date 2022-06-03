@@ -271,6 +271,8 @@ public class ChartOfAccountsService {
 
   @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
   public CodatSyncResponse resyncChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
-    return codatService.updateChartOfAccountsForBusiness(businessId);
+    // TODO: Pull this out to a separate service when we know where other refresh buttons may be.
+    codatService.updateDataTypeForBusiness(businessId, "trackingCategories");
+    return codatService.updateDataTypeForBusiness(businessId, "chartOfAccounts");
   }
 }
