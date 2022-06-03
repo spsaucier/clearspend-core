@@ -2,7 +2,7 @@ import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     java
-    id("org.springframework.boot") version "2.6.8"
+    id("org.springframework.boot") version "2.7.0"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     id("com.google.cloud.tools.jib") version "3.1.4"
     id("io.snyk.gradle.plugin.snykplugin") version "0.4"
@@ -217,12 +217,13 @@ dependencies {
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
 //just for the non-prod data generator
-    implementation("com.github.javafaker:javafaker:1.0.1")
+    implementation("com.github.javafaker:javafaker:1.0.2") {
+        exclude("org.yaml")
+    }
 
 // test section
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("com.github.javafaker:javafaker:1.0.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
 //test containers
