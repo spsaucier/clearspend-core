@@ -472,7 +472,6 @@ public class BusinessBankAccountService {
           amount,
           user,
           declineDetails);
-
       throw e;
     }
   }

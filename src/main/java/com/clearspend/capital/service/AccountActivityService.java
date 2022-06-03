@@ -52,6 +52,7 @@ import com.clearspend.capital.data.repository.ChartOfAccountsMappingRepository;
 import com.clearspend.capital.data.repository.ReceiptRepository;
 import com.clearspend.capital.data.repository.UserRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
+import com.clearspend.capital.service.notification.FirebaseNotificationService;
 import com.clearspend.capital.service.type.ChartData;
 import com.clearspend.capital.service.type.ChartFilterCriteria;
 import com.clearspend.capital.service.type.DashboardData;
@@ -84,12 +85,13 @@ public class AccountActivityService {
   private final ExpenseCategoryService expenseCategoryService;
   private final UserRepository userRepository;
   private final ReceiptRepository receiptRepository;
+  private final FirebaseNotificationService firebaseNotificationService;
 
   public record AdjustmentAndHoldActivitiesRecord(
       AccountActivity adjustmentActivity, AccountActivity holdActivity) {}
 
   @Transactional(TxType.REQUIRES_NEW)
-  void recordBankAccountAccountActivityDecline(
+  AccountActivity recordBankAccountAccountActivityDecline(
       Allocation allocation,
       AccountActivityType type,
       BusinessBankAccount businessBankAccount,
@@ -112,7 +114,7 @@ public class AccountActivityService {
     accountActivity.setUser(UserDetails.of(user));
     accountActivity.setDeclineDetails(List.of(declineDetails));
 
-    accountActivityRepository.save(accountActivity);
+    return accountActivityRepository.save(accountActivity);
   }
 
   @Transactional(TxType.REQUIRED)

@@ -16,8 +16,8 @@ public class ClearspendRepositoryImpl implements ClearspendRepository {
   private static final String calculateTotalBalance =
       """
           select
-          	(select coalesce(sum(a.ledger_balance_amount), 0) from account a) as total_ledger_amount,
-          	(select coalesce(sum(h.amount_amount), 0) from hold h where h.status = 'PLACED' and h.expiration_date > now()) as total_holds_amount
+            (select coalesce(sum(a.ledger_balance_amount), 0) from account a) as total_ledger_amount,
+            (select coalesce(sum(h.amount_amount), 0) from hold h where h.status = 'PLACED' and h.expiration_date > now()) as total_holds_amount
           """;
 
   private final EntityManager entityManager;
@@ -28,7 +28,7 @@ public class ClearspendRepositoryImpl implements ClearspendRepository {
         entityManager,
         calculateTotalBalance,
         new EmptySqlParameterSource(),
-        (rs) -> {
+        rs -> {
           rs.next();
           BigDecimal totalLedgerAmount = rs.getBigDecimal("total_ledger_amount");
           BigDecimal totalHoldsAmount = rs.getBigDecimal("total_holds_amount");

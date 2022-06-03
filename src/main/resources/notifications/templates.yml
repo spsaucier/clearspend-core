@@ -1,0 +1,3 @@
+APPROVED: "Your payment of %s to %s was approved."
+DECLINED: "Your payment of %s to %s was declined."
+REFUND: "You received a refund of %s from %s."

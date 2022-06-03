@@ -1,5 +1,6 @@
 package com.clearspend.capital.client.google;
 
+import com.clearspend.capital.common.audit.NotificationAuditProcessor;
 import com.clearspend.capital.data.audit.AccountActivityAuditLog;
 import com.clearspend.capital.data.audit.AccountActivityNotesChangeDetail;
 import com.clearspend.capital.data.audit.AccountActivityReceiptChangeDetail;
@@ -7,20 +8,30 @@ import com.clearspend.capital.data.audit.AccountingAuditResponse;
 import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValueDetail;
+import com.clearspend.capital.data.audit.NotificationAuditData;
+import com.clearspend.capital.service.type.FirebaseNotificationStoredData;
+import com.google.api.gax.rpc.ServerStream;
+import com.google.cloud.bigtable.data.v2.models.Filters;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
 import com.google.protobuf.ByteString;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.mockito.Mockito;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 @Profile("test")
 @Component
@@ -180,5 +191,64 @@ public class MockBigTableClient extends BigTableClient {
   public AccountingAuditResponse readAccountingTransactionActivityLog(
       @NonNull String regex, @NonNull String familyName, int limit) {
     return this.accountActivitySample;
+  }
+
+  @SneakyThrows
+  @Override
+  public ServerStream<Row> readRowsByCustomFilter(
+      @NonNull String tableName, @NonNull Filters.Filter filter) {
+    Iterator iterator = List.of().iterator();
+    if (filter
+        .toProto()
+        .getChain()
+        .getFiltersList()
+        .get(0)
+        .toString()
+        .contains(NotificationAuditData.ROW_KEY_PREFIX)) {
+      String rowString =
+          String.format(
+              "%s#%s#%s#%s",
+              NotificationAuditData.ROW_KEY_PREFIX,
+              UUID.randomUUID(),
+              UUID.randomUUID(),
+              NotificationAuditProcessor.getReversedDateString());
+      iterator =
+          List.of(
+                  Row.create(
+                      ByteString.copyFrom(rowString.getBytes()),
+                      List.of(
+                          RowCell.create(
+                              NotificationAuditData.COLUMN_FAMILY,
+                              ByteString.copyFromUtf8(
+                                  NotificationAuditData.NOTIFICATION_AUDIT_STORED_DATA),
+                              LocalDateTime.now().toEpochSecond(ZoneOffset.UTC),
+                              List.of(NotificationAuditData.NOTIFICATION_AUDIT_STORED_DATA),
+                              ByteString.copyFromUtf8(
+                                  new ObjectMapper()
+                                      .writeValueAsString(
+                                          new FirebaseNotificationStoredData(
+                                              UUID.randomUUID().toString(),
+                                              "This is the message",
+                                              "notificationsIds")))),
+                          RowCell.create(
+                              NotificationAuditData.COLUMN_FAMILY,
+                              ByteString.copyFromUtf8(
+                                  NotificationAuditData.NOTIFICATION_AUDIT_STORED_DATA),
+                              LocalDateTime.now().toEpochSecond(ZoneOffset.UTC),
+                              List.of(NotificationAuditData.NOTIFICATION_AUDIT_STORED_DATA),
+                              ByteString.copyFromUtf8(
+                                  new ObjectMapper()
+                                      .writeValueAsString(
+                                          new FirebaseNotificationStoredData(
+                                              UUID.randomUUID().toString(),
+                                              "This is the second message",
+                                              "notificationsIds")))))))
+              .iterator();
+    }
+
+    ServerStream mock = Mockito.mock(ServerStream.class);
+    Mockito.when(mock.iterator()).thenReturn(iterator);
+
+    return mock;
   }
 }

@@ -210,6 +210,8 @@ dependencies {
     implementation("com.plaid:plaid-java:9.0.0")
     implementation("com.twilio.sdk:twilio:8.25.1")
     implementation("io.fusionauth:fusionauth-java-client:1.36.0")
+    implementation ("com.google.firebase:firebase-admin:8.1.0")
+
 
 //monitoring support
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")

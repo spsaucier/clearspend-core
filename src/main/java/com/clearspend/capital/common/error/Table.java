@@ -14,6 +14,7 @@ public enum Table {
   CARD("Card"),
   CARD_ALLOCATION("CardAllocation"),
   CHART_OF_ACCOUNTS_MAPPING("codat_account_expense_category_mappings"),
+  DEVICE_REGISTRATION("DeviceRegistration"),
   EXPENSE_CATEGORY("expense_categories"),
   FILE_STORE("FileStore"),
   HOLD("Hold"),

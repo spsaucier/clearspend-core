@@ -30,6 +30,7 @@ import com.clearspend.capital.service.AccountService.HoldRecord;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.CardService.CardRecord;
 import com.clearspend.capital.service.type.NetworkCommon;
+import com.clearspend.capital.service.type.PushNotificationEvent;
 import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -42,6 +43,7 @@ import javax.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +53,8 @@ import org.springframework.stereotype.Service;
 public class NetworkMessageService {
   private final NetworkMessageRepository networkMessageRepository;
   private final NetworkMerchantRepository networkMerchantRepository;
+
+  private final ApplicationEventPublisher applicationEventPublisher;
 
   private final AccountService accountService;
   private final BusinessService businessService;
@@ -195,6 +199,8 @@ public class NetworkMessageService {
       postDecline(common, networkMessage);
 
       common.setNetworkMessage(networkMessageRepository.save(networkMessage));
+      // notifications to firebase
+      applicationEventPublisher.publishEvent(new PushNotificationEvent(common));
     }
   }
 
@@ -337,13 +343,13 @@ public class NetworkMessageService {
     }
 
     AccountActivityType accountActivityType = common.getAccountActivityType();
-
     common
         .getAccountActivityDetails()
         .setAccountActivityStatus(
             accountActivityType == AccountActivityType.NETWORK_REFUND
                 ? AccountActivityStatus.PROCESSED
                 : AccountActivityStatus.APPROVED);
+
     common.setPostAdjustment(true);
 
     releasePriorHold(common);
