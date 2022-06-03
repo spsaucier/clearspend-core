@@ -303,4 +303,15 @@ public class BusinessController {
                 CurrentUser.getActiveBusinessId(),
                 updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories())));
   }
+
+  @PostMapping("/require-class-for-sync")
+  ResponseEntity<?> updateRequireClassForSync(
+      @RequestBody @Validated
+          UpdateAutoCreateExpenseCategoriesRequest updateAutoCreateExpenseCategoriesRequest) {
+    return ResponseEntity.ok(
+        new Business(
+            businessService.setRequireClassForSync(
+                CurrentUser.getActiveBusinessId(),
+                updateAutoCreateExpenseCategoriesRequest.getAutoCreateExpenseCategories())));
+  }
 }

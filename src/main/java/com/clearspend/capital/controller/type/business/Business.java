@@ -71,6 +71,10 @@ public class Business {
   @NonNull
   private Boolean autoCreateExpenseCategories;
 
+  @JsonProperty("classRequiredForSync")
+  @NonNull
+  private Boolean classRequiredForSync;
+
   @JsonProperty("accountNumber")
   private String accountNumber;
 
@@ -114,6 +118,7 @@ public class Business {
         business.getStatus(),
         business.getAccountingSetupStep(),
         business.getAutoCreateExpenseCategories(),
+        business.getClassRequiredForSync(),
         business.getMcc(),
         business.getPartnerType());
 

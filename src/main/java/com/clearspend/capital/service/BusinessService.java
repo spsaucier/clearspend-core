@@ -96,6 +96,7 @@ public class BusinessService {
             convertBusinessProspect.getMerchantType().getMcc(),
             new StripeData(FinancialAccountState.NOT_READY, tosAcceptance),
             false,
+            false,
             AccountingSetupStep.AWAITING_SYNC,
             convertBusinessProspect.getTimeZone());
     if (businessId != null) {
@@ -504,8 +505,16 @@ public class BusinessService {
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   @Transactional
   public Business setAutomaticExpenseCategories(TypedId<BusinessId> businessId, boolean value) {
-    Business business = businessRepository.getById(businessId);
+    Business business = businessRepository.getReferenceById(businessId);
     business.setAutoCreateExpenseCategories(value);
+    return businessRepository.save(business);
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  @Transactional
+  public Business setRequireClassForSync(TypedId<BusinessId> businessId, boolean value) {
+    Business business = businessRepository.getReferenceById(businessId);
+    business.setClassRequiredForSync(value);
     return businessRepository.save(business);
   }
 

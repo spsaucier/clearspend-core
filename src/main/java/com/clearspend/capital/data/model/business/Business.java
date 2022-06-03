@@ -131,6 +131,8 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
 
   @NonNull private Boolean autoCreateExpenseCategories;
 
+  @NonNull private Boolean classRequiredForSync;
+
   @NonNull
   @Enumerated(EnumType.STRING)
   private AccountingSetupStep accountingSetupStep;

@@ -193,6 +193,23 @@ class BusinessServiceTest extends BaseCapitalTest {
   }
 
   @Test
+  public void setClassRequiredForSync_persistsAppropriately() {
+    CreateBusinessRecord record = testHelper.createBusiness();
+    Business business = record.business();
+    testHelper.setCurrentUser(record.user());
+    assertThat(business.getClassRequiredForSync()).isFalse();
+
+    businessService.setRequireClassForSync(business.getBusinessId(), true);
+    assertThat(business.getClassRequiredForSync()).isTrue();
+    // Updating to the current value works
+    businessService.setRequireClassForSync(business.getBusinessId(), true);
+    assertThat(business.getClassRequiredForSync()).isTrue();
+
+    businessService.setRequireClassForSync(business.getBusinessId(), false);
+    assertThat(business.getClassRequiredForSync()).isFalse();
+  }
+
+  @Test
   public void setAutomaticExpenseCategories_permissionsCheck() {
     CreateBusinessRecord record = testHelper.createBusiness();
     testHelper.setCurrentUser(record.user());
@@ -207,6 +224,30 @@ class BusinessServiceTest extends BaseCapitalTest {
     final ThrowingRunnable action =
         () ->
             businessService.setAutomaticExpenseCategories(record.business().getBusinessId(), true);
+
+    permissionValidationHelper
+        .buildValidator(record)
+        .setAllocation(childAllocation)
+        .allowRolesOnRootAllocation(
+            Set.of(DefaultRoles.ALLOCATION_ADMIN, DefaultRoles.ALLOCATION_MANAGER))
+        .build()
+        .validateServiceMethod(action);
+  }
+
+  @Test
+  public void setRequireClassesForSync_permissionsCheck() {
+    CreateBusinessRecord record = testHelper.createBusiness();
+    testHelper.setCurrentUser(record.user());
+    Allocation childAllocation =
+        testHelper
+            .createAllocation(
+                record.business().getBusinessId(),
+                "Sub-Allocation",
+                record.allocationRecord().allocation().getId())
+            .allocation();
+
+    final ThrowingRunnable action =
+        () -> businessService.setRequireClassForSync(record.business().getBusinessId(), true);
 
     permissionValidationHelper
         .buildValidator(record)
