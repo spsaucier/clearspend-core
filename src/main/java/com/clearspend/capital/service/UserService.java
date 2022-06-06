@@ -57,6 +57,12 @@ public class UserService {
     String explanation();
   }
 
+  public @interface FusionAuthUserLookup {
+    String reviewer();
+
+    String explanation();
+  }
+
   public @interface TestDataUserOp {
 
     String reviewer();
@@ -299,7 +305,7 @@ public class UserService {
           "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
       explanation =
           "This method is used to retrieve user data during the login flow, and no SecurityContext will be available.",
-      allowlistAnnotations = {LoginUserOp.class})
+      allowlistAnnotations = {LoginUserOp.class, FusionAuthUserLookup.class})
   public Optional<User> retrieveUserBySubjectRef(String subjectRef) {
     return userRepository.findBySubjectRef(subjectRef);
   }

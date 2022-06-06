@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.configuration.SecurityConfig;
+import com.clearspend.capital.controller.type.twofactor.TwoFactorStartResponse;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
 import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
@@ -49,7 +50,6 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import javax.validation.constraints.AssertTrue;
 import lombok.Data;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpCookie;
@@ -131,7 +131,7 @@ public class AuthenticationController {
       return UserLoginResponse.twoFactorChallenge(loginResponse.successResponse.twoFactorId);
     }
 
-    return finalizeLogin(loginResponse);
+    return finalizeLogin(loginResponse.successResponse);
   }
 
   @FusionAuthUserModifier(
@@ -159,9 +159,8 @@ public class AuthenticationController {
       reviewer = "Patrick Morton",
       explanation = "Retrieve the Business entity prior to login for Status check")
   @SuppressWarnings("JavaUtilDate")
-  public ResponseEntity<UserLoginResponse> finalizeLogin(
-      ClientResponse<LoginResponse, Errors> loginResponse) throws ParseException {
-    LoginResponse response = loginResponse.successResponse;
+  public ResponseEntity<UserLoginResponse> finalizeLogin(LoginResponse response)
+      throws ParseException {
 
     CurrentUser user = CurrentUser.get(getClaims(response));
 
@@ -210,7 +209,7 @@ public class AuthenticationController {
                           return null;
                         }));
 
-    return ResponseEntity.status(loginResponse.status)
+    return ResponseEntity.status(200)
         .header(
             HttpHeaders.SET_COOKIE,
             createCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME, response.token, expiry),
@@ -234,8 +233,7 @@ public class AuthenticationController {
   @PostMapping("/two-factor/login")
   ResponseEntity<UserLoginResponse> twoFactorLogin(
       @Validated @RequestBody TwoFactorLoginRequest request) throws ParseException {
-    ClientResponse<LoginResponse, Errors> loginResponse = fusionAuthService.twoFactorLogin(request);
-    return finalizeLogin(loginResponse);
+    return finalizeLogin(fusionAuthService.twoFactorLogin(request));
   }
 
   record FirstTwoFactorSendRequest(String destination, TwoFactorAuthenticationMethod method) {}
@@ -264,17 +262,17 @@ public class AuthenticationController {
   @FusionAuthUserModifier(
       explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
       reviewer = "jscarbor")
-  ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddMethod(
+  ResponseEntity<TwoFactorStartResponse> twoFactorAddMethod(
       @Validated @RequestBody ChangeMethodRequest request) {
     return twoFactorAddRemoveMethod(request, fusionAuthService::addMethod);
   }
 
-  private ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorAddRemoveMethod(
+  private ResponseEntity<TwoFactorStartResponse> twoFactorAddRemoveMethod(
       ChangeMethodRequest request,
       BiFunction<
               FusionAuthUser,
               FusionAuthService.ChangeMethodRequest,
-              FusionAuthService.TwoFactorStartLoggedInResponse>
+              Optional<TwoFactorStartResponse>>
           function) {
 
     FusionAuthUser actor = FusionAuthUser.fromCurrentUser();
@@ -283,9 +281,14 @@ public class AuthenticationController {
             .map(uid -> FusionAuthUser.fromUser(userService.retrieveUser(uid)))
             .orElse(actor);
 
-    return Optional.ofNullable(function.apply(actor, request.svc(target)))
-        .map(r -> ResponseEntity.status(242).body(TwoFactorStartLoggedInResponse.of(r)))
-        .orElse(ResponseEntity.status(204).build());
+    return handleTwoFactorResponse(function.apply(actor, request.svc(target)));
+  }
+
+  private ResponseEntity<TwoFactorStartResponse> handleTwoFactorResponse(
+      Optional<TwoFactorStartResponse> twoFactorResponse) {
+    return twoFactorResponse
+        .map(ResponseEntity.status(242)::body)
+        .orElse(ResponseEntity.noContent().build());
   }
 
   @Operation(
@@ -299,7 +302,7 @@ public class AuthenticationController {
   @FusionAuthUserModifier(
       explanation = "Modifying the user to enable 2FA from AuthenticationController by design",
       reviewer = "jscarbor")
-  ResponseEntity<TwoFactorStartLoggedInResponse> twoFactorDeleteMethod(
+  ResponseEntity<TwoFactorStartResponse> twoFactorDeleteMethod(
       @Validated @RequestBody ChangeMethodRequest request) {
     return twoFactorAddRemoveMethod(request, fusionAuthService::removeMethod);
   }
@@ -344,27 +347,13 @@ public class AuthenticationController {
 
     public FusionAuthService.ChangeMethodRequest svc(FusionAuthUser user) {
       return new FusionAuthService.ChangeMethodRequest(
-          UUID.fromString(user.getSubjectRef()),
           user.getBusinessId(),
-          user.getUserId(),
+          user.getOwnerId(),
           destination,
           Optional.ofNullable(method).map(TwoFactorAuthenticationMethod::svc).orElse(null),
           twoFactorCode,
           twoFactorId,
           trustChallenge);
-    }
-  }
-
-  /**
-   * - * Some 2FA actions are done while the user is logged in. These have a twoFactorId and
-   * possibly a - * methodId which could be needed for follow-up with the code. -
-   */
-  public record TwoFactorStartLoggedInResponse(
-      String twoFactorId, String methodId, String trustChallenge) {
-
-    static TwoFactorStartLoggedInResponse of(
-        @NonNull FusionAuthService.TwoFactorStartLoggedInResponse r) {
-      return new TwoFactorStartLoggedInResponse(r.twoFactorId(), r.methodId(), r.trustChallenge());
     }
   }
 
@@ -375,9 +364,8 @@ public class AuthenticationController {
    * @return codes required to proceed
    */
   @PostMapping("/two-factor/start")
-  TwoFactorStartLoggedInResponse beginStepUp() {
-    return TwoFactorStartLoggedInResponse.of(
-        fusionAuthService.beginStepUp(FusionAuthUser.fromCurrentUser(), Collections.emptyMap()));
+  TwoFactorStartResponse beginStepUp() {
+    return fusionAuthService.beginStepUp(FusionAuthUser.fromCurrentUser(), Collections.emptyMap());
   }
 
   /**
@@ -411,30 +399,24 @@ public class AuthenticationController {
   }
 
   @PostMapping("/reset-password")
-  void resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
-    fusionAuthService.resetPassword(request);
+  ResponseEntity<TwoFactorStartResponse> resetPassword(
+      @Validated @RequestBody ResetPasswordRequest request) {
+    return handleTwoFactorResponse(fusionAuthService.resetPassword(request));
   }
 
   @PostMapping(value = "/change-password", consumes = "application/json")
-  ResponseEntity<TwoFactorStartLoggedInResponse> changePassword(
+  ResponseEntity<TwoFactorStartResponse> changePassword(
       @Validated @RequestBody ChangePasswordRequest request) {
     FusionAuthUser user = FusionAuthUser.fromCurrentUser();
-    FusionAuthUser targetUser =
-        Optional.ofNullable(request.getUserId())
-            .map(uid -> FusionAuthUser.fromUser(userService.retrieveUser(uid)))
-            .orElse(user);
-    FusionAuthService.TwoFactorStartLoggedInResponse response;
     try {
-      response = fusionAuthService.changePassword(user, request.toFusionAuthRequest(targetUser));
+      return handleTwoFactorResponse(
+          fusionAuthService.changePassword(user, request.toFusionAuthRequest()));
     } catch (InvalidRequestException e) {
       if ("Unauthorized".equals(e.getMessage())) {
         return ResponseEntity.status(401).build();
       }
       throw e;
     }
-    return Optional.ofNullable(response)
-        .map(r -> ResponseEntity.status(242).body(TwoFactorStartLoggedInResponse.of(r)))
-        .orElse(ResponseEntity.status(204).build());
   }
 
   /** Change password from a change request */

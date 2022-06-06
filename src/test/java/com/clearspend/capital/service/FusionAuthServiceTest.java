@@ -17,7 +17,6 @@ import com.clearspend.capital.testutils.permission.PermissionValidationHelper;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
@@ -124,14 +123,7 @@ class FusionAuthServiceTest extends BaseCapitalTest {
     User user = createBusinessRecord.user();
     ChangePasswordRequest changeRequest =
         new ChangePasswordRequest(
-            UUID.fromString(user.getSubjectRef()),
-            user.getBusinessId(),
-            user.getId(),
-            testHelper.getPassword(createBusinessRecord.user()),
-            "hackable",
-            null,
-            null,
-            null);
+            testHelper.getPassword(createBusinessRecord.user()), "hackable", null, null, null);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .allowUser(createBusinessRecord.user())
@@ -156,7 +148,6 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             .user();
     ChangeMethodRequest changeRequest =
         new ChangeMethodRequest(
-            UUID.fromString(user.getSubjectRef()),
             user.getBusinessId(),
             user.getId(),
             "+6021023",
@@ -188,7 +179,6 @@ class FusionAuthServiceTest extends BaseCapitalTest {
             .user();
     ChangeMethodRequest changeRequest =
         new ChangeMethodRequest(
-            UUID.fromString(user.getSubjectRef()),
             user.getBusinessId(),
             user.getId(),
             "+6021023",
@@ -220,15 +210,7 @@ class FusionAuthServiceTest extends BaseCapitalTest {
                 DefaultRoles.ALLOCATION_EMPLOYEE)
             .user();
     ChangePasswordRequest changeRequest =
-        new ChangePasswordRequest(
-            UUID.fromString(user.getSubjectRef()),
-            user.getBusinessId(),
-            user.getId(),
-            testHelper.getPassword(user),
-            "hackable",
-            null,
-            null,
-            null);
+        new ChangePasswordRequest(testHelper.getPassword(user), "hackable", null, null, null);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .allowUser(user)

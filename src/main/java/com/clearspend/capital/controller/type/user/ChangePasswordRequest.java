@@ -4,11 +4,9 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.service.FusionAuthService;
-import com.clearspend.capital.service.FusionAuthService.FusionAuthUser;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
 import javax.annotation.Nullable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -72,15 +70,8 @@ public class ChangePasswordRequest {
   @Nullable
   private String twoFactorCode;
 
-  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest(FusionAuthUser user) {
+  public FusionAuthService.ChangePasswordRequest toFusionAuthRequest() {
     return new FusionAuthService.ChangePasswordRequest(
-        UUID.fromString(user.getSubjectRef()),
-        user.getBusinessId(),
-        user.getUserId(),
-        currentPassword,
-        newPassword,
-        trustChallenge,
-        twoFactorId,
-        twoFactorCode);
+        currentPassword, newPassword, trustChallenge, twoFactorId, twoFactorCode);
   }
 }

@@ -9,20 +9,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
+import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.common.error.FusionAuthException;
 import com.clearspend.capital.configuration.SecurityConfig;
 import com.clearspend.capital.controller.AuthenticationController.ChangeMethodRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorSendRequest;
 import com.clearspend.capital.controller.AuthenticationController.FirstTwoFactorValidateRequest;
 import com.clearspend.capital.controller.AuthenticationController.TwoFactorAuthenticationMethod;
-import com.clearspend.capital.controller.AuthenticationController.TwoFactorStartLoggedInResponse;
 import com.clearspend.capital.controller.security.TestFusionAuthClient;
+import com.clearspend.capital.controller.type.twofactor.TwoFactorStartResponse;
 import com.clearspend.capital.controller.type.user.ChangePasswordRequest;
+import com.clearspend.capital.controller.type.user.ForgotPasswordRequest;
 import com.clearspend.capital.controller.type.user.LoginRequest;
+import com.clearspend.capital.controller.type.user.ResetPasswordRequest;
 import com.clearspend.capital.controller.type.user.UserLoginResponse;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.service.FusionAuthService;
@@ -56,8 +61,10 @@ import org.springframework.test.web.servlet.MockMvc;
 public class AuthenticationController_2FATest extends BaseCapitalTest {
 
   private final MockMvc mvc;
+  private final MockMvcHelper mockMvcHelper;
   private final TestHelper testHelper;
   private final FusionAuthClient fusionAuthClient;
+  private final TwilioServiceMock twilioServiceMock;
 
   /**
    * This does a byzantine bumbling test of setting up two factor authentication and disabling it,
@@ -159,8 +166,8 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     MockHttpServletResponse changePasswordResponse =
         changePassword(user, authCookie, null, null, null, password, newPassword);
     assertThat(changePasswordResponse.getStatus()).isEqualTo(242);
-    TwoFactorStartLoggedInResponse twoFactorStartLoggedInResponse =
-        validateResponse(changePasswordResponse, TwoFactorStartLoggedInResponse.class);
+    TwoFactorStartResponse twoFactorStartLoggedInResponse =
+        validateResponse(changePasswordResponse, TwoFactorStartResponse.class);
 
     // change the password
     String twoFactorCode = faClient.getLastCode(userPhone);
@@ -184,7 +191,7 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
     validateCookie(authCookie);
 
     // Start to disable 2FA
-    @NotNull TwoFactorStartLoggedInResponse startResponse = start2FALoggedIn(authCookie);
+    @NotNull TwoFactorStartResponse startResponse = start2FALoggedIn(authCookie);
     final String twoFactorCodeForDisable = faClient.getLastCode(userPhone);
 
     // Try to disable with the wrong code
@@ -255,6 +262,55 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
         complete2FALogin(twoFactorId, twoFactorCodeForLogin);
     assertThat(loginCompleteResponse.getStatus()).isEqualTo(200);
     return loginCompleteResponse.getCookie(SecurityConfig.ACCESS_TOKEN_COOKIE_NAME);
+  }
+
+  @Test
+  @SneakyThrows
+  void twoFactorForgotAndResetPassword() {
+    final String newPassword = UUID.randomUUID().toString();
+    final CreateBusinessRecord createBusinessRecord = testHelper.createBusiness();
+    twoFactorSetup(createBusinessRecord.user());
+    TestFusionAuthClient faClient = (TestFusionAuthClient) fusionAuthClient;
+
+    final ForgotPasswordRequest forgotRequest =
+        new ForgotPasswordRequest(createBusinessRecord.user().getEmail().getEncrypted());
+
+    mockMvcHelper
+        .query("/authentication/forgot-password", HttpMethod.POST, null, forgotRequest)
+        .andExpect(status().isOk());
+
+    assertNotNull(twilioServiceMock.getLastChangePasswordId());
+
+    final ResetPasswordRequest resetRequest =
+        new ResetPasswordRequest(twilioServiceMock.getLastChangePasswordId(), newPassword);
+
+    final String resetPasswordResponseString =
+        mockMvcHelper
+            .query("/authentication/reset-password", HttpMethod.POST, null, resetRequest)
+            .andExpect(status().is(242))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final TwoFactorStartResponse resetPasswordResponse =
+        objectMapper.readValue(resetPasswordResponseString, TwoFactorStartResponse.class);
+
+    final ResetPasswordRequest resetRequestPost2Factor =
+        new ResetPasswordRequest(
+            resetRequest.getChangePasswordId(),
+            resetRequest.getNewPassword(),
+            faClient.getLastCode(createBusinessRecord.user().getPhone().getEncrypted()),
+            resetPasswordResponse.twoFactorId(),
+            resetPasswordResponse.trustChallenge());
+    mockMvcHelper
+        .query("/authentication/reset-password", HttpMethod.POST, null, resetRequestPost2Factor)
+        .andExpect(status().isNoContent());
+
+    // Verify everything works by ensuring we can login with the new password
+    final LoginRequest loginRequest =
+        new LoginRequest(createBusinessRecord.user().getEmail().getEncrypted(), newPassword);
+    mockMvcHelper
+        .query("/authentication/login", HttpMethod.POST, null, loginRequest)
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -408,9 +464,8 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
     assertThat(firstResponse.getStatus()).isEqualTo(242);
 
-    TwoFactorStartLoggedInResponse twoFactorStartLoggedInResponse =
-        objectMapper.readValue(
-            firstResponse.getContentAsString(), TwoFactorStartLoggedInResponse.class);
+    TwoFactorStartResponse twoFactorStartLoggedInResponse =
+        objectMapper.readValue(firstResponse.getContentAsString(), TwoFactorStartResponse.class);
 
     ChangeMethodRequest changeRequest =
         new ChangeMethodRequest(
@@ -472,9 +527,8 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
 
       assertThat(response.getStatus()).isEqualTo(242);
 
-      TwoFactorStartLoggedInResponse twoFactorStartLoggedInResponse =
-          objectMapper.readValue(
-              response.getContentAsString(), TwoFactorStartLoggedInResponse.class);
+      TwoFactorStartResponse twoFactorStartLoggedInResponse =
+          objectMapper.readValue(response.getContentAsString(), TwoFactorStartResponse.class);
 
       changeRequest =
           new ChangeMethodRequest(
@@ -576,7 +630,7 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
   }
 
   @NotNull
-  private TwoFactorStartLoggedInResponse start2FALoggedIn(Cookie userCookie) throws Exception {
+  private TwoFactorStartResponse start2FALoggedIn(Cookie userCookie) throws Exception {
     MockHttpServletResponse response =
         mvc.perform(
                 post("/authentication/two-factor/start")
@@ -586,7 +640,7 @@ public class AuthenticationController_2FATest extends BaseCapitalTest {
             .getResponse();
 
     log.info("response: {}", response);
-    return validateResponse(response, TwoFactorStartLoggedInResponse.class);
+    return validateResponse(response, TwoFactorStartResponse.class);
   }
 
   private void disable2FA(Cookie userCookie, String code, String methodId) throws Exception {

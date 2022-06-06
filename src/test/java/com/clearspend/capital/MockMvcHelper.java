@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Optional;
 import javax.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -105,7 +106,8 @@ public class MockMvcHelper {
           case OPTIONS -> MockMvcRequestBuilders.options(uri);
           case TRACE -> throw new RuntimeException("Trace http method is not supported");
         };
-    builder.contentType("application/json").cookie(userCookie);
+    builder.contentType("application/json");
+    Optional.ofNullable(userCookie).ifPresent(builder::cookie);
 
     if (body != null) {
       builder.content(objectMapper.writeValueAsString(body));
