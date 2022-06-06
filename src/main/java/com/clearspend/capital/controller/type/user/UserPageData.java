@@ -44,6 +44,7 @@ public class UserPageData {
                     card ->
                         new CardInfo(
                             card.card().getId(),
+                            card.card().getCardholderType(),
                             card.card().getLastFour(),
                             card.allocationName(),
                             user.getFirstName().getEncrypted(),

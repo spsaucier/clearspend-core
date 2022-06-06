@@ -4,9 +4,11 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.PagedData;
 import com.clearspend.capital.controller.type.allocation.AllocationFundsManagerResponse;
+import com.clearspend.capital.controller.type.card.Card;
 import com.clearspend.capital.controller.type.card.CardAllocationDetails;
 import com.clearspend.capital.controller.type.card.CardAllocationSpendControls;
 import com.clearspend.capital.controller.type.card.CardDetailsResponse;
@@ -20,7 +22,6 @@ import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.card.UpdateCardSpendControlsRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
 import com.clearspend.capital.controller.type.user.UserData;
-import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.service.BusinessService;
@@ -65,11 +66,32 @@ public class CardController {
           @Parameter(
               required = true,
               name = "cardId",
-              description = "ID of the allocation record.",
+              description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
 
     return CardDetailsResponse.of(cardService.getCard(CurrentUser.getActiveBusinessId(), cardId));
+  }
+
+  @PatchMapping("/{cardId}/reassign/{userId}")
+  Card reassignCardOwner(
+      @PathVariable("cardId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the card to reassign",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<CardId> cardId,
+      @PathVariable("userId")
+          @Parameter(
+              required = true,
+              name = "cardId",
+              description = "ID of the user to assign to the card",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          final TypedId<UserId> userId) {
+    return new Card(
+        cardService.reassignCard(
+            cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId), userId));
   }
 
   @PostMapping("")
@@ -196,10 +218,10 @@ public class CardController {
               description = "ID of the card record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<CardId> cardId) {
-    Card card = cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId);
     return new AllocationFundsManagerResponse(
         securedRolesAndPermissionsService
-            .getManagerRolesAndPermissionsForAllocation(card)
+            .getManagerRolesAndPermissionsForAllocation(
+                cardService.retrieveCard(CurrentUser.getActiveBusinessId(), cardId))
             .values()
             .stream()
             .map(

@@ -399,6 +399,7 @@ public class AccountActivityService {
     accountActivity.setCard(
         new CardDetails(
             common.getCard().getId(),
+            common.getCard().getCardholderType(),
             common.getCard().getLastFour(),
             cardOwner.getFirstName(),
             cardOwner.getLastName(),

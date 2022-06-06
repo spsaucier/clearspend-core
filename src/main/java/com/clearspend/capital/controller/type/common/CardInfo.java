@@ -4,6 +4,7 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.data.model.embedded.CardDetails;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,6 +19,10 @@ public class CardInfo {
   @JsonProperty("cardId")
   @NonNull
   private TypedId<CardId> cardId;
+
+  @JsonProperty("cardholderType")
+  @NonNull
+  private CardholderType cardholderType;
 
   @JsonProperty("lastFour")
   @NonNull
@@ -44,6 +49,7 @@ public class CardInfo {
 
     return new CardInfo(
         in.getCardId(),
+        in.getCardholderType(),
         in.getLastFour(),
         name,
         in.getOwnerFirstName().getEncrypted(),

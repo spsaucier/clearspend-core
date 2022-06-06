@@ -15,7 +15,7 @@ import org.hibernate.annotations.Type;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@MappedSuperclass // TODO do I really need this?
+@MappedSuperclass
 public class CardReplacementDetails {
   @Type(type = "com.clearspend.capital.common.typedid.jpatype.TypedIdJpaType")
   private TypedId<CardId> cardId;

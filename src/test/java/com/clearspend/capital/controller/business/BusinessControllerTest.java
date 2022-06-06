@@ -2,6 +2,8 @@ package com.clearspend.capital.controller.business;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -12,6 +14,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
+import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -51,6 +54,7 @@ import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AccountService;
 import com.clearspend.capital.service.AllocationService;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
@@ -66,6 +70,8 @@ import com.plaid.client.model.IdentityGetResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.SandboxPublicTokenCreateResponse;
+import com.stripe.model.issuing.Cardholder;
+import com.stripe.param.issuing.CardholderUpdateParams.Status;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -73,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
@@ -81,6 +88,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,6 +108,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
   private final TestHelper testHelper;
 
   private final BusinessService businessService;
+  private final BusinessRepository businessRepository;
+  private final StripeMockClient stripeMockClient;
   private final UserRepository userRepository;
   private final AllocationRepository allocationRepository;
   private final PermissionValidationHelper permissionValidationHelper;
@@ -117,6 +127,11 @@ public class BusinessControllerTest extends BaseCapitalTest {
     createBusinessRecord = testHelper.init();
     authCookie = createBusinessRecord.authCookie();
     testHelper.setCurrentUser(createBusinessRecord.user());
+  }
+
+  @AfterEach
+  void cleanup() {
+    stripeMockClient.reset();
   }
 
   @SneakyThrows
@@ -1059,9 +1074,13 @@ public class BusinessControllerTest extends BaseCapitalTest {
   @Test
   @SneakyThrows
   void updateBusiness() {
-    Address address = new Address("Line 1", "Line 2", "AFG", "Washington", "123456", Country.AFG);
+    final String cardholderRef = UUID.randomUUID().toString().substring(0, 30);
+    createBusinessRecord.business().setCardholderExternalRef(cardholderRef);
+    businessRepository.saveAndFlush(createBusinessRecord.business());
+    final Address address =
+        new Address("Line 1", "Line 2", "AFG", "Washington", "123456", Country.AFG);
 
-    UpdateBusiness updateBusiness = new UpdateBusiness();
+    final UpdateBusiness updateBusiness = new UpdateBusiness();
     updateBusiness.setBusinessType(BusinessType.INDIVIDUAL);
     updateBusiness.setLegalName("My legal name");
     updateBusiness.setBusinessPhone("+123213121");
@@ -1073,6 +1092,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
     updateBusiness.setAddress(address);
     updateBusiness.setTimeZone(TimeZone.US_MOUNTAIN);
 
+    assertNull(stripeMockClient.getCreatedObject(cardholderRef));
+
     mvc.perform(
             post("/businesses/update")
                 .contentType("application/json")
@@ -1082,21 +1103,81 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .andReturn()
         .getResponse();
 
-    Business business =
+    final Business businessAfterUpdate =
         serviceHelper
             .businessService()
             .getBusiness(createBusinessRecord.business().getId())
             .business();
 
-    assertThat(business.getBusinessName()).isEqualTo(updateBusiness.getBusinessName());
-    assertThat(business.getBusinessPhone().getEncrypted())
+    assertThat(businessAfterUpdate.getBusinessName()).isEqualTo(updateBusiness.getBusinessName());
+    assertThat(businessAfterUpdate.getBusinessPhone().getEncrypted())
         .isEqualTo(updateBusiness.getBusinessPhone());
-    assertThat(business.getDescription()).isEqualTo(updateBusiness.getDescription());
-    assertThat(business.getEmployerIdentificationNumber())
+    assertThat(businessAfterUpdate.getDescription()).isEqualTo(updateBusiness.getDescription());
+    assertThat(businessAfterUpdate.getEmployerIdentificationNumber())
         .isEqualTo(updateBusiness.getEmployerIdentificationNumber());
-    assertThat(business.getLegalName()).isEqualTo(updateBusiness.getLegalName());
-    assertThat(business.getMcc()).isEqualTo(updateBusiness.getMcc());
-    assertThat(business.getTimeZone()).isEqualTo(updateBusiness.getTimeZone());
-    assertThat(new Address(business.getClearAddress())).isEqualTo(address);
+    assertThat(businessAfterUpdate.getLegalName()).isEqualTo(updateBusiness.getLegalName());
+    assertThat(businessAfterUpdate.getMcc()).isEqualTo(updateBusiness.getMcc());
+    assertThat(businessAfterUpdate.getTimeZone()).isEqualTo(updateBusiness.getTimeZone());
+    assertThat(new Address(businessAfterUpdate.getClearAddress())).isEqualTo(address);
+
+    assertNotNull(stripeMockClient.getCreatedObject(cardholderRef));
+  }
+
+  @Test
+  @SneakyThrows
+  void suspendBusiness() {
+    final String cardholderRef = UUID.randomUUID().toString().substring(0, 30);
+    createBusinessRecord.business().setCardholderExternalRef(cardholderRef);
+    businessRepository.saveAndFlush(createBusinessRecord.business());
+
+    final User customerServiceManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+            .user();
+    final Cookie cookie = testHelper.login(customerServiceManager);
+
+    mvc.perform(
+            post("/businesses/%s/suspend".formatted(createBusinessRecord.business().getId()))
+                .cookie(cookie))
+        .andExpect(status().isOk());
+
+    final Business dbBusiness =
+        businessRepository.findById(createBusinessRecord.business().getId()).orElseThrow();
+    assertThat(dbBusiness).hasFieldOrPropertyWithValue("status", BusinessStatus.SUSPENDED);
+
+    final Cardholder cardholder = (Cardholder) stripeMockClient.getCreatedObject(cardholderRef);
+    assertThat(cardholder)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", Status.INACTIVE.getValue());
+  }
+
+  @Test
+  @SneakyThrows
+  void restoreBusiness() {
+    final Business newBusiness = testHelper.createBusiness().business();
+
+    final String cardholderRef = UUID.randomUUID().toString().substring(0, 30);
+    newBusiness.setCardholderExternalRef(cardholderRef);
+    newBusiness.setStatus(BusinessStatus.CLOSED);
+    businessRepository.saveAndFlush(newBusiness);
+
+    final User customerServiceManager =
+        testHelper
+            .createUserWithGlobalRole(
+                createBusinessRecord.business(), DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER)
+            .user();
+    final Cookie cookie = testHelper.login(customerServiceManager);
+
+    mvc.perform(post("/businesses/%s/restore".formatted(newBusiness.getId())).cookie(cookie))
+        .andExpect(status().isOk());
+
+    final Business dbBusiness = businessRepository.findById(newBusiness.getId()).orElseThrow();
+    assertThat(dbBusiness).hasFieldOrPropertyWithValue("status", BusinessStatus.ACTIVE);
+
+    final Cardholder cardholder = (Cardholder) stripeMockClient.getCreatedObject(cardholderRef);
+    assertThat(cardholder)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("status", Status.ACTIVE.getValue());
   }
 }

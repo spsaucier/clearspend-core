@@ -27,11 +27,14 @@ import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessSettings;
 import com.clearspend.capital.data.model.enums.AccountType;
+import com.clearspend.capital.data.model.enums.AllocationPermission;
 import com.clearspend.capital.data.model.enums.FundingType;
+import com.clearspend.capital.data.model.enums.GlobalUserPermission;
 import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AccountRepository;
 import com.clearspend.capital.data.repository.AllocationRepository;
@@ -53,6 +56,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
@@ -64,6 +68,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -99,6 +104,31 @@ public class CardService {
   private record CardAllocationAndLimit(
       CardAllocation cardAllocation, TransactionLimit transactionLimit) {}
 
+  private void validateSpecialBusinessCardRequirements(
+      @NonNull final TypedId<BusinessId> businessId,
+      final CardholderType cardholderType,
+      @NonNull final TypedId<UserId> ownerId) {
+    if (CardholderType.BUSINESS != cardholderType) {
+      return;
+    }
+    final Allocation rootAllocation = retrievalService.retrieveRootAllocation(businessId);
+    // I do want a 403 returned if the current user doesn't have permissions
+    rolesAndPermissionsService.assertCurrentUserHasPermission(
+        rootAllocation.getId(),
+        EnumSet.of(AllocationPermission.MANAGE_USERS),
+        EnumSet.noneOf(GlobalUserPermission.class));
+
+    try {
+      rolesAndPermissionsService.assertUserHasPermission(
+          ownerId,
+          rootAllocation.getId(),
+          EnumSet.of(AllocationPermission.MANAGE_USERS),
+          EnumSet.noneOf(GlobalUserPermission.class));
+    } catch (AccessDeniedException ex) {
+      throw new InvalidRequestException("Business Card owner is not Admin on root allocation", ex);
+    }
+  }
+
   @Transactional
   // Connecting the card to allocations will test for permissions on each allocation
   @PreAuthorize("hasPermissionAnyAllocation(#businessId, 'MANAGE_CARDS|CUSTOMER_SERVICE')")
@@ -125,9 +155,11 @@ public class CardService {
       }
     }
 
+    validateSpecialBusinessCardRequirements(
+        businessId, request.getCardholderType(), request.getUserId());
+
     User user = retrievalService.retrieveUser(request.getUserId());
-    final Business business =
-        retrievalService.retrieveBusiness(CurrentUser.getActiveBusinessId(), true);
+    Business business = retrievalService.retrieveBusiness(CurrentUser.getActiveBusinessId(), true);
 
     // build cardLine3 and cardLine4 until it will be delivered from UI
     StringBuilder cardLine3 = new StringBuilder();
@@ -160,6 +192,7 @@ public class CardService {
                 request.getBinType(),
                 request.getFundingType(),
                 cardType,
+                request.getCardholderType(),
                 OffsetDateTime.now(ZoneOffset.UTC),
                 LocalDate.now(ZoneOffset.UTC).plusYears(3),
                 cardLine3.toString(),
@@ -223,16 +256,30 @@ public class CardService {
 
     entityManager.flush();
 
-    // If user never had any cards, stripe cardholder id (ExternalRef) will be empty
-    // we need to create a stripe cardholder before we can create the actual stripe card
-    if (StringUtils.isEmpty(user.getExternalRef())) {
-      user.setExternalRef(
-          stripeClient
-              .createCardholder(
-                  user, business.getClearAddress(), business.getStripeData().getAccountRef())
-              .getId());
-      user = userRepository.save(user);
-    }
+    final String cardholderRef =
+        switch (request.getCardholderType()) {
+          case INDIVIDUAL -> {
+            if (StringUtils.isEmpty(user.getExternalRef())) {
+              user.setExternalRef(
+                  stripeClient
+                      .createIndividualCardholder(
+                          user,
+                          business.getClearAddress(),
+                          business.getStripeData().getAccountRef())
+                      .getId());
+              user = userRepository.save(user);
+            }
+            yield user.getExternalRef();
+          }
+          case BUSINESS -> {
+            if (StringUtils.isEmpty(business.getCardholderExternalRef())) {
+              business.setCardholderExternalRef(
+                  stripeClient.createCompanyCardholder(business, user.getId()).getId());
+              business = businessRepository.save(business);
+            }
+            yield business.getCardholderExternalRef();
+          }
+        };
 
     // If FusionAuth record was never created for the current user, we will create it now
     // This usually happens for new employees, created after the main user was created,
@@ -245,7 +292,7 @@ public class CardService {
             .replacementReason(request.getReplacementReason())
             .card(card)
             .stripeAccountRef(business.getStripeData().getAccountRef())
-            .stripeUserRef(user.getExternalRef())
+            .stripeUserRef(cardholderRef)
             .build();
 
     com.stripe.model.issuing.Card stripeCard =
@@ -276,8 +323,7 @@ public class CardService {
 
     rolesAndPermissionsService.ensureMinimumAllocationPermissions(
         user,
-        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(
-            CurrentUser.getActiveBusinessId()),
+        retrievalService.retrieveRootAllocation(CurrentUser.getActiveBusinessId()),
         DefaultRoles.ALLOCATION_EMPLOYEE);
 
     twilioService.sendCardIssuedNotifyOwnerEmail(
@@ -696,5 +742,18 @@ public class CardService {
 
     final Account account = accountService.retrieveAccountById(allocation.getAccountId(), true);
     return new CardRecord(cardRepository.saveAndFlush(card), account);
+  }
+
+  @PreAuthorize("hasRootPermission(#card, 'MANAGE_USERS')")
+  public Card reassignCard(final Card card, final TypedId<UserId> newOwnerId) {
+    if (CardholderType.BUSINESS != card.getCardholderType()) {
+      throw new InvalidRequestException("Owner can only be reassigned for Business Cards");
+    }
+
+    validateSpecialBusinessCardRequirements(
+        card.getBusinessId(), card.getCardholderType(), newOwnerId);
+
+    card.setUserId(newOwnerId);
+    return cardRepository.save(card);
   }
 }

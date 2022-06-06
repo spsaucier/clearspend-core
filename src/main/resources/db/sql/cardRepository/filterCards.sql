@@ -12,6 +12,7 @@ SELECT
     Allocation.Name AS allocation_name,
     Card.Status AS card_status,
     Card.Type AS card_type,
+    Card.Cardholder_Type AS cardholder_type,
     Card.Activated AS card_activated,
     Card.Activation_Date AS card_activation_date,
     Account.Ledger_Balance_Amount AS ledger_balance_amount,

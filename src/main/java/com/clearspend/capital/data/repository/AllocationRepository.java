@@ -20,7 +20,7 @@ public interface AllocationRepository
   List<Allocation> findByBusinessIdAndIdIn(
       TypedId<BusinessId> businessId, Set<TypedId<AllocationId>> allocationId);
 
-  Allocation findByBusinessIdAndParentAllocationIdIsNull(TypedId<BusinessId> businessId);
+  Optional<Allocation> findByBusinessIdAndParentAllocationIdIsNull(TypedId<BusinessId> businessId);
 
   List<Allocation> findByBusinessIdAndParentAllocationId(
       TypedId<BusinessId> businessId, TypedId<AllocationId> parentBusinessAllocationId);

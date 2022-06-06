@@ -143,6 +143,9 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
 
   private OffsetDateTime formationDate;
 
+  // If there is a Business Cardholder issued for this business
+  private String cardholderExternalRef;
+
   @Override
   public TypedId<BusinessId> getBusinessId() {
     return getId();

@@ -88,6 +88,8 @@ public class Business {
   @NonNull
   private String mcc;
 
+  private String businessEmail;
+
   @JsonProperty("url")
   private String url;
 
@@ -126,6 +128,7 @@ public class Business {
     this.description = business.getDescription();
     this.url = business.getUrl();
     this.codatCreditCardId = business.getCodatCreditCardId();
+    this.businessEmail = business.getBusinessEmail().getEncrypted();
 
     if (business.getStripeData().getBankAccountNumber() != null) {
       this.accountNumber = business.getStripeData().getBankAccountNumber().getEncrypted();

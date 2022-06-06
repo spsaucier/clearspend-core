@@ -45,6 +45,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.clearspend.capital.data.model.ledger.JournalEntry;
 import com.clearspend.capital.data.model.ledger.LedgerAccount;
 import com.clearspend.capital.data.model.ledger.Posting;
@@ -211,6 +212,7 @@ public class TestDataHelper {
         .ifPresent(
             cardId -> {
               final CardDetails cardDetails = new CardDetails();
+              cardDetails.setCardholderType(CardholderType.INDIVIDUAL);
               cardDetails.setOwnerFirstName(new RequiredEncryptedStringWithHash("John"));
               cardDetails.setOwnerLastName(new RequiredEncryptedStringWithHash("Doe"));
               cardDetails.setCardId(cardId);
@@ -250,6 +252,7 @@ public class TestDataHelper {
     card.setAllocationId(cardConfig.getAllocationId());
     card.setAccountId(cardConfig.getAccountId());
     card.setUserId(cardConfig.getUserId());
+    card.setCardholderType(CardholderType.INDIVIDUAL);
     card.setStatus(CardStatus.ACTIVE);
     card.setStatusReason(CardStatusReason.NONE);
     card.setBinType(BinType.DEBIT);

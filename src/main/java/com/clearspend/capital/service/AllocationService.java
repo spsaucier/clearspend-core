@@ -349,11 +349,7 @@ public class AllocationService {
   }
 
   AllocationRecord getRootAllocation(final TypedId<BusinessId> businessId) {
-    final Allocation rootAllocation =
-        allocationRepository.findByBusinessIdAndParentAllocationIdIsNull(businessId);
-    if (rootAllocation == null) {
-      throw new RecordNotFoundException(Table.ALLOCATION, businessId);
-    }
+    final Allocation rootAllocation = retrievalService.retrieveRootAllocation(businessId);
     return new AllocationRecord(
         rootAllocation,
         accountService.retrieveAllocationAccount(businessId, Currency.USD, rootAllocation.getId()));
@@ -367,10 +363,7 @@ public class AllocationService {
     if (allocationId == null) {
       allocations =
           allocationRepository.findByBusinessIdAndParentAllocationId(
-              business.getId(),
-              allocationRepository
-                  .findByBusinessIdAndParentAllocationIdIsNull(business.getId())
-                  .getId());
+              business.getId(), retrievalService.retrieveRootAllocation(business.getId()).getId());
     } else {
       allocations =
           allocationRepository.findByBusinessIdAndParentAllocationId(

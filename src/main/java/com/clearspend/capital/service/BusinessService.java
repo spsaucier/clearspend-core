@@ -208,7 +208,7 @@ public class BusinessService {
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public Business updateBusiness(TypedId<BusinessId> businessId, UpdateBusiness updateBusiness) {
-    Business business = retrieveBusiness(businessId, true);
+    final Business business = retrieveBusiness(businessId, true);
 
     BeanUtils.setNotNull(updateBusiness.getBusinessType(), business::setType);
     BeanUtils.setNotNull(updateBusiness.getLegalName(), business::setLegalName);
@@ -228,11 +228,13 @@ public class BusinessService {
       business.setBusinessPhone(new RequiredEncryptedString(updateBusiness.getBusinessPhone()));
     }
 
-    businessRepository.saveAndFlush(business);
+    final Business updatedBusiness = businessRepository.saveAndFlush(business);
 
-    stripeClient.updateAccount(business);
+    stripeClient.updateAccount(updatedBusiness);
+    Optional.ofNullable(updatedBusiness.getCardholderExternalRef())
+        .ifPresent(r -> stripeClient.updateCompanyCardholder(updatedBusiness));
 
-    return business;
+    return updatedBusiness;
   }
 
   @Transactional
@@ -275,9 +277,11 @@ public class BusinessService {
   @PreAuthorize("hasGlobalPermission('CUSTOMER_SERVICE')")
   public BusinessStatusResponse updateBusinessStatus(
       TypedId<BusinessId> businessId, BusinessStatus status) {
-    Business business = businessRepository.getById(businessId);
+    final Business business = businessRepository.getById(businessId);
     business.setStatus(status);
-    business = businessRepository.save(business);
+    final Business updatedBusiness = businessRepository.save(business);
+    Optional.ofNullable(updatedBusiness.getCardholderExternalRef())
+        .ifPresent(r -> stripeClient.updateCompanyCardholder(updatedBusiness));
 
     return new BusinessStatusResponse(business.getId(), business.getStatus());
   }

@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -74,6 +75,9 @@ public class Card {
   @JsonProperty("type")
   private CardType type;
 
+  @JsonProperty("cardholderType")
+  private CardholderType cardholderType;
+
   // Flag to indicate whether this card has been superseded by another in some way like reissue,
   // renew, replace, etc.
   @JsonProperty("superseded")
@@ -115,6 +119,7 @@ public class Card {
     cardLine3 = card.getCardLine3();
     cardLine4 = card.getCardLine4();
     type = card.getType();
+    cardholderType = card.getCardholderType();
     superseded = card.isSuperseded();
     shippingAddress = card.getShippingAddress();
     externalRef = card.getExternalRef();

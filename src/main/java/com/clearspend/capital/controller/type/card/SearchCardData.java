@@ -9,6 +9,7 @@ import com.clearspend.capital.controller.type.user.UserData;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.FilteredCardRecord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
@@ -46,6 +47,10 @@ public class SearchCardData {
   @JsonProperty("cardType")
   private CardType cardType;
 
+  @NonNull
+  @JsonProperty("cardholderType")
+  private CardholderType cardholderType;
+
   @JsonProperty("activated")
   private boolean activated;
 
@@ -63,6 +68,7 @@ public class SearchCardData {
         Amount.of(record.account().getAvailableBalance()),
         card.getStatus(),
         card.getType(),
+        card.getCardholderType(),
         card.isActivated(),
         card.getActivationDate());
   }

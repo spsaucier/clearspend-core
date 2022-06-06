@@ -33,9 +33,11 @@ import com.stripe.model.issuing.Cardholder;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingSupplier;
@@ -66,6 +68,11 @@ class UserServiceTest extends BaseCapitalTest {
     if (createBusinessRecord == null) {
       createBusinessRecord = testHelper.createBusiness();
     }
+  }
+
+  @AfterEach
+  void cleanup() {
+    stripeMockClient.reset();
   }
 
   @SneakyThrows
@@ -221,6 +228,8 @@ class UserServiceTest extends BaseCapitalTest {
   }
 
   private void changeNameAndAddress(User user, Class<?> clazz) {
+    user.setExternalRef(UUID.randomUUID().toString().substring(0, 30));
+    userRepository.saveAndFlush(user);
     String newFirstName = testHelper.generateFirstName();
     String newLastName = testHelper.generateLastName();
     com.clearspend.capital.controller.type.Address newAddress = testHelper.generateApiAddress();
@@ -245,7 +254,7 @@ class UserServiceTest extends BaseCapitalTest {
     // Names and addresses aren't in FusionAuth, so skipping that
 
     // Check the change went to Stripe
-    assertThat(stripeMockClient.countCreatedObjectsByType(clazz)).isEqualTo(stripePersonWrites + 1);
+    assertThat(stripeMockClient.getCreatedObject(user.getExternalRef())).isNotNull();
   }
 
   @SneakyThrows
@@ -398,8 +407,7 @@ class UserServiceTest extends BaseCapitalTest {
 
     assertThat(fusionAuthService.getUser(FusionAuthUser.fromUser(existing)).email)
         .isEqualTo(existing.getEmail().getEncrypted());
-    assertThat(stripeMockClient.countCreatedObjectsByType(Cardholder.class))
-        .isEqualTo(cardholderObjs + 1);
+    assertThat(stripeMockClient.getCreatedObject(existing.getExternalRef())).isNotNull();
   }
 
   @Test

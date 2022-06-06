@@ -253,8 +253,10 @@ public class UserService {
 
     if (user.getType().equals(UserType.BUSINESS_OWNER)) {
       businessOwnerService.updateBusinessOwnerAndStripePerson(user);
-    } else if (user.getExternalRef() != null) {
-      stripeClient.updateCardholder(user);
+    }
+
+    if (user.getExternalRef() != null) {
+      stripeClient.updateIndividualCardholder(user);
     }
 
     CreateUpdateUserRecord response =

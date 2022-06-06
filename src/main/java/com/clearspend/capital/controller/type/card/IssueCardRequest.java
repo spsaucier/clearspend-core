@@ -8,6 +8,7 @@ import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.FundingType;
 import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,6 +37,9 @@ public class IssueCardRequest {
   @NotNull(message = "Card Type required")
   @Size(max = 2)
   private Set<CardType> cardType;
+
+  @JsonProperty("cardholderType")
+  private CardholderType cardholderType;
 
   @JsonProperty("userId")
   @NonNull
@@ -86,5 +90,9 @@ public class IssueCardRequest {
   @JsonIgnore
   public com.clearspend.capital.common.data.model.Address getModelShippingAddress() {
     return Optional.ofNullable(shippingAddress).map(Address::toAddress).orElse(null);
+  }
+
+  public CardholderType getCardholderType() {
+    return Optional.ofNullable(cardholderType).orElse(CardholderType.INDIVIDUAL);
   }
 }

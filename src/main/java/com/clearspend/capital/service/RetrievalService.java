@@ -43,6 +43,12 @@ class RetrievalService {
         .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, allocationId));
   }
 
+  Allocation retrieveRootAllocation(final TypedId<BusinessId> businessId) {
+    return allocationRepository
+        .findByBusinessIdAndParentAllocationIdIsNull(businessId)
+        .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, businessId));
+  }
+
   BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
     return businessBankAccountRepository

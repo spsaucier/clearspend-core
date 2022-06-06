@@ -364,7 +364,7 @@ public class RolesAndPermissionsService {
 
     EnumSet<AllocationPermission> grantorNeedsPerms = EnumSet.copyOf(changedPerms);
     grantorNeedsPerms.add(AllocationPermission.MANAGE_PERMISSIONS);
-    assertUserHasPermission(
+    assertCurrentUserHasPermission(
         allocation.getId(), grantorNeedsPerms, GlobalUserPermission.ALL_CUSTOMER_SERVICE);
 
     if (!grantorPermissions.allocationPermissions().containsAll(allPerms)) {
@@ -449,23 +449,37 @@ public class RolesAndPermissionsService {
    *
    * @param allocationId The allocation for which permission is requested, null if the permission is
    *     global
-   * @param allocationPermission Each allocation permission that would be sufficient
-   * @param globalUserPermissions Each given user permission is sufficient
+   * @param allocationPermissions Each allocation permission that would be sufficient
+   * @param globalPermissions Each given user permission is sufficient
    * @throws AccessDeniedException when user permissions are insufficient
    */
-  void assertUserHasPermission(
+  void assertCurrentUserHasPermission(
       TypedId<AllocationId> allocationId,
-      @NonNull EnumSet<AllocationPermission> allocationPermission,
-      EnumSet<GlobalUserPermission> globalUserPermissions) {
+      @NonNull EnumSet<AllocationPermission> allocationPermissions,
+      EnumSet<GlobalUserPermission> globalPermissions) {
+    assertUserHasPermission(
+        CurrentUser.getUserId(), allocationId, allocationPermissions, globalPermissions);
+  }
+
+  void assertUserHasPermission(
+      @NonNull final TypedId<UserId> userId,
+      final TypedId<AllocationId> allocationId,
+      @NonNull final EnumSet<AllocationPermission> allocationPermissions,
+      final EnumSet<GlobalUserPermission> globalPermissions) {
     entityManager.flush();
-    CurrentUser user = CurrentUser.get();
+    final User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new RecordNotFoundException(Table.USER, userId));
+    final Set<String> globalRoles =
+        user.getId().equals(CurrentUser.getUserId()) ? CurrentUser.getRoles() : Set.of();
     if (!userAllocationRoleRepository.userHasPermission(
         CurrentUser.getActiveBusinessId(),
         allocationId,
-        user.userId(),
-        user.roles(),
-        allocationPermission,
-        globalUserPermissions)) {
+        user.getId(),
+        globalRoles,
+        allocationPermissions,
+        globalPermissions)) {
       throw new AccessDeniedException(
           Map.of(
                   "businessId",
@@ -473,13 +487,13 @@ public class RolesAndPermissionsService {
                   "allocationId",
                   allocationId,
                   "userId",
-                  user.userId(),
+                  user.getId(),
                   "userRoles",
-                  user.roles(),
+                  globalRoles,
                   "allocationPermissions",
-                  allocationPermission,
+                  allocationPermissions,
                   "globalUserPermissions",
-                  globalUserPermissions)
+                  globalPermissions)
               .toString());
     }
   }

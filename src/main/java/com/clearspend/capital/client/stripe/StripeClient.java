@@ -11,12 +11,15 @@ import com.clearspend.capital.common.error.StripePersonDocumentUpdateException;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
@@ -76,6 +79,7 @@ import com.stripe.param.issuing.CardUpdateParams;
 import com.stripe.param.issuing.CardUpdateParams.CancellationReason;
 import com.stripe.param.issuing.CardholderCreateParams;
 import com.stripe.param.issuing.CardholderCreateParams.Billing;
+import com.stripe.param.issuing.CardholderCreateParams.Type;
 import com.stripe.param.issuing.CardholderUpdateParams;
 import com.stripe.param.issuing.CardholderUpdateParams.Individual;
 import java.io.InputStream;
@@ -444,9 +448,8 @@ public class StripeClient {
         accountUpdateParams, getRequestOptions(new TypedId<>(), 0L, stripeAccountId));
   }
 
-  public Cardholder createCardholder(
-      User user, ClearAddress billingAddress, String stripeAccountId) {
-    Billing.Address.Builder addressBuilder =
+  private Billing.Address toCreateBillingAddress(final ClearAddress billingAddress) {
+    final Billing.Address.Builder addressBuilder =
         Billing.Address.builder()
             .setLine1(billingAddress.getStreetLine1())
             .setCity(billingAddress.getLocality())
@@ -456,8 +459,70 @@ public class StripeClient {
     if (StringUtils.isNotEmpty(billingAddress.getStreetLine2())) {
       addressBuilder.setLine2(billingAddress.getStreetLine2());
     }
+    return addressBuilder.build();
+  }
 
-    CardholderCreateParams params =
+  private CardholderUpdateParams.Billing.Address toUpdateBillingAddress(
+      final ClearAddress billingAddress) {
+    final CardholderUpdateParams.Billing.Address.Builder addressBuilder =
+        CardholderUpdateParams.Billing.Address.builder()
+            .setLine1(billingAddress.getStreetLine1())
+            .setCity(billingAddress.getLocality())
+            .setState(billingAddress.getRegion())
+            .setPostalCode(billingAddress.getPostalCode())
+            .setCountry(billingAddress.getCountry().getTwoCharacterCode());
+    if (StringUtils.isNotEmpty(billingAddress.getStreetLine2())) {
+      addressBuilder.setLine2(billingAddress.getStreetLine2());
+    }
+    return addressBuilder.build();
+  }
+
+  public Cardholder createCompanyCardholder(
+      final Business business, final TypedId<UserId> ownerId) {
+    final CardholderCreateParams params =
+        CardholderCreateParams.builder()
+            .setName(
+                Optional.ofNullable(business.getBusinessName()).orElse(business.getLegalName()))
+            .setEmail(
+                Optional.ofNullable(business.getBusinessEmail())
+                    .map(RequiredEncryptedString::getEncrypted)
+                    .filter(StringUtils::isNotBlank)
+                    .orElse(null))
+            .setPhoneNumber(business.getBusinessPhone().getEncrypted())
+            .setStatus(CardholderCreateParams.Status.ACTIVE)
+            .setType(Type.COMPANY)
+            .setCompany(
+                CardholderCreateParams.Company.builder()
+                    .setTaxId(business.getEmployerIdentificationNumber())
+                    .build())
+            .setBilling(
+                Billing.builder()
+                    .setAddress(toCreateBillingAddress(business.getClearAddress()))
+                    .build())
+            .putAllMetadata(
+                Map.of(
+                    StripeMetadataEntry.BUSINESS_ID.getKey(),
+                    business.getId().toString(),
+                    StripeMetadataEntry.STRIPE_ACCOUNT_ID.getKey(),
+                    business.getStripeData().getAccountRef(),
+                    StripeMetadataEntry.USER_ID.getKey(),
+                    ownerId.toString()))
+            .build();
+    return callStripe(
+        "createCardholder",
+        params,
+        () ->
+            Cardholder.create(
+                params,
+                getRequestOptions(
+                    business.getId(),
+                    business.getVersion(),
+                    stripeProperties.getClearspendConnectedAccountId())));
+  }
+
+  public Cardholder createIndividualCardholder(
+      final User user, final ClearAddress billingAddress, final String stripeAccountId) {
+    final CardholderCreateParams params =
         CardholderCreateParams.builder()
             .setName(
                 "%s %s"
@@ -469,9 +534,14 @@ public class StripeClient {
                     .map(NullableEncryptedStringWithHash::getEncrypted)
                     .orElse(null))
             .setStatus(CardholderCreateParams.Status.ACTIVE)
-            .setType(CardholderCreateParams.Type.INDIVIDUAL)
+            .setType(Type.INDIVIDUAL)
+            .setIndividual(
+                CardholderCreateParams.Individual.builder()
+                    .setFirstName(user.getFirstName().getEncrypted())
+                    .setLastName(user.getLastName().getEncrypted())
+                    .build())
             .setBilling(
-                CardholderCreateParams.Billing.builder().setAddress(addressBuilder.build()).build())
+                Billing.builder().setAddress(toCreateBillingAddress(billingAddress)).build())
             .putAllMetadata(
                 Map.of(
                     StripeMetadataEntry.BUSINESS_ID.getKey(),
@@ -495,13 +565,50 @@ public class StripeClient {
   }
 
   @SneakyThrows
-  public Cardholder updateCardholder(User user) {
+  public Cardholder updateCompanyCardholder(final Business business) {
+    final Cardholder cardholder = new Cardholder();
+    cardholder.setId(business.getCardholderExternalRef());
+    final CardholderUpdateParams updateParams =
+        CardholderUpdateParams.builder()
+            .setPhoneNumber(business.getBusinessPhone().getEncrypted())
+            .setEmail(
+                Optional.ofNullable(business.getBusinessEmail())
+                    .map(RequiredEncryptedString::getEncrypted)
+                    .orElse(null))
+            .setCompany(
+                CardholderUpdateParams.Company.builder()
+                    .setTaxId(business.getEmployerIdentificationNumber())
+                    .build())
+            .setBilling(
+                CardholderUpdateParams.Billing.builder()
+                    .setAddress(toUpdateBillingAddress(business.getClearAddress()))
+                    .build())
+            .setStatus(businessStatusToCardholderStatus(business.getStatus()))
+            .build();
 
-    Cardholder cardholder =
-        Cardholder.retrieve(
-            user.getExternalRef(),
-            getRequestOptions(
-                new TypedId<>(), 0L, stripeProperties.getClearspendConnectedAccountId()));
+    return callStripe(
+        "updateCardholder",
+        updateParams,
+        () ->
+            cardholder.update(
+                updateParams,
+                getRequestOptions(
+                    business.getId(),
+                    business.getVersion(),
+                    stripeProperties.getClearspendConnectedAccountId())));
+  }
+
+  protected CardholderUpdateParams.Status businessStatusToCardholderStatus(
+      final BusinessStatus status) {
+    return BusinessStatus.ACTIVE == status
+        ? CardholderUpdateParams.Status.ACTIVE
+        : CardholderUpdateParams.Status.INACTIVE;
+  }
+
+  @SneakyThrows
+  public Cardholder updateIndividualCardholder(User user) {
+    final Cardholder cardholder = new Cardholder();
+    cardholder.setId(user.getExternalRef());
 
     CardholderUpdateParams updateParams =
         CardholderUpdateParams.builder()

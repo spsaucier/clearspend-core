@@ -13,6 +13,7 @@ import com.clearspend.capital.data.model.enums.card.BinType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import javax.persistence.Column;
@@ -80,6 +81,10 @@ public class Card extends TypedMutable<CardId> implements Permissionable {
   @NonNull
   @Enumerated(EnumType.STRING)
   private CardType type;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private CardholderType cardholderType;
 
   // date the card was issued
   @NonNull private OffsetDateTime issueDate;

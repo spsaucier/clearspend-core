@@ -754,7 +754,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
 
     assertDoesNotThrow(
         () ->
-            rolesAndPermissionsService.assertUserHasPermission(
+            rolesAndPermissionsService.assertCurrentUserHasPermission(
                 rootAllocation.getId(),
                 EnumSet.of(AllocationPermission.READ),
                 EnumSet.noneOf(GlobalUserPermission.class)));
@@ -767,7 +767,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     assertThrows(
         AccessDeniedException.class,
         () ->
-            rolesAndPermissionsService.assertUserHasPermission(
+            rolesAndPermissionsService.assertCurrentUserHasPermission(
                 rootAllocation.getId(),
                 EnumSet.of(AllocationPermission.READ),
                 EnumSet.noneOf(GlobalUserPermission.class)));
@@ -779,7 +779,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     makeBookkeeperBusinessUser.run();
     assertDoesNotThrow(
         () ->
-            rolesAndPermissionsService.assertUserHasPermission(
+            rolesAndPermissionsService.assertCurrentUserHasPermission(
                 rootAllocation.getId(),
                 EnumSet.of(AllocationPermission.READ),
                 EnumSet.noneOf(GlobalUserPermission.class)));
@@ -792,7 +792,7 @@ public class RolesAndPermissionsServiceTest extends BaseCapitalTest implements D
     assertThrows(
         AccessDeniedException.class,
         () ->
-            rolesAndPermissionsService.assertUserHasPermission(
+            rolesAndPermissionsService.assertCurrentUserHasPermission(
                 rootAllocation.getId(),
                 EnumSet.of(AllocationPermission.READ),
                 EnumSet.noneOf(GlobalUserPermission.class)));

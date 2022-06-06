@@ -27,6 +27,7 @@ import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom;
 import com.clearspend.capital.data.repository.impl.JDBCUtils.MustacheQueryConfig;
@@ -138,6 +139,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         ledgerAmount,
         CardStatus.valueOf(resultSet.getString("card_status")),
         CardType.valueOf(resultSet.getString("card_type")),
+        CardholderType.valueOf(resultSet.getString("cardholder_type")),
         resultSet.getBoolean("card_activated"),
         resultSet.getObject("card_activation_date", OffsetDateTime.class));
   }

@@ -52,12 +52,14 @@ import com.clearspend.capital.data.model.enums.TransactionLimitType;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardStatusReason;
 import com.clearspend.capital.data.model.enums.card.CardType;
+import com.clearspend.capital.data.model.enums.card.CardholderType;
 import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardAllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.TransactionLimitRepository;
 import com.clearspend.capital.data.repository.UserRepository;
+import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.UserService.CreateUpdateUserRecord;
 import com.clearspend.capital.testutils.assertions.AssertCardAllocationDetailsResponse;
@@ -67,6 +69,7 @@ import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.javafaker.Faker;
+import com.stripe.model.issuing.Cardholder;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -104,6 +107,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private final EntityManager entityManager;
   private final CardRepository cardRepository;
   private final CardAllocationRepository cardAllocationRepository;
+  private final BusinessRepository businessRepository;
   private final UserRepository userRepository;
   private final AllocationRepository allocationRepository;
   private final TransactionLimitRepository transactionLimitRepository;
@@ -303,6 +307,151 @@ public class CardControllerTest extends BaseCapitalTest {
         cardAllocations.get(createBusinessRecord.allocationRecord().allocation().getId()),
         rootControls);
     testTransactionLimit(cardAllocations.get(childAllocation.allocation().getId()), childControls);
+  }
+
+  @Test
+  void issueCard_BusinessCard_SpecialUserPermissions() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+
+    final IssueCardRequest request =
+        new IssueCardRequest(
+            Set.of(CardType.VIRTUAL),
+            createBusinessRecord.user().getId(),
+            Currency.USD,
+            true,
+            List.of(CardAllocationSpendControls.of(childAllocation.allocation())));
+    request.setCardholderType(CardholderType.BUSINESS);
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie -> mockMvcHelper.query("/cards", HttpMethod.POST, cookie, request);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .setAllocation(childAllocation.allocation())
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  @SneakyThrows
+  void issueCard_BusinessCardholder_OwnerMustBeAdminOnRoot() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final User adminOnRoot =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    final User adminOnChild =
+        testHelper
+            .createUserWithRole(childAllocation.allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+
+    final Function<TypedId<UserId>, IssueCardRequest> requestCreator =
+        userId -> {
+          final IssueCardRequest request =
+              new IssueCardRequest(
+                  Set.of(CardType.VIRTUAL),
+                  userId,
+                  Currency.USD,
+                  true,
+                  List.of(CardAllocationSpendControls.of(childAllocation.allocation())));
+          request.setCardholderType(CardholderType.BUSINESS);
+          return request;
+        };
+
+    entityManager.flush();
+
+    final JavaType responseType =
+        objectMapper.getTypeFactory().constructParametricType(List.class, IssueCardResponse.class);
+    mockMvcHelper
+        .query(
+            "/cards",
+            HttpMethod.POST,
+            createBusinessRecord.authCookie(),
+            requestCreator.apply(adminOnRoot.getId()))
+        .andExpect(status().isOk());
+    final String response =
+        mockMvcHelper
+            .query(
+                "/cards",
+                HttpMethod.POST,
+                createBusinessRecord.authCookie(),
+                requestCreator.apply(adminOnChild.getId()))
+            .andExpect(status().is(400))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue(
+            "message", "Business Card owner is not Admin on root allocation");
+  }
+
+  @Test
+  void issueCard_BusinessCardholder() {
+    final CardAllocationSpendControls controls =
+        CardAllocationSpendControls.of(createBusinessRecord.allocationRecord().allocation());
+    controls.setLimits(
+        CurrencyLimit.ofMap(
+            Map.of(
+                Currency.USD,
+                Map.of(
+                    LimitType.PURCHASE,
+                    Map.of(
+                        LimitPeriod.DAILY, BigDecimal.ONE, LimitPeriod.MONTHLY, BigDecimal.TEN)))));
+    controls.setDisabledMccGroups(Set.of());
+    controls.setDisabledPaymentTypes(Set.of(PaymentType.MANUAL_ENTRY));
+    controls.setDisableForeign(false);
+
+    final IssueCardRequest issueCardRequest =
+        new IssueCardRequest(
+            Set.of(CardType.VIRTUAL),
+            createBusinessRecord.user().getId(),
+            Currency.USD,
+            true,
+            List.of(controls));
+    issueCardRequest.setCardholderType(CardholderType.BUSINESS);
+
+    entityManager.flush();
+
+    final JavaType responseType =
+        objectMapper.getTypeFactory().constructParametricType(List.class, IssueCardResponse.class);
+    final List<IssueCardResponse> response =
+        mockMvcHelper.queryObject(
+            "/cards",
+            HttpMethod.POST,
+            createBusinessRecord.authCookie(),
+            issueCardRequest,
+            responseType);
+    assertThat(response).hasSize(1);
+
+    final Card card = cardRepository.findById(response.get(0).getCardId()).orElseThrow();
+    assertThat(card)
+        .hasFieldOrPropertyWithValue("cardholderType", CardholderType.BUSINESS)
+        .hasFieldOrPropertyWithValue("userId", createBusinessRecord.user().getId());
+
+    final Business dbBusiness =
+        businessRepository.findById(createBusinessRecord.business().getId()).orElseThrow();
+    assertThat(dbBusiness.getCardholderExternalRef()).isNotNull();
+
+    final Cardholder cardholder =
+        (Cardholder) stripeMockClient.getCreatedObject(business.getCardholderExternalRef());
+    assertThat(cardholder).isNotNull();
+
+    final com.stripe.model.issuing.Card stripeCard =
+        (com.stripe.model.issuing.Card) stripeMockClient.getCreatedObject(card.getExternalRef());
+    assertThat(stripeCard).isNotNull();
+    assertThat(stripeCard.getCardholder())
+        .hasFieldOrPropertyWithValue("id", dbBusiness.getCardholderExternalRef());
   }
 
   @Test
@@ -1123,6 +1272,165 @@ public class CardControllerTest extends BaseCapitalTest {
             Set.of(
                 DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
         .denyUser(managerOnGrandchild)
+        .build()
+        .validateMockMvcCall(action);
+  }
+
+  @Test
+  void reassignCardOwner() {
+    final User admin =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setCardholderType(CardholderType.BUSINESS);
+    cardRepository.saveAndFlush(card);
+
+    final com.clearspend.capital.controller.type.card.Card response =
+        mockMvcHelper.queryObject(
+            "/cards/%s/reassign/%s".formatted(card.getId(), admin.getId()),
+            HttpMethod.PATCH,
+            createBusinessRecord.authCookie(),
+            com.clearspend.capital.controller.type.card.Card.class);
+
+    assertThat(response).hasFieldOrPropertyWithValue("userId", admin.getId());
+
+    final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
+    assertThat(dbCard).hasFieldOrPropertyWithValue("userId", admin.getId());
+  }
+
+  @Test
+  @SneakyThrows
+  void reassignCardOwner_NotBusinessCard() {
+    final User admin =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+
+    final String response =
+        mockMvcHelper
+            .query(
+                "/cards/%s/reassign/%s".formatted(card.getId(), admin.getId()),
+                HttpMethod.PATCH,
+                createBusinessRecord.authCookie())
+            .andExpect(status().isBadRequest())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    final ControllerError error = objectMapper.readValue(response, ControllerError.class);
+    assertThat(error)
+        .hasFieldOrPropertyWithValue("message", "Owner can only be reassigned for Business Cards");
+  }
+
+  @Test
+  @SneakyThrows
+  void reassignCardOwner_InvalidNewOwner() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final User adminOnChild =
+        testHelper
+            .createUserWithRole(childAllocation.allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    final User manager =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(),
+                DefaultRoles.ALLOCATION_MANAGER)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setCardholderType(CardholderType.BUSINESS);
+    cardRepository.saveAndFlush(card);
+
+    final ThrowingFunction<TypedId<UserId>, ControllerError> doRequest =
+        userId -> {
+          final String response =
+              mockMvcHelper
+                  .query(
+                      "/cards/%s/reassign/%s".formatted(card.getId(), userId),
+                      HttpMethod.PATCH,
+                      createBusinessRecord.authCookie())
+                  .andExpect(status().isBadRequest())
+                  .andReturn()
+                  .getResponse()
+                  .getContentAsString();
+          return objectMapper.readValue(response, ControllerError.class);
+        };
+
+    final ControllerError adminOnChildError = doRequest.apply(adminOnChild.getId());
+    assertThat(adminOnChildError)
+        .hasFieldOrPropertyWithValue(
+            "message", "Business Card owner is not Admin on root allocation");
+    final ControllerError managerError = doRequest.apply(manager.getId());
+    assertThat(managerError)
+        .hasFieldOrPropertyWithValue(
+            "message", "Business Card owner is not Admin on root allocation");
+  }
+
+  @Test
+  void reassignCardOwner_UserPermissions() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final User admin =
+        testHelper
+            .createUserWithRole(
+                createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_ADMIN)
+            .user();
+    final Card card =
+        testHelper.issueCard(
+            createBusinessRecord.business(),
+            createBusinessRecord.allocationRecord().allocation(),
+            createBusinessRecord.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            true);
+    card.setCardholderType(CardholderType.BUSINESS);
+    cardRepository.saveAndFlush(card);
+
+    final ThrowingFunction<Cookie, ResultActions> action =
+        cookie ->
+            mockMvcHelper.query(
+                "/cards/%s/reassign/%s".formatted(card.getId(), admin.getId()),
+                HttpMethod.PATCH,
+                cookie);
+
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .setAllocation(childAllocation.allocation())
+        .allowRolesOnRootAllocation(DefaultRoles.ALLOCATION_ADMIN)
         .build()
         .validateMockMvcCall(action);
   }

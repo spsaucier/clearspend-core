@@ -12,6 +12,7 @@ import com.clearspend.capital.common.data.model.ClearAddress;
 import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
+import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.model.ReplacementReason;
@@ -212,8 +213,13 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Cardholder createCardholder(
+  public Cardholder createIndividualCardholder(
       User user, ClearAddress billingAddress, String stripeAccountId) {
+    return generateEntityWithId(Cardholder.class);
+  }
+
+  @Override
+  public Cardholder createCompanyCardholder(Business business, TypedId<UserId> ownerId) {
     return generateEntityWithId(Cardholder.class);
   }
 
@@ -240,8 +246,16 @@ public class StripeMockClient extends StripeClient {
   }
 
   @Override
-  public Cardholder updateCardholder(User user) {
-    return generateEntityWithId(Cardholder.class);
+  public Cardholder updateIndividualCardholder(User user) {
+    return generateEntityWithId(Cardholder.class, user.getExternalRef());
+  }
+
+  @Override
+  public Cardholder updateCompanyCardholder(final Business business) {
+    final Cardholder cardholder =
+        generateEntityWithId(Cardholder.class, business.getCardholderExternalRef());
+    cardholder.setStatus(businessStatusToCardholderStatus(business.getStatus()).getValue());
+    return cardholder;
   }
 
   @Override
@@ -488,6 +502,9 @@ public class StripeMockClient extends StripeClient {
   }
 
   private void populateFields(final CreateCardConfig config, final Card card) {
+    final Cardholder cardholder = new Cardholder();
+    cardholder.setId(config.getStripeUserRef());
+    card.setCardholder(cardholder);
     card.setLast4(faker.numerify("####"));
     card.setReplacementFor(config.getReplacementFor());
     card.setReplacementReason(
