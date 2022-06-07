@@ -376,7 +376,7 @@ public class TestHelper {
   }
 
   public String generateEmployerIdentificationNumber() {
-    return Integer.toString(faker.number().numberBetween(100_000_000, 999_999_999));
+    return "0" + faker.number().numberBetween(10_000_000, 99_999_999);
   }
 
   public String generateRoutingNumber() {

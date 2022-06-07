@@ -24,8 +24,6 @@ import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.KnowYourBusinessStatus;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.data.repository.business.BusinessRepository;
-import com.clearspend.capital.service.BusinessService;
-import com.clearspend.capital.service.FusionAuthService;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserAccessor;
 import com.clearspend.capital.service.kyc.BusinessKycStepHandler;
 import io.fusionauth.domain.User;
@@ -47,11 +45,9 @@ class BusinessProspectControllerTest extends BaseCapitalTest {
   private final MockMvc mvc;
   private final TestHelper testHelper;
 
-  private final FusionAuthService fusionAuthService;
   private final BusinessProspectRepository businessProspectRepository;
   private final BusinessRepository businessRepository;
   private final TwilioServiceMock twilioServiceMock;
-  private final BusinessService businessService;
   private final StripeClient stripeClient;
   private final BusinessKycStepHandler stepHandler;
 
