@@ -33,10 +33,8 @@ public class ChartOfAccountsMappingServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
   }
 
   @Test

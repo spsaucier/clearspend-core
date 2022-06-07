@@ -72,88 +72,78 @@ public class CardControllerSearchTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness(1000L);
-      business = createBusinessRecord.business();
-      rootAllocation = createBusinessRecord.allocationRecord();
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      childAllocation =
-          testHelper.createAllocation(
-              business.getId(), "Child Allocation", rootAllocation.allocation().getId());
-      userA =
-          testHelper.createUserWithRole(
-              createBusinessRecord.allocationRecord().allocation(),
-              DefaultRoles.ALLOCATION_EMPLOYEE);
-      userB =
-          testHelper.createUserWithRole(
-              createBusinessRecord.allocationRecord().allocation(),
-              DefaultRoles.ALLOCATION_EMPLOYEE);
-      userC =
-          testHelper.createUserWithRole(
-              childAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER);
-      authCookie = createBusinessRecord.authCookie();
+    createBusinessRecord = testHelper.createBusiness(1000L);
+    business = createBusinessRecord.business();
+    rootAllocation = createBusinessRecord.allocationRecord();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    childAllocation =
+        testHelper.createAllocation(
+            business.getId(), "Child Allocation", rootAllocation.allocation().getId());
+    userA =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    userB =
+        testHelper.createUserWithRole(
+            createBusinessRecord.allocationRecord().allocation(), DefaultRoles.ALLOCATION_EMPLOYEE);
+    userC =
+        testHelper.createUserWithRole(
+            childAllocation.allocation(), DefaultRoles.ALLOCATION_MANAGER);
+    authCookie = createBusinessRecord.authCookie();
 
-      // root card A
-      rootCardA =
-          testHelper.issueCard(
-              business,
-              rootAllocation.allocation(),
-              userA.user(),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.VIRTUAL,
-              false);
-      rootCardASearchResult =
-          SearchCardData.of(
-              new FilteredCardRecord(
-                  rootCardA, rootAllocation.allocation(), rootAllocation.account(), userA.user()));
-      rootCardASearchResult.setBalance(
-          new com.clearspend.capital.controller.type.Amount(
-              Currency.USD, new BigDecimal("1000.00")));
+    // root card A
+    rootCardA =
+        testHelper.issueCard(
+            business,
+            rootAllocation.allocation(),
+            userA.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    rootCardASearchResult =
+        SearchCardData.of(
+            new FilteredCardRecord(
+                rootCardA, rootAllocation.allocation(), rootAllocation.account(), userA.user()));
+    rootCardASearchResult.setBalance(
+        new com.clearspend.capital.controller.type.Amount(Currency.USD, new BigDecimal("1000.00")));
 
-      // root card B
-      rootCardB =
-          testHelper.issueCard(
-              business,
-              rootAllocation.allocation(),
-              userB.user(),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.VIRTUAL,
-              false);
-      rootCardBSearchResult =
-          SearchCardData.of(
-              new FilteredCardRecord(
-                  rootCardB, rootAllocation.allocation(), rootAllocation.account(), userB.user()));
-      rootCardBSearchResult.setBalance(
-          new com.clearspend.capital.controller.type.Amount(
-              Currency.USD, new BigDecimal("1000.00")));
+    // root card B
+    rootCardB =
+        testHelper.issueCard(
+            business,
+            rootAllocation.allocation(),
+            userB.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
+    rootCardBSearchResult =
+        SearchCardData.of(
+            new FilteredCardRecord(
+                rootCardB, rootAllocation.allocation(), rootAllocation.account(), userB.user()));
+    rootCardBSearchResult.setBalance(
+        new com.clearspend.capital.controller.type.Amount(Currency.USD, new BigDecimal("1000.00")));
 
-      // child card A
-      childCardA =
-          testHelper.issueCard(
-              business,
-              childAllocation.allocation(),
-              userA.user(),
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.PHYSICAL,
-              false);
-      childCardASearchResult =
-          SearchCardData.of(
-              new FilteredCardRecord(
-                  childCardA,
-                  childAllocation.allocation(),
-                  childAllocation.account(),
-                  userA.user()));
+    // child card A
+    childCardA =
+        testHelper.issueCard(
+            business,
+            childAllocation.allocation(),
+            userA.user(),
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
+    childCardASearchResult =
+        SearchCardData.of(
+            new FilteredCardRecord(
+                childCardA, childAllocation.allocation(), childAllocation.account(), userA.user()));
 
-      // placing hold to make sure that available balance is returned for root cards A and B
-      // THIS DOES NOT WORK!!! The balance does not get updated by the time I need to run a query
-      //      accountService.depositFunds(
-      //          business.getId(), rootAllocation.account(), Amount.of(Currency.USD, 777), true,
-      // true);
-
-    }
+    // placing hold to make sure that available balance is returned for root cards A and B
+    // THIS DOES NOT WORK!!! The balance does not get updated by the time I need to run a query
+    //      accountService.depositFunds(
+    //          business.getId(), rootAllocation.account(), Amount.of(Currency.USD, 777), true,
+    // true);
   }
 
   @SneakyThrows

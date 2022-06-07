@@ -42,21 +42,19 @@ class NetworkMessageDemoControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      user = createBusinessRecord.user();
-      testHelper.setCurrentUser(user);
-      card =
-          testHelper.issueCard(
-              business,
-              createBusinessRecord.allocationRecord().allocation(),
-              user,
-              Currency.USD,
-              FundingType.POOLED,
-              CardType.PHYSICAL,
-              false);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
+    card =
+        testHelper.issueCard(
+            business,
+            createBusinessRecord.allocationRecord().allocation(),
+            user,
+            Currency.USD,
+            FundingType.POOLED,
+            CardType.PHYSICAL,
+            false);
   }
 
   @SneakyThrows

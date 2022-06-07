@@ -60,11 +60,9 @@ public class AuthenticationControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   void init() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.init();
-      user = testHelper.createUser(createBusinessRecord.business());
-      userCookie = testHelper.login(user.user());
-    }
+    createBusinessRecord = testHelper.init();
+    user = testHelper.createUser(createBusinessRecord.business());
+    userCookie = testHelper.login(user.user());
   }
 
   @Test

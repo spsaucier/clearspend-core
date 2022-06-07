@@ -65,9 +65,7 @@ class UserServiceTest extends BaseCapitalTest {
 
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-    }
+    createBusinessRecord = testHelper.createBusiness();
   }
 
   @AfterEach

@@ -31,15 +31,13 @@ public class BusinessNotificationRepositoryTest extends BaseCapitalTest {
 
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      business.setCodatCompanyRef("test-codat-ref");
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      user = createBusinessRecord.user();
-      userCookie = testHelper.login(user);
-      testHelper.setCurrentUser(user);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    business.setCodatCompanyRef("test-codat-ref");
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    user = createBusinessRecord.user();
+    userCookie = testHelper.login(user);
+    testHelper.setCurrentUser(user);
   }
 
   @Test

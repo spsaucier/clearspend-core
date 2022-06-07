@@ -38,11 +38,9 @@ class ChartOfAccountsMappingControllerTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      userCookie = createBusinessRecord.authCookie();
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    userCookie = createBusinessRecord.authCookie();
   }
 
   @SneakyThrows

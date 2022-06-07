@@ -42,22 +42,20 @@ class NetworkMessageServiceTest extends BaseCapitalTest {
 
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      business = createBusinessRecord.business();
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      user = createBusinessRecord.user();
-      testHelper.setCurrentUser(user);
-      card =
-          testHelper.issueCard(
-              business,
-              allocation,
-              user,
-              business.getCurrency(),
-              FundingType.POOLED,
-              CardType.VIRTUAL,
-              false);
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    business = createBusinessRecord.business();
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    user = createBusinessRecord.user();
+    testHelper.setCurrentUser(user);
+    card =
+        testHelper.issueCard(
+            business,
+            allocation,
+            user,
+            business.getCurrency(),
+            FundingType.POOLED,
+            CardType.VIRTUAL,
+            false);
   }
 
   private static Stream<Arguments> buildCardStatuses() {

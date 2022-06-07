@@ -51,13 +51,11 @@ class CardServiceTest extends BaseCapitalTest {
   @SneakyThrows
   @BeforeEach
   public void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-      testHelper.setCurrentUser(createBusinessRecord.user());
-      business = createBusinessRecord.business();
-      allocation = createBusinessRecord.allocationRecord().allocation();
-      userRecord = testHelper.createUser(createBusinessRecord.business());
-    }
+    createBusinessRecord = testHelper.createBusiness();
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    business = createBusinessRecord.business();
+    allocation = createBusinessRecord.allocationRecord().allocation();
+    userRecord = testHelper.createUser(createBusinessRecord.business());
   }
 
   @Test

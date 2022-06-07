@@ -57,9 +57,7 @@ class FirebaseNotificationServiceTest extends BaseCapitalTest {
 
   @BeforeEach
   void setup() {
-    if (createBusinessRecord == null) {
-      createBusinessRecord = testHelper.createBusiness();
-    }
+    createBusinessRecord = testHelper.createBusiness();
   }
 
   @AfterEach
