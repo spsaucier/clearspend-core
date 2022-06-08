@@ -641,10 +641,10 @@ public class CardControllerTest extends BaseCapitalTest {
     assertThat(cardDetailsResponse.getLedgerBalance().getCurrency())
         .isEqualTo(business.getCurrency());
 
-    assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(cardDetailsResponse.getAllocationSpendControls()).hasSize(1);
     assertCardAllocationDetailsResponse.doAssert(
         createBusinessRecord.allocationRecord().allocation().getId(),
-        cardDetailsResponse.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+        cardDetailsResponse.getAllocationSpendControls().stream().findFirst().orElseThrow());
   }
 
   @Test
@@ -693,7 +693,7 @@ public class CardControllerTest extends BaseCapitalTest {
     assertThat(response)
         .hasFieldOrPropertyWithValue(
             "card", new com.clearspend.capital.controller.type.card.Card(card));
-    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(response.getAllocationSpendControls()).hasSize(1);
 
     final LimitsToAssert limitsToAssert =
         new LimitsToAssert(
@@ -701,7 +701,7 @@ public class CardControllerTest extends BaseCapitalTest {
     assertCardAllocationDetailsResponse.doAssert(
         limitsToAssert,
         createBusinessRecord.allocationRecord().allocation().getId(),
-        response.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+        response.getAllocationSpendControls().stream().findFirst().orElseThrow());
 
     final CardAllocation cardAllocation =
         cardAllocationRepository
@@ -888,12 +888,12 @@ public class CardControllerTest extends BaseCapitalTest {
             request,
             CardDetailsResponse.class);
 
-    assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(cardDetailsResponse.getAllocationSpendControls()).hasSize(1);
 
     assertCardAllocationDetailsResponse.doAssert(
         LimitsToAssert.fromUpdateCardRequest(controls),
         createBusinessRecord.allocationRecord().allocation().getId(),
-        cardDetailsResponse.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+        cardDetailsResponse.getAllocationSpendControls().stream().findFirst().orElseThrow());
   }
 
   @SneakyThrows
@@ -992,14 +992,14 @@ public class CardControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("allocationId", null)
         .hasFieldOrPropertyWithValue("accountId", null)
         .hasFieldOrPropertyWithValue("cardId", card.getId());
-    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(response.getAllocationSpendControls()).hasSize(1);
     final LimitsToAssert limitsToAssert =
         new LimitsToAssert(
             List.of(new CurrencyLimit(Currency.USD, new HashMap<>())), Set.of(), Set.of(), true);
     assertCardAllocationDetailsResponse.doAssert(
         limitsToAssert,
         createBusinessRecord.allocationRecord().allocation().getId(),
-        response.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+        response.getAllocationSpendControls().stream().findFirst().orElseThrow());
   }
 
   @Test
@@ -1081,7 +1081,7 @@ public class CardControllerTest extends BaseCapitalTest {
         .hasFieldOrPropertyWithValue("availableBalance", null)
         .hasFieldOrPropertyWithValue("linkedAllocationId", null)
         .hasFieldOrPropertyWithValue("linkedAllocationName", null)
-        .hasFieldOrPropertyWithValue("allowedAllocationsAndLimits", List.of());
+        .hasFieldOrPropertyWithValue("allocationSpendControls", List.of());
   }
 
   @Test
@@ -1144,9 +1144,9 @@ public class CardControllerTest extends BaseCapitalTest {
             CardDetailsResponse.class);
 
     assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
-    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(2);
+    assertThat(response.getAllocationSpendControls()).hasSize(2);
     final List<CardAllocationSpendControls> allowedAllocationsAndLimits =
-        response.getAllowedAllocationsAndLimits().stream()
+        response.getAllocationSpendControls().stream()
             .sorted(
                 (a, b) ->
                     a.getAllocationId()
@@ -1231,8 +1231,8 @@ public class CardControllerTest extends BaseCapitalTest {
             CardDetailsResponse.class);
 
     assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
-    assertThat(response.getAllowedAllocationsAndLimits()).hasSize(1);
-    assertThat(response.getAllowedAllocationsAndLimits().get(0))
+    assertThat(response.getAllocationSpendControls()).hasSize(1);
+    assertThat(response.getAllocationSpendControls().get(0))
         .hasFieldOrPropertyWithValue(
             "allocationId", createBusinessRecord.allocationRecord().allocation().getId());
 

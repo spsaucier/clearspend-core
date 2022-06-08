@@ -550,9 +550,9 @@ class UserControllerTest extends BaseCapitalTest {
           .isEqualTo(business.getCurrency());
 
       if (cardDetailsResponse.getCard().getCardId().equals(card.getId())) {
-        assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(2);
+        assertThat(cardDetailsResponse.getAllocationSpendControls()).hasSize(2);
         final List<CardAllocationSpendControls> sorted =
-            cardDetailsResponse.getAllowedAllocationsAndLimits().stream()
+            cardDetailsResponse.getAllocationSpendControls().stream()
                 .sorted(
                     (d1, d2) ->
                         d1.getAllocationId()
@@ -566,12 +566,10 @@ class UserControllerTest extends BaseCapitalTest {
         assertCardAllocationDetailsResponse.doAssert(
             childAllocation.allocation().getId(), sorted.get(1));
       } else {
-        assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+        assertThat(cardDetailsResponse.getAllocationSpendControls()).hasSize(1);
         assertCardAllocationDetailsResponse.doAssert(
             createBusinessRecord.allocationRecord().allocation().getId(),
-            cardDetailsResponse.getAllowedAllocationsAndLimits().stream()
-                .findFirst()
-                .orElseThrow());
+            cardDetailsResponse.getAllocationSpendControls().stream().findFirst().orElseThrow());
       }
     }
 
@@ -624,10 +622,10 @@ class UserControllerTest extends BaseCapitalTest {
     assertThat(cardDetailsResponse.getLedgerBalance().getCurrency())
         .isEqualTo(business.getCurrency());
 
-    assertThat(cardDetailsResponse.getAllowedAllocationsAndLimits()).hasSize(1);
+    assertThat(cardDetailsResponse.getAllocationSpendControls()).hasSize(1);
     assertCardAllocationDetailsResponse.doAssert(
         createBusinessRecord.allocationRecord().allocation().getId(),
-        cardDetailsResponse.getAllowedAllocationsAndLimits().stream().findFirst().orElseThrow());
+        cardDetailsResponse.getAllocationSpendControls().stream().findFirst().orElseThrow());
   }
 
   @Test

@@ -33,8 +33,8 @@ public class CardDetailsResponse {
   @JsonProperty("linkedAllocationName")
   private String linkedAllocationName;
 
-  @JsonProperty("allowedAllocationsAndLimits")
-  private List<CardAllocationSpendControls> allowedAllocationsAndLimits;
+  @JsonProperty("allocationSpendControls")
+  private List<CardAllocationSpendControls> allocationSpendControls;
 
   public static CardDetailsResponse of(CardDetailsRecord cardDetailsRecord) {
     final AccountAmounts accountAmounts =
@@ -51,7 +51,7 @@ public class CardDetailsResponse {
     response.setLinkedAllocationName(allocationName);
     response.setLedgerBalance(accountAmounts.ledgerBalance());
     response.setAvailableBalance(accountAmounts.availableBalance());
-    response.setAllowedAllocationsAndLimits(
+    response.setAllocationSpendControls(
         cardDetailsRecord.allowedAllocationsAndLimits().stream()
             .map(CardAllocationSpendControls::of)
             .toList());
