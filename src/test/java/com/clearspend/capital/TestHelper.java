@@ -23,8 +23,8 @@ import com.clearspend.capital.controller.nonprod.TestDataController.NetworkCommo
 import com.clearspend.capital.controller.type.allocation.CreateAllocationRequest;
 import com.clearspend.capital.controller.type.allocation.CreateAllocationResponse;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectStatus;
-import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
+import com.clearspend.capital.controller.type.business.prospect.ConvertClientBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
 import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPhoneRequest;
@@ -53,6 +53,7 @@ import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.AccountingSetupStep;
 import com.clearspend.capital.data.model.enums.AuthorizationMethod;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -703,8 +704,8 @@ public class TestHelper {
 
   public ConvertBusinessProspectResponse convertBusinessProspect(
       String businessLegalName, TypedId<BusinessProspectId> businessProspectId) throws Exception {
-    ConvertBusinessProspectRequest request =
-        new ConvertBusinessProspectRequest(
+    ConvertClientBusinessProspectRequest request =
+        new ConvertClientBusinessProspectRequest(
             businessLegalName,
             generateEmployerIdentificationNumber(),
             generatePhone(),
@@ -981,6 +982,7 @@ public class TestHelper {
                     MerchantType.AGRICULTURAL_COOPERATIVE,
                     MerchantType.AGRICULTURAL_COOPERATIVE.getDescription(),
                     faker.internet().url(),
+                    BusinessPartnerType.CLIENT,
                     TimeZone.US_CENTRAL),
                 new TosAcceptance(
                     OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS),

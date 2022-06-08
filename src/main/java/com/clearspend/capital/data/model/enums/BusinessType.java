@@ -2,7 +2,6 @@ package com.clearspend.capital.data.model.enums;
 
 import com.stripe.param.AccountCreateParams;
 import com.stripe.param.AccountCreateParams.Company.Structure;
-import java.util.List;
 
 public enum BusinessType {
   INDIVIDUAL(null, AccountCreateParams.BusinessType.INDIVIDUAL),
@@ -14,10 +13,7 @@ public enum BusinessType {
   PRIVATE_CORPORATION(Structure.PRIVATE_CORPORATION, AccountCreateParams.BusinessType.COMPANY),
   PUBLIC_CORPORATION(Structure.PUBLIC_CORPORATION, AccountCreateParams.BusinessType.COMPANY),
   INCORPORATED_NON_PROFIT(
-      Structure.INCORPORATED_NON_PROFIT, AccountCreateParams.BusinessType.NON_PROFIT),
-  ACCOUNTING_FIRM(null, null),
-  BANK(null, null),
-  CONSULTING_FIRM(null, null);
+      Structure.INCORPORATED_NON_PROFIT, AccountCreateParams.BusinessType.NON_PROFIT);
 
   private final Structure stripeValue;
   private final AccountCreateParams.BusinessType stripeBusinessType;
@@ -33,13 +29,5 @@ public enum BusinessType {
 
   public AccountCreateParams.BusinessType getStripeBusinessType() {
     return stripeBusinessType;
-  }
-
-  public boolean isPartnerType() {
-    return List.of(ACCOUNTING_FIRM, BANK, CONSULTING_FIRM).contains(this);
-  }
-
-  public boolean isStripeType() {
-    return !isPartnerType();
   }
 }

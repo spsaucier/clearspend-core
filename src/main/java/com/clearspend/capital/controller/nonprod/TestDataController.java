@@ -32,6 +32,7 @@ import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.enums.AllocationReallocationType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.Country;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -448,7 +449,7 @@ public class TestDataController {
     businessProspectService.setBusinessProspectPassword(
         businessProspect.businessProspect().getId(), "1234567890", false);
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
-        businessProspectService.convertBusinessProspect(
+        businessProspectService.convertClientBusinessProspect(
             new ConvertBusinessProspect(
                 businessProspect.businessProspect().getId(),
                 faker.company().name(),
@@ -465,6 +466,7 @@ public class TestDataController {
                 MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
                 "Description of business",
                 faker.internet().url(),
+                BusinessPartnerType.CLIENT,
                 TimeZone.US_CENTRAL));
 
     Business business = convertBusinessProspectRecord.business();
@@ -622,7 +624,7 @@ public class TestDataController {
     businessProspectService.setBusinessProspectPassword(
         businessProspect.businessProspect().getId(), "1234567890", false);
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
-        businessProspectService.convertBusinessProspect(
+        businessProspectService.convertClientBusinessProspect(
             new ConvertBusinessProspect(
                 businessProspect.businessProspect().getId(),
                 faker.company().name(),
@@ -639,6 +641,7 @@ public class TestDataController {
                 MerchantType.COMPUTERS_PERIPHERALS_AND_SOFTWARE,
                 "Description of business",
                 faker.internet().url(),
+                BusinessPartnerType.CLIENT,
                 TimeZone.US_CENTRAL));
 
     Business business = convertBusinessProspectRecord.business();

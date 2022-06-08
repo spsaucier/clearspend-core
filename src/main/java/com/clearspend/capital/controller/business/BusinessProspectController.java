@@ -6,8 +6,9 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.business.Business;
 import com.clearspend.capital.controller.type.business.prospect.BusinessProspectData;
-import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.ConvertBusinessProspectResponse;
+import com.clearspend.capital.controller.type.business.prospect.ConvertClientBusinessProspectRequest;
+import com.clearspend.capital.controller.type.business.prospect.ConvertPartnerBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.CreateBusinessProspectResponse;
 import com.clearspend.capital.controller.type.business.prospect.CreateOrUpdateBusinessProspectRequest;
 import com.clearspend.capital.controller.type.business.prospect.SetBusinessProspectPasswordRequest;
@@ -164,7 +165,7 @@ public class BusinessProspectController {
       reviewer = "Craig Miller",
       explanation = "This is a part of the onboarding process before users exist for the business.")
   @PostMapping("/{businessProspectId}/convert")
-  ConvertBusinessProspectResponse convertBusinessProspect(
+  ConvertBusinessProspectResponse convertClientBusinessProspect(
       @PathVariable(value = "businessProspectId")
           @Parameter(
               required = true,
@@ -172,9 +173,31 @@ public class BusinessProspectController {
               description = "ID of the businessProspect record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessProspectId> businessProspectId,
-      @Validated @RequestBody ConvertBusinessProspectRequest request) {
+      @Validated @RequestBody ConvertClientBusinessProspectRequest request) {
     ConvertBusinessProspectRecord convertBusinessProspectRecord =
-        businessProspectService.convertBusinessProspect(
+        businessProspectService.convertClientBusinessProspect(
+            request.toConvertBusinessProspect(businessProspectId));
+
+    return new ConvertBusinessProspectResponse(
+        new Business(convertBusinessProspectRecord.business()),
+        convertBusinessProspectRecord.businessOwner().getId());
+  }
+
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Patrick Morton",
+      explanation = "This is part of the Partner onboarding process before the user exists")
+  @PostMapping("/{businessProspectId}/partner-convert")
+  ConvertBusinessProspectResponse convertPartnerBusinessProspect(
+      @PathVariable(value = "businessProspectId")
+          @Parameter(
+              required = true,
+              name = "businessProspectId",
+              description = "ID of the businessProspect record",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessProspectId> businessProspectId,
+      @Validated @RequestBody ConvertPartnerBusinessProspectRequest request) {
+    ConvertBusinessProspectRecord convertBusinessProspectRecord =
+        businessProspectService.convertPartnerBusinessProspect(
             request.toConvertBusinessProspect(businessProspectId));
 
     return new ConvertBusinessProspectResponse(

@@ -102,7 +102,7 @@ public class BusinessService {
     if (businessId != null) {
       business.setId(businessId);
     }
-
+    business.setPartnerType(convertBusinessProspect.getBusinessType());
     business.setEmployerIdentificationNumber(
         convertBusinessProspect.getEmployerIdentificationNumber());
     business.setBusinessName(convertBusinessProspect.getBusinessName());
@@ -119,16 +119,18 @@ public class BusinessService {
     business = businessRepository.save(business);
 
     // stripe account creation
-    com.stripe.model.Account account = stripeClient.createAccount(business);
-    business.getStripeData().setAccountRef(account.getId());
-    // TODO hot-fix start the financial account creation process
-    business
-        .getStripeData()
-        .setFinancialAccountRef(
-            stripeClient.createFinancialAccount(business.getId(), account.getId()).getId());
+    com.stripe.model.Account account = null;
+    if (convertBusinessProspect.getBusinessType() != BusinessPartnerType.PARTNER) {
+      account = stripeClient.createAccount(business);
+      business.getStripeData().setAccountRef(account.getId());
+      // TODO hot-fix start the financial account creation process
+      business
+          .getStripeData()
+          .setFinancialAccountRef(
+              stripeClient.createFinancialAccount(business.getId(), account.getId()).getId());
+    }
 
     businessSettingsService.initializeBusinessSettings(business.getId());
-
     expenseCategoryService.createDefaultCategoriesForBusiness(business.getId());
 
     return new BusinessAndStripeAccount(business, account);
@@ -409,7 +411,7 @@ public class BusinessService {
   @Transactional
   @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void syncWithStripeAccountData(Business business, com.stripe.model.Account account) {
-    if (business.getType().isPartnerType()) {
+    if (business.getPartnerType() == BusinessPartnerType.PARTNER) {
       // Partner-Type businesses do not have the required Stripe details to continue.
       return;
     }

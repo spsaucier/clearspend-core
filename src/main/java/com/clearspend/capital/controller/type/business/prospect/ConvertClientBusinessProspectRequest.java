@@ -6,6 +6,7 @@ import static com.clearspend.capital.controller.type.Constants.PHONE_PATTERN;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessProspectId;
 import com.clearspend.capital.controller.type.Address;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.MerchantType;
 import com.clearspend.capital.data.model.enums.TimeZone;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
@@ -19,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class ConvertBusinessProspectRequest {
+public class ConvertClientBusinessProspectRequest {
 
   @JsonProperty("legalName")
   @NonNull
@@ -80,6 +81,7 @@ public class ConvertBusinessProspectRequest {
         MerchantType.fromMccCode(mcc),
         description,
         url,
+        BusinessPartnerType.CLIENT,
         timeZone);
   }
 }

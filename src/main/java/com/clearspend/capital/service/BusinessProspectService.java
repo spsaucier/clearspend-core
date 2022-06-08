@@ -18,14 +18,17 @@ import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.business.TosAcceptance;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import com.clearspend.capital.data.model.enums.UserType;
+import com.clearspend.capital.data.model.security.DefaultRoles;
 import com.clearspend.capital.data.repository.business.BusinessProspectRepository;
 import com.clearspend.capital.service.AllocationService.AllocationRecord;
 import com.clearspend.capital.service.AllocationService.CreatesRootAllocation;
 import com.clearspend.capital.service.BusinessOwnerService.BusinessOwnerAndUserRecord;
 import com.clearspend.capital.service.BusinessService.BusinessAndStripeAccount;
 import com.clearspend.capital.service.FusionAuthService.FusionAuthUserCreator;
+import com.clearspend.capital.service.FusionAuthService.RoleChange;
 import com.clearspend.capital.service.type.BusinessOwnerData;
 import com.clearspend.capital.service.type.ConvertBusinessProspect;
 import com.clearspend.capital.service.type.StripeAccountFieldsToClearspendBusinessFields;
@@ -131,6 +134,8 @@ public class BusinessProspectService {
                               OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS),
                               tosAcceptanceIp,
                               userAgent));
+                  // Default to CLIENT. PARTNERS are invite only
+                  entity.setPartnerType(BusinessPartnerType.CLIENT);
                   entity.setBusinessType(businessType);
                   entity.setRelationshipOwner(relationshipOwner);
                   entity.setRelationshipRepresentative(relationshipRepresentative);
@@ -377,6 +382,12 @@ public class BusinessProspectService {
                 password)
             .toString());
 
+    // For PARTNER and BOTH Business Types, give the BusinessOwner the GLOBAL_BOOKKEEPER role.
+    if (businessProspect.getPartnerType() != BusinessPartnerType.CLIENT) {
+      fusionAuthService.changeUserRole(
+          RoleChange.GRANT, businessProspect.getSubjectRef(), DefaultRoles.GLOBAL_BOOKKEEPER);
+    }
+
     if (Boolean.TRUE.equals(live)) {
       twilioService.sendOnboardingWelcomeEmail(
           businessProspect.getEmail().toString(), businessProspect);
@@ -406,7 +417,7 @@ public class BusinessProspectService {
       explanation =
           "This method is both used by the onboard process, and uses an onboarding method itself")
   @Transactional
-  public ConvertBusinessProspectRecord convertBusinessProspect(
+  public ConvertBusinessProspectRecord convertClientBusinessProspect(
       ConvertBusinessProspect convertBusinessProspect) {
     BusinessProspect businessProspect =
         retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
@@ -444,6 +455,60 @@ public class BusinessProspectService {
     return new ConvertBusinessProspectRecord(
         business,
         allocationRecord,
+        businessOwner.businessOwner(),
+        businessOwner.user(),
+        Collections.emptyList());
+  }
+
+  @RestrictedApi(
+      explanation =
+          "This is used as part of the onboarding flow, and a SecurityContext is not available for this",
+      link =
+          "https://tranwall.atlassian.net/wiki/spaces/CAP/pages/2088828965/Dev+notes+Service+method+security",
+      allowlistAnnotations = {OnboardingBusinessProspectMethod.class})
+  @CreatesRootAllocation(
+      reviewer = "jscarbor",
+      explanation = "This is where the business gets created")
+  @OnboardingBusinessProspectMethod(
+      reviewer = "Craig Miller",
+      explanation =
+          "This method is both used by the onboard process, and uses an onboarding method itself")
+  @Transactional
+  public ConvertBusinessProspectRecord convertPartnerBusinessProspect(
+      ConvertBusinessProspect convertBusinessProspect) {
+
+    BusinessProspect businessProspect =
+        retrieveBusinessProspectById(convertBusinessProspect.getBusinessProspectId());
+
+    if (StringUtils.isBlank(businessProspect.getSubjectRef())) {
+      throw new InvalidRequestException("password has not been set");
+    }
+
+    // When a business is created, a corespondent into stripe will be created too
+    BusinessAndStripeAccount businessAndStripeAccount =
+        businessService.createBusiness(
+            businessProspect.getBusinessId(),
+            businessProspect.getBusinessType(),
+            businessProspect.getEmail().getEncrypted(),
+            convertBusinessProspect,
+            businessProspect.getTosAcceptance());
+
+    BusinessOwnerData businessOwnerData = new BusinessOwnerData(businessProspect);
+
+    // On convert step we will create owner without the person stripe corespondent
+    BusinessOwnerAndUserRecord businessOwner =
+        createMainBusinessOwnerAndRepresentative(
+            businessOwnerData, businessProspect.getTosAcceptance());
+
+    // delete the business prospect so that the owner of the email could register a new business
+    businessProspectRepository.delete(businessProspect);
+
+    // It's likely that we will need to add the Root Allocation creation back
+    // into this method. See the above method for an example.
+
+    return new ConvertBusinessProspectRecord(
+        businessAndStripeAccount.business(),
+        null,
         businessOwner.businessOwner(),
         businessOwner.user(),
         Collections.emptyList());

@@ -11,6 +11,7 @@ import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedString
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.OwnerRelated;
+import com.clearspend.capital.data.model.enums.BusinessPartnerType;
 import com.clearspend.capital.data.model.enums.BusinessType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -77,6 +78,10 @@ public class BusinessProspect extends TypedMutable<BusinessProspectId> implement
   private String subjectRef;
 
   @Embedded @NonNull private TosAcceptance tosAcceptance;
+
+  @NonNull
+  @Enumerated(EnumType.STRING)
+  private BusinessPartnerType partnerType = BusinessPartnerType.CLIENT;
 
   @Override
   public TypedId<UserId> getOwnerId() {
