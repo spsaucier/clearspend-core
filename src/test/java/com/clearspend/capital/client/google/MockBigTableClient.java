@@ -137,6 +137,14 @@ public class MockBigTableClient extends BigTableClient {
     detail.setSyncType("SUPPLIER_SYNC");
     detail.setSyncDetail("my new supplier");
     details.add(detail);
+    List<CodatSyncLogValueDetail> syncs = new ArrayList<>();
+    syncs.add(
+        CodatSyncLogValueDetail.builder()
+            .CodatSyncDate(OffsetDateTime.now(ZoneOffset.UTC).minusDays(6))
+            .syncType("DIRECT_COST_SYNC")
+            .accountActivityId("a0001")
+            .build());
+    v.setDirectCostSyncs(syncs);
 
     this.accountActivitySample = new AccountingAuditResponse();
     List<AccountActivityAuditLog> alogs = new ArrayList<>();

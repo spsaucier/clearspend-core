@@ -19,9 +19,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -76,10 +76,10 @@ public class AccountingAuditLogService {
     List<AuditLogDisplayValue> responseList = new ArrayList<>();
     AccountingAuditResponse transactionLog =
         this.searchAccountActivityByBusiness(businessId, limit);
-    AccountingAuditResponse supplierLog = this.searchSupplierCodatSyncByBusiness(businessId, limit);
+    AccountingAuditResponse codatLog = this.searchSupplierCodatSyncByBusiness(businessId, limit);
     Map<String, User> localUserCache = new HashMap<>();
-    if (supplierLog != null && supplierLog.getCodatSyncLogList() != null) {
-      for (CodatSyncLogValue v : supplierLog.getCodatSyncLogList()) {
+    if (codatLog != null && codatLog.getCodatSyncLogList() != null) {
+      for (CodatSyncLogValue v : codatLog.getCodatSyncLogList()) {
         User user = this.getUser(localUserCache, v.getUserId());
         String firstName = user.getFirstName().getEncrypted();
         String lastName = user.getLastName().getEncrypted();
@@ -97,17 +97,20 @@ public class AccountingAuditLogService {
           responseList.add(supplierSyncLog);
         }
         // Direct Cost Sync
-        if (StringUtils.isNotBlank(v.getDirectCostSyncIds())) {
-          responseList.add(
-              AuditLogDisplayValue.builder()
-                  .changedValue(v.getDirectCostSyncIds())
-                  .transactionId(v.getDirectCostSyncIds())
-                  .eventType("Direct Cost Sync")
-                  .auditTime(v.getCodatSyncDate())
-                  .firstName(firstName)
-                  .lastName(lastName)
-                  .email(email)
-                  .build());
+        if (v.getDirectCostSyncs() != null) {
+          responseList.addAll(
+              v.getDirectCostSyncs().stream()
+                  .map(
+                      d ->
+                          AuditLogDisplayValue.builder()
+                              .auditTime(d.getCodatSyncDate())
+                              .eventType("Direct Cost Sync")
+                              .transactionId(d.getAccountActivityId())
+                              .firstName(firstName)
+                              .lastName(lastName)
+                              .email(email)
+                              .build())
+                  .collect(Collectors.toList()));
         }
       }
     }

@@ -168,14 +168,24 @@ public class BigTableClient {
         details.add(detail);
       }
       // fetch direct cost sync
-      List<String> directCostIds = new ArrayList<>();
-      for (RowCell dc :
-          r.getCells(
-              AccountingCodatSyncAuditEvent.COLUMN_FAMILY,
-              CodatSyncEventType.DIRECT_COST_SYNC.toString())) {
-        directCostIds.add(dc.getValue().toStringUtf8());
-      }
-      value.setDirectCostSyncIds(directCostIds.stream().collect(Collectors.joining(",")));
+      value.setDirectCostSyncs(
+          r
+              .getCells(
+                  AccountingCodatSyncAuditEvent.COLUMN_FAMILY,
+                  CodatSyncEventType.DIRECT_COST_SYNC.toString())
+              .stream()
+              .map(
+                  cell ->
+                      CodatSyncLogValueDetail.builder()
+                          .bigTableTimestamp(cell.getTimestamp())
+                          .syncType(CodatSyncEventType.DIRECT_COST_SYNC.toString())
+                          .CodatSyncDate(
+                              OffsetDateTime.ofInstant(
+                                  Instant.ofEpochMilli(cell.getTimestamp() / 1000), ZoneOffset.UTC))
+                          .accountActivityId(cell.getValue().toStringUtf8())
+                          .build())
+              .collect(Collectors.toList()));
+
       values.add(value);
     }
 

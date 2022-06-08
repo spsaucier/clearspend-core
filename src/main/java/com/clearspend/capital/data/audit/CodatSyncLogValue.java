@@ -20,5 +20,5 @@ public class CodatSyncLogValue implements Serializable {
 
   private List<CodatSyncLogValueDetail> details;
 
-  private String directCostSyncIds;
+  private List<CodatSyncLogValueDetail> directCostSyncs;
 }
