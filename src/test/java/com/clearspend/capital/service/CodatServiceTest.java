@@ -1239,7 +1239,7 @@ public class CodatServiceTest extends BaseCapitalTest {
 
     codatCategoryRepository.saveAll(List.of(firstCategory, secondCategory, thirdCategory));
 
-    codatService.setClearspendNamesForCategories(
+    codatService.setClearSpendNamesForCategories(
         business.getBusinessId(),
         List.of(
             new SetCategoryNamesRequest(firstCategory.getId(), "New First Name"),

@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 public class BusinessNotificationService {
   private final BusinessNotificationRepository businessNotificationRepository;
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public BusinessNotification acceptChartOfAccountChangesForUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     BusinessNotification businessNotification = new BusinessNotification();
@@ -33,7 +33,7 @@ public class BusinessNotificationService {
     return businessNotificationRepository.save(businessNotification);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<BusinessNotification> getUnseenNotificationsForUser(
       TypedId<BusinessId> businessId, TypedId<UserId> userId) {
     Optional<BusinessNotification> lastUserAccept =
@@ -52,7 +52,7 @@ public class BusinessNotificationService {
     return List.of();
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<BusinessNotification> getRecentChartOfAccountsNotifications(
       TypedId<BusinessId> businessId) {
     OffsetDateTime targetTime = OffsetDateTime.now(ZoneOffset.UTC);

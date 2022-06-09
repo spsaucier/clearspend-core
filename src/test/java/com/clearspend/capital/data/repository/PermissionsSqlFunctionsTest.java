@@ -940,6 +940,8 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                     AllocationPermission.VIEW_OWN,
                     AllocationPermission.CATEGORIZE,
                     AllocationPermission.LINK_RECEIPTS,
+                    AllocationPermission.MANAGE_CATEGORIES,
+                    AllocationPermission.MANAGE_CONNECTIONS,
                     AllocationPermission.EMPLOYEE),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)),
             new AllAllocationPermissions(
@@ -954,6 +956,8 @@ public class PermissionsSqlFunctionsTest extends BaseCapitalTest {
                     AllocationPermission.VIEW_OWN,
                     AllocationPermission.CATEGORIZE,
                     AllocationPermission.LINK_RECEIPTS,
+                    AllocationPermission.MANAGE_CATEGORIES,
+                    AllocationPermission.MANAGE_CONNECTIONS,
                     AllocationPermission.EMPLOYEE),
                 EnumSet.of(GlobalUserPermission.CROSS_BUSINESS_BOUNDARY)));
   }

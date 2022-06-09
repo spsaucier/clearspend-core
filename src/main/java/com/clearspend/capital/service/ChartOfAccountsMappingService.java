@@ -33,7 +33,7 @@ public class ChartOfAccountsMappingService {
   private final CodatClient codatClient;
   private final ExpenseCategoryRepository expenseCategoryRepository;
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<ChartOfAccountsMappingResponse> getAllMappingsForBusiness(
       TypedId<BusinessId> businessId) {
 
@@ -66,7 +66,7 @@ public class ChartOfAccountsMappingService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<ChartOfAccountsMappingResponse> overwriteAllMappings(
       TypedId<BusinessId> businessId, List<AddChartOfAccountsMappingRequest> request) {
     // delete existing chart of accounts mappings for business
@@ -122,7 +122,7 @@ public class ChartOfAccountsMappingService {
   }
 
   @Transactional
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public void deleteChartOfAccountsMappingsForBusiness(TypedId<BusinessId> businessId) {
     mappingRepository.deleteAll(mappingRepository.findAllByBusinessId(businessId));
   }

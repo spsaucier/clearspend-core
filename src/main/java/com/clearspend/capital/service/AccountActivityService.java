@@ -584,7 +584,7 @@ public class AccountActivityService {
             () -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, businessId, adjustmentId));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<AccountActivity> findAllSyncableForBusiness(TypedId<BusinessId> businessId) {
     return accountActivityRepository.findByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);

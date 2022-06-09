@@ -58,14 +58,14 @@ public class ChartOfAccountsService {
     }
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public ChartOfAccounts getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     return chartOfAccountsRepository
         .findByBusinessId(businessId)
         .orElseThrow(() -> new RecordNotFoundException(Table.CHART_OF_ACCOUNTS));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public ChartOfAccounts updateChartOfAccountsFromCodat(TypedId<BusinessId> businessId) {
     return updateChartOfAccountsForBusiness(
         businessId,
@@ -246,7 +246,7 @@ public class ChartOfAccountsService {
         .forEach(codatAccount -> notifyNewAccountRecursively(codatAccount, businessId));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public Integer getTotalChangesForBusiness(TypedId<BusinessId> businessId) {
     Optional<ChartOfAccounts> chartOfAccounts =
         chartOfAccountsRepository.findByBusinessId(businessId);
@@ -269,7 +269,7 @@ public class ChartOfAccountsService {
     return total;
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CodatSyncResponse resyncChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     // TODO: Pull this out to a separate service when we know where other refresh buttons may be.
     codatService.updateDataTypeForBusiness(businessId, "trackingCategories");

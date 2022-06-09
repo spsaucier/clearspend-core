@@ -191,6 +191,6 @@ public class CodatController {
   @PostMapping("/category-names")
   public Boolean setClearspendNamesForCategories(
       @Validated @RequestBody List<SetCategoryNamesRequest> request) {
-    return codatService.setClearspendNamesForCategories(CurrentUser.getActiveBusinessId(), request);
+    return codatService.setClearSpendNamesForCategories(CurrentUser.getActiveBusinessId(), request);
   }
 }

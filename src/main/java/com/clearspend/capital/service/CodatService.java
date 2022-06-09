@@ -107,7 +107,7 @@ public class CodatService {
 
   private final AccountingAuditEventPublisher accountingEventPublisher;
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public String createQboConnectionForBusiness(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
     Business business = businessService.retrieveBusinessForService(businessId, true);
@@ -122,7 +122,7 @@ public class CodatService {
     return codatClient.createQboConnectionForBusiness(business.getCodatCompanyRef()).getLinkUrl();
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public Boolean getIntegrationConnectionStatus(TypedId<BusinessId> businessId) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
 
@@ -142,7 +142,7 @@ public class CodatService {
     }
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public SyncTransactionResponse syncTransactionAsDirectCost(
       TypedId<AccountActivityId> accountActivityId, TypedId<BusinessId> businessId)
       throws CodatApiCallException {
@@ -238,7 +238,7 @@ public class CodatService {
     return new SyncTransactionResponse("IN_PROGRESS", directCostSyncResponse);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CodatAccountNestedResponse getChartOfAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
@@ -248,7 +248,7 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(chartOfAccounts.getResults()));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|APPLICATION')")
   public CodatAccountNestedResponse getCodatChartOfAccountsForBusiness(
       TypedId<BusinessId> businessId, List<CodatAccountSubtype> subCategories) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
@@ -273,7 +273,7 @@ public class CodatService {
     return new CodatAccountNestedResponse(nestCodatAccounts(response));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CodatBankAccountsResponse getBankAccountsForBusiness(TypedId<BusinessId> businessId) {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
 
@@ -281,7 +281,7 @@ public class CodatService {
         currentBusiness.getCodatCompanyRef(), currentBusiness.getCodatConnectionId());
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CodatCreateBankAccountResponse createBankAccountForBusiness(
       TypedId<BusinessId> businessId, CreateCreditCardRequest createBankAccountRequest)
       throws CodatApiCallException {
@@ -312,7 +312,7 @@ public class CodatService {
         createBankAccountRequest.getAccountName());
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|APPLICATION')")
   public Business updateCodatCreditCardForBusiness(
       TypedId<BusinessId> businessId, String codatCreditCardId) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
@@ -333,7 +333,7 @@ public class CodatService {
     return businessRepository.save(business);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public Boolean deleteCodatIntegrationConnection(TypedId<BusinessId> businessId)
       throws CodatApiCallException {
     Business currentBusiness = businessService.retrieveBusinessForService(businessId, true);
@@ -533,7 +533,7 @@ public class CodatService {
     }
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'CROSS_BUSINESS_BOUNDARY|MANAGE_CONNECTIONS')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CodatSyncResponse updateDataTypeForBusiness(
       TypedId<BusinessId> businessId, String dataType) {
     Business business = businessService.getBusiness(businessId, true);
@@ -543,7 +543,7 @@ public class CodatService {
     return null;
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<SyncTransactionResponse> syncMultipleTransactions(
       List<TypedId<AccountActivityId>> accountActivityIds, TypedId<BusinessId> businessId) {
     return accountActivityIds.stream()
@@ -551,7 +551,7 @@ public class CodatService {
         .collect(Collectors.toUnmodifiableList());
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<SyncTransactionResponse> syncAllReadyTransactions(TypedId<BusinessId> businessId) {
     List<AccountActivity> transactionsReadyToSync =
         accountActivityService.findAllSyncableForBusiness(businessId);
@@ -559,13 +559,13 @@ public class CodatService {
         transactionsReadyToSync.stream().map(TypedMutable::getId).collect(toList()), businessId);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public Integer getSyncReadyCount(TypedId<BusinessId> businessId) {
     return accountActivityRepository.countByIntegrationSyncStatusAndBusinessId(
         AccountActivityIntegrationSyncStatus.READY, businessId);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public GetSuppliersResponse getAllSuppliersFromQboByBusiness(
       TypedId<BusinessId> businessId, Integer limit) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
@@ -591,7 +591,7 @@ public class CodatService {
     return new GetSuppliersResponse(finalResult.size(), finalResult);
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public GetSuppliersResponse getMatchedSuppliersFromQboByBusiness(
       TypedId<BusinessId> businessId, Integer limit, String targetName) {
     Business business = businessService.retrieveBusinessForService(businessId, true);
@@ -615,7 +615,7 @@ public class CodatService {
             .collect(toList()));
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public CreateAssignSupplierResponse createVendorAssignedToAccountActivity(
       TypedId<BusinessId> businessId,
       TypedId<AccountActivityId> accountActivityId,
@@ -701,8 +701,8 @@ public class CodatService {
     }
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
-  public Boolean setClearspendNamesForCategories(
+  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
+  public Boolean setClearSpendNamesForCategories(
       TypedId<BusinessId> businessId, List<SetCategoryNamesRequest> nameUpdateRequests) {
     nameUpdateRequests.forEach(
         update -> {
@@ -717,7 +717,7 @@ public class CodatService {
     return true;
   }
 
-  @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS|READ|APPLICATION')")
+  @PreAuthorize("hasRootPermission(#businessId, 'READ')")
   public List<CodatCategory> getCodatCategoriesByType(
       TypedId<BusinessId> businessId, CodatCategoryType type) {
     return codatCategoryRepository.findByBusinessIdAndType(businessId, type);
