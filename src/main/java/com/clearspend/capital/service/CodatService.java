@@ -546,6 +546,14 @@ public class CodatService {
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_CONNECTIONS')")
   public List<SyncTransactionResponse> syncMultipleTransactions(
       List<TypedId<AccountActivityId>> accountActivityIds, TypedId<BusinessId> businessId) {
+    // Audit Event
+    Map<String, String> auditData = new HashMap<>();
+    auditData.put(
+        CodatSyncEventType.GROUP_DIRECT_COST_SYNC.toString(),
+        org.apache.commons.lang3.StringUtils.join(accountActivityIds, ","));
+    accountingEventPublisher.publishAccountingCodatSyncAuditEvent(
+        auditData, businessId.toString(), CurrentUser.getUserId().toString());
+
     return accountActivityIds.stream()
         .map(accountActivityId -> syncTransactionAsDirectCost(accountActivityId, businessId))
         .collect(Collectors.toUnmodifiableList());

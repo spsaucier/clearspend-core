@@ -92,8 +92,9 @@ public class AccountingAuditLogEndPointTest extends BaseCapitalTest {
         mockMvcHelper.queryList(
             "/codat/audit-log?limit=1", HttpMethod.GET, userCookie, null, new TypeReference<>() {});
 
-    assertThat(fullResult.size() == 6).isTrue();
+    assertThat(fullResult.size() == 7).isTrue();
     assertThat(fullResult.get(0).getChangedValue()).isEqualTo("new vendor");
     assertThat(fullResult.get(5).getTransactionId()).isEqualTo("a0001");
+    assertThat(fullResult.get(6).getGroupSyncActivityIds().size()).isEqualTo(2);
   }
 }

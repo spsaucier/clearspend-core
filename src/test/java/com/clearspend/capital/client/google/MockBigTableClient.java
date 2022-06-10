@@ -14,6 +14,7 @@ import com.google.api.gax.rpc.ServerStream;
 import com.google.cloud.bigtable.data.v2.models.Filters;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
+import com.google.common.base.Splitter;
 import com.google.protobuf.ByteString;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -145,6 +146,15 @@ public class MockBigTableClient extends BigTableClient {
             .accountActivityId("a0001")
             .build());
     v.setDirectCostSyncs(syncs);
+
+    v.setGroupSyncActivities(
+        List.of(
+            AuditLogDisplayValue.builder()
+                .userId(this.testUserId)
+                .eventType("Group Direct Cost Sync")
+                .auditTime(OffsetDateTime.now(ZoneOffset.UTC).minusDays(7))
+                .groupSyncActivityIds(Splitter.on(',').splitToList("activity001,activity002"))
+                .build()));
 
     this.accountActivitySample = new AccountingAuditResponse();
     List<AccountActivityAuditLog> alogs = new ArrayList<>();

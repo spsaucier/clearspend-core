@@ -112,6 +112,17 @@ public class AccountingAuditLogService {
                               .build())
                   .collect(Collectors.toList()));
         }
+        // group direct cost sync
+        if (v.getGroupSyncActivities() != null) {
+          v.getGroupSyncActivities()
+              .forEach(
+                  d -> {
+                    d.setFirstName(firstName);
+                    d.setLastName(lastName);
+                    d.setEmail(email);
+                  });
+          responseList.addAll(v.getGroupSyncActivities());
+        }
       }
     }
 

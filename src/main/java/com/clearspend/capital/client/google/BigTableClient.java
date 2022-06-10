@@ -7,6 +7,7 @@ import com.clearspend.capital.common.audit.AccountingAuditProcessor;
 import com.clearspend.capital.common.audit.AccountingCodatSyncAuditEvent;
 import com.clearspend.capital.common.audit.CodatSyncEventType;
 import com.clearspend.capital.data.audit.AccountingAuditResponse;
+import com.clearspend.capital.data.audit.AuditLogDisplayValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValue;
 import com.clearspend.capital.data.audit.CodatSyncLogValueDetail;
 import com.google.api.gax.core.FixedCredentialsProvider;
@@ -20,6 +21,7 @@ import com.google.cloud.bigtable.data.v2.models.ReadModifyWriteRow;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
 import com.google.cloud.bigtable.data.v2.models.RowMutation;
+import com.google.common.base.Splitter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Instant;
@@ -151,6 +153,7 @@ public class BigTableClient {
               rowKeys[1],
               rowKeys[2],
               details,
+              null,
               null);
       // convert the cells
       for (RowCell c :
@@ -183,6 +186,27 @@ public class BigTableClient {
                               OffsetDateTime.ofInstant(
                                   Instant.ofEpochMilli(cell.getTimestamp() / 1000), ZoneOffset.UTC))
                           .accountActivityId(cell.getValue().toStringUtf8())
+                          .build())
+              .collect(Collectors.toList()));
+
+      // fetch group sync
+      value.setGroupSyncActivities(
+          r
+              .getCells(
+                  AccountingCodatSyncAuditEvent.COLUMN_FAMILY,
+                  CodatSyncEventType.GROUP_DIRECT_COST_SYNC.toString())
+              .stream()
+              .map(
+                  cell ->
+                      AuditLogDisplayValue.builder()
+                          .userId(rowKeys[2])
+                          .eventType("Group Direct Cost Sync")
+                          .timestamp(cell.getTimestamp())
+                          .auditTime(
+                              OffsetDateTime.ofInstant(
+                                  Instant.ofEpochMilli(cell.getTimestamp() / 1000), ZoneOffset.UTC))
+                          .groupSyncActivityIds(
+                              Splitter.on(',').splitToList(cell.getValue().toStringUtf8()))
                           .build())
               .collect(Collectors.toList()));
 

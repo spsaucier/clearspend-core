@@ -543,6 +543,8 @@ public class CodatServiceTest extends BaseCapitalTest {
                 .collect(Collectors.toUnmodifiableList())
                 .size())
         .isEqualTo(2);
+
+    assertThat(bigTableClient.getMockBigTable().size() > 0).isTrue();
   }
 
   @Test

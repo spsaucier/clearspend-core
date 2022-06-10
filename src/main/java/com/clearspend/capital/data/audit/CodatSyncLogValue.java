@@ -21,4 +21,6 @@ public class CodatSyncLogValue implements Serializable {
   private List<CodatSyncLogValueDetail> details;
 
   private List<CodatSyncLogValueDetail> directCostSyncs;
+
+  private List<AuditLogDisplayValue> groupSyncActivities;
 }
