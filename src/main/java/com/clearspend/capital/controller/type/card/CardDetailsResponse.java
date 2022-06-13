@@ -47,8 +47,11 @@ public class CardDetailsResponse {
             .orElse(new AccountAmounts(null, null));
     final String allocationName =
         Optional.ofNullable(cardDetailsRecord.allocation()).map(Allocation::getName).orElse(null);
+    final TypedId<AllocationId> allocationId =
+        Optional.ofNullable(cardDetailsRecord.allocation()).map(Allocation::getId).orElse(null);
     CardDetailsResponse response = new CardDetailsResponse(new Card(cardDetailsRecord.card()));
     response.setLinkedAllocationName(allocationName);
+    response.setLinkedAllocationId(allocationId);
     response.setLedgerBalance(accountAmounts.ledgerBalance());
     response.setAvailableBalance(accountAmounts.availableBalance());
     response.setAllocationSpendControls(
