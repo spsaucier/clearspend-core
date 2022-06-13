@@ -233,4 +233,8 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion") {
         exclude("junit.junit")
     }
+
+    val permissionEnforcementProcessorJar = "lib/capital-permission-enforcement-1.0.0-SNAPSHOT.jar"
+    implementation(files(permissionEnforcementProcessorJar))
+    annotationProcessor(files(permissionEnforcementProcessorJar))
 }

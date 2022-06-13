@@ -19,7 +19,7 @@ public class ClearspendService {
   public record FinancialAccountBalance(
       Amount totalBalance, Amount businessBalance, Amount availableBalance) {}
 
-  public FinancialAccountBalance getFinancialAccountBalance() {
+  FinancialAccountBalance getFinancialAccountBalance() {
     FinancialAccount clearspendFinancialAccount = stripeClient.getClearspendFinancialAccount();
     Amount totalBalance =
         Amount.fromStripeAmount(

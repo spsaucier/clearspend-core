@@ -591,9 +591,9 @@ public class AccountActivityService {
   }
 
   @Transactional
+  @PreAuthorize("hasPermission(#accountActivity, 'VIEW_OWN|MANAGE_CONNECTIONS')")
   public AccountActivity unlockAccountActivityForSync(
-      TypedId<BusinessId> businessId, TypedId<AccountActivityId> accountActivityId) {
-    AccountActivity accountActivity = getAccountActivity(accountActivityId);
+      TypedId<BusinessId> businessId, AccountActivity accountActivity) {
     if (accountActivity.getExpenseDetails() != null
         && accountActivity.getExpenseDetails().getExpenseCategoryId() != null) {
       Optional<ExpenseCategory> expenseCategory =
@@ -613,7 +613,7 @@ public class AccountActivityService {
   }
 
   @Transactional
-  public AccountActivity updateCodatSupplier(
+  AccountActivity updateCodatSupplier(
       TypedId<AccountActivityId> accountActivityId, String supplierId, String supplierName) {
     AccountActivity accountActivity = getAccountActivity(accountActivityId);
     if (accountActivity.getMerchant() != null) {
@@ -676,6 +676,7 @@ public class AccountActivityService {
         .orElseThrow(() -> new RecordNotFoundException(Table.ACCOUNT_ACTIVITY, accountActivityId));
   }
 
+  @SqlPermissionAPI
   public Page<AccountActivity> find(
       TypedId<BusinessId> businessId, AccountActivityFilterCriteria filterCriteria) {
     return accountActivityRepository.find(businessId, filterCriteria);
@@ -694,7 +695,7 @@ public class AccountActivityService {
   }
 
   @Transactional
-  public void updateMerchantData(
+  void updateMerchantData(
       TypedId<BusinessId> businessId,
       TypedId<AccountActivityId> accountActivityId,
       String merchantName,

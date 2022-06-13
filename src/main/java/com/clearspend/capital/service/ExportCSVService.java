@@ -101,6 +101,10 @@ public class ExportCSVService {
     return csvFile.toByteArray();
   }
 
+  @OpenAccessAPI(
+      explanation =
+          "The CSV is composed based on the data passed in as an argument. The method that retrieves the data will enforce the permissions",
+      reviewer = "Craig Miller")
   public byte[] fromLedgerActivity(
       List<LedgerActivityResponse> ledgerActivities, boolean transactionsOnly) {
     List<String> headerFields =

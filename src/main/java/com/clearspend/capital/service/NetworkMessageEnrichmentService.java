@@ -12,6 +12,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,6 +37,7 @@ public class NetworkMessageEnrichmentService {
   }
 
   @Async
+  @PreAuthorize("hasGlobalPermission('APPLICATION')")
   public void scheduleActivityEnrichment(NetworkCommon common) {
     if (common.getAccountActivity() != null) {
       EnhanceTransactionResponse mxResponse =

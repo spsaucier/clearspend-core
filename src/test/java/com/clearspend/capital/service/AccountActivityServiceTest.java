@@ -1290,7 +1290,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
     accountActivityRepository.save(activity);
 
     accountActivityService.unlockAccountActivityForSync(
-        createBusinessRecord.businessOwner().getBusinessId(), activity.getId());
+        createBusinessRecord.businessOwner().getBusinessId(), activity);
     assertThat(
             accountActivityService.getAccountActivity(activity.getId()).getIntegrationSyncStatus())
         .isEqualTo(AccountActivityIntegrationSyncStatus.NOT_READY);
@@ -1318,7 +1318,7 @@ public class AccountActivityServiceTest extends BaseCapitalTest {
                 .build());
 
     accountActivityService.unlockAccountActivityForSync(
-        createBusinessRecord.businessOwner().getBusinessId(), mappedActivity.getId());
+        createBusinessRecord.businessOwner().getBusinessId(), mappedActivity);
     assertThat(
             accountActivityService
                 .getAccountActivity(mappedActivity.getId())

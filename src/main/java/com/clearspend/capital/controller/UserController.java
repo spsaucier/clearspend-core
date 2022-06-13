@@ -498,7 +498,8 @@ public class UserController {
           TypedId<AccountActivityId> accountActivityId) {
     return new AccountActivityResponse(
         accountActivityService.unlockAccountActivityForSync(
-            CurrentUser.getActiveBusinessId(), accountActivityId));
+            CurrentUser.getActiveBusinessId(),
+            accountActivityService.getAccountActivity(accountActivityId)));
   }
 
   @PostMapping("/account-activity/{accountActivityId}/receipts/{receiptId}/link")
