@@ -7,6 +7,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.adjustment.CreateAdjustmentResponse;
 import com.clearspend.capital.controller.type.business.bankaccount.BankAccount;
 import com.clearspend.capital.controller.type.business.bankaccount.TransactBankAccountRequest;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.enums.BusinessOnboardingStep;
@@ -29,6 +30,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -78,18 +80,19 @@ public class BusinessBankAccountController {
             CurrentUser.getActiveBusinessId(), businessBankAccountId));
   }
 
-  @GetMapping(
-      value = "/link-token/{linkToken}/accounts",
+  @PutMapping(
+      value = "/link-token/{publicToken}/accounts",
       produces = MediaType.APPLICATION_JSON_VALUE)
   @OnboardingBusinessOp(
       reviewer = "Craig Miller",
       explanation = "This method uses the Business for onboarding tasks")
-  List<BankAccount> linkBusinessBankAccounts(@PathVariable String linkToken) throws IOException {
+  ResponseEntity<List<BankAccount>> linkBusinessBankAccounts(@PathVariable String publicToken)
+      throws IOException {
     TypedId<BusinessId> businessId = CurrentUser.getActiveBusinessId();
 
     List<BankAccount> bankAccounts =
         toListBankAccount(
-            businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId));
+            businessBankAccountService.linkBusinessBankAccounts(publicToken, businessId));
 
     Business business = businessService.getBusiness(businessId, true);
     if (business.getStatus() == BusinessStatus.ONBOARDING) {
@@ -97,7 +100,14 @@ public class BusinessBankAccountController {
           businessId, BusinessStatus.ONBOARDING, BusinessOnboardingStep.TRANSFER_MONEY, null);
     }
 
-    return bankAccounts;
+    int status =
+        bankAccounts.stream()
+            .filter(a -> a.getAccountLinkStatus() != AccountLinkStatus.LINKED)
+            .findFirst()
+            .map(a -> 202)
+            .orElse(200);
+
+    return ResponseEntity.status(status).body(bankAccounts);
   }
 
   private List<BankAccount> toListBankAccount(List<BusinessBankAccount> businessBankAccounts) {
@@ -155,7 +165,29 @@ public class BusinessBankAccountController {
               description = "ID of the businessBankAccount record.",
               example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
           TypedId<BusinessBankAccountId> businessBankAccountId) {
-    businessBankAccountService.registerExternalBank(
+    try {
+      businessBankAccountService.registerExternalBank(
+          CurrentUser.getActiveBusinessId(), businessBankAccountId);
+    } catch (IllegalStateException e) {
+      // The account is not correctly linked
+      return ResponseEntity.status(424).build();
+    }
+
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping(
+      value = "/{businessBankAccountId}/fail_link",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  ResponseEntity<?> failAccountLinking(
+      @PathVariable(value = "businessBankAccountId")
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "ID of the businessBankAccount record.",
+              example = "48104ecb-1343-4cc1-b6f2-e6cc88e9a80f")
+          TypedId<BusinessBankAccountId> businessBankAccountId) {
+    businessBankAccountService.failAccountLinking(
         CurrentUser.getActiveBusinessId(), businessBankAccountId);
 
     return ResponseEntity.ok().build();

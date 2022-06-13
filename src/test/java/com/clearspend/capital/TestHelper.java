@@ -827,7 +827,7 @@ public class TestHelper {
   public BusinessBankAccount createBusinessBankAccount(
       TypedId<BusinessId> businessId, boolean linkStripe) {
     try {
-      String linkToken = plaidClient.createLinkToken(businessId);
+      String linkToken = plaidClient.createNewLinkToken(businessId);
       BusinessBankAccount businessBankAccount =
           businessBankAccountService.linkBusinessBankAccounts(linkToken, businessId).get(0);
 

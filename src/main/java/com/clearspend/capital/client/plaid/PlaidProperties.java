@@ -15,6 +15,7 @@ public class PlaidProperties {
   private String clientId;
   private String secret;
   private String environment;
+  private String webhook;
 
   public boolean isConfigured() {
     return StringUtils.isNoneBlank(clientId, secret, environment);

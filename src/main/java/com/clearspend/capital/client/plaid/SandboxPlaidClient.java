@@ -1,14 +1,20 @@
 package com.clearspend.capital.client.plaid;
 
+import static com.stripe.Stripe.clientId;
+
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.data.repository.PlaidLogEntryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.plaid.client.model.SandboxItemResetLoginRequest;
 import com.plaid.client.model.SandboxItemResetLoginResponse;
+import com.plaid.client.model.SandboxItemSetVerificationStatusRequest;
+import com.plaid.client.model.SandboxItemSetVerificationStatusRequest.VerificationStatusEnum;
+import com.plaid.client.model.SandboxItemSetVerificationStatusResponse;
 import com.plaid.client.request.PlaidApi;
 import java.io.IOException;
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -47,5 +53,24 @@ public class SandboxPlaidClient extends PlaidClient {
     } catch (IOException e) {
       throw new RuntimeException("Failed to reset login", e);
     }
+  }
+
+  @Override
+  @SneakyThrows
+  public @NonNull SandboxItemSetVerificationStatusResponse setVerificationStatus(
+      @NonNull final TypedId<BusinessId> businessId,
+      String accessToken,
+      String accountId,
+      VerificationStatusEnum newStatus) {
+    SandboxItemSetVerificationStatusRequest request =
+        new SandboxItemSetVerificationStatusRequest()
+            .accessToken(accessToken)
+            .secret(plaidProperties.getSecret())
+            .clientId(clientId)
+            .accountId(accountId);
+    request.setAccessToken(accessToken);
+    request.setVerificationStatus(newStatus);
+
+    return validBody(businessId, plaidApi.sandboxItemSetVerificationStatus(request).execute());
   }
 }

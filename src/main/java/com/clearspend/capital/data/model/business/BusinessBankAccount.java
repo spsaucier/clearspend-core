@@ -5,6 +5,7 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.BusinessRelated;
 import com.vladmihalcea.hibernate.type.basic.PostgreSQLEnumType;
@@ -14,6 +15,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -30,6 +32,7 @@ import org.hibernate.annotations.TypeDef;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@AllArgsConstructor
 @RequiredArgsConstructor
 @DynamicUpdate
 @DynamicInsert
@@ -47,9 +50,9 @@ public class BusinessBankAccount extends TypedMutable<BusinessBankAccountId>
 
   @Sensitive private String name;
 
-  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash routingNumber;
+  @Sensitive @Embedded private EncryptedStringWithHash routingNumber;
 
-  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accountNumber;
+  @Sensitive @Embedded private EncryptedStringWithHash accountNumber;
 
   @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash accessToken;
 

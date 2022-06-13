@@ -3,10 +3,12 @@ package com.clearspend.capital.controller.business;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.clearspend.capital.BaseCapitalTest;
@@ -19,6 +21,7 @@ import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidClientTest;
 import com.clearspend.capital.client.plaid.PlaidProperties;
 import com.clearspend.capital.client.stripe.StripeClient;
+import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -105,7 +108,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
     // Test a new linked account
     String linkToken = testHelper.getLinkToken(testHelper.retrieveBusiness().getId());
-    usualGet(String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken));
+    usualRequest(
+        HttpMethod.PUT,
+        String.format("/business-bank-accounts/link-token/%s/accounts/", linkToken));
   }
 
   @SneakyThrows
@@ -120,8 +125,12 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
   }
 
   private MockHttpServletResponse usualGet(String s) throws Exception {
+    return usualRequest(HttpMethod.GET, s);
+  }
+
+  private MockHttpServletResponse usualRequest(HttpMethod method, String s) throws Exception {
     MockHttpServletResponse response =
-        mvc.perform(get(s).contentType("application/json").cookie(authCookie))
+        mvc.perform(request(method, s).contentType("application/json").cookie(authCookie))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse();
@@ -369,10 +378,9 @@ class BusinessBankAccountControllerTest extends BaseCapitalTest {
 
     testHelper.setCurrentUser(createBusinessRecord.user());
 
-    businessBankAccount =
-        businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId());
-
-    assertThat(businessBankAccount.getDeleted()).isTrue();
+    assertThrows(
+        RecordNotFoundException.class,
+        () -> businessBankAccountService.retrieveBusinessBankAccount(businessBankAccount.getId()));
   }
 
   @SneakyThrows

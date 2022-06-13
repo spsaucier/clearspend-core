@@ -28,10 +28,12 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.business.BusinessSettings;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessBankAccountBalance;
 import com.clearspend.capital.data.model.decline.DeclineDetails;
@@ -559,14 +561,15 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             accessToken,
             accountRef,
             bankName,
-            createBusinessRecord.business().getId());
+            createBusinessRecord.business().getId(),
+            AccountLinkStatus.LINKED);
 
     assertThat(businessBankAccount.getBusinessId())
         .isEqualTo(createBusinessRecord.business().getId());
     assertThat(businessBankAccount.getRoutingNumber())
-        .isEqualTo(new RequiredEncryptedStringWithHash(routingNumber));
+        .isEqualTo(new EncryptedStringWithHash(routingNumber));
     assertThat(businessBankAccount.getAccountNumber())
-        .isEqualTo(new RequiredEncryptedStringWithHash(accountNumber));
+        .isEqualTo(new EncryptedStringWithHash(accountNumber));
     assertThat(businessBankAccount.getAccessToken())
         .isEqualTo(new RequiredEncryptedStringWithHash(accessToken));
     assertThat(businessBankAccount.getPlaidAccountRef())
@@ -592,7 +595,8 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
                 accessToken,
                 accountRef,
                 bankName,
-                createBusinessRecord.business().getId());
+                createBusinessRecord.business().getId(),
+                AccountLinkStatus.LINKED);
     permissionValidationHelper
         .buildValidator(createBusinessRecord)
         .setAllocation(childAllocation)

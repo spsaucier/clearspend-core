@@ -17,6 +17,7 @@ import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.BalanceNotFoundException;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.business.AccountLinkStatus;
@@ -97,8 +98,8 @@ public class BusinessBankAccountBalanceServiceTest extends BaseCapitalTest {
     account.setId(new TypedId<>(UUID.randomUUID()));
     account.setBusinessId(businessId);
     account.setName(String.format("TheBusiness-%s", UUID.randomUUID()));
-    account.setRoutingNumber(new RequiredEncryptedStringWithHash("Routing"));
-    account.setAccountNumber(new RequiredEncryptedStringWithHash("Account"));
+    account.setRoutingNumber(new EncryptedStringWithHash("Routing"));
+    account.setAccountNumber(new EncryptedStringWithHash("Account"));
     account.setAccessToken(new RequiredEncryptedStringWithHash(ACCESS_TOKEN));
     account.setPlaidAccountRef(new RequiredEncryptedStringWithHash(plaidAccountRef));
     account.setLinkStatus(AccountLinkStatus.LINKED);

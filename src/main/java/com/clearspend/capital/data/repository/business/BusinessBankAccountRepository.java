@@ -4,6 +4,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +26,8 @@ public interface BusinessBankAccountRepository
   }
 
   List<BusinessBankAccount> findAllByAccessTokenHash(byte[] hash);
+
+  Optional<BusinessBankAccount> findByPlaidAccountRefHash(byte[] plaidAccountRef);
+
+  List<BusinessBankAccount> findAllByLinkStatus(AccountLinkStatus linkStatus);
 }

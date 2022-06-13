@@ -89,6 +89,7 @@ client:
     clientId: 6148efa64491e20011af5b75
     environment: SANDBOX
     secret: ${PLAID_SECRET:}
+    webhook: ${PLAID_WEBHOOK:}
   sendgrid:
     api-key: ${SENDGRID_API_KEY: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}
     email-notifications-enabled: ${SENDGRID_EMAIL_NOTIFICATIONS_ENABLED:true}

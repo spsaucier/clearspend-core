@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -62,9 +63,9 @@ public class PlaidClientTest extends BaseCapitalTest {
   void getAccounts() throws IOException {
     assumeTrue(underTest.isConfigured());
     String linkToken =
-        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+        underTest.createNewLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId(), linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(businessId(), accessToken);
     assertNotNull(accounts);
 
     checkLastLogTypes(
@@ -91,9 +92,9 @@ public class PlaidClientTest extends BaseCapitalTest {
   void getOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
     String linkToken =
-        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
-    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken, businessId());
+        underTest.createNewLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId(), linkToken);
+    PlaidClient.OwnersResponse owners = underTest.getOwners(businessId(), accessToken);
     assertNotNull(owners);
     Owner owner = owners.accounts().get(0).getOwners().get(0);
     assertNotNull(owner);
@@ -106,10 +107,10 @@ public class PlaidClientTest extends BaseCapitalTest {
   void getAccountsAndOwners() throws IOException {
     assumeTrue(underTest.isConfigured());
     String linkToken =
-        underTest.createLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
-    PlaidClient.OwnersResponse owners = underTest.getOwners(accessToken, businessId());
+        underTest.createNewLinkToken(businessId(), Arrays.asList(Products.AUTH, Products.IDENTITY));
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId(), linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(businessId(), accessToken);
+    PlaidClient.OwnersResponse owners = underTest.getOwners(businessId(), accessToken);
     assertNotNull(accounts);
     assertNotNull(owners);
 
@@ -119,7 +120,10 @@ public class PlaidClientTest extends BaseCapitalTest {
         accounts.accounts().stream().map(AccountBase::getAccountId).collect(Collectors.toSet());
     Set<String> ownerAccts =
         owners.accounts().stream().map(AccountIdentity::getAccountId).collect(Collectors.toSet());
-    assertEquals(accessAccts, ownerAccts);
+
+    // With the depository account filter on link, only accessAccounts are limited to depository
+    // owner accounts contain all the other accounts, too.
+    assertTrue(ownerAccts.containsAll(accessAccts));
     assertFalse(accessAccts.isEmpty());
 
     checkLastLogTypes(
@@ -134,13 +138,13 @@ public class PlaidClientTest extends BaseCapitalTest {
     assumeTrue(underTest.isConfigured());
     TypedId<BusinessId> businessId =
         TestPlaidClient.SANDBOX_INSTITUTIONS_BY_NAME.get("Tattersall Federal Credit Union");
-    String linkToken = underTest.createLinkToken(businessId);
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId);
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId);
+    String linkToken = underTest.createNewLinkToken(businessId);
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId, linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(businessId, accessToken);
     assertFalse(accounts.accounts().isEmpty());
     PlaidClientException e =
         assertThrows(
-            PlaidClientException.class, () -> underTest.getOwners(accessToken, businessId));
+            PlaidClientException.class, () -> underTest.getOwners(businessId, accessToken));
     assertEquals(PlaidErrorCode.PRODUCTS_NOT_SUPPORTED, e.getErrorCode());
 
     checkLastLogTypes(
@@ -154,9 +158,9 @@ public class PlaidClientTest extends BaseCapitalTest {
   @Test
   void testBalanceCheck() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken = underTest.createLinkToken(businessId());
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+    String linkToken = underTest.createNewLinkToken(businessId());
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId(), linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(businessId(), accessToken);
     List<AccountBase> balances = underTest.getBalances(businessId(), accessToken);
     assertNotNull(balances);
     assertNotNull(accounts);
@@ -171,9 +175,9 @@ public class PlaidClientTest extends BaseCapitalTest {
   @Test
   void testBalanceCheckAfterChangePassword_CAP_859() throws IOException {
     assumeTrue(underTest.isConfigured());
-    String linkToken = underTest.createLinkToken(businessId());
-    String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId());
-    PlaidClient.AccountsResponse accounts = underTest.getAccounts(accessToken, businessId());
+    String linkToken = underTest.createNewLinkToken(businessId());
+    String accessToken = underTest.exchangePublicTokenForAccessToken(businessId(), linkToken);
+    PlaidClient.AccountsResponse accounts = underTest.getAccounts(businessId(), accessToken);
     List<AccountBase> balances = underTest.getBalances(businessId(), accessToken);
     assertNotNull(balances);
     assertNotNull(accounts);
@@ -184,7 +188,7 @@ public class PlaidClientTest extends BaseCapitalTest {
     Assertions.assertThatExceptionOfType(PlaidClientException.class)
         .isThrownBy(() -> underTest.getBalances(businessId(), accessToken));
 
-    String newLinkToken = underTest.createLinkToken(businessId(), accessToken);
+    String newLinkToken = underTest.createReLinkToken(businessId(), accessToken);
     // Mock Link to use the link token to tie things together. (but they have to tell me how)
     // List<AccountBase> newBalances = underTest.getBalances(businessId(), newAccessToken);
     // assertNotNull(newBalances);
@@ -233,7 +237,7 @@ public class PlaidClientTest extends BaseCapitalTest {
             TypedId<BusinessId> businessId = institution.businessId();
             try {
               linkToken =
-                  underTest.createLinkToken(
+                  underTest.createNewLinkToken(
                       businessId, Arrays.asList(Products.AUTH, Products.IDENTITY));
             } catch (PlaidClientException e) {
               switch (e.getErrorCode()) {
@@ -246,8 +250,14 @@ public class PlaidClientTest extends BaseCapitalTest {
               }
             }
 
-            String accessToken = underTest.exchangePublicTokenForAccessToken(linkToken, businessId);
-            OwnersResponse response = underTest.getOwners(accessToken, businessId);
+            String accessToken = underTest.exchangePublicTokenForAccessToken(businessId, linkToken);
+            OwnersResponse response = underTest.getOwners(businessId, accessToken);
+            Map<String, String> accountStatus =
+                underTest.getVerificationStatus(businessId, accessToken).accounts().stream()
+                    .collect(
+                        Collectors.toMap(
+                            AccountBase::getAccountId,
+                            a -> String.valueOf(a.getVerificationStatus())));
             // log.info(institution.name());
             response
                 .accounts()
@@ -267,6 +277,8 @@ public class PlaidClientTest extends BaseCapitalTest {
                                                         accountIdentity.getName(),
                                                         accountIdentity.getOfficialName(),
                                                         accountIdentity.getType().toString(),
+                                                        accountStatus.get(
+                                                            accountIdentity.getAccountId()),
                                                         accountIdentity.getMask(),
                                                         String.valueOf(
                                                             accountIdentity
@@ -296,11 +308,9 @@ public class PlaidClientTest extends BaseCapitalTest {
     Set<String> uniqueCells = rows.stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
     // debug or print out the rows to get the full table.
-    /*
-     System.out.println(
-        "Bank\tAccount name\tOfficial Account Name\tType\tMask\tCurrent Bal\tAvail Bal\tLimit\tBal Curr\tOwner\tStreet\tCity\tRegion\tPostCode\tCountry");
+    System.out.println(
+        "Bank\tAccount name\tOfficial Account Name\tType\tLink Status\tMask\tCurrent Bal\tAvail Bal\tLimit\tBal Curr\tOwner\tStreet\tCity\tRegion\tPostCode\tCountry");
     rows.forEach(r -> System.out.println(String.join("\t", r.toArray(new String[0]))));
-     */
 
     // Just a few basic assertions to show items that are validated
     assertTrue(uniqueCells.contains("93405-2255"));

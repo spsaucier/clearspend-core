@@ -115,7 +115,7 @@ public record CurrentUser(
     return getClaims().map(claims -> claims.get(name)).orElse(null);
   }
 
-  private static Optional<Map<String, Object>> getClaims() {
+  public static Optional<Map<String, Object>> getClaims() {
     // TODO https://github.com/fusionauth/fusionauth-jwt#verify-and-decode-a-jwt-using-hmac
     return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
         .map(auth -> (JwtAuthenticationToken) auth)

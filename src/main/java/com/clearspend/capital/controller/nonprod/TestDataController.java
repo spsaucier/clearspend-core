@@ -8,6 +8,8 @@ import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Address;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.util.HttpReqRespUtils;
+import com.clearspend.capital.common.error.RecordNotFoundException;
+import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
@@ -27,6 +29,7 @@ import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
+import com.clearspend.capital.data.model.business.AccountLinkStatus;
 import com.clearspend.capital.data.model.business.Business;
 import com.clearspend.capital.data.model.business.BusinessBankAccount;
 import com.clearspend.capital.data.model.business.BusinessOwner;
@@ -79,6 +82,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.javafaker.Faker;
 import com.github.javafaker.Name;
+import com.plaid.client.model.SandboxItemSetVerificationStatusRequest.VerificationStatusEnum;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Person;
 import com.stripe.model.issuing.Authorization;
@@ -119,6 +123,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -238,7 +243,8 @@ public class TestDataController {
             UUID.randomUUID().toString(),
             UUID.randomUUID().toString(),
             faker.funnyName().name(),
-            business.getId());
+            business.getId(),
+            AccountLinkStatus.LINKED);
     businessBankAccountService.transactBankAccount(
         business.getId(),
         businessBankAccount.getId(),
@@ -936,5 +942,35 @@ public class TestDataController {
         businessBankAccountRepository.findById(businessBankAccountId).orElseThrow();
     plaidClient.sandboxItemResetLogin(
         businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
+  }
+
+  @PutMapping("/plaid/link/update/{businessBankAccountId}/{newStatus}")
+  void updateStatus(
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "businessBankAccountId",
+              description = "The BusinessBankAccount for which to update linking",
+              example = "7e626f82-5493-4c00-81fa-dbd3423e75e4")
+          TypedId<BusinessBankAccountId> businessBankAccountId,
+      @PathVariable
+          @Parameter(
+              required = true,
+              name = "newStatus",
+              description = "The new status for the link corresponding to the businessBankAccount",
+              example = "AUTOMATICALLY_VERIFIED")
+          VerificationStatusEnum newStatus) {
+    BusinessBankAccount bankAccount =
+        businessBankAccountRepository
+            .findById(businessBankAccountId)
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    plaidClient.setVerificationStatus(
+        bankAccount.getBusinessId(),
+        bankAccount.getAccessToken().getEncrypted(),
+        bankAccount.getPlaidAccountRef().getEncrypted(),
+        newStatus);
   }
 }

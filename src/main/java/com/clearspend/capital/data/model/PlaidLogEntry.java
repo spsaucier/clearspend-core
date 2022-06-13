@@ -33,6 +33,11 @@ import org.hibernate.annotations.Type;
 @Slf4j
 public class PlaidLogEntry extends TypedImmutable<PlaidLogEntryId> {
 
+  public PlaidLogEntry(
+      TypedId<BusinessId> businessId, String message, PlaidResponseType plaidResponseType) {
+    this(businessId, new EncryptedString(message), plaidResponseType);
+  }
+
   @NonNull
   @JoinColumn(referencedColumnName = "id", table = "business")
   @Column(updatable = false)

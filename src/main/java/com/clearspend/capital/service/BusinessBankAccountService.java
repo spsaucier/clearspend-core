@@ -6,6 +6,7 @@ import com.clearspend.capital.client.plaid.PlaidClientException;
 import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.data.model.Versioned;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
@@ -23,6 +24,8 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
+import com.clearspend.capital.crypto.HashUtil;
+import com.clearspend.capital.crypto.data.model.embedded.EncryptedStringWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
@@ -55,6 +58,7 @@ import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
 import com.plaid.client.model.AccountBalance;
 import com.plaid.client.model.AccountBase;
+import com.plaid.client.model.AccountBase.VerificationStatusEnum;
 import com.plaid.client.model.AccountIdentity;
 import com.plaid.client.model.NumbersACH;
 import com.plaid.client.model.Owner;
@@ -67,16 +71,19 @@ import java.nio.file.AccessDeniedException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
@@ -124,18 +131,21 @@ public class BusinessBankAccountService {
       String accessToken,
       String accountRef,
       String bankName,
-      TypedId<BusinessId> businessId) {
+      TypedId<BusinessId> businessId,
+      AccountLinkStatus accountLinkStatus) {
     BusinessBankAccount businessBankAccount =
         new BusinessBankAccount(
             businessId,
-            new RequiredEncryptedStringWithHash(routingNumber),
-            new RequiredEncryptedStringWithHash(accountNumber),
+            accountName,
+            new EncryptedStringWithHash(routingNumber),
+            new EncryptedStringWithHash(accountNumber),
             new RequiredEncryptedStringWithHash(accessToken),
             new RequiredEncryptedStringWithHash(accountRef),
-            AccountLinkStatus.LINKED,
-            false);
-    businessBankAccount.setName(accountName);
-    businessBankAccount.setBankName(bankName);
+            null,
+            null,
+            accountLinkStatus,
+            false,
+            bankName);
 
     log.debug(
         "Created business bank account {} for businessID {}",
@@ -145,48 +155,107 @@ public class BusinessBankAccountService {
     return businessBankAccountRepository.save(businessBankAccount);
   }
 
+  /**
+   * Retrieve the BusinessBankAccount and call Plaid to update name, link status, etc.
+   * Deleted/unlinked accounts will not be returned from this method.
+   *
+   * @param businessBankAccountId The ID of the account to fetch
+   * @return the BusinessBankAccount, updated
+   * @throws RecordNotFoundException if the record does not exist or has been deleted
+   */
   @PostAuthorize("hasRootPermission(returnObject, 'LINK_BANK_ACCOUNTS')")
   public BusinessBankAccount retrieveBusinessBankAccount(
       TypedId<BusinessBankAccountId> businessBankAccountId) {
     BusinessBankAccount businessBankAccount =
         retrievalService.retrieveBusinessBankAccount(businessBankAccountId);
-    if (StringUtils.isEmpty(businessBankAccount.getBankName())) {
-      try {
-        AccountsResponse accounts =
-            plaidClient.getAccounts(
-                businessBankAccount.getAccessToken().getEncrypted(),
-                businessBankAccount.getBusinessId());
-        businessBankAccount.setBankName(accounts.institutionName());
-        businessBankAccount = businessBankAccountRepository.save(businessBankAccount);
-      } catch (PlaidClientException plaidClientException) {
-        tryReLink(businessBankAccount, plaidClientException);
-        log.warn("Failed to fetch institution name", plaidClientException);
-      } catch (IOException ioException) {
-        log.warn("Failed to fetch institution name", ioException);
-      }
+    try {
+      businessBankAccount =
+          updateLinkedAccount(businessBankAccount)
+              .orElseThrow(
+                  () ->
+                      new RecordNotFoundException(
+                          Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    } catch (Exception exception) {
+      log.warn("Failed to update from Plaid", exception);
+    }
+    if (businessBankAccount.getDeleted()) {
+      throw new RecordNotFoundException(Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId);
     }
     return businessBankAccount;
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public String getLinkToken(TypedId<BusinessId> businessId) throws IOException {
-    return plaidClient.createLinkToken(businessId);
+    return plaidClient.createNewLinkToken(businessId);
   }
 
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public List<BusinessBankAccount> linkBusinessBankAccounts(
-      String linkToken, TypedId<BusinessId> businessId) throws IOException {
+      String publicToken, TypedId<BusinessId> businessId) throws IOException {
     // TODO: Check for already existing access token
-    // Will need some unique ID to look up in the database but can't use routing/account since
-    // that
-    // is not in the plaid metadata
-    String accessToken = plaidClient.exchangePublicTokenForAccessToken(linkToken, businessId);
-    PlaidClient.AccountsResponse accountsResponse =
-        plaidClient.getAccounts(accessToken, businessId);
+    String accessToken = plaidClient.exchangePublicTokenForAccessToken(businessId, publicToken);
+    AccountsResponse verificationStatus =
+        plaidClient.getVerificationStatus(businessId, accessToken);
+    boolean isPending =
+        verificationStatus.accounts().stream()
+            .filter(a -> a.getVerificationStatus() != null) // null is the most common case
+            .anyMatch(
+                a ->
+                    !AccountLinkStatus.of(a.getVerificationStatus())
+                        .equals(AccountLinkStatus.LINKED));
+
+    if (isPending) {
+      return synchronizeAccounts(businessId, verificationStatus);
+    }
+
+    return updateLinkedAccounts(businessId, accessToken);
+  }
+
+  /**
+   * Update the given linked account to reflect the latest Plaid link status. Also updates any other
+   * Plaid accounts linked with that institution in the background.
+   *
+   * @param account The account to update link status for
+   * @return the account, updated as necessary, if it has not been deleted. @Throws
+   */
+  Optional<BusinessBankAccount> updateLinkedAccount(final BusinessBankAccount account) {
+    final TypedId<BusinessBankAccountId> accountId = account.getId();
+    return updateLinkedAccounts(account.getBusinessId(), account.getAccessToken().getEncrypted())
+        .stream()
+        .filter(a -> accountId.equals(a.getId()))
+        .findAny();
+  }
+
+  @SneakyThrows
+  List<BusinessBankAccount> updateLinkedAccounts(
+      final TypedId<BusinessId> businessId, final String accessToken) {
+    PlaidClient.AccountsResponse accountsResponse;
+    try {
+      accountsResponse = plaidClient.getAccounts(businessId, accessToken);
+    } catch (PlaidClientException e) {
+      if (PlaidErrorCode.PRODUCT_NOT_READY.equals(e.getErrorCode())) {
+        // Probably a pending verification (which is fine), but also could be failed
+        // no way to distinguish
+        List<BusinessBankAccount> accounts =
+            businessBankAccountRepository.findByBusinessId(businessId).stream()
+                .filter(a -> a.getAccessToken().getEncrypted().equals(accessToken))
+                .toList();
+
+        // Check that assumption
+        if (accounts.stream()
+            .anyMatch(
+                a -> AccountLinkStatus.MICROTRANSACTION_PENDING.contains(a.getLinkStatus()))) {
+          return accounts;
+        }
+
+        // throw otherwise
+      }
+      throw e;
+    }
 
     try {
-      PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(accessToken, businessId);
+      PlaidClient.OwnersResponse ownersResponse = plaidClient.getOwners(businessId, accessToken);
       Map<String, List<Owner>> accountOwners =
           ownersResponse.accounts().stream()
               .collect(Collectors.toMap(AccountIdentity::getAccountId, AccountIdentity::getOwners));
@@ -232,46 +301,67 @@ public class BusinessBankAccountService {
     List<BusinessBankAccount> result = new ArrayList<>();
 
     // plaid related data
-    Map<String, NumbersACH> plaidAccounts =
+    Map<String, NumbersACH> plaidNumbersAch =
         accountsResponse.achList().stream()
             .collect(Collectors.toMap(NumbersACH::getAccountId, Function.identity()));
 
-    Map<String, String> plaidAccountNames =
+    Map<String, AccountBase> plaidAccountBase =
         accountsResponse.accounts().stream()
-            .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getName));
+            .collect(Collectors.toMap(AccountBase::getAccountId, v -> v));
 
     Map<String, AccountBalance> plaidAccountBalances =
         accountsResponse.accounts().stream()
             .collect(Collectors.toMap(AccountBase::getAccountId, AccountBase::getBalances));
 
-    // existing data
+    Map<String, VerificationStatusEnum> plaidAccountLinkStatus =
+        accountsResponse.accounts().stream()
+            .filter(a -> a.getVerificationStatus() != null)
+            .collect(
+                Collectors.toMap(AccountBase::getAccountId, AccountBase::getVerificationStatus));
+
+    // fetch existing data
     Map<String, BusinessBankAccount> businessBankAccounts =
         businessBankAccountRepository.findByBusinessId(businessId).stream()
+            .filter(a -> !a.getDeleted())
             .collect(
                 Collectors.toMap(a -> a.getPlaidAccountRef().getEncrypted(), Function.identity()));
 
     // logically delete obsolete
-    businessBankAccounts.entrySet().stream()
-        .filter(entry -> !plaidAccounts.containsKey(entry.getKey()))
-        .map(Entry::getValue)
-        .forEach(account -> account.setDeleted(true));
+    List<BusinessBankAccount> deleting =
+        businessBankAccounts.keySet().stream()
+            .filter(key -> !plaidAccountBase.containsKey(key))
+            .map(businessBankAccounts::get)
+            .peek(a -> a.setDeleted(true))
+            .toList();
+
+    if (!deleting.isEmpty()) {
+      businessBankAccountRepository.saveAll(deleting);
+    }
 
     // add new
-    plaidAccounts.entrySet().stream()
-        .filter(entry -> !businessBankAccounts.containsKey(entry.getKey()))
-        .map(Entry::getValue)
+    accountsResponse.accounts().stream()
+        .filter(accountBase -> !businessBankAccounts.containsKey(accountBase.getAccountId()))
         .forEach(
             plaidAccount -> {
+              String plaidKey = plaidAccount.getAccountId();
+              // This populates some fields with empty strings while the link is incomplete.
               String bankName = accountsResponse.institutionName();
               BusinessBankAccount businessBankAccount =
                   createBusinessBankAccount(
-                      plaidAccount.getRouting(),
-                      plaidAccount.getAccount(),
-                      plaidAccountNames.get(plaidAccount.getAccountId()),
+                      Optional.ofNullable(plaidNumbersAch.get(plaidKey))
+                          .map(NumbersACH::getRouting)
+                          .orElse(null),
+                      Optional.ofNullable(plaidNumbersAch.get(plaidKey))
+                          .map(NumbersACH::getAccount)
+                          .orElse(null),
+                      plaidAccountBase.get(plaidKey).getName(),
                       accountsResponse.accessToken(),
                       plaidAccount.getAccountId(),
                       bankName,
-                      businessId);
+                      businessId,
+                      Optional.ofNullable(plaidAccountLinkStatus.get(plaidAccount.getAccountId()))
+                          .map(AccountLinkStatus::of)
+                          .orElse(AccountLinkStatus.LINKED));
 
               businessBankAccountBalanceService.createBusinessBankAccountBalance(
                   businessBankAccount, plaidAccountBalances.get(plaidAccount.getAccountId()));
@@ -280,43 +370,92 @@ public class BusinessBankAccountService {
             });
 
     // update existing
-    businessBankAccounts.entrySet().stream()
-        .filter(entry -> plaidAccounts.containsKey(entry.getKey()))
-        .map(Entry::getValue)
+    businessBankAccounts.keySet().stream()
+        .filter(plaidNumbersAch::containsKey)
         .forEach(
-            account -> {
+            plaidKey -> {
+              BusinessBankAccount account = businessBankAccounts.get(plaidKey);
+              NumbersACH numbersAch = plaidNumbersAch.get(plaidKey);
+              account.setAccountNumber(new EncryptedStringWithHash(numbersAch.getAccount()));
+              account.setRoutingNumber(new EncryptedStringWithHash(numbersAch.getRouting()));
               account.setName(
-                  plaidAccountNames.getOrDefault(
-                      account.getPlaidAccountRef().getEncrypted(), account.getName()));
+                  Optional.ofNullable(plaidAccountBase.get(plaidKey))
+                      .map(AccountBase::getName)
+                      .orElse(account.getName()));
               account.setDeleted(false);
               account.setAccessToken(
                   new RequiredEncryptedStringWithHash(accountsResponse.accessToken()));
               account.setBankName(accountsResponse.institutionName());
-              if (AccountLinkStatus.RE_LINK_REQUIRED.equals(account.getLinkStatus())) {
-                account.setLinkStatus(AccountLinkStatus.LINKED);
-              }
-
-              result.add(businessBankAccountRepository.save(account));
+              account.setLinkStatus(
+                  Optional.ofNullable(plaidAccountLinkStatus.get(plaidKey))
+                      .map(AccountLinkStatus::of)
+                      .orElse(AccountLinkStatus.LINKED));
+              result.add(account);
             });
 
-    return result;
+    // Update institution names
+    if (!StringUtils.isBlank(accountsResponse.institutionName())) {
+      result.stream()
+          .filter(a -> StringUtils.isBlank(a.getBankName()))
+          .forEach(a -> a.setBankName(accountsResponse.institutionName()));
+    }
+
+    return businessBankAccountRepository.saveAll(result);
   }
 
+  /**
+   * Return the main business bank account. For Stripe, there is only one. If Stripe is connected,
+   * the result will contain only the stripe-connected account. Failing that, if an account is
+   * pending microdeposit verification, that will be included, and failing that, the most recent
+   * account that has failed microdeposit verification will be listed.
+   *
+   * @param businessId
+   * @param mainAccountOnly
+   * @return
+   */
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public List<BusinessBankAccount> getBusinessBankAccounts(
-      TypedId<BusinessId> businessId, boolean stripeRegisteredOnly) {
-    return doGetBusinessBankAccounts(businessId, stripeRegisteredOnly);
-  }
+      TypedId<BusinessId> businessId, boolean mainAccountOnly) {
 
-  private List<BusinessBankAccount> doGetBusinessBankAccounts(
-      final TypedId<BusinessId> businessId, final boolean stripeRegisteredOnly) {
-    return businessBankAccountRepository.findByBusinessId(businessId).stream()
-        .filter(businessBankAccount -> !businessBankAccount.getDeleted())
-        .filter(
-            businessBankAccount ->
-                !stripeRegisteredOnly
-                    || StringUtils.isNotEmpty(businessBankAccount.getStripeBankAccountRef()))
-        .collect(Collectors.toList());
+    List<BusinessBankAccount> accounts =
+        businessBankAccountRepository.findByBusinessId(businessId).stream()
+            .filter(businessBankAccount -> !businessBankAccount.getDeleted())
+            .toList();
+    if (!mainAccountOnly) {
+      return accounts;
+    }
+
+    List<BusinessBankAccount> filtered =
+        accounts.stream().filter(a -> StringUtils.isNotEmpty(a.getStripeBankAccountRef())).toList();
+    if (!filtered.isEmpty()) {
+      return filtered;
+    }
+
+    filtered =
+        accounts.stream()
+            .filter(a -> AccountLinkStatus.MICROTRANSACTION_PENDING.contains(a.getLinkStatus()))
+            .toList();
+
+    if (!filtered.isEmpty()) {
+      // Something is pending, so update the status in case it might have changed
+      return filtered.stream()
+          .map(a -> a.getAccessToken().getEncrypted())
+          .collect(Collectors.toSet())
+          .stream()
+          .map(at -> updateLinkedAccounts(businessId, at))
+          .flatMap(Collection::stream)
+          .filter(a -> AccountLinkStatus.MICROTRANSACTION_PENDING.contains(a.getLinkStatus()))
+          .toList();
+    }
+
+    filtered =
+        accounts.stream()
+            .filter(a -> AccountLinkStatus.FAILED.equals(a.getLinkStatus()))
+            .max(Comparator.comparing(Versioned::getUpdated))
+            .map(List::of)
+            .orElse(List.of());
+
+    return filtered;
   }
 
   @Transactional
@@ -806,13 +945,42 @@ public class BusinessBankAccountService {
 
   /**
    * Creates stripe external account with setup intent for further money transfers. Current
-   * requirement is to make sure that only one bank account may be configured in Stripe
+   * requirement is to make sure that only one bank account may be configured in Stripe. This call
+   * includes notifying the user.
    *
    * @return the new account record
    */
   @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
   public BusinessBankAccount registerExternalBank(
+      TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId) {
+    BusinessBankAccount businessBankAccount =
+        registerExternalBankForService(businessId, businessBankAccountId);
+
+    String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
+    User currentUser = userService.retrieveUserForService(CurrentUser.get().userId());
+    twilioService.sendBankDetailsAddedEmail(
+        currentUser.getEmail().getEncrypted(),
+        currentUser.getFirstName().getEncrypted(),
+        businessBankAccount.getBankName(),
+        String.format(
+            "%s %s",
+            currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
+        businessBankAccount.getName(),
+        accountNumber.substring(accountNumber.length() - 4));
+    return businessBankAccount;
+  }
+
+  /**
+   * This does not notify the user.
+   *
+   * @param businessId the business
+   * @param businessBankAccountId the accountId to register
+   * @return the BusinessBankAccount all set up and ready to go
+   */
+  @Transactional
+  @SneakyThrows
+  BusinessBankAccount registerExternalBankForService(
       TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId) {
 
     // check that only one bank account is registered in Stripe
@@ -832,16 +1000,19 @@ public class BusinessBankAccountService {
     Business business = retrievalService.retrieveBusiness(businessId, true);
     String stripeAccountId = business.getStripeData().getAccountRef();
 
+    if (businessBankAccount.getLinkStatus() != AccountLinkStatus.LINKED) {
+      throw new IllegalStateException("not linked");
+    }
+
     // Get a Stripe "Bank Account Token" (btok) via Plaid
     // Attach the already-verified bank account to the connected account
     Account account =
         stripeClient.setExternalAccount(
             stripeAccountId,
             plaidClient.getStripeBankAccountToken(
+                businessId,
                 businessBankAccount.getAccessToken().getEncrypted(),
-                businessBankAccount.getPlaidAccountRef().getEncrypted(),
-                businessId));
-
+                businessBankAccount.getPlaidAccountRef().getEncrypted()));
     String stripeBankAccountRef = null;
     for (ExternalAccount externalAccount : account.getExternalAccounts().getData()) {
       if (externalAccount instanceof BankAccount bankAccount) {
@@ -879,18 +1050,6 @@ public class BusinessBankAccountService {
     }
 
     registeredBankAccount = businessBankAccountRepository.save(businessBankAccount);
-
-    String accountNumber = businessBankAccount.getAccountNumber().getEncrypted();
-    User currentUser = userService.retrieveUserForService(CurrentUser.get().userId());
-    twilioService.sendBankDetailsAddedEmail(
-        currentUser.getEmail().getEncrypted(),
-        currentUser.getFirstName().getEncrypted(),
-        businessBankAccount.getBankName(),
-        String.format(
-            "%s %s",
-            currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
-        businessBankAccount.getName(),
-        accountNumber.substring(accountNumber.length() - 4));
 
     return registeredBankAccount;
   }
@@ -930,7 +1089,9 @@ public class BusinessBankAccountService {
             "%s %s",
             currentUser.getFirstName().getEncrypted(), currentUser.getLastName().getEncrypted()),
         businessBankAccount.getName(),
-        accountNumber.substring(accountNumber.length() - 4));
+        StringUtils.isEmpty(accountNumber)
+            ? "never linked"
+            : accountNumber.substring(accountNumber.length() - 4));
   }
 
   @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
@@ -949,7 +1110,7 @@ public class BusinessBankAccountService {
       throw new AccessDeniedException("");
     }
     try {
-      return plaidClient.createLinkToken(
+      return plaidClient.createReLinkToken(
           businessBankAccount.getBusinessId(), businessBankAccount.getAccessToken().getEncrypted());
     } catch (PlaidClientException e) {
       tryReLink(businessBankAccount, e);
@@ -965,5 +1126,34 @@ public class BusinessBankAccountService {
       businessBankAccountRepository.save(businessBankAccount);
       throw new ReLinkException(e);
     }
+  }
+
+  List<BusinessBankAccount> findAutomaticMicrotransactionPending() {
+    return businessBankAccountRepository.findAllByLinkStatus(
+        AccountLinkStatus.AUTOMATIC_MICROTRANSACTOIN_PENDING);
+  }
+
+  Optional<BusinessBankAccount> findAccountByPlaidAccountRef(String plaidAccountRef) {
+    return businessBankAccountRepository.findByPlaidAccountRefHash(
+        HashUtil.calculateHash(plaidAccountRef));
+  }
+
+  BusinessBankAccount failAccountLinking(BusinessBankAccount account) {
+    account.setLinkStatus(AccountLinkStatus.FAILED);
+    return businessBankAccountRepository.save(account);
+  }
+
+  @PreAuthorize("hasRootPermission(#businessId, 'LINK_BANK_ACCOUNTS')")
+  public void failAccountLinking(
+      TypedId<BusinessId> businessId, TypedId<BusinessBankAccountId> businessBankAccountId) {
+    BusinessBankAccount account =
+        businessBankAccountRepository
+            .findById(businessBankAccountId)
+            .filter(a -> a.getBusinessId().equals(businessId))
+            .orElseThrow(
+                () ->
+                    new RecordNotFoundException(
+                        Table.BUSINESS_BANK_ACCOUNT, businessBankAccountId));
+    failAccountLinking(account);
   }
 }

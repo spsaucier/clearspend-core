@@ -118,7 +118,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
    * @throws PlaidClientException if Plaid gives an error
    */
   @Override
-  public String createLinkToken(TypedId<BusinessId> businessId, List<Products> products)
+  public String createNewLinkToken(TypedId<BusinessId> businessId, List<Products> products)
       throws IOException {
     if (TestHelper.businessIds.contains(businessId)) {
       return "link-token-mock-" + businessId;
@@ -156,15 +156,25 @@ public class TestPlaidClient extends SandboxPlaidClient {
 
   @Override
   public String exchangePublicTokenForAccessToken(
-      @NonNull String linkToken, @NonNull TypedId<BusinessId> businessId) throws IOException {
-    if (isMockLinkToken(linkToken)) {
-      return linkToken.replaceFirst("^link-token-mock-", "access-mock-");
+      @NonNull TypedId<BusinessId> businessId, @NonNull String publicToken) throws IOException {
+    if (isMockLinkToken(publicToken)) {
+      return publicToken.replaceFirst("^link-token-mock-", "access-mock-");
     }
     if (TestEnv.isFastTestExecution()) {
       throw new RuntimeException(
           "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
     }
-    return super.exchangePublicTokenForAccessToken(linkToken, businessId);
+    return super.exchangePublicTokenForAccessToken(businessId, publicToken);
+  }
+
+  @Override
+  public AccountsResponse getVerificationStatus(
+      @NonNull TypedId<BusinessId> businessId, @NonNull String accessToken) throws IOException {
+    if (isMockAccessToken(accessToken)) {
+      // verification status is usually null
+      return getAccounts(businessId, accessToken);
+    }
+    return super.getVerificationStatus(businessId, accessToken);
   }
 
   private boolean isMockLinkToken(@NonNull String linkToken) {
@@ -180,7 +190,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
   record PlaidAccountResponse(List<AccountBase> accounts, PlaidNumbers numbers) {}
 
   @Override
-  public AccountsResponse getAccounts(String accessToken, @NonNull TypedId<BusinessId> businessId)
+  public AccountsResponse getAccounts(@NonNull TypedId<BusinessId> businessId, String accessToken)
       throws IOException {
     if (isMockAccessToken(accessToken)) {
       PlaidAccountResponse response =
@@ -193,14 +203,17 @@ public class TestPlaidClient extends SandboxPlaidClient {
               .getName();
       objectMapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, false);
       return new AccountsResponse(
-          accessToken, response.accounts(), response.numbers().ach(), institutionName);
+          accessToken,
+          filterForDepository(response.accounts()),
+          response.numbers().ach(),
+          institutionName);
     }
 
     if (TestEnv.isFastTestExecution()) {
       throw new RuntimeException(
           "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
     }
-    return super.getAccounts(accessToken, businessId);
+    return super.getAccounts(businessId, accessToken);
   }
 
   @Override
@@ -220,7 +233,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
   }
 
   @Override
-  public OwnersResponse getOwners(String accessToken, @NonNull TypedId<BusinessId> businessId)
+  public OwnersResponse getOwners(@NonNull TypedId<BusinessId> businessId, String accessToken)
       throws IOException {
     if (isMockAccessToken(accessToken)) {
       return objectMapper.readValue(mockOwnersResponse.getFile(), OwnersResponse.class);
@@ -230,7 +243,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
       throw new RuntimeException(
           "Cannot query Plaid when running for %s".formatted(TestEnv.FAST_TEST_EXECUTION));
     }
-    return super.getOwners(accessToken, businessId);
+    return super.getOwners(businessId, accessToken);
   }
 
   /*
@@ -247,7 +260,7 @@ public class TestPlaidClient extends SandboxPlaidClient {
 
   @Override
   public String getStripeBankAccountToken(
-      String plaidAccessToken, String plaidAccountId, TypedId<BusinessId> businessId) {
+      TypedId<BusinessId> businessId, String plaidAccessToken, String plaidAccountId) {
 
     return "dummy_btok";
   }

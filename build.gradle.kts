@@ -118,7 +118,7 @@ tasks {
         violationRules {
             rule {
                 limit {
-                    minimum = BigDecimal(0.70)
+                    minimum = BigDecimal(0.76)
                     // This number should ideally be around .8 or .9, but not
                     // higher because of diminishing returns for the effort.
                     // It is set lower now so that we can more gracefully
@@ -207,7 +207,7 @@ dependencies {
     implementation("com.stripe:stripe-java:20.111.0") // from: https://github.com/stripe/stripe-java
     implementation("com.google.cloud:google-cloud-nio:0.124.2")
     implementation("com.sendgrid:sendgrid-java:4.8.3")
-    implementation("com.plaid:plaid-java:9.0.0")
+    implementation("com.plaid:plaid-java:11.4.0")
     implementation("com.twilio.sdk:twilio:8.25.1")
     implementation("io.fusionauth:fusionauth-java-client:1.36.0")
     implementation ("com.google.firebase:firebase-admin:8.1.0")
