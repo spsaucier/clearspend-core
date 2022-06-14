@@ -47,6 +47,9 @@ spring:
 
 clearspend:
   business:
+    delay:
+      # 7 days (defined in seconds)
+      negative-balance: 604800
     limit:
       issuance:
         card:

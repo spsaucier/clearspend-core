@@ -813,7 +813,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
             1,
             BigDecimal.valueOf(5.0),
             AchFundsAvailabilityMode.FAST,
-            BigDecimal.TEN);
+            BigDecimal.TEN,
+            null);
 
     BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
@@ -892,7 +893,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
             1,
             BigDecimal.TEN,
             AchFundsAvailabilityMode.STANDARD,
-            BigDecimal.TEN);
+            BigDecimal.TEN,
+            null);
 
     BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
@@ -943,7 +945,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
             1,
             BigDecimal.TEN,
             AchFundsAvailabilityMode.IMMEDIATE,
-            BigDecimal.ONE);
+            BigDecimal.ONE,
+            null);
 
     BusinessSettings businessSettingsResponse =
         mvcHelper.queryObject(
@@ -1034,7 +1037,8 @@ public class BusinessControllerTest extends BaseCapitalTest {
             1,
             BigDecimal.TEN,
             AchFundsAvailabilityMode.STANDARD,
-            BigDecimal.ONE);
+            BigDecimal.ONE,
+            null);
 
     mvc.perform(
             patch("/businesses/business-settings")

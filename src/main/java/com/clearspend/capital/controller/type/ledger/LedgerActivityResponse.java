@@ -111,8 +111,8 @@ public class LedgerActivityResponse {
       }
       case REALLOCATE -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());
-        account = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
-        referenceAccount = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        account = LedgerAllocationAccount.of(accountActivity.getAllocation());
+        referenceAccount = LedgerAllocationAccount.of(accountActivity.getFlipAllocation());
       }
       case BANK_DEPOSIT_STRIPE, BANK_WITHDRAWAL -> {
         ledgerUser = new LedgerUser(accountActivity.getUser());

@@ -9,6 +9,7 @@ import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString
 import com.clearspend.capital.data.model.BusinessRelated;
 import com.clearspend.capital.data.model.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
@@ -17,11 +18,13 @@ import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.DynamicUpdate;
 
@@ -80,6 +83,9 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
   @NonNull
   @Enumerated(EnumType.STRING)
   private BusinessStatusReason statusReason;
+
+  @Setter(AccessLevel.PROTECTED)
+  private OffsetDateTime lastStatusChangeTime;
 
   // business description required to Stripe for validation
   private String description;
@@ -149,5 +155,13 @@ public class Business extends TypedMutable<BusinessId> implements BusinessRelate
   @Override
   public TypedId<BusinessId> getBusinessId() {
     return getId();
+  }
+
+  public void setStatus(@NonNull BusinessStatus status) {
+    if (this.status != status) {
+      lastStatusChangeTime = OffsetDateTime.now(Clock.systemUTC());
+    }
+
+    this.status = status;
   }
 }

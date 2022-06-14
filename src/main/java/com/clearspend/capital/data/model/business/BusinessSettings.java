@@ -10,6 +10,7 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -69,4 +70,6 @@ public class BusinessSettings extends TypedMutable<BusinessSettingsId> {
    * performance issues
    */
   @Transient private int issuedPhysicalCardsTotal;
+
+  @Transient private OffsetDateTime negativeBalanceCorrectionScheduledTime;
 }

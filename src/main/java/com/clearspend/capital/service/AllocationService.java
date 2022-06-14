@@ -9,7 +9,6 @@ import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.InvalidRequestException;
-import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;
 import com.clearspend.capital.common.typedid.data.AccountId;
 import com.clearspend.capital.common.typedid.data.AllocationId;
@@ -43,8 +42,6 @@ import com.clearspend.capital.data.repository.AllocationRepository;
 import com.clearspend.capital.data.repository.CardRepository;
 import com.clearspend.capital.data.repository.CardRepositoryCustom.CardDetailsRecord;
 import com.clearspend.capital.data.repository.HoldRepository;
-import com.clearspend.capital.data.repository.UserRepository;
-import com.clearspend.capital.data.repository.business.BusinessRepository;
 import com.clearspend.capital.permissioncheck.annotations.SqlPermissionAPI;
 import com.clearspend.capital.service.AccountService.AccountReallocateFundsRecord;
 import com.clearspend.capital.service.AccountService.AdjustmentRecord;
@@ -63,7 +60,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.persistence.EntityManager;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,19 +77,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AllocationService {
 
   private final AllocationRepository allocationRepository;
-  private final BusinessRepository businessRepository;
   private final AccountRepository accountRepository;
-  private final UserRepository userRepository;
 
   private final AccountActivityService accountActivityService;
   private final AccountService accountService;
   private final CardRepository cardRepository;
   private final HoldRepository holdRepository;
-  private final RolesAndPermissionsService rolesAndPermissionsService;
   private final TransactionLimitService transactionLimitService;
   private final RetrievalService retrievalService;
-
-  private final EntityManager entityManager;
   private final CardService cardService;
 
   public record AllocationRecord(Allocation allocation, Account account) {}
@@ -189,12 +180,10 @@ public class AllocationService {
   @SqlPermissionAPI
   /** READ|CUSTOMER_SERVICE|GLOBAL_READ -- findAllocationsWithPermissions.sql */
   public List<AllocationRecord> getAllocationsForBusiness(final TypedId<BusinessId> businessId) {
-    final Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, businessId));
+    final Business business = retrievalService.retrieveBusiness(businessId, true);
     final TypedId<UserId> userId = CurrentUser.getUserId();
     final Set<String> globalRoles = Optional.ofNullable(CurrentUser.getRoles()).orElse(Set.of());
+
     return getAllocationRecords(
         business,
         allocationRepository.findByBusinessIdWithSqlPermissions(businessId, userId, globalRoles));
@@ -216,10 +205,7 @@ public class AllocationService {
     TypedId<AllocationId> allocationId = new TypedId<>();
     Account parentAccount = null;
 
-    Allocation parent =
-        allocationRepository
-            .findById(parentAllocationId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.ALLOCATION, parentAllocationId));
+    Allocation parent = retrieveAllocation(businessId, parentAllocationId);
 
     if (!parent.getBusinessId().equals(businessId)) {
       throw new IdMismatchException(IdType.BUSINESS_ID, businessId, parent.getBusinessId());
@@ -253,10 +239,7 @@ public class AllocationService {
       AccountReallocateFundsRecord reallocateFundsRecord =
           accountService.reallocateFunds(parentAccount.getId(), account.getId(), amount);
 
-      final User user =
-          userRepository
-              .findById(CurrentUser.getUserId())
-              .orElseThrow(() -> new RecordNotFoundException(Table.USER, CurrentUser.getUserId()));
+      final User user = retrievalService.retrieveUser(CurrentUser.getUserId());
 
       accountActivityService.recordReallocationAccountActivity(
           parent, allocation, reallocateFundsRecord.reallocateFundsRecord().fromAdjustment(), user);
@@ -277,11 +260,7 @@ public class AllocationService {
 
   Allocation retrieveAllocation(
       TypedId<BusinessId> businessId, TypedId<AllocationId> allocationId) {
-    Allocation allocation =
-        allocationRepository
-            .findById(allocationId)
-            .orElseThrow(
-                () -> new RecordNotFoundException(Table.ALLOCATION, businessId, allocationId));
+    Allocation allocation = retrievalService.retrieveAllocation(allocationId);
 
     if (!allocation.getBusinessId().equals(businessId)) {
       throw new DataAccessViolationException(
@@ -298,7 +277,8 @@ public class AllocationService {
   }
 
   // TODO: improve entity retrieval to make a single db call
-  @PreAuthorize("hasAllocationPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE')")
+  @PreAuthorize(
+      "hasAllocationPermission(#allocationId, 'READ|GLOBAL_READ|CUSTOMER_SERVICE|APPLICATION')")
   public AllocationDetailsRecord getAllocation(
       Business business, TypedId<AllocationId> allocationId) {
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
@@ -574,10 +554,7 @@ public class AllocationService {
           "Amounts in excess of +/- %s not allowed".formatted(maxAmount));
     }
 
-    Business business =
-        businessRepository
-            .findById(businessId)
-            .orElseThrow(() -> new RecordNotFoundException(Table.BUSINESS, true, businessId));
+    Business business = retrievalService.retrieveBusiness(businessId, true);
 
     Allocation allocation = retrieveAllocation(business.getId(), allocationId);
     ensureMatchingIds(business.getId(), allocation.getBusinessId());

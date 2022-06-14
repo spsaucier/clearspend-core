@@ -77,7 +77,7 @@ public class BusinessSettingsService {
 
   private final BusinessSettingsRepository businessSettingsRepository;
   private final AdjustmentService adjustmentService;
-
+  private final JobRunrService jobRunrService;
   private final CardRepository cardRepository;
 
   private final Integer issuedPhysicalCardDefaultLimit;
@@ -85,11 +85,13 @@ public class BusinessSettingsService {
   public BusinessSettingsService(
       BusinessSettingsRepository businessSettingsRepository,
       AdjustmentService adjustmentService,
+      JobRunrService jobRunrService,
       CardRepository cardRepository,
       @Value("${clearspend.business.limit.issuance.card.physical}")
           Integer issuedPhysicalCardDefaultLimit) {
     this.businessSettingsRepository = businessSettingsRepository;
     this.adjustmentService = adjustmentService;
+    this.jobRunrService = jobRunrService;
     this.cardRepository = cardRepository;
     this.issuedPhysicalCardDefaultLimit = issuedPhysicalCardDefaultLimit;
   }
@@ -115,6 +117,8 @@ public class BusinessSettingsService {
     BusinessSettings businessSettings = findBusinessSettings(businessId);
     businessSettings.setIssuedPhysicalCardsTotal(
         cardRepository.countByBusinessIdAndType(businessId, CardType.PHYSICAL));
+    businessSettings.setNegativeBalanceCorrectionScheduledTime(
+        jobRunrService.getJobStartTime(businessId.toUuid()));
 
     return businessSettings;
   }

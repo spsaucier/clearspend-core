@@ -152,6 +152,11 @@ public class Amount {
   }
 
   @JsonIgnore
+  public boolean isEqualToZero() {
+    return amount.compareTo(BigDecimal.ZERO) == 0;
+  }
+
+  @JsonIgnore
   public boolean isLessThanZero() {
     return amount.compareTo(BigDecimal.ZERO) < 0;
   }

@@ -478,9 +478,16 @@ public class TestHelper {
 
   @FusionAuthUserAccessor(
       reviewer = "Craig Miller",
-      explanation = "to create master user for testing purposes")
+      explanation = "to create webhook user for testing purposes")
   public void setCurrentUserAsWebhook(@NonNull final User user) {
     CurrentUserSwitcher.setCurrentUser(user, Set.of(DefaultRoles.GLOBAL_APPLICATION_WEBHOOK));
+  }
+
+  @FusionAuthUserAccessor(
+      reviewer = "vakimov",
+      explanation = "to create job user for testing purposes")
+  public void setCurrentUserAsJob(@NonNull final User user) {
+    CurrentUserSwitcher.setCurrentUser(user, Set.of(DefaultRoles.GLOBAL_APPLICATION_JOB));
   }
 
   public CreateUpdateUserRecord createUserWithGlobalRole(
@@ -560,6 +567,17 @@ public class TestHelper {
     setCurrentUserAsWebhook(user);
     try {
       return action.get();
+    } finally {
+      setCurrentUser(oldCurrentUser);
+    }
+  }
+
+  @SneakyThrows
+  public void runWithJobUser(@NonNull final User user, final ThrowingRunnable action) {
+    final CurrentUser oldCurrentUser = CurrentUser.get();
+    setCurrentUserAsJob(user);
+    try {
+      action.run();
     } finally {
       setCurrentUser(oldCurrentUser);
     }
@@ -873,13 +891,21 @@ public class TestHelper {
 
   public AllocationRecord createAllocation(
       TypedId<BusinessId> businessId, String name, TypedId<AllocationId> parentAllocationId) {
+    return createAllocation(businessId, name, parentAllocationId, BigDecimal.ZERO);
+  }
+
+  public AllocationRecord createAllocation(
+      TypedId<BusinessId> businessId,
+      String name,
+      TypedId<AllocationId> parentAllocationId,
+      BigDecimal amount) {
     entityManager.flush();
     final AllocationRecord allocationRecord =
         allocationService.createAllocation(
             businessId,
             parentAllocationId,
             name,
-            Amount.of(Currency.USD),
+            Amount.of(Currency.USD, amount),
             DEFAULT_TRANSACTION_LIMITS,
             Collections.emptySet(),
             Collections.emptySet(),
@@ -1259,9 +1285,7 @@ public class TestHelper {
         TestDataController.generateCaptureNetworkCommon(business, authorization.authorization());
     runWithWebhookUser(
         authorization.networkCommon().getUser(),
-        () -> {
-          networkMessageService.processNetworkMessage(common);
-        });
+        () -> networkMessageService.processNetworkMessage(common));
     assertPost(common, true, false, false);
     return common;
   }
@@ -1272,19 +1296,15 @@ public class TestHelper {
         TestDataController.generateAuthorizationNetworkCommon(user, card, account, amount);
     runWithWebhookUser(
         user,
-        () -> {
-          networkMessageService.processNetworkMessage(networkCommonAuthorization.networkCommon());
-        });
+        () ->
+            networkMessageService.processNetworkMessage(
+                networkCommonAuthorization.networkCommon()));
     assertPost(networkCommonAuthorization.networkCommon(), false, false, true);
 
     NetworkCommon common =
         TestDataController.generateCaptureNetworkCommon(
             business, networkCommonAuthorization.authorization());
-    runWithWebhookUser(
-        user,
-        () -> {
-          networkMessageService.processNetworkMessage(common);
-        });
+    runWithWebhookUser(user, () -> networkMessageService.processNetworkMessage(common));
     assertPost(common, true, false, false);
   }
 

@@ -3,7 +3,7 @@ package com.clearspend.capital.client.codat.webhook.controller;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookConnectionChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCompleteRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
-import com.clearspend.capital.common.advice.AssignWebhookSecurityContextAdvice.SecureWebhook;
+import com.clearspend.capital.common.advice.AssignApplicationSecurityContextAdvice.SecureWebhook;
 import com.clearspend.capital.service.ChartOfAccountsService;
 import com.clearspend.capital.service.CodatService;
 import java.util.Map;

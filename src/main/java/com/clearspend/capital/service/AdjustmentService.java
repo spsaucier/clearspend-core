@@ -25,6 +25,7 @@ import javax.transaction.Transactional.TxType;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,10 +37,14 @@ public class AdjustmentService {
 
   private final AdjustmentRepository adjustmentRepository;
 
+  private final ApplicationEventPublisher eventPublisher;
+
   public record ReallocateFundsRecord(
       ReallocationJournalEntry bankJournalEntry,
       Adjustment fromAdjustment,
       Adjustment toAdjustment) {}
+
+  public record AdjustmentPersistedEvent(Adjustment adjustment) {}
 
   public record AdjustmentRecord(JournalEntry journalEntry, Adjustment adjustment) {}
 
@@ -48,7 +53,7 @@ public class AdjustmentService {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
+    return saveAndPublish(
         new Adjustment(
             account.getBusinessId(),
             account.getAllocationId(),
@@ -66,7 +71,7 @@ public class AdjustmentService {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordDepositFunds(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
+    return saveAndPublish(
         new Adjustment(
             account.getBusinessId(),
             account.getAllocationId(),
@@ -84,7 +89,7 @@ public class AdjustmentService {
     NetworkJournalEntry networkJournalEntry =
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
+    return saveAndPublish(
         new Adjustment(
             account.getBusinessId(),
             account.getAllocationId(),
@@ -102,7 +107,7 @@ public class AdjustmentService {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordWithdrawFunds(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
+    return saveAndPublish(
         new Adjustment(
             account.getBusinessId(),
             account.getAllocationId(),
@@ -120,7 +125,7 @@ public class AdjustmentService {
     BankJournalEntry bankJournalEntry =
         ledgerService.recordApplyFee(account.getLedgerAccountId(), amount);
 
-    return adjustmentRepository.save(
+    return saveAndPublish(
         new Adjustment(
             account.getBusinessId(),
             account.getAllocationId(),
@@ -140,7 +145,7 @@ public class AdjustmentService {
             fromAccount.getLedgerAccountId(), toAccount.getLedgerAccountId(), amount);
 
     Adjustment fromAdjustment =
-        adjustmentRepository.save(
+        saveAndPublish(
             new Adjustment(
                 fromAccount.getBusinessId(),
                 fromAccount.getAllocationId(),
@@ -153,7 +158,7 @@ public class AdjustmentService {
                 amount.negate()));
 
     Adjustment toAdjustment =
-        adjustmentRepository.save(
+        saveAndPublish(
             new Adjustment(
                 toAccount.getBusinessId(),
                 toAccount.getAllocationId(),
@@ -174,7 +179,7 @@ public class AdjustmentService {
         ledgerService.recordManualAdjustment(account.getLedgerAccountId(), amount);
 
     Adjustment adjustment =
-        adjustmentRepository.save(
+        saveAndPublish(
             new Adjustment(
                 account.getBusinessId(),
                 account.getAllocationId(),
@@ -201,7 +206,7 @@ public class AdjustmentService {
         ledgerService.recordNetworkAdjustment(account.getLedgerAccountId(), amount);
 
     Adjustment adjustment =
-        adjustmentRepository.save(
+        saveAndPublish(
             new Adjustment(
                 account.getBusinessId(),
                 allocationId,
@@ -233,5 +238,22 @@ public class AdjustmentService {
   LedgerBalancePeriod getBusinessLedgerBalanceForPeriod(
       TypedId<BusinessId> businessId, OffsetDateTime from, OffsetDateTime to) {
     return adjustmentRepository.findBusinessLedgerBalanceForPeriod(businessId, from, to);
+  }
+
+  Adjustment updateEffectiveDate(
+      TypedId<BusinessId> businessId,
+      TypedId<AdjustmentId> adjustmentId,
+      OffsetDateTime effectiveDate) {
+    Adjustment adjustment = retrieveAdjustment(businessId, adjustmentId);
+    adjustment.setEffectiveDate(effectiveDate);
+
+    return saveAndPublish(adjustment);
+  }
+
+  private Adjustment saveAndPublish(Adjustment adjustment) {
+    Adjustment savedAdjustment = adjustmentRepository.save(adjustment);
+    eventPublisher.publishEvent(new AdjustmentPersistedEvent(savedAdjustment));
+
+    return savedAdjustment;
   }
 }

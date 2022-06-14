@@ -9,6 +9,7 @@ import com.clearspend.capital.data.model.enums.LimitPeriod;
 import com.clearspend.capital.data.model.enums.LimitType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,6 +62,9 @@ public class BusinessSettings {
   @JsonProperty("immediateAchFundsLimit")
   BigDecimal immediateAchFundsLimit;
 
+  @JsonProperty("negativeBalanceCorrectionScheduledTime")
+  OffsetDateTime negativeBalanceCorrectionScheduledTime;
+
   public static BusinessSettings of(
       com.clearspend.capital.data.model.business.BusinessSettings businessSettings) {
     Set<LimitRecord> limitRecords =
@@ -80,7 +84,8 @@ public class BusinessSettings {
         businessSettings.getIssuedPhysicalCardsTotal(),
         businessSettings.getForeignTransactionFeePercents(),
         businessSettings.getAchFundsAvailabilityMode(),
-        businessSettings.getImmediateAchFundsLimit());
+        businessSettings.getImmediateAchFundsLimit(),
+        businessSettings.getNegativeBalanceCorrectionScheduledTime());
   }
 
   private static Function<

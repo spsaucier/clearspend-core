@@ -363,6 +363,13 @@ public class NetworkMessageService {
       common.setPostDecline(true);
     }
 
+    if (common.getBusiness().getStatus() == BusinessStatus.SUSPENDED_EXPENDITURE) {
+      common
+          .getDeclineDetails()
+          .add(new DeclineDetails(DeclineReason.BUSINESS_SUSPENSION_EXPENDITURE));
+      common.setPostDecline(true);
+    }
+
     // decline if we have any mismatches on address, CVN or card expiration date
     if (common.getAddressPostalCodeCheck() == VerificationResultType.MISMATCH) {
       common.getDeclineDetails().add(new AddressPostalCodeMismatch(common.getAddressPostalCode()));

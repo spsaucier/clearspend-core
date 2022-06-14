@@ -359,11 +359,26 @@ public class BusinessService {
       Amount amount) {
     amount.ensureNonNegative();
 
-    BusinessRecord businessRecord = getBusiness(businessId);
+    return reallocateBusinessFunds(
+        retrieveBusiness(businessId, true),
+        retrievalService.retrieveUser(businessId, userId),
+        allocationIdFrom,
+        allocationIdTo,
+        amount);
+  }
+
+  AccountReallocateFundsRecord reallocateBusinessFunds(
+      Business business,
+      User user,
+      @NonNull TypedId<AllocationId> allocationIdFrom,
+      @NonNull TypedId<AllocationId> allocationIdTo,
+      Amount amount) {
+    amount.ensureNonNegative();
+
     AllocationDetailsRecord allocationFromRecord =
-        allocationService.getAllocation(businessRecord.business, allocationIdFrom);
+        allocationService.getAllocation(business, allocationIdFrom);
     AllocationDetailsRecord allocationToRecord =
-        allocationService.getAllocation(businessRecord.business, allocationIdTo);
+        allocationService.getAllocation(business, allocationIdTo);
 
     if (allocationFromRecord.allocation().isArchived()
         || allocationToRecord.allocation().isArchived()) {
@@ -373,8 +388,6 @@ public class BusinessService {
     AccountReallocateFundsRecord reallocateFundsRecord =
         accountService.reallocateFunds(
             allocationFromRecord.account().getId(), allocationToRecord.account().getId(), amount);
-
-    User user = retrievalService.retrieveUser(businessId, userId);
 
     accountActivityService.recordReallocationAccountActivity(
         allocationFromRecord.allocation(),

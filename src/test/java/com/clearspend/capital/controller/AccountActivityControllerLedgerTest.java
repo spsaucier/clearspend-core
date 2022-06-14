@@ -246,9 +246,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(from.getHold()).isNull();
 
     assertThat(from.getAccount())
-        .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
-    assertThat(from.getReferenceAccount())
         .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
+    assertThat(from.getReferenceAccount())
+        .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
     assertThat(from.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
 
     assertThat(from.getRequestedAmount().getAmount()).isEqualByComparingTo(new BigDecimal(-777));
@@ -265,9 +265,9 @@ public class AccountActivityControllerLedgerTest extends BaseCapitalTest {
     assertThat(to.getHold()).isNull();
 
     assertThat(to.getAccount())
-        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
-    assertThat(to.getReferenceAccount())
         .isEqualTo(LedgerAllocationAccount.of(anotherAllocation.allocation()));
+    assertThat(to.getReferenceAccount())
+        .isEqualTo(LedgerAllocationAccount.of(businessRecord.allocationRecord().allocation()));
     assertThat(to.getAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));
 
     assertThat(to.getRequestedAmount().getAmount()).isEqualByComparingTo(new BigDecimal(777));

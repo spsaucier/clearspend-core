@@ -14,9 +14,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
-public class AssignWebhookSecurityContextAdviceTest {
-  private final AssignWebhookSecurityContextAdvice advice =
-      new AssignWebhookSecurityContextAdvice();
+public class AssignApplicationSecurityContextAdviceTest {
+  private final AssignApplicationSecurityContextAdvice advice =
+      new AssignApplicationSecurityContextAdvice();
 
   @BeforeEach
   void setup() {
@@ -38,5 +38,17 @@ public class AssignWebhookSecurityContextAdviceTest {
     assertThat(jwt.getClaims())
         .containsEntry("name", "SecureWebhook")
         .containsEntry(ROLES, Set.of(DefaultRoles.GLOBAL_APPLICATION_WEBHOOK));
+  }
+
+  @Test
+  void setupSecureJob() {
+    advice.setupSecureJob();
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    assertNotNull(authentication);
+    assertThat(authentication).isInstanceOf(JwtAuthenticationToken.class);
+    final Jwt jwt = ((JwtAuthenticationToken) authentication).getToken();
+    assertThat(jwt.getClaims())
+        .containsEntry("name", "SecureJob")
+        .containsEntry(ROLES, Set.of(DefaultRoles.GLOBAL_APPLICATION_JOB));
   }
 }

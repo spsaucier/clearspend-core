@@ -317,6 +317,24 @@ public class AccountService {
     return accounts;
   }
 
+  List<Account> retrieveBusinessAccounts(TypedId<BusinessId> businessId, boolean fetchHolds) {
+    List<Account> accounts = accountRepository.findByBusinessId(businessId);
+
+    if (fetchHolds) {
+      Map<TypedId<AccountId>, List<Hold>> holds =
+          holdRepository
+              .findByBusinessIdAndStatusAndExpirationDateAfter(
+                  businessId, HoldStatus.PLACED, OffsetDateTime.now(ZoneOffset.UTC))
+              .stream()
+              .collect(Collectors.groupingBy(Hold::getAccountId));
+      accounts.forEach(
+          account ->
+              account.setHolds(holds.getOrDefault(account.getId(), Collections.emptyList())));
+    }
+
+    return accounts;
+  }
+
   @Transactional(TxType.REQUIRED)
   AccountReallocateFundsRecord reallocateFunds(
       TypedId<AccountId> fromAccountId, TypedId<AccountId> toAccountId, Amount amount) {

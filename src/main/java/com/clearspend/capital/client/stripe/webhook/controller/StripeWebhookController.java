@@ -2,7 +2,7 @@ package com.clearspend.capital.client.stripe.webhook.controller;
 
 import com.clearspend.capital.client.stripe.StripeClientException;
 import com.clearspend.capital.client.stripe.StripeProperties;
-import com.clearspend.capital.common.advice.AssignWebhookSecurityContextAdvice.SecureWebhook;
+import com.clearspend.capital.common.advice.AssignApplicationSecurityContextAdvice.SecureWebhook;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;

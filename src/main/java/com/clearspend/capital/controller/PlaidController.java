@@ -1,6 +1,6 @@
 package com.clearspend.capital.controller;
 
-import com.clearspend.capital.common.advice.AssignWebhookSecurityContextAdvice.SecureWebhook;
+import com.clearspend.capital.common.advice.AssignApplicationSecurityContextAdvice.SecureWebhook;
 import com.clearspend.capital.service.PlaidService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

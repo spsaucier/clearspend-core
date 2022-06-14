@@ -64,8 +64,8 @@ public class NetworkMessageEnrichmentServiceTest {
     underTest =
         new NetworkMessageEnrichmentService(
             mockAccountActivityService,
-            mockMxClient,
             mockCodatClient,
+            mockMxClient,
             mockNetworkMerchantRepository);
   }
 

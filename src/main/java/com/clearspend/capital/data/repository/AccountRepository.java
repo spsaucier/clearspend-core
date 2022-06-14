@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,7 +33,7 @@ public interface AccountRepository extends JpaRepository<Account, TypedId<Accoun
   Optional<Account> findByBusinessIdAndCardId(
       TypedId<BusinessId> businessId, TypedId<CardId> cardId);
 
-  List<Account> findByIdIn(Set<TypedId<AccountId>> ids);
+  List<Account> findByBusinessId(TypedId<BusinessId> businessId);
 
   List<Account> findByBusinessIdAndTypeAndLedgerBalance_Currency(
       TypedId<BusinessId> businessId, AccountType accountType, Currency currency);

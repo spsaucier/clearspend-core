@@ -1,6 +1,6 @@
 package com.clearspend.capital.service;
 
-import com.clearspend.capital.common.advice.AssignWebhookSecurityContextAdvice.SecureWebhook;
+import com.clearspend.capital.common.advice.AssignApplicationSecurityContextAdvice.SecureWebhook;
 import com.clearspend.capital.common.error.InvalidRequestException;
 import com.clearspend.capital.common.error.RecordNotFoundException;
 import com.clearspend.capital.common.error.Table;

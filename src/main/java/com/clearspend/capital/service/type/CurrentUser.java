@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -72,13 +73,11 @@ public record CurrentUser(
   @Nullable
   public static TypedId<BusinessId> getActiveBusinessId() {
     String businessIdHeader = null;
-    try {
-      businessIdHeader =
-          ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
-              .getRequest()
-              .getHeader(BUSINESS_ID);
-    } catch (Exception e) {
-      log.warn("Being called outside of spring runtine environmnet", e);
+
+    // try to get business id from http header. Header could be absent (scheduled jobs)
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+    if (requestAttributes instanceof ServletRequestAttributes servletRequestAttributes) {
+      businessIdHeader = servletRequestAttributes.getRequest().getHeader(BUSINESS_ID);
     }
 
     return Optional.ofNullable(businessIdHeader)

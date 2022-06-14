@@ -19,6 +19,7 @@ import com.clearspend.capital.client.stripe.StripeMockClient;
 import com.clearspend.capital.client.stripe.types.InboundTransfer;
 import com.clearspend.capital.client.stripe.webhook.controller.StripeConnectHandlerAccessor;
 import com.clearspend.capital.common.data.model.Amount;
+import com.clearspend.capital.common.error.ExpenditureOperationsDisabledException;
 import com.clearspend.capital.common.error.InsufficientFundsException;
 import com.clearspend.capital.common.error.LimitViolationException;
 import com.clearspend.capital.common.error.OperationLimitViolationException;
@@ -42,6 +43,7 @@ import com.clearspend.capital.data.model.decline.OperationLimitExceeded;
 import com.clearspend.capital.data.model.enums.AccountActivityStatus;
 import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.Currency;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
@@ -58,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.function.ThrowingRunnable;
@@ -169,6 +170,33 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
             .orElseThrow();
     assertThat(declinedActivity.getDeclineDetails())
         .containsOnly(new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS));
+  }
+
+  @Test
+  void withdrawFunds_expenditureSuspension() {
+    testHelper.setCurrentUser(createBusinessRecord.user());
+    TypedId<BusinessId> businessId = createBusinessRecord.business().getId();
+    BusinessBankAccount businessBankAccount = testHelper.createBusinessBankAccount(businessId);
+    createBusinessRecord.business().setStatus(BusinessStatus.SUSPENDED_EXPENDITURE);
+
+    assertThrows(
+        ExpenditureOperationsDisabledException.class,
+        () ->
+            bankAccountService.transactBankAccount(
+                createBusinessRecord.business().getId(),
+                businessBankAccount.getId(),
+                createBusinessRecord.user().getId(),
+                BankAccountTransactType.WITHDRAW,
+                Amount.of(Currency.USD, new BigDecimal("1.85")),
+                true));
+
+    AccountActivity declinedActivity =
+        accountActivityRepository.findAll().stream()
+            .filter(a -> a.getStatus() == AccountActivityStatus.DECLINED)
+            .findFirst()
+            .orElseThrow();
+    assertThat(declinedActivity.getDeclineDetails())
+        .containsOnly(new DeclineDetails(DeclineReason.BUSINESS_SUSPENSION_EXPENDITURE));
   }
 
   @Test
@@ -650,7 +678,7 @@ class BusinessBankAccountServiceTest extends BaseCapitalTest {
         listAppender.list.stream()
             .map(ILoggingEvent::getMessage)
             .filter(m -> m.contains("Validation failed for Plaid account ref ending "))
-            .collect(Collectors.toList());
+            .toList();
 
     assertEquals(2, messages.size());
     assertTrue(

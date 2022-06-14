@@ -9,6 +9,7 @@ import com.clearspend.capital.data.model.network.NetworkMerchant;
 import com.clearspend.capital.data.repository.network.NetworkMerchantRepository;
 import com.clearspend.capital.service.type.NetworkCommon;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
@@ -17,24 +18,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class NetworkMessageEnrichmentService {
 
   private final AccountActivityService accountActivityService;
   private final CodatClient codatClient;
   private final MxClient mxClient;
   private final NetworkMerchantRepository networkMerchantRepository;
-
-  public NetworkMessageEnrichmentService(
-      AccountActivityService accountActivityService,
-      MxClient mxClient,
-      CodatClient codatClient,
-      NetworkMerchantRepository networkMerchantRepository) {
-
-    this.accountActivityService = accountActivityService;
-    this.mxClient = mxClient;
-    this.codatClient = codatClient;
-    this.networkMerchantRepository = networkMerchantRepository;
-  }
 
   @Async
   @PreAuthorize("hasGlobalPermission('APPLICATION')")

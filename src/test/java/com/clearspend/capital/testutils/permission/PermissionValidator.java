@@ -165,7 +165,10 @@ public class PermissionValidator {
       final ThrowingFunction<User, ?> allowedAssertion) {
     DefaultRoles.ALL_GLOBAL.stream()
         // As long as this role is always allowed through, it shouldn't be included in the validator
-        .filter(role -> !DefaultRoles.GLOBAL_APPLICATION_WEBHOOK.equals(role))
+        .filter(
+            role ->
+                !DefaultRoles.GLOBAL_APPLICATION_WEBHOOK.equals(role)
+                    && !DefaultRoles.GLOBAL_APPLICATION_JOB.equals(role))
         .forEach(
             role ->
                 Optional.ofNullable(allowedGlobalRoles.get(role))

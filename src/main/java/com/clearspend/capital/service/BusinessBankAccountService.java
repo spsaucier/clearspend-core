@@ -7,6 +7,7 @@ import com.clearspend.capital.client.plaid.PlaidErrorCode;
 import com.clearspend.capital.client.stripe.StripeClient;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.data.model.Versioned;
+import com.clearspend.capital.common.error.ExpenditureOperationsDisabledException;
 import com.clearspend.capital.common.error.IdMismatchException;
 import com.clearspend.capital.common.error.IdMismatchException.IdType;
 import com.clearspend.capital.common.error.InsufficientFundsException;
@@ -46,6 +47,7 @@ import com.clearspend.capital.data.model.enums.AccountActivityType;
 import com.clearspend.capital.data.model.enums.AchFundsAvailabilityMode;
 import com.clearspend.capital.data.model.enums.AdjustmentType;
 import com.clearspend.capital.data.model.enums.BankAccountTransactType;
+import com.clearspend.capital.data.model.enums.BusinessStatus;
 import com.clearspend.capital.data.model.enums.FinancialAccountState;
 import com.clearspend.capital.data.model.enums.HoldStatus;
 import com.clearspend.capital.data.model.enums.network.DeclineReason;
@@ -564,6 +566,7 @@ public class BusinessBankAccountService {
       boolean standardHold) {
 
     Business business = retrievalService.retrieveBusiness(businessId, true);
+
     if (Strings.isBlank(business.getStripeData().getFinancialAccountRef())) {
       throw new InvalidStateException(
           Table.BUSINESS, "Stripe Financial Account Ref missing on business " + businessId);
@@ -595,12 +598,15 @@ public class BusinessBankAccountService {
           standardHold);
     } catch (InsufficientFundsException
         | LimitViolationException
-        | OperationLimitViolationException e) {
+        | OperationLimitViolationException
+        | ExpenditureOperationsDisabledException e) {
       DeclineDetails declineDetails;
       if (e instanceof InsufficientFundsException) {
         declineDetails = new DeclineDetails(DeclineReason.INSUFFICIENT_FUNDS);
       } else if (e instanceof LimitViolationException limitViolationException) {
         declineDetails = LimitExceeded.from(limitViolationException);
+      } else if (e instanceof ExpenditureOperationsDisabledException) {
+        declineDetails = new DeclineDetails(DeclineReason.BUSINESS_SUSPENSION_EXPENDITURE);
       } else {
         declineDetails = OperationLimitExceeded.from((OperationLimitViolationException) e);
       }
@@ -667,6 +673,11 @@ public class BusinessBankAccountService {
       BankAccountTransactType bankAccountTransactType,
       Amount amount,
       boolean standardHold) {
+
+    if (bankAccountTransactType == BankAccountTransactType.WITHDRAW
+        && business.getStatus() == BusinessStatus.SUSPENDED_EXPENDITURE) {
+      throw new ExpenditureOperationsDisabledException();
+    }
 
     TypedId<BusinessId> businessId = business.getId();
     TypedId<BusinessBankAccountId> businessBankAccountId = businessBankAccount.getId();
@@ -854,8 +865,9 @@ public class BusinessBankAccountService {
     Hold hold = accountService.retrieveHold(businessId, holdId);
     hold.setStatus(HoldStatus.RELEASED);
 
-    Adjustment adjustment = adjustmentService.retrieveAdjustment(businessId, adjustmentId);
-    adjustment.setEffectiveDate(OffsetDateTime.now(Clock.systemUTC()));
+    Adjustment adjustment =
+        adjustmentService.updateEffectiveDate(
+            businessId, adjustmentId, OffsetDateTime.now(Clock.systemUTC()));
 
     return accountActivityService.recordHoldReleaseAccountActivity(adjustment, hold);
   }
