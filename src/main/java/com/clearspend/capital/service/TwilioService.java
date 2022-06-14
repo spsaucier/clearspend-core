@@ -2,6 +2,7 @@ package com.clearspend.capital.service;
 
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
 import com.clearspend.capital.client.twilio.TwilioProperties;
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.service.type.CurrentJob;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,7 @@ import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.Verification.Channel;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -36,6 +38,8 @@ import org.springframework.stereotype.Service;
 @Profile("!test")
 @Service
 public class TwilioService {
+
+  private static final DecimalFormat AMOUNT_FORMAT = new DecimalFormat("0.00");
 
   public @interface TwilioKycKybOp {
     String reviewer();
@@ -522,6 +526,26 @@ public class TwilioService {
     Mail mail =
         initMailWithTemplate(sendGridProperties.getCardUnfrozenTemplateId(), to, personalization);
     send(mail);
+  }
+
+  /* Allocation: Low Balance email */
+  protected void sendLowBalanceEmail(
+      final String to,
+      final String firstName,
+      final String allocationName,
+      final Amount lowBalanceLevel) {
+    final Personalization personalization = new Personalization();
+    personalization.addDynamicTemplateData(FIRST_NAME_KEY, firstName);
+    personalization.addDynamicTemplateData(ALLOCATION_NAME, allocationName);
+    final String amountString =
+        "%s %s"
+            .formatted(
+                AMOUNT_FORMAT.format(lowBalanceLevel.getAmount().doubleValue()),
+                lowBalanceLevel.getCurrency().name());
+    personalization.addDynamicTemplateData(AMOUNT_KEY, amountString);
+    send(
+        initMailWithTemplate(
+            sendGridProperties.getLowBalanceNotificationTemplateId(), to, personalization));
   }
 
   /* Update : Employee Update Phone number or email or Address email */

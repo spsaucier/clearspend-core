@@ -1,0 +1,166 @@
+{
+  "id": "evt_1KUaNk4g2Xo63Nb8Uw7dvKNz",
+  "data": {
+    "object": {
+      "id": "iauth_1Kvpwq4g2Xo63Nb83veTeJrW",
+      "object": "issuing.authorization",
+      "amount": 0,
+      "amount_details": {
+        "atm_fee": null
+      },
+      "approved": false,
+      "authorization_method": "online",
+      "balance_transactions": [
+      ],
+      "card": {
+        "id": "{{cardExternalRef}}",
+        "object": "issuing.card",
+        "brand": "Visa",
+        "cancellation_reason": null,
+        "cardholder": {
+          "id": "ich_1KlILA4g2Xo63Nb8vaY0Tpfr",
+          "object": "issuing.cardholder",
+          "billing": {
+            "address": {
+              "city": "TUCSON",
+              "country": "US",
+              "line1": "2380 N CREEK VISTA DR",
+              "line2": null,
+              "postal_code": "85749",
+              "state": "AZ"
+            }
+          },
+          "company": null,
+          "created": 1649188020,
+          "email": "utkarsh+soleEmployee1@clearspend.com",
+          "individual": null,
+          "livemode": false,
+          "metadata": {
+            "user_id": "{{userId}}",
+            "stripe_account_id": "{{stripeAccountId}}",
+            "business_id": "{{businessId}}"
+          },
+          "name": "USole1 Emp",
+          "phone_number": null,
+          "requirements": {
+            "disabled_reason": null,
+            "past_due": [
+            ]
+          },
+          "spending_controls": {
+            "allowed_categories": [
+            ],
+            "blocked_categories": [
+            ],
+            "spending_limits": [
+            ],
+            "spending_limits_currency": null
+          },
+          "status": "active",
+          "type": "individual"
+        },
+        "created": 1649188021,
+        "currency": "usd",
+        "exp_month": 3,
+        "exp_year": 2025,
+        "financial_account": "fa_1KPLzt4g2Xo63Nb8uaQvsdmO",
+        "last4": "9667",
+        "livemode": false,
+        "metadata": {
+          "stripe_account_id": "{{stripeAccountId}}",
+          "business_id": "{{businessId}}",
+          "card_id": "{{cardId}}"
+        },
+        "replaced_by": null,
+        "replacement_for": null,
+        "replacement_reason": null,
+        "shipping": null,
+        "spending_controls": {
+          "allowed_categories": null,
+          "blocked_categories": null,
+          "spending_limits": [
+            {
+              "amount": 1000000,
+              "categories": [
+              ],
+              "interval": "daily"
+            }
+          ],
+          "spending_limits_currency": "usd"
+        },
+        "status": "active",
+        "type": "virtual",
+        "wallets": {
+          "apple_pay": {
+            "eligible": true,
+            "ineligible_reason": null
+          },
+          "google_pay": {
+            "eligible": true,
+            "ineligible_reason": null
+          },
+          "primary_account_identifier": null
+        }
+      },
+      "cardholder": "ich_1KlILA4g2Xo63Nb8vaY0Tpfr",
+      "created": 1651700488,
+      "currency": "usd",
+      "livemode": false,
+      "merchant_amount": 0,
+      "merchant_currency": "usd",
+      "merchant_data": {
+        "category": "hotels_motels_and_resorts",
+        "category_code": "7011",
+        "city": "San Francisco",
+        "country": "US",
+        "name": "UBER *TRI",
+        "network_id": "1234567890",
+        "postal_code": "94103",
+        "state": "CA"
+      },
+      "metadata": {
+      },
+      "pending_request": {
+        "amount": {{amount}},
+        "amount_details": {
+          "atm_fee": null
+        },
+        "currency": "usd",
+        "is_amount_controllable": false,
+        "merchant_amount": {{amount}},
+        "merchant_currency": "usd"
+      },
+      "request_history": [
+      ],
+      "status": "pending",
+      "transactions": [
+      ],
+      "treasury": {
+        "received_credits": [
+        ],
+        "received_debits": [
+        ],
+        "transaction": null
+      },
+      "verification_data": {
+        "address_line1_check": "not_provided",
+        "address_postal_code_check": "not_provided",
+        "cvc_check": "not_provided",
+        "expiry_check": "match",
+        "postal_code": "94103"
+      },
+      "wallet": null
+    }
+  },
+  "type": "issuing_authorization.request",
+  "object": "event",
+  "account": "{{stripeAccountId}}",
+  "created": 1645205796,
+  "request": {
+    "id": "req_fXCaykmwqh6YpA",
+    "idempotency_key": "bbdd11d9-1026-4f9f-a49f-de73a828eza9"
+  },
+  "livemode": false,
+  "api_version": "2020-08-27; financial_accounts_beta=v3; issuing_flows_beta=v1; money_flows_beta=v2",
+  "pending_webhooks": 1
+}

@@ -5,6 +5,7 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
 import com.clearspend.capital.data.model.User;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,8 @@ public interface UserRepository
       RequiredEncryptedStringWithHash userLastName);
 
   List<User> findByBusinessIdAndIdIn(TypedId<BusinessId> businessId, List<TypedId<UserId>> ids);
+
+  List<User> findAllByIdIn(final Collection<TypedId<UserId>> ids);
 
   Optional<User> findByEmailHash(byte[] emailHash);
 }

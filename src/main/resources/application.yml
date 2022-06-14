@@ -69,6 +69,9 @@ clearspend:
         key: 148F8C2650959006B52D67A1E927A4D83DF6C967B8D4BA30C457EAF492F7C825
         tweak: 9F1E1761
   onboarding-validation: ${ONBOARD_EMAIL_PHONE_VALIDATION:true}
+  notifications:
+    low-balance:
+      per-allocation-frequency-min: ${LOW_BALANCE_PER_ALLOCATION_FREQ_MIN:20}
 
 client:
   connect-timeout: 2000
@@ -129,6 +132,7 @@ client:
     bank-funds-deposit-request-template-id: ${SENDGRID_BANK_FUNDS_DEPOSIT_REQUEST_TEMPLATE_ID:d-46c77ecdafd545a9a33384d763fd96ad}
     bank-funds-deposit-request-scheduled-action-template-id: ${SENDGRID_BANK_FUNDS_DEPOSIT_REQUEST_SCHEDULED_ACTION_TEMPLATE_ID:d-60669e8099b246f193dd29bc73a3278e}
     financial-account-ready-template-id: ${SENDGRID_FINANCIAL_ACCOUNT_READY_TEMPLATE_ID:d-b69e6245a61a4f0593ed3de9726cd7ec}
+    low-balance-notification-template-id: ${LOW_BALANCE_NOTIFICATION_TEMPLATE_ID:d-61685838640a459d820fa28355518985}
   stripe:
     # secret: "whsec_Mj59eXcGrzLDhheRIb7cXk8mfwUhPfCI" (Stripe CLI)
     issuing-secret: ${STRIPE_ISSUING_SECRET:whsec_5egOdj0En2NkrLxaj1kQlLgBN3aDn2xC}

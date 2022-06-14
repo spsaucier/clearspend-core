@@ -325,6 +325,7 @@ public class UserService {
     return userRepository.find(businessId, userFilterCriteria);
   }
 
+  @Transactional
   @PreAuthorize("hasRootPermission(#businessId, 'MANAGE_USERS|CUSTOMER_SERVICE')")
   public boolean archiveUser(final TypedId<BusinessId> businessId, final TypedId<UserId> userId) {
     final User user =

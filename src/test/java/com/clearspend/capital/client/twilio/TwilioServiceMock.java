@@ -1,11 +1,13 @@
 package com.clearspend.capital.client.twilio;
 
 import com.clearspend.capital.client.sendgrid.SendGridProperties;
+import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.service.TwilioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,6 +27,9 @@ public class TwilioServiceMock extends TwilioService {
   @Setter @Getter private String lastVerificationPhone;
   @Setter @Getter private String lastOtp;
   @Setter @Getter private String lastUserAccountCreatedPassword;
+  @Getter private final List<LastLowBalanceEmail> lastLowBalanceEmail = new ArrayList<>();
+
+  public record LastLowBalanceEmail(String to, Amount amount) {}
 
   public TwilioServiceMock(
       TwilioProperties twilioProperties, SendGridProperties sendGridProperties) {
@@ -113,6 +118,15 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   public void sendBankFundsReturnEmail(String to, String firstName) {}
+
+  @Override
+  protected void sendLowBalanceEmail(
+      final String to,
+      final String firstName,
+      final String allocationName,
+      final Amount lowBalanceLevel) {
+    this.lastLowBalanceEmail.add(new LastLowBalanceEmail(to, lowBalanceLevel));
+  }
 
   @Override
   public void sendBankFundsWithdrawalEmail(

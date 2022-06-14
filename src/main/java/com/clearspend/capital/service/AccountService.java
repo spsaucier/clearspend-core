@@ -40,6 +40,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -54,6 +55,7 @@ public class AccountService {
   private final AdjustmentService adjustmentService;
   private final BusinessSettingsService businessSettingsService;
   private final LedgerService ledgerService;
+  private final ApplicationEventPublisher eventPublisher;
 
   public record AdjustmentRecord(
       Account account, Adjustment adjustment, JournalEntry journalEntry) {}
@@ -61,6 +63,8 @@ public class AccountService {
   public record AdjustmentAndHoldRecord(Account account, Adjustment adjustment, Hold hold) {}
 
   public record HoldRecord(Account account, Hold hold) {}
+
+  public record HoldCreatedEvent(Hold hold) {}
 
   public record AccountReallocateFundsRecord(
       Account fromAccount, Account toAccount, ReallocateFundsRecord reallocateFundsRecord) {}
@@ -115,7 +119,7 @@ public class AccountService {
     rootAllocationAccount.setLedgerBalance(rootAllocationAccount.getLedgerBalance().add(amount));
 
     Hold hold =
-        holdRepository.save(
+        saveAndPublishHold(
             new Hold(
                 businessId,
                 rootAllocationAccount.getId(),
@@ -191,7 +195,7 @@ public class AccountService {
   HoldRecord recordNetworkHold(Account account, Amount amount, OffsetDateTime expirationDate) {
     amount.ensureNegative();
     Hold hold =
-        holdRepository.save(
+        saveAndPublishHold(
             new Hold(
                 account.getBusinessId(),
                 account.getId(),
@@ -369,5 +373,11 @@ public class AccountService {
     return holdRepository
         .findByBusinessIdAndId(businessId, holdId)
         .orElseThrow(() -> new RecordNotFoundException(Table.HOLD, businessId, holdId));
+  }
+
+  Hold saveAndPublishHold(final Hold hold) {
+    final Hold savedHold = holdRepository.saveAndFlush(hold);
+    eventPublisher.publishEvent(new HoldCreatedEvent(savedHold));
+    return savedHold;
   }
 }
