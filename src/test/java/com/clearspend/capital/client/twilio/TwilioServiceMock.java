@@ -28,6 +28,7 @@ public class TwilioServiceMock extends TwilioService {
   @Setter @Getter private String lastOtp;
   @Setter @Getter private String lastUserAccountCreatedPassword;
   @Getter private final List<LastLowBalanceEmail> lastLowBalanceEmail = new ArrayList<>();
+  @Setter @Getter private String lastCardUnlinkedEmail;
 
   public record LastLowBalanceEmail(String to, Amount amount) {}
 
@@ -166,7 +167,9 @@ public class TwilioServiceMock extends TwilioService {
 
   @Override
   protected void sendCardUnlinkedEmail(
-      String to, String firstName, String lastFour, String allocationName) {}
+      String to, String firstName, String lastFour, String allocationName) {
+    this.lastCardUnlinkedEmail = to;
+  }
 
   @Override
   public void sendUserAccountCreatedEmail(

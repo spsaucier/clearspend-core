@@ -13,6 +13,7 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.typedid.data.AllocationId;
 import com.clearspend.capital.common.typedid.data.CardId;
@@ -121,6 +122,7 @@ public class CardControllerTest extends BaseCapitalTest {
   private TypedId<UserId> userId;
   private Cookie userCookie;
   private Card card;
+  private final TwilioServiceMock twilioServiceMock;
 
   @SneakyThrows
   @BeforeEach
@@ -139,6 +141,7 @@ public class CardControllerTest extends BaseCapitalTest {
             FundingType.POOLED,
             CardType.PHYSICAL,
             false);
+    twilioServiceMock.setLastCardUnlinkedEmail(null);
   }
 
   @AfterEach
@@ -1231,6 +1234,9 @@ public class CardControllerTest extends BaseCapitalTest {
             CardDetailsResponse.class);
 
     assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
+    assertThat(response)
+        .hasFieldOrPropertyWithValue(
+            "linkedAllocationId", createBusinessRecord.allocationRecord().allocation().getId());
     assertThat(response.getAllocationSpendControls()).hasSize(1);
     assertThat(response.getAllocationSpendControls().get(0))
         .hasFieldOrPropertyWithValue(
@@ -1238,6 +1244,66 @@ public class CardControllerTest extends BaseCapitalTest {
 
     assertThat(cardAllocationRepository.findById(childCardAllocation.getId())).isEmpty();
     assertThat(transactionLimitRepository.findById(transactionLimit.getId())).isEmpty();
+
+    assertThat(twilioServiceMock).hasFieldOrPropertyWithValue("lastCardUnlinkedEmail", null);
+  }
+
+  @Test
+  void removeAllocationsFromCard_RemovingLinkedAllocation() {
+    final AllocationRecord childAllocation =
+        testHelper.createAllocation(
+            createBusinessRecord.business().getId(),
+            "Child",
+            createBusinessRecord.allocationRecord().allocation().getId());
+    final CardAllocation childCardAllocation =
+        cardAllocationRepository.save(
+            new CardAllocation(card.getId(), childAllocation.allocation().getId()));
+    final TransactionLimit transactionLimit =
+        transactionLimitRepository.save(
+            new TransactionLimit(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                childCardAllocation.getId().toUuid(),
+                Map.of(),
+                Set.of(),
+                Set.of(),
+                false));
+    final CardAllocationDetails allocations =
+        new CardAllocationDetails(createBusinessRecord.allocationRecord().allocation().getId());
+
+    final CardAllocation rootCardAllocation =
+        cardAllocationRepository
+            .findByCardIdAndAllocationId(
+                card.getId(), createBusinessRecord.allocationRecord().allocation().getId())
+            .orElseThrow();
+    final TransactionLimit rootTransactionLimit =
+        transactionLimitRepository
+            .findByBusinessIdAndTypeAndOwnerId(
+                createBusinessRecord.business().getId(),
+                TransactionLimitType.CARD,
+                rootCardAllocation.getId().toUuid())
+            .orElseThrow();
+
+    final CardDetailsResponse response =
+        mockMvcHelper.queryObject(
+            "/cards/%s/allocations".formatted(card.getId()),
+            HttpMethod.DELETE,
+            createBusinessRecord.authCookie(),
+            List.of(allocations),
+            CardDetailsResponse.class);
+
+    assertThat(response.getCard()).hasFieldOrPropertyWithValue("cardId", card.getId());
+    assertThat(response).hasFieldOrPropertyWithValue("linkedAllocationId", null);
+    assertThat(response.getAllocationSpendControls()).hasSize(1);
+    assertThat(response.getAllocationSpendControls().get(0))
+        .hasFieldOrPropertyWithValue("allocationId", childAllocation.allocation().getId());
+
+    assertThat(cardAllocationRepository.findById(rootCardAllocation.getId())).isEmpty();
+    assertThat(transactionLimitRepository.findById(rootTransactionLimit.getId())).isEmpty();
+
+    assertThat(twilioServiceMock)
+        .hasFieldOrPropertyWithValue(
+            "lastCardUnlinkedEmail", createBusinessRecord.user().getEmail().getEncrypted());
   }
 
   @Test

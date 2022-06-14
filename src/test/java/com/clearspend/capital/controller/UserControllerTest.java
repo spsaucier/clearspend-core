@@ -17,6 +17,7 @@ import com.clearspend.capital.MockMvcHelper;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.client.stripe.StripeMockClient;
+import com.clearspend.capital.client.twilio.TwilioServiceMock;
 import com.clearspend.capital.common.advice.GlobalControllerExceptionHandler.ControllerError;
 import com.clearspend.capital.common.data.model.Amount;
 import com.clearspend.capital.common.error.FusionAuthException;
@@ -143,6 +144,7 @@ class UserControllerTest extends BaseCapitalTest {
   private final CardAllocationRepository cardAllocationRepository;
   private final StripeMockClient stripeMockClient;
   private final UserRepository userRepository;
+  private final TwilioServiceMock twilioServiceMock;
 
   private final Faker faker = new Faker();
   private final CoreFusionAuthService fusionAuthService;
@@ -184,6 +186,7 @@ class UserControllerTest extends BaseCapitalTest {
             CardType.VIRTUAL,
             false);
     testHelper.setCurrentUser(createBusinessRecord.user());
+    twilioServiceMock.setLastCardUnlinkedEmail(null);
   }
 
   @AfterEach
@@ -996,6 +999,10 @@ class UserControllerTest extends BaseCapitalTest {
 
     final Card dbCard = cardRepository.findById(card.getId()).orElseThrow();
     assertThat(dbCard).isEqualTo(card);
+
+    assertThat(twilioServiceMock)
+        .hasFieldOrPropertyWithValue(
+            "lastCardUnlinkedEmail", user.user().getEmail().getEncrypted());
   }
 
   @Test
@@ -1028,6 +1035,10 @@ class UserControllerTest extends BaseCapitalTest {
             "card", new com.clearspend.capital.controller.type.card.Card(card))
         .hasFieldOrPropertyWithValue(
             "account", com.clearspend.capital.controller.type.account.Account.of(cardAccount));
+
+    assertThat(twilioServiceMock)
+        .hasFieldOrPropertyWithValue(
+            "lastCardUnlinkedEmail", user.user().getEmail().getEncrypted());
   }
 
   @Test

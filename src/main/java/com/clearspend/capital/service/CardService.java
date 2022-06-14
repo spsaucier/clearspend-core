@@ -730,6 +730,20 @@ public class CardService {
                             card.getBusinessId(),
                             TransactionLimitType.CARD,
                             cardAllocation.getId().toUuid())));
+    if (isCardLinkedToRemovedAllocation(card, allocationsToRemove)) {
+      unlinkCard(card);
+    }
+  }
+
+  private boolean isCardLinkedToRemovedAllocation(
+      final Card card, final List<CardAllocationDetails> allocationsToRemove) {
+    return allocationsToRemove.stream()
+        .map(CardAllocationDetails::getAllocationId)
+        .anyMatch(
+            allocationId ->
+                Optional.ofNullable(card.getAllocationId())
+                    .filter(allocationId::equals)
+                    .isPresent());
   }
 
   @Transactional
