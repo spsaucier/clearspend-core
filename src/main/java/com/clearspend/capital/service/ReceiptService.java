@@ -141,7 +141,7 @@ public class ReceiptService {
   }
 
   @Transactional
-  @PreAuthorize("isSelfOwned(#receipt)")
+  @PreAuthorize("hasPermission(#receipt, 'VIEW_OWN|LINK_RECEIPTS|CUSTOMER_SERVICE')")
   public void deleteReceipt(Receipt receipt) {
     if (receipt.isLinked()) {
       AccountActivity accountActivity =
@@ -160,11 +160,5 @@ public class ReceiptService {
     receiptRepository.delete(receipt);
     receiptImageService.deleteReceiptImage(receipt.getPath());
     log.debug("deleted receipt {} {}", receipt.getId(), receipt.getPath());
-  }
-
-  public @interface ReceiptViewer {
-    public String reviewer();
-
-    public String explanation();
   }
 }

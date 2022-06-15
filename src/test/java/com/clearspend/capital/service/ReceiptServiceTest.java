@@ -417,37 +417,45 @@ class ReceiptServiceTest extends BaseCapitalTest {
   @Test
   void deleteReceipt_requiresOwnership() {
     testHelper.setCurrentUser(createBusinessRecord.user());
-    // Create three users to test.
-    User manager =
-        testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_MANAGER).user();
-    User employee =
+    final User employee1 =
         testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
-    User snooper =
+    final User employee2 =
         testHelper.createUserWithRole(allocation, DefaultRoles.ALLOCATION_EMPLOYEE).user();
 
-    // Create a Receipt for the Employee user
-    receipt =
-        receiptService.storeReceiptImage(
-            userRecord.user().getBusinessId(),
-            employee.getId(),
-            fileContents.getBytes(),
-            contentType);
+    final AccountActivity accountActivity = createAccountActivity(employee1);
 
-    // Create an Account Activity object to 'link'
-    AccountActivity accountActivity = createAccountActivity(employee);
+    final ThrowingRunnable action =
+        () -> {
+          final Receipt receipt =
+              testHelper.runWithCurrentUser(
+                  createBusinessRecord.user(),
+                  () -> {
+                    final Receipt tempReceipt =
+                        receiptService.storeReceiptImage(
+                            userRecord.user().getBusinessId(),
+                            employee2.getId(),
+                            fileContents.getBytes(),
+                            contentType);
+                    receiptService.linkReceipt(tempReceipt, accountActivity);
+                    return receiptRepository.findById(tempReceipt.getId()).orElseThrow();
+                  });
+          receiptService.deleteReceipt(receipt);
+        };
 
-    // Ensure that the Manager can NOT delete a receipt
-    testHelper.setCurrentUser(manager);
-    assertThrows(AccessDeniedException.class, () -> receiptService.deleteReceipt(receipt));
-
-    // The Employee that owns the Receipt and the Activity should be able to link the two
-    testHelper.setCurrentUser(employee);
-    assertDoesNotThrow(() -> receiptService.linkReceipt(receipt, accountActivity));
-
-    // The sibling employee (Snooper) should NOT be allowed to link the Receipt
-    testHelper.setCurrentUser(snooper);
-    assertThrows(
-        AccessDeniedException.class, () -> receiptService.linkReceipt(receipt, accountActivity));
+    permissionValidationHelper
+        .buildValidator(createBusinessRecord)
+        .allowRolesOnAllocation(
+            Set.of(
+                DefaultRoles.ALLOCATION_VIEW_ONLY,
+                DefaultRoles.ALLOCATION_MANAGER,
+                DefaultRoles.ALLOCATION_ADMIN))
+        .allowUser(employee1)
+        .allowUser(employee2)
+        .allowGlobalRoles(
+            Set.of(
+                DefaultRoles.GLOBAL_CUSTOMER_SERVICE, DefaultRoles.GLOBAL_CUSTOMER_SERVICE_MANAGER))
+        .build()
+        .validateServiceMethod(action);
   }
 
   private AccountActivity createAccountActivity(User user) {
