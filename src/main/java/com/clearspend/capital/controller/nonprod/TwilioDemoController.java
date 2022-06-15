@@ -29,7 +29,7 @@ public class TwilioDemoController {
   @TwilioKycKybOp(
       reviewer = "Craig Miller",
       explanation = "This is a demo controller for non-prod operations")
-  void kycFail(@RequestBody @Validated KycPassRequest request) {
+  void kycPass(@RequestBody @Validated KycPassRequest request) {
     twilioService.sendKybKycPassEmail(request.getTo(), request.getFirstName());
   }
 
@@ -37,7 +37,7 @@ public class TwilioDemoController {
   @TwilioKycKybOp(
       reviewer = "Craig Miller",
       explanation = "This is a demo controller for non-prod operations")
-  void kycFail(@RequestBody @Validated KycFailRequest request) {
+  void kycPass(@RequestBody @Validated KycFailRequest request) {
     twilioService.sendKybKycFailEmail(
         request.getTo(), request.getFirstName(), request.getReasons());
   }

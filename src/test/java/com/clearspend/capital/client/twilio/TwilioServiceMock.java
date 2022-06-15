@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class TwilioServiceMock extends TwilioService {
       Verification.fromJson("{\"status\": \"pending\"}", objectMapper);
   private final VerificationCheck verificationCheck =
       VerificationCheck.fromJson("{\"valid\": \"true\"}", objectMapper);
+
+  public static Map<String, List<String>> emails = new HashMap<>();
 
   @Setter @Getter private String lastChangePasswordId;
   @Setter @Getter private String lastVerificationEmail;
@@ -67,21 +71,31 @@ public class TwilioServiceMock extends TwilioService {
   public void sendOnboardingWelcomeEmail(String to, BusinessProspect businessProspect) {}
 
   @Override
-  public void sendKybKycPassEmail(String to, String firstName) {}
+  public void sendKybKycPassEmail(String to, String firstName) {
+    emails.put(to, List.of(firstName));
+  }
 
   @Override
-  public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {}
+  public void sendKybKycFailEmail(String to, String firstName, List<String> reasons) {
+    emails.put(to, List.of(firstName, reasons == null ? "" : String.join(",", reasons)));
+  }
 
   @Override
-  public void sendKybKycReviewStateEmail(String to, String firstName) {}
+  public void sendKybKycReviewStateEmail(String to, String firstName) {
+    emails.put(to, List.of(firstName));
+  }
 
   @Override
   public void sendKybKycRequireAdditionalInfoEmail(
-      String to, String firstName, List<String> reasons) {}
+      String to, String firstName, List<String> reasons) {
+    emails.put(to, List.of(firstName, reasons == null ? "" : String.join(",", reasons)));
+  }
 
   @Override
   public void sendKybKycRequireDocumentsEmail(
-      String to, String firstName, List<String> requiredDocuments) {}
+      String to, String firstName, List<String> requiredDocuments) {
+    emails.put(to, List.of(firstName, requiredDocuments.toString()));
+  }
 
   @Override
   public Verification sendVerificationSms(String to) {
@@ -115,7 +129,9 @@ public class TwilioServiceMock extends TwilioService {
       String accountLastFour) {}
 
   @Override
-  public void sendBankFundsAvailableEmail(String to, String firstName) {}
+  public void sendBankFundsAvailableEmail(String to, String firstName) {
+    emails.put(to, List.of(firstName));
+  }
 
   @Override
   public void sendBankFundsReturnEmail(String to, String firstName) {}

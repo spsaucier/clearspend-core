@@ -14,11 +14,11 @@ import java.time.ZoneOffset;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-// TODO use dedicated singleton for batch service, once configured
-// @Profile("batch")
+@Profile("batch")
 @Service
 @RequiredArgsConstructor
 @Slf4j
