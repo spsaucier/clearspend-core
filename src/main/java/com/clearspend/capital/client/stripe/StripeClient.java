@@ -14,7 +14,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessBankAccountId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedPhoneWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedString;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.Business;
@@ -531,7 +531,7 @@ public class StripeClient {
             .setEmail(user.getEmail().getEncrypted())
             .setPhoneNumber(
                 Optional.ofNullable(user.getPhone())
-                    .map(NullableEncryptedStringWithHash::getEncrypted)
+                    .map(NullableEncryptedPhoneWithHash::getEncrypted)
                     .orElse(null))
             .setStatus(CardholderCreateParams.Status.ACTIVE)
             .setType(Type.INDIVIDUAL)
@@ -614,7 +614,7 @@ public class StripeClient {
         CardholderUpdateParams.builder()
             .setPhoneNumber(
                 Optional.ofNullable(user.getPhone())
-                    .map(NullableEncryptedStringWithHash::getEncrypted)
+                    .map(NullableEncryptedPhoneWithHash::getEncrypted)
                     .orElse(null))
             .setStatus(
                 user.isArchived()

@@ -8,7 +8,7 @@ import com.clearspend.capital.BaseCapitalTest;
 import com.clearspend.capital.TestHelper;
 import com.clearspend.capital.TestHelper.CreateBusinessRecord;
 import com.clearspend.capital.common.data.model.Amount;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Receipt;
@@ -202,8 +202,8 @@ class ReceiptServiceTest extends BaseCapitalTest {
     log.setStatus(TransactionSyncStatus.COMPLETED);
     log.setAccountActivityId(accountActivity.getId());
     log.setDirectCostPushOperationKey("whatever");
-    log.setFirstName(new RequiredEncryptedStringWithHash("first"));
-    log.setLastName(new RequiredEncryptedStringWithHash("last"));
+    log.setFirstName(new RequiredEncryptedNameWithHash("first"));
+    log.setLastName(new RequiredEncryptedNameWithHash("last"));
     log = transactionSyncLogRepository.save(log);
 
     receiptService.linkReceipt(receipt, accountActivity);

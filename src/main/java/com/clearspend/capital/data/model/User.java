@@ -6,8 +6,9 @@ import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedPhoneWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedEmailWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.business.TosAcceptance;
 import com.clearspend.capital.data.model.enums.UserType;
 import com.vladmihalcea.hibernate.type.array.EnumArrayType;
@@ -50,15 +51,15 @@ public class User extends TypedMutable<UserId> implements BusinessRelated, Owner
   @Enumerated(EnumType.STRING)
   private UserType type;
 
-  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash firstName;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedNameWithHash firstName;
 
-  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash lastName;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedNameWithHash lastName;
 
   @Embedded private Address address;
 
-  @NonNull @Sensitive @Embedded private RequiredEncryptedStringWithHash email;
+  @NonNull @Sensitive @Embedded private RequiredEncryptedEmailWithHash email;
 
-  @Sensitive @Embedded private NullableEncryptedStringWithHash phone;
+  @Sensitive @Embedded private NullableEncryptedPhoneWithHash phone;
 
   // link to FusionAuth
   private String subjectRef;

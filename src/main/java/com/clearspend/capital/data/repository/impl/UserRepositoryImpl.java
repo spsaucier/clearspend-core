@@ -6,7 +6,7 @@ import com.clearspend.capital.common.data.util.MustacheResourceLoader;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.HashUtil;
+import com.clearspend.capital.crypto.data.converter.canonicalization.Canonicalizer;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
 import com.clearspend.capital.data.model.User;
@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
 import org.hibernate.jpa.TypedParameterValue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -55,12 +54,6 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
   public record CardAndAllocationName(Card card, String allocationName) {}
 
-  private record SearchTextAndHash(String searchText, byte[] hash) {
-    public String likeSearchText() {
-      return Optional.ofNullable(searchText).map("%%%s%%"::formatted).orElse(null);
-    }
-  }
-
   @Override
   public Page<FilteredUserWithCardListRecord> find(
       @NonNull TypedId<BusinessId> businessId, UserFilterCriteria criteria) {
@@ -72,12 +65,6 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .filter(list -> !list.isEmpty())
             .map(list -> list.stream().map(TypedId::toUuid).toList())
             .orElse(null);
-    final SearchTextAndHash searchTextAndHash =
-        Optional.ofNullable(criteria.getSearchText())
-            .filter(StringUtils::isNotEmpty)
-            .map(String::trim)
-            .map(search -> new SearchTextAndHash(search, HashUtil.calculateHash(search)))
-            .orElse(new SearchTextAndHash(null, null));
 
     PageToken pageToken = criteria.getPageToken();
     int maxResults = pageToken.getPageSize();
@@ -98,9 +85,14 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             .addValue("hasPhysicalCard", criteria.getHasPhysicalCard())
             .addValue("includeArchived", includeArchived)
             .addValue("allocations", allocations)
-            .addValue("searchText", searchTextAndHash.searchText())
-            .addValue("likeSearchText", searchTextAndHash.likeSearchText())
-            .addValue("hash", searchTextAndHash.hash())
+            .addValue("searchText", criteria.getSearchText())
+            .addValue("likeSearchText", "%%%s%%".formatted(criteria.getSearchText()))
+            .addValue(
+                "hashedName", Canonicalizer.NAME.getCanonicalizedHash(criteria.getSearchText()))
+            .addValue(
+                "hashedEmail", Canonicalizer.EMAIL.getCanonicalizedHash(criteria.getSearchText()))
+            .addValue(
+                "hashedPhone", Canonicalizer.PHONE.getCanonicalizedHash(criteria.getSearchText()))
             .addValue("firstResult", firstResult)
             .addValue("pageSize", pageToken.getPageSize())
             .addValue("invokingUser", invokingUser)

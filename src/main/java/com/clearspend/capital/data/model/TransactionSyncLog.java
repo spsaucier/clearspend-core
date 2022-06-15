@@ -6,7 +6,7 @@ import com.clearspend.capital.common.typedid.data.AccountActivityId;
 import com.clearspend.capital.common.typedid.data.TransactionSyncLogId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.enums.TransactionSyncStatus;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -57,7 +57,7 @@ public class TransactionSyncLog extends TypedMutable<TransactionSyncLogId> {
 
   @NonNull private String codatCompanyRef;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash firstName;
+  @Sensitive @Embedded private RequiredEncryptedNameWithHash firstName;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash lastName;
+  @Sensitive @Embedded private RequiredEncryptedNameWithHash lastName;
 }

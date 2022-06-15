@@ -48,10 +48,12 @@ WHERE (
     {{#statuses}} AND Card.Status IN (:statuses) {{/statuses}}
     {{#types}} AND Card.Type IN (:types) {{/types}}
     {{#searchText}}
-        AND (Allocation.Name LIKE :likeSearchText
-        OR Card.Last_Four = :searchText
-        OR Users.First_Name_Hash = decode(:searchStringHash, 'hex')
-        OR Users.Last_Name_Hash = decode(:searchStringHash, 'hex')
+        AND (
+            LOWER(Allocation.Name) LIKE LOWER(:likeSearchText)
+            OR Card.Last_Four = :searchText
+            {{#hashedName}} OR Users.First_Name_Hash = :hashedName OR Users.Last_Name_Hash = :hashedName {{/hashedName}}
+            {{#hashedPhone}} OR Users.Phone_Hash = :hashedPhone {{/hashedPhone}}
+            {{#hashedEmail}} OR Users.Email_Hash = :hashedEmail {{/hashedEmail}}
         )
     {{/searchText}}
 {{^count}}

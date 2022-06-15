@@ -21,10 +21,10 @@ WHERE users.business_id = :businessId
 {{#searchText}}
     AND (
         card.last_four = :searchText
-        OR users.first_name_hash = :hash
-        OR users.last_name_hash = :hash
-        OR users.email_hash = :hash
         OR LOWER(allocation.name) LIKE LOWER(:likeSearchText)
+        {{#hashedName}} OR users.first_name_hash = :hashedName OR users.last_name_hash = :hashedName {{/hashedName}}
+        {{#hashedEmail}} OR users.email_hash = :hashedEmail {{/hashedEmail}}
+        {{#hashedPhone}} OR users.phone_hash = :hashedPhone {{/hashedPhone}}
     )
 {{/searchText}}
 AND (permissions.user_id IS NOT NULL)

@@ -16,7 +16,7 @@ import com.clearspend.capital.client.codat.webhook.types.CodatWebhookDataSyncCom
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusChangedRequest;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookPushStatusData;
 import com.clearspend.capital.client.codat.webhook.types.CodatWebhookSyncData;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.ChartOfAccounts;
 import com.clearspend.capital.data.model.CodatCategory;
@@ -80,8 +80,8 @@ public class CodatWebhookControllerTest extends BaseCapitalTest {
     transactionSyncLog.setSupplierId("");
     transactionSyncLog.setDirectCostPushOperationKey(TXN_SYNC_KEY);
     transactionSyncLog.setCodatCompanyRef(createBusinessRecord.business().getCodatCompanyRef());
-    transactionSyncLog.setFirstName(new RequiredEncryptedStringWithHash("John"));
-    transactionSyncLog.setLastName(new RequiredEncryptedStringWithHash("Doe"));
+    transactionSyncLog.setFirstName(new RequiredEncryptedNameWithHash("John"));
+    transactionSyncLog.setLastName(new RequiredEncryptedNameWithHash("Doe"));
     transactionSyncLogRepo.save(transactionSyncLog);
     testHelper.setCurrentUser(createBusinessRecord.user());
   }

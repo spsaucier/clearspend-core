@@ -11,8 +11,9 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.user.UpdateUserRequest;
 import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.crypto.PasswordUtil;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedPhoneWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedEmailWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.crypto.data.model.embedded.WithEncryptedString;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.business.TosAcceptance;
@@ -97,11 +98,11 @@ public class UserService {
         new User(
             businessId,
             type,
-            new RequiredEncryptedStringWithHash(firstName),
-            new RequiredEncryptedStringWithHash(lastName),
-            new RequiredEncryptedStringWithHash(email));
+            new RequiredEncryptedNameWithHash(firstName),
+            new RequiredEncryptedNameWithHash(lastName),
+            new RequiredEncryptedEmailWithHash(email));
     if (phone != null) {
-      user.setPhone(new NullableEncryptedStringWithHash(phone));
+      user.setPhone(new NullableEncryptedPhoneWithHash(phone));
     }
     user.setId(userId);
     user.setAddress(address);
@@ -129,11 +130,11 @@ public class UserService {
         new User(
             businessId,
             type,
-            new RequiredEncryptedStringWithHash(firstName),
-            new RequiredEncryptedStringWithHash(lastName),
-            new RequiredEncryptedStringWithHash(email));
+            new RequiredEncryptedNameWithHash(firstName),
+            new RequiredEncryptedNameWithHash(lastName),
+            new RequiredEncryptedEmailWithHash(email));
     if (phone != null) {
-      user.setPhone(new NullableEncryptedStringWithHash(phone));
+      user.setPhone(new NullableEncryptedPhoneWithHash(phone));
     }
     if (userRepository.findByEmailHash(HashUtil.calculateHash(email)).isPresent()) {
       throw new InvalidRequestException("A user with that email address already exists");
@@ -201,17 +202,17 @@ public class UserService {
       throw new InvalidRequestException("Invalid Business ID");
     }
     if (isChanged(updateUserRequest.getFirstName(), user.getFirstName())) {
-      user.setFirstName(new RequiredEncryptedStringWithHash(updateUserRequest.getFirstName()));
+      user.setFirstName(new RequiredEncryptedNameWithHash(updateUserRequest.getFirstName()));
     }
     if (isChanged(updateUserRequest.getLastName(), user.getLastName())) {
-      user.setLastName(new RequiredEncryptedStringWithHash(updateUserRequest.getLastName()));
+      user.setLastName(new RequiredEncryptedNameWithHash(updateUserRequest.getLastName()));
     }
 
     String oldEmail = null;
     if (isChanged(updateUserRequest.getEmail(), user.getEmail())) {
       // Ensure that this email address does NOT already exist within the database.
-      RequiredEncryptedStringWithHash newEmail =
-          new RequiredEncryptedStringWithHash(updateUserRequest.getEmail());
+      RequiredEncryptedEmailWithHash newEmail =
+          new RequiredEncryptedEmailWithHash(updateUserRequest.getEmail());
       Optional<User> duplicate = userRepository.findByEmailHash(newEmail.getHash());
       if (duplicate.isPresent() && !duplicate.get().getId().equals(updateUserRequest.getUserId())) {
         throw new InvalidRequestException("A user with that email address already exists");
@@ -220,7 +221,7 @@ public class UserService {
       user.setEmail(newEmail);
     }
     if (isChanged(updateUserRequest.getPhone(), user.getPhone())) {
-      user.setPhone(new NullableEncryptedStringWithHash(updateUserRequest.getPhone()));
+      user.setPhone(new NullableEncryptedPhoneWithHash(updateUserRequest.getPhone()));
     }
     final Address updatedAddress =
         Optional.ofNullable(updateUserRequest.getAddress())

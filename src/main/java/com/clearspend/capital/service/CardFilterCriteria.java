@@ -6,7 +6,6 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.card.SearchCardRequest;
 import com.clearspend.capital.controller.type.common.PageRequest;
-import com.clearspend.capital.crypto.HashUtil;
 import com.clearspend.capital.data.model.enums.card.CardStatus;
 import com.clearspend.capital.data.model.enums.card.CardType;
 import com.clearspend.capital.service.type.CurrentUser;
@@ -15,7 +14,6 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.xml.bind.DatatypeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.util.StringUtils;
@@ -70,13 +68,6 @@ public class CardFilterCriteria {
     return Arrays.stream(CardType.values())
         .map(type -> String.format("'%s'", type.toString()))
         .collect(Collectors.joining(","));
-  }
-
-  public String getSearchStringHash() {
-    if (StringUtils.hasText(searchText)) {
-      return DatatypeConverter.printHexBinary(HashUtil.calculateHash(searchText));
-    }
-    return null;
   }
 
   public static CardFilterCriteria fromSearchRequest(SearchCardRequest request) {

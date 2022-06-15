@@ -15,6 +15,7 @@ import com.clearspend.capital.controller.type.Item;
 import com.clearspend.capital.controller.type.card.SearchCardData;
 import com.clearspend.capital.controller.type.user.UserData;
 import com.clearspend.capital.crypto.Crypto;
+import com.clearspend.capital.crypto.data.converter.canonicalization.Canonicalizer;
 import com.clearspend.capital.data.model.Account;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -35,7 +36,7 @@ import com.clearspend.capital.service.BeanUtils;
 import com.clearspend.capital.service.CardFilterCriteria;
 import com.clearspend.capital.service.type.CurrentUser;
 import com.clearspend.capital.service.type.PageToken;
-import com.clearspend.capital.util.function.ThrowableFunctions;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import com.clearspend.capital.util.function.TypeFunctions;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
@@ -110,7 +111,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     final BigDecimal amount =
         Optional.ofNullable(resultSet.getBigDecimal("ledger_balance_amount"))
             .map(
-                ThrowableFunctions.sneakyThrows(
+                ThrowingFunction.sneakyThrows(
                     value -> value.add(resultSet.getBigDecimal("hold_total"))))
             .orElse(null);
     // These should both either be null or non-null
@@ -162,7 +163,12 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                 TypeFunctions.nullableTypedIdListToUuidList(criteria.getAllocationIds()))
             .addValue("searchText", criteria.getSearchText())
             .addValue("likeSearchText", "%%%s%%".formatted(criteria.getSearchText()))
-            .addValue("searchStringHash", criteria.getSearchStringHash())
+            .addValue(
+                "hashedName", Canonicalizer.NAME.getCanonicalizedHash(criteria.getSearchText()))
+            .addValue(
+                "hashedEmail", Canonicalizer.EMAIL.getCanonicalizedHash(criteria.getSearchText()))
+            .addValue(
+                "hashedPhone", Canonicalizer.PHONE.getCanonicalizedHash(criteria.getSearchText()))
             .addValue(
                 "statuses", TypeFunctions.nullableEnumListToStringList(criteria.getStatuses()))
             .addValue("types", TypeFunctions.nullableEnumListToStringList(criteria.getTypes()))

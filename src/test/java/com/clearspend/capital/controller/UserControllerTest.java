@@ -1737,15 +1737,19 @@ class UserControllerTest extends BaseCapitalTest {
             testHelper.generateEntityAddress(),
             testHelper.createRandomEmail(),
             faker.phoneNumber().phoneNumber());
+
+    String jhonDoeRandomEmail = testHelper.createRandomEmail();
+    String jhonDoeRandomPhone = faker.phoneNumber().cellPhone();
+    String jhonName = "Jhon lenses";
     CreateUpdateUserRecord user1 =
         userService.createUser(
             business.getId(),
             UserType.EMPLOYEE,
-            "Name",
-            "Last",
+            jhonName,
+            "Doe",
             testHelper.generateEntityAddress(),
-            testHelper.createRandomEmail(),
-            faker.phoneNumber().phoneNumber());
+            jhonDoeRandomEmail,
+            jhonDoeRandomPhone);
 
     testHelper.issueCard(
         business,
@@ -1779,25 +1783,39 @@ class UserControllerTest extends BaseCapitalTest {
     searchUserRequest.setAllocations(List.of());
     searchUserRequest.setPageRequest(new PageRequest(0, 10));
 
-    String body = objectMapper.writeValueAsString(searchUserRequest);
-
-    MockHttpServletResponse responseFilteredByUserName =
+    String resp =
         mvc.perform(
                 post("/users/search")
                     .contentType("application/json")
-                    .content(body)
+                    .content(objectMapper.writeValueAsString(searchUserRequest))
                     .cookie(createBusinessRecord.authCookie()))
             .andExpect(status().isOk())
             .andReturn()
-            .getResponse();
-    log.info(responseFilteredByUserName.getContentAsString());
-    PagedData<UserPageData> userPageData =
-        objectMapper.readValue(
-            responseFilteredByUserName.getContentAsString(),
-            objectMapper
-                .getTypeFactory()
-                .constructParametricType(PagedData.class, UserPageData.class));
+            .getResponse()
+            .getContentAsString();
+    PagedData<UserPageData> userPageData = objectMapper.readValue(resp, new TypeReference<>() {});
     Assertions.assertEquals(3, userPageData.getTotalElements());
+
+    List<String> terms =
+        List.of(
+            jhonName.toUpperCase(),
+            jhonDoeRandomPhone.toUpperCase(),
+            jhonDoeRandomEmail.toUpperCase());
+    for (String searchTerm : terms) {
+      searchUserRequest.setSearchText(searchTerm);
+      resp =
+          mvc.perform(
+                  post("/users/search")
+                      .contentType("application/json")
+                      .content(objectMapper.writeValueAsString(searchUserRequest))
+                      .cookie(createBusinessRecord.authCookie()))
+              .andExpect(status().isOk())
+              .andReturn()
+              .getResponse()
+              .getContentAsString();
+      userPageData = objectMapper.readValue(resp, new TypeReference<>() {});
+      Assertions.assertEquals(1, userPageData.getTotalElements());
+    }
   }
 
   @SneakyThrows

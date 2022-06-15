@@ -3,7 +3,7 @@ package com.clearspend.capital.data.model.embedded;
 import com.clearspend.capital.common.masking.annotation.Sensitive;
 import com.clearspend.capital.common.typedid.data.CardId;
 import com.clearspend.capital.common.typedid.data.TypedId;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.enums.card.CardholderType;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
@@ -32,9 +32,9 @@ public class CardDetails {
 
   private String lastFour;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash ownerFirstName;
+  @Sensitive @Embedded private RequiredEncryptedNameWithHash ownerFirstName;
 
-  @Sensitive @Embedded private RequiredEncryptedStringWithHash ownerLastName;
+  @Sensitive @Embedded private RequiredEncryptedNameWithHash ownerLastName;
 
   // this is the identifier of this card at Stripe
   private String externalRef;

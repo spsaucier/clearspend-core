@@ -4,7 +4,7 @@ import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.controller.type.Address;
-import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.NullableEncryptedPhoneWithHash;
 import com.clearspend.capital.data.model.business.BusinessOwner;
 import com.clearspend.capital.data.model.business.BusinessProspect;
 import com.clearspend.capital.data.model.enums.UserType;
@@ -59,7 +59,7 @@ public class User {
     this.email = user.getEmail().getEncrypted();
     this.phone =
         Optional.ofNullable(user.getPhone())
-            .map(NullableEncryptedStringWithHash::getEncrypted)
+            .map(NullableEncryptedPhoneWithHash::getEncrypted)
             .orElse(null);
     this.archived = user.isArchived();
   }

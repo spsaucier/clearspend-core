@@ -2,6 +2,7 @@ package com.clearspend.capital.util.function;
 
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.crypto.Crypto;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingFunction;
 import java.sql.Array;
 import java.util.Arrays;
 import java.util.Collection;
@@ -59,7 +60,7 @@ public interface TypeFunctions {
 
   static Stream<Object> nullableSqlArrayToStream(@Nullable Array array) {
     return Optional.ofNullable(array)
-        .map(ThrowableFunctions.sneakyThrows(Array::getArray))
+        .map(ThrowingFunction.sneakyThrows(Array::getArray))
         .map(arr -> (Object[]) arr)
         .stream()
         .flatMap(Arrays::stream);

@@ -397,7 +397,7 @@ public class BusinessControllerTest extends BaseCapitalTest {
         .forEach(
             (plaidResponseType, plaidEntryWithData) -> {
               final PlaidLogEntryDetails<?> details =
-                  ThrowableFunctions.sneakyThrows(makeRequest::apply)
+                  ThrowableFunctions.ThrowingFunction.sneakyThrows(makeRequest::apply)
                       .apply(
                           new ImmutablePair<>(
                               plaidEntryWithData.plaidLogEntry().getId(), plaidResponseType));

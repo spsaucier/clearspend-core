@@ -25,6 +25,11 @@ public class UserPageData {
   @NonNull
   private String email;
 
+  @Sensitive
+  @JsonProperty("phone")
+  @NonNull
+  private String phone;
+
   @JsonProperty("archived")
   @NonNull
   private Boolean archived;
@@ -36,6 +41,7 @@ public class UserPageData {
   public UserPageData(User user, List<UserRepositoryImpl.CardAndAllocationName> cards) {
     this.userData = new UserData(user);
     this.email = user.getEmail().getEncrypted();
+    this.phone = user.getPhone().getEncrypted();
     this.archived = user.isArchived();
     this.cardInfoList =
         cards != null

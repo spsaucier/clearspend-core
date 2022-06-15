@@ -15,7 +15,7 @@ import com.clearspend.capital.common.typedid.data.business.BusinessId;
 import com.clearspend.capital.common.typedid.data.ledger.JournalEntryId;
 import com.clearspend.capital.common.typedid.data.ledger.LedgerAccountId;
 import com.clearspend.capital.common.typedid.data.ledger.PostingId;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Adjustment;
 import com.clearspend.capital.data.model.Allocation;
@@ -213,8 +213,8 @@ public class TestDataHelper {
             cardId -> {
               final CardDetails cardDetails = new CardDetails();
               cardDetails.setCardholderType(CardholderType.INDIVIDUAL);
-              cardDetails.setOwnerFirstName(new RequiredEncryptedStringWithHash("John"));
-              cardDetails.setOwnerLastName(new RequiredEncryptedStringWithHash("Doe"));
+              cardDetails.setOwnerFirstName(new RequiredEncryptedNameWithHash("John"));
+              cardDetails.setOwnerLastName(new RequiredEncryptedNameWithHash("Doe"));
               cardDetails.setCardId(cardId);
               accountActivity.setCard(cardDetails);
             });

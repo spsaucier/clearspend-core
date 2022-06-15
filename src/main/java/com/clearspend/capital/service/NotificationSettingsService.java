@@ -8,7 +8,7 @@ import com.clearspend.capital.common.typedid.data.UserId;
 import com.clearspend.capital.controller.type.notification.AllocationNotificationSettingsResponse;
 import com.clearspend.capital.controller.type.notification.AllocationNotificationSettingsResponse.AllocationNotificationRecipient;
 import com.clearspend.capital.controller.type.notification.AllocationNotificationsSettingRequest;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedEmailWithHash;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.User;
 import com.clearspend.capital.data.model.enums.Currency;
@@ -75,7 +75,7 @@ public class NotificationSettingsService {
         .filter(user -> user.getId().equals(userId))
         .findFirst()
         .map(User::getEmail)
-        .map(RequiredEncryptedStringWithHash::getEncrypted)
+        .map(RequiredEncryptedEmailWithHash::getEncrypted)
         .orElse(null);
   }
 

@@ -27,7 +27,7 @@ import com.clearspend.capital.common.typedid.data.AdjustmentId;
 import com.clearspend.capital.common.typedid.data.HoldId;
 import com.clearspend.capital.common.typedid.data.TypedId;
 import com.clearspend.capital.controller.type.common.PageRequest;
-import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedStringWithHash;
+import com.clearspend.capital.crypto.data.model.embedded.RequiredEncryptedNameWithHash;
 import com.clearspend.capital.data.model.AccountActivity;
 import com.clearspend.capital.data.model.Allocation;
 import com.clearspend.capital.data.model.Card;
@@ -694,8 +694,8 @@ public class CodatServiceTest extends BaseCapitalTest {
     log.setBusinessId(createBusinessRecord.user().getBusinessId());
     log.setAccountActivityId(newAccountActivity.getId());
     log.setDirectCostPushOperationKey("MY_KEY");
-    log.setFirstName(new RequiredEncryptedStringWithHash("First"));
-    log.setLastName(new RequiredEncryptedStringWithHash("Last"));
+    log.setFirstName(new RequiredEncryptedNameWithHash("First"));
+    log.setLastName(new RequiredEncryptedNameWithHash("Last"));
     log = transactionSyncLogRepository.save(log);
 
     testHelper.runWithWebhookUser(

@@ -3,7 +3,7 @@ package com.clearspend.capital.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.clearspend.capital.BaseCapitalTest;
-import com.clearspend.capital.util.function.ThrowableFunctions;
+import com.clearspend.capital.util.function.ThrowableFunctions.ThrowingRunnable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.SneakyThrows;
@@ -36,13 +36,13 @@ public class DistributedLockerServiceTest extends BaseCapitalTest {
     Thread thread1 =
         new Thread(
             () ->
-                ThrowableFunctions.sneakyThrows(
+                ThrowingRunnable.sneakyThrows(
                     () -> {
                       barrier.await();
                       lockerService.doWithLock(
                           firstLockId,
                           () ->
-                              ThrowableFunctions.sneakyThrows(
+                              ThrowingRunnable.sneakyThrows(
                                   () -> {
                                     concurrentThreadDetected.compareAndSet(
                                         false, !runningThreadFlag.compareAndSet(false, true));
@@ -54,13 +54,13 @@ public class DistributedLockerServiceTest extends BaseCapitalTest {
     Thread thread2 =
         new Thread(
             () ->
-                ThrowableFunctions.sneakyThrows(
+                ThrowingRunnable.sneakyThrows(
                     () -> {
                       barrier.await();
                       lockerService.doWithLock(
                           secondLockId,
                           () ->
-                              ThrowableFunctions.sneakyThrows(
+                              ThrowingRunnable.sneakyThrows(
                                   () -> {
                                     concurrentThreadDetected.compareAndSet(
                                         false, !runningThreadFlag.compareAndSet(false, true));
